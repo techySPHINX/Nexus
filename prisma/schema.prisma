@@ -9,9 +9,9 @@ datasource db {
 
 model User {
   id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  name      String   @db.VarChar(100)
   role      Role     @default(STUDENT)
   profile   Profile?
   createdAt DateTime @default(now())
@@ -19,20 +19,20 @@ model User {
 }
 
 model Profile {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id])
-  bio       String?
-  location  String?
-  interests String?
-  skills    Skill[]  @relation("ProfileSkills")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bio        String?  @db.Text
+  location   String?  @db.VarChar(100)
+  interests  String?  @db.Text
+  skills     Skill[]  @relation("ProfileSkills")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Skill {
   id        String    @id @default(uuid())
-  name      String
+  name      String    @unique @db.VarChar(50)
   profiles  Profile[] @relation("ProfileSkills")
 }
 
@@ -41,4 +41,3 @@ enum Role {
   ALUM
   ADMIN
 }
-

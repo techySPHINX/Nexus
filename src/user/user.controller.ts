@@ -1,22 +1,42 @@
-import { Controller, Get, Put, Body, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { GetUser } from '../common/decorators/get-user.decorator';
+import {
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Body,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { UserService } from './user.service';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
+import { Role } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('user')
+@Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get('me')
-  getMe(@GetUser() user: any) {
-    return this.userService.getUserWithProfile(user.id);
+  @Get()
+  @Roles(Role.ADMIN)
+  findAll() {
+    return this.userService.findAll();
   }
 
-  @Put('update')
-  update(@GetUser() user: any, @Body() dto: UpdateUserDto) {
-    return this.userService.updateUserProfile(user.id, dto);
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.userService.findOne(id);
+  }
+
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
+    return this.userService.update(id, dto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.userService.remove(id);
   }
 }

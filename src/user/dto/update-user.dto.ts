@@ -1,9 +1,14 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsArray, MinLength } from 'class-validator';
 
 export class UpdateUserDto {
   @IsOptional()
   @IsString()
   name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(6)
+  password?: string;
 
   @IsOptional()
   @IsString()
@@ -16,4 +21,9 @@ export class UpdateUserDto {
   @IsOptional()
   @IsString()
   interests?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  skills?: string[];
 }
