@@ -16,6 +16,10 @@ model User {
   profile   Profile?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  requestedConnections Connection[] @relation("RequestedConnections")
+
+  receivedConnections Connection[] @relation("ReceivedConnections")
 }
 
 model Profile {
@@ -35,6 +39,28 @@ model Skill {
   name      String    @unique @db.VarChar(50)
   profiles  Profile[] @relation("ProfileSkills")
 }
+
+model Connection {
+  id           String           @id @default(uuid())
+  requesterId  String
+  recipientId  String
+  status       ConnectionStatus @default(PENDING)
+  createdAt    DateTime         @default(now())
+
+  requester    User             @relation("RequestedConnections", fields: [requesterId], references: [id])
+  recipient    User             @relation("ReceivedConnections", fields: [recipientId], references: [id])
+
+  @@unique([requesterId, recipientId])
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
+}
+
+
 
 enum Role {
   STUDENT

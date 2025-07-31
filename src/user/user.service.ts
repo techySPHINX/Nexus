@@ -34,6 +34,25 @@ export class UserService {
       data,
     });
 
+    let skillConnections: { id: string }[] = [];
+    if (skills && skills.length > 0) {
+      const skillPromises = skills.map(async (skillName) => {
+        let skill = await this.prisma.skill.findFirst({
+          where: { name: skillName },
+        });
+
+        if (!skill) {
+          skill = await this.prisma.skill.create({
+            data: { name: skillName },
+          });
+        }
+
+        return skill;
+      });
+      const createdSkills = await Promise.all(skillPromises);
+      skillConnections = createdSkills.map((skill) => ({ id: skill.id }));
+    }
+
     const profile = await this.prisma.profile.upsert({
       where: { userId: id },
       create: {
@@ -42,11 +61,7 @@ export class UserService {
         location,
         interests,
         skills: {
-          set: [],
-          connectOrCreate: skills.map((name) => ({
-            where: { name },
-            create: { name },
-          })),
+          connect: skillConnections,
         },
       },
       update: {
@@ -54,11 +69,7 @@ export class UserService {
         location,
         interests,
         skills: {
-          set: [],
-          connectOrCreate: skills.map((name) => ({
-            where: { name },
-            create: { name },
-          })),
+          set: skillConnections,
         },
       },
       include: { skills: true },
