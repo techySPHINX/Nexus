@@ -20,6 +20,10 @@ model User {
   requestedConnections Connection[] @relation("RequestedConnections")
 
   receivedConnections Connection[] @relation("ReceivedConnections")
+
+  sentMessages Message[] @relation("SentMessages")
+
+  receivedMessages Message[] @relation("ReceivedMessages")
 }
 
 model Profile {
@@ -59,6 +63,19 @@ enum ConnectionStatus {
   REJECTED
   BLOCKED
 }
+
+model Message {
+  id          String   @id @default(uuid())
+  content     String   @db.Text
+  timestamp   DateTime @default(now())
+
+  senderId    String
+  receiverId  String
+
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
 
 
 

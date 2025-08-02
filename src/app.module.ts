@@ -6,6 +6,9 @@ import { UserModule } from './user/user.module';
 import { ConnectionService } from './connection/connection.service';
 import { ConnectionController } from './connection/connection.controller';
 import { ConnectionModule } from './connection/connection.module';
+import { MessagingService } from './messaging/messaging.service';
+import { MessagingController } from './messaging/messaging.controller';
+import { MessagingModule } from './messaging/messaging.module';
 
 @Module({
   imports: [
@@ -14,8 +17,9 @@ import { ConnectionModule } from './connection/connection.module';
     AuthModule,
     UserModule,
     ConnectionModule,
+    MessagingModule,
   ],
-  providers: [ConnectionService],
-  controllers: [ConnectionController],
+  providers: [ConnectionService, MessagingService],
+  controllers: [ConnectionController, MessagingController],
 })
 export class AppModule {}

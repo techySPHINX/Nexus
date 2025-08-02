@@ -1,85 +1,123 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Nexus Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+## Project Description
+The Nexus Backend is a robust and scalable API built with NestJS, designed to power a social networking or community platform. It provides core functionalities such as user authentication, user profile management, connection handling, and real-time messaging capabilities. Leveraging PostgreSQL as its database and Prisma as the ORM, this backend ensures efficient data management and a secure, high-performance foundation for your application.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Features
+- **User Authentication:** Secure user registration, login, and session management using JWT (JSON Web Tokens).
+- **User Management:** Create, retrieve, update, and delete user profiles.
+- **Connection Management:** Functionality to send, accept, reject, and block connection requests between users.
+- **Messaging:** Real-time or asynchronous messaging between connected users.
+- **Prisma ORM:** Type-safe database access and migrations with PostgreSQL.
+- **Modular Architecture:** Organized and scalable codebase using NestJS modules.
 
-## Description
+## Technologies Used
+- **[NestJS](https://nestjs.com/):** A progressive Node.js framework for building efficient, reliable, and scalable server-side applications.
+- **[TypeScript](https://www.typescriptlang.org/):** A typed superset of JavaScript that compiles to plain JavaScript.
+- **[Prisma](https://www.prisma.io/):** A next-generation ORM that makes database access easy and type-safe.
+- **[PostgreSQL](https://www.postgresql.org/):** A powerful, open-source object-relational database system.
+- **[JWT (JSON Web Tokens)](https://jwt.io/):** For secure authentication and authorization.
+- **[Bcrypt](https://www.npmjs.com/package/bcrypt):** For hashing passwords securely.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Getting Started
 
-## Project setup
+### Prerequisites
+Before you begin, ensure you have the following installed:
+- **Node.js** (LTS version recommended)
+- **npm** or **Yarn** (npm is used in the examples)
+- **PostgreSQL** database server
 
-```bash
-$ yarn install
-```
+### Installation
 
-## Compile and run the project
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-username/nexus-backend.git
+    cd nexus-backend
+    ```
 
-```bash
-# development
-$ yarn run start
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
 
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
-```
-
-## Run tests
+### Environment Variables
+Create a `.env` file in the root of the project based on the `.env.example` file.
 
 ```bash
-# unit tests
-$ yarn run test
-
-# e2e tests
-$ yarn run test:e2e
-
-# test coverage
-$ yarn run test:cov
+cp .env.example .env
 ```
 
-## Resources
+Open the newly created `.env` file and update the variables:
 
-Check out a few resources that may come in handy when working with NestJS:
+```dotenv
+# The connection string for your PostgreSQL database
+DATABASE_URL="postgresql://user:password@localhost:5432/mydatabase"
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+# A secret key for signing JWT tokens.
+# This should be a long, random string. Generate one using a tool or a random string generator.
+JWT_SECRET="your-super-secret-and-long-string"
 
-## Support
+# The port the application will run on
+PORT=3000
+```
+**Note:** For `JWT_SECRET`, ensure you use a strong, randomly generated string for production environments.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Database Setup
 
-## Stay in touch
+1.  **Run Prisma migrations:** This will create the necessary tables in your PostgreSQL database.
+    ```bash
+    npx prisma migrate dev --name init
+    ```
+    If you make changes to `prisma/schema.prisma`, you will need to run this command again to apply the migrations.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Running the Application
+
+-   **Development Mode (with watch):**
+    ```bash
+    npm run start:dev
+    # or
+    yarn start:dev
+    ```
+    The application will reload automatically on code changes.
+
+-   **Production Mode:**
+    ```bash
+    npm run build
+    npm run start:prod
+    # or
+    yarn build
+    yarn start:prod
+    ```
+
+The application will typically run on `http://localhost:3000` (or the `PORT` you specified in your `.env` file).
+
+## API Endpoints
+Once the application is running, you can access the API. Detailed API documentation (e.g., Swagger UI) can be integrated for a comprehensive list of endpoints and their usage.
+
+Common base paths might include:
+-   `/auth` for authentication-related endpoints (register, login)
+-   `/users` for user profile management
+-   `/connections` for managing user connections
+-   `/messages` for messaging functionalities
+
+## Testing
+To run the automated tests:
+
+-   **Unit and Integration Tests:**
+    ```bash
+    npm run test
+    # or
+    yarn test
+    ```
+
+-   **End-to-End Tests:**
+    ```bash
+    npm run test:e2e
+    # or
+    yarn test:e2e
+    ```
 
 ## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+This project is licensed under the UNLICENSED license. See the `LICENSE` file for details.

@@ -11,7 +11,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Role } from '@prisma/client';
 
-const ALLOWED_DOMAIN = 'iitm.ac.in';
+const ALLOWED_DOMAIN = 'kiit.ac.in';
 
 @Injectable()
 export class AuthService {
