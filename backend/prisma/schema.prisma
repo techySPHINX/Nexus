@@ -24,6 +24,14 @@ model User {
   sentMessages Message[] @relation("SentMessages")
 
   receivedMessages Message[] @relation("ReceivedMessages")
+
+  Notification Notification[]
+
+  Post Post[]
+
+  Like Like[]
+
+  Comment Comment[]
 }
 
 model Profile {
@@ -76,9 +84,48 @@ model Message {
   receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  type      String?  
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
 
+model Post {
+  id        String   @id @default(uuid())
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  imageUrl  String?  @db.VarChar(512)
+  type      String?  // "JOB", "UPDATE", etc.
+  createdAt DateTime @default(now())
 
+  Like Like[]
 
+  Comment Comment[]
+}
+
+model Like {
+  id      String   @id @default(uuid())
+  userId  String
+  postId  String
+  user    User     @relation(fields: [userId], references: [id])
+  post    Post     @relation(fields: [postId], references: [id])
+  @@unique([userId, postId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  userId    String
+  postId    String
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+}
 enum Role {
   STUDENT
   ALUM
