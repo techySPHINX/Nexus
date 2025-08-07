@@ -1,5 +1,5 @@
 import { Controller, Post, Body, Param, Delete, Get } from '@nestjs/common';
-import { EngagementService } from './enagagement.service';
+import { EngagementService } from './engagement.service';
 
 @Controller('engagement')
 export class EngagementController {
