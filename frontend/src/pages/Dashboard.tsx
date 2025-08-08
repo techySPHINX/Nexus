@@ -129,7 +129,7 @@ const Dashboard: React.FC = () => {
         {/* Welcome Section */}
         <Box sx={{ mb: 4 }}>
           <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-            Welcome back, {user?.email.split('@')[0]}!
+            Welcome, {user?.name.split(' ')[0]}!
           </Typography>
           <Typography variant="h6" color="text.secondary">
             Here's what's happening in your Nexus network
