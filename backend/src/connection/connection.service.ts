@@ -31,9 +31,9 @@ export class ConnectionService {
       where: {
         OR: [
           {
-          requesterId,
-          recipientId,
-        },
+            requesterId,
+            recipientId,
+          },
           {
             requesterId: recipientId,
             recipientId: requesterId,
@@ -44,7 +44,7 @@ export class ConnectionService {
 
     if (existingConnection) {
       if (existingConnection.status === 'PENDING') {
-      throw new ConflictException('Connection request already sent');
+        throw new ConflictException('Connection request already sent');
       } else if (existingConnection.status === 'ACCEPTED') {
         throw new ConflictException('Users are already connected');
       } else if (existingConnection.status === 'BLOCKED') {
@@ -102,11 +102,15 @@ export class ConnectionService {
     }
 
     if (connection.recipientId !== userId) {
-      throw new ForbiddenException('You are not the recipient of this connection request');
+      throw new ForbiddenException(
+        'You are not the recipient of this connection request',
+      );
     }
 
     if (connection.status !== 'PENDING') {
-      throw new BadRequestException('Connection request has already been processed');
+      throw new BadRequestException(
+        'Connection request has already been processed',
+      );
     }
 
     return this.prisma.connection.update({

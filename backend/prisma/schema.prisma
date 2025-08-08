@@ -18,20 +18,15 @@ model User {
   updatedAt DateTime @updatedAt
 
   requestedConnections Connection[] @relation("RequestedConnections")
-
   receivedConnections Connection[] @relation("ReceivedConnections")
-
   sentMessages Message[] @relation("SentMessages")
-
   receivedMessages Message[] @relation("ReceivedMessages")
-
   Notification Notification[]
-
   Post Post[]
-
   Like Like[]
-
   Comment Comment[]
+
+  @@map("user")
 }
 
 model Profile {
@@ -41,16 +36,20 @@ model Profile {
   bio        String?  @db.Text
   location   String?  @db.VarChar(100)
   interests  String?  @db.Text
-  avatarUrl String? @db.VarChar(512)
+  avatarUrl  String?  @db.VarChar(512)
   skills     Skill[]  @relation("ProfileSkills")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
+
+  @@map("profile")
 }
 
 model Skill {
   id        String    @id @default(uuid())
   name      String    @unique @db.VarChar(50)
   profiles  Profile[] @relation("ProfileSkills")
+
+  @@map("skill")
 }
 
 model Connection {
@@ -64,6 +63,7 @@ model Connection {
   recipient    User             @relation("ReceivedConnections", fields: [recipientId], references: [id])
 
   @@unique([requesterId, recipientId])
+  @@map("connection")
 }
 
 enum ConnectionStatus {
@@ -77,12 +77,12 @@ model Message {
   id          String   @id @default(uuid())
   content     String   @db.Text
   timestamp   DateTime @default(now())
-
   senderId    String
   receiverId  String
-
   sender      User     @relation("SentMessages", fields: [senderId], references: [id])
   receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@map("message")
 }
 
 model Notification {
@@ -93,6 +93,8 @@ model Notification {
   type      String?  
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@map("notification")
 }
 
 model Post {
@@ -103,10 +105,10 @@ model Post {
   imageUrl  String?  @db.VarChar(512)
   type      String?  // "JOB", "UPDATE", etc.
   createdAt DateTime @default(now())
-
   Like Like[]
-
   Comment Comment[]
+
+  @@map("post")
 }
 
 model Like {
@@ -116,6 +118,8 @@ model Like {
   user    User     @relation(fields: [userId], references: [id])
   post    Post     @relation(fields: [postId], references: [id])
   @@unique([userId, postId])
+
+  @@map("like")
 }
 
 model Comment {
@@ -126,7 +130,10 @@ model Comment {
   user      User     @relation(fields: [userId], references: [id])
   post      Post     @relation(fields: [postId], references: [id])
   createdAt DateTime @default(now())
+
+  @@map("comment")
 }
+
 enum Role {
   STUDENT
   ALUM

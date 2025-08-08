@@ -18,11 +18,11 @@ import { PostService } from './post/post.service';
 import { PostController } from './post/post.controller';
 import { PostModule } from './post/post.module';
 import { EngagementController } from './engagement/engagement.controller';
-// import { EngagementModule } from './engagement/engagement.module';
 import { EngagementService } from './engagement/engagement.service';
 import { ProfileModule } from './profile/profile.module';
 import { ProfileController } from './profile/profile.controller';
 import { ProfileService } from './profile/profile.service';
+import { EngagementModule } from './engagement/engagement.module';
 
 @Module({
   imports: [
@@ -35,7 +35,7 @@ import { ProfileService } from './profile/profile.service';
     NotificationModule,
     PostModule,
     ProfileModule,
-    // EngagementModule,
+    EngagementModule,
   ],
   controllers: [
     AppController,
