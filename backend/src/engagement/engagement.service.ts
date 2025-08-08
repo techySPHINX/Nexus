@@ -31,11 +31,11 @@ export class EngagementService {
 
   async getRecommendedFeed() {
     return this.prisma.post.findMany({
-      orderBy: [{ createdAt: 'desc' }, { likes: { _count: 'desc' } }],
+      orderBy: [{ createdAt: 'desc' }, { Like: { _count: 'desc' } }],
       include: {
         author: true,
         _count: {
-          select: { likes: true, comments: true },
+          select: { Like: true, Comment: true },
         },
       },
     });

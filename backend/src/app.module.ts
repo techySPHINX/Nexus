@@ -17,9 +17,9 @@ import { NotificationModule } from './notification/notification.module';
 import { PostService } from './post/post.service';
 import { PostController } from './post/post.controller';
 import { PostModule } from './post/post.module';
-import { EnagagementController } from './enagagement/enagagement.controller';
-import { EngagementModule } from './engagement/engagement.module';
-import { EnagagementService } from './enagagement/enagagement.service';
+import { EngagementController } from './engagement/engagement.controller';
+// import { EngagementModule } from './engagement/engagement.module';
+import { EngagementService } from './engagement/engagement.service';
 
 @Module({
   imports: [
@@ -31,7 +31,7 @@ import { EnagagementService } from './enagagement/enagagement.service';
     MessagingModule,
     NotificationModule,
     PostModule,
-    EngagementModule,
+    // EngagementModule,
   ],
   controllers: [
     AppController,
@@ -39,7 +39,7 @@ import { EnagagementService } from './enagagement/enagagement.service';
     MessagingController,
     NotificationController,
     PostController,
-    EnagagementController,
+    EngagementController,
   ],
   providers: [
     AppService,
@@ -47,7 +47,7 @@ import { EnagagementService } from './enagagement/enagagement.service';
     MessagingService,
     NotificationService,
     PostService,
-    EnagagementService,
+    EngagementService,
   ],
 })
 export class AppModule {}

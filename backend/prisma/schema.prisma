@@ -41,6 +41,7 @@ model Profile {
   bio        String?  @db.Text
   location   String?  @db.VarChar(100)
   interests  String?  @db.Text
+  avatarUrl String? @db.VarChar(512)
   skills     Skill[]  @relation("ProfileSkills")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
