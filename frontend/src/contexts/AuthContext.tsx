@@ -4,8 +4,19 @@ import axios from 'axios';
 interface User {
   id: string;
   email: string;
+  name: string;
   role: 'STUDENT' | 'ALUM' | 'ADMIN';
   profileCompleted: boolean;
+  profile?: Profile;
+}
+
+export interface Profile {
+  id: string;
+  userId: string;
+  bio?: string;
+  location?: string;
+  interests?: string;
+  avatarUrl?: string;
 }
 
 interface AuthResponse {
