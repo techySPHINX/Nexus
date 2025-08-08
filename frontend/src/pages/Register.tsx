@@ -58,6 +58,8 @@ const Register: React.FC = () => {
     e.preventDefault();
     setError('');
 
+    console.log('Form Data:', formData);
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
