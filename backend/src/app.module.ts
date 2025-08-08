@@ -20,6 +20,9 @@ import { PostModule } from './post/post.module';
 import { EngagementController } from './engagement/engagement.controller';
 // import { EngagementModule } from './engagement/engagement.module';
 import { EngagementService } from './engagement/engagement.service';
+import { ProfileModule } from './profile/profile.module';
+import { ProfileController } from './profile/profile.controller';
+import { ProfileService } from './profile/profile.service';
 
 @Module({
   imports: [
@@ -31,6 +34,7 @@ import { EngagementService } from './engagement/engagement.service';
     MessagingModule,
     NotificationModule,
     PostModule,
+    ProfileModule,
     // EngagementModule,
   ],
   controllers: [
@@ -39,6 +43,7 @@ import { EngagementService } from './engagement/engagement.service';
     MessagingController,
     NotificationController,
     PostController,
+    ProfileController,
     EngagementController,
   ],
   providers: [
@@ -47,6 +52,7 @@ import { EngagementService } from './engagement/engagement.service';
     MessagingService,
     NotificationService,
     PostService,
+    ProfileService,
     EngagementService,
   ],
 })
