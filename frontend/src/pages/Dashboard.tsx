@@ -16,10 +16,8 @@ import {
   Divider,
   Paper,
   LinearProgress,
-  CircularProgress,
-  Alert,
-  IconButton,
-  Tooltip,
+  Stack,
+  Badge
 } from '@mui/material';
 import {
   People,
@@ -32,484 +30,347 @@ import {
   Notifications,
   CalendarToday,
   LocationOn,
-  Refresh as RefreshIcon,
-  NavigateNext as NavigateNextIcon,
+  Event,
+  Forum,
+  ConnectWithoutContact,
+  PersonAdd,
+  Assignment,
+  Groups,
+  RocketLaunch
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 
 interface DashboardStats {
   connections: number;
   messages: number;
   pendingRequests: number;
   profileCompletion: number;
-}
-
-interface RecentActivity {
-  id: string;
-  type: 'connection' | 'message' | 'profile' | 'post';
-  message: string;
-  time: string;
-  avatar: string;
-  userId?: string;
+  upcomingEvents: number;
+  newAlumni: number;
 }
 
 const Dashboard: React.FC = () => {
-  const { user, token } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
-    connections: 0,
-    messages: 0,
-    pendingRequests: 0,
-    profileCompletion: 0,
+    connections: 24,
+    messages: 5,
+    pendingRequests: 3,
+    profileCompletion: 75,
+    upcomingEvents: 2,
+    newAlumni: 8
   });
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
+  // Simulate loading data
   useEffect(() => {
-    if (token) {
-      fetchDashboardData();
-    }
-  }, [token]);
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      // Fetch stats from multiple endpoints
-      const [connectionsRes, messagesRes, notificationsRes] = await Promise.all([
-        axios.get('/connection/stats'),
-        axios.get('/messages/conversations/all'),
-        axios.get('/notifications/stats'),
-      ]);
-
-      // Calculate profile completion
-      const profileCompletion = user?.profileCompleted ? 100 : 
-        (user?.profile ? 75 : 25);
-
+    // In a real app, you would fetch this data from your API
+    const timer = setTimeout(() => {
       setStats({
-        connections: connectionsRes.data.totalConnections || 0,
-        messages: messagesRes.data.length || 0,
-        pendingRequests: connectionsRes.data.pendingRequests || 0,
-        profileCompletion,
+        connections: 24,
+        messages: 5,
+        pendingRequests: 3,
+        profileCompletion: 75,
+        upcomingEvents: 2,
+        newAlumni: 8
       });
-
-      // Generate recent activities based on real data
-      const activities: RecentActivity[] = [];
-      
-      if (connectionsRes.data.recentConnections) {
-        connectionsRes.data.recentConnections.forEach((conn: any) => {
-          activities.push({
-            id: conn.id,
-            type: 'connection',
-            message: `${conn.user.name} ${conn.status === 'ACCEPTED' ? 'accepted' : 'sent'} your connection request`,
-            time: formatTime(conn.createdAt),
-            avatar: conn.user.name.charAt(0),
-            userId: conn.user.id,
-          });
-        });
-      }
-
-      if (messagesRes.data.length > 0) {
-        const recentMessage = messagesRes.data[0];
-        activities.push({
-          id: recentMessage.id,
-          type: 'message',
-          message: `New message from ${recentMessage.otherUser?.name || 'a connection'}`,
-          time: formatTime(recentMessage.lastMessage?.createdAt || new Date()),
-          avatar: recentMessage.otherUser?.name?.charAt(0) || 'M',
-          userId: recentMessage.otherUser?.id,
-        });
-      }
-
-      // Add profile completion activity if incomplete
-      if (profileCompletion < 100) {
-        activities.push({
-          id: 'profile',
-          type: 'profile',
-          message: 'Complete your profile to get better connection suggestions',
-          time: 'Just now',
-          avatar: 'P',
-        });
-      }
-
-      setRecentActivities(activities.slice(0, 5));
-    } catch (error: any) {
-      console.error('Error fetching dashboard data:', error);
-      setError('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const formatTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
-
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      return `${Math.floor(diffInHours)} hours ago`;
-    } else {
-      const diffInDays = Math.floor(diffInHours / 24);
-      return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
-    }
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'STUDENT':
-        return <School />;
-      case 'ALUM':
-        return <Work />;
-      case 'ADMIN':
-        return <AdminPanelSettings />;
-      default:
-        return <School />;
-    }
-  };
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'STUDENT':
-        return 'primary';
-      case 'ALUM':
-        return 'secondary';
-      case 'ADMIN':
-        return 'error';
-      default:
-        return 'default';
+      case 'STUDENT': return 'primary';
+      case 'ALUM': return 'secondary';
+      case 'ADMIN': return 'error';
+      default: return 'default';
     }
   };
 
-  const quickActions = [
-    {
-      title: 'Send Connection Request',
-      description: 'Connect with other students and alumni',
-      icon: <People />,
-      color: 'primary',
-      action: () => navigate('/connections'),
-    },
-    {
-      title: 'Send Message',
-      description: 'Start a conversation with your connections',
-      icon: <Message />,
-      color: 'secondary',
-      action: () => navigate('/messages'),
-    },
-    {
-      title: 'Update Profile',
-      description: 'Keep your profile information current',
-      icon: <Add />,
-      color: 'success',
-      action: () => navigate('/profile'),
-    },
+  const recentActivities = [
+    { id: 1, type: 'connection', message: 'John Doe accepted your connection', time: '2h ago', avatar: 'J' },
+    { id: 2, type: 'message', message: 'New message from Jane Smith', time: '4h ago', avatar: 'J' },
+    { id: 3, type: 'event', message: 'Upcoming alumni meet on Friday', time: '1d ago', avatar: 'E' },
+    { id: 4, type: 'network', message: '8 new alumni joined this week', time: '2d ago', avatar: 'N' },
   ];
 
-  const handleActivityClick = (activity: RecentActivity) => {
-    switch (activity.type) {
-      case 'connection':
-        navigate('/connections');
-        break;
-      case 'message':
-        navigate('/messages');
-        break;
-      case 'profile':
-        navigate('/profile');
-        break;
-      default:
-        break;
-    }
-  };
+  const quickActions = [
+    { title: 'Connect', icon: <PersonAdd />, color: 'primary' },
+    { title: 'Message', icon: <Forum />, color: 'secondary' },
+    { title: 'Events', icon: <Event />, color: 'warning' },
+    { title: 'Resources', icon: <Assignment />, color: 'info' },
+  ];
 
-  if (loading && stats.connections === 0) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
-  }
+  // Future features placeholder data
+  const upcomingEvents = [
+    { id: 1, title: 'Alumni Meet 2023', date: 'Oct 15', location: 'College Campus' },
+    { id: 2, title: 'Career Workshop', date: 'Nov 5', location: 'Online' },
+  ];
+
+  const suggestedConnections = [
+    { id: 1, name: 'Alex Johnson', role: 'Software Engineer', avatar: 'AJ' },
+    { id: 2, name: 'Sarah Miller', role: 'Product Manager', avatar: 'SM' },
+    { id: 3, name: 'David Wilson', role: 'Data Scientist', avatar: 'DW' },
+  ];
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        {/* Welcome Section */}
-        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <Box>
-            <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-              Welcome, {user?.name.split(' ')[0]}!
-            </Typography>
-            <Typography variant="h6" color="text.secondary">
-              Here's what's happening in your Nexus network
-            </Typography>
-          </Box>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Chip
-              icon={getRoleIcon(user?.role || 'STUDENT')}
-              label={user?.role}
-              color={getRoleColor(user?.role || 'STUDENT') as any}
-              variant="outlined"
-            />
-            <Tooltip title="Refresh dashboard">
-              <IconButton onClick={fetchDashboardData} disabled={loading}>
-                <RefreshIcon />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        </Box>
+    <Container maxWidth="xl" sx={{ py: 3 }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" component="h1" sx={{ 
+          fontWeight: 700,
+          background: 'linear-gradient(45deg, #1976d2 30%, #4dabf5 90%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+          display: 'inline-block'
+        }}>
+          Welcome back, {user?.name.split(' ')[0]}!
+        </Typography>
+        <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 1 }}>
+          Here's what's happening in your network today
+        </Typography>
+      </Box>
 
-        {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Stats Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => navigate('/connections')}>
+      {/* Stats Grid */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {[
+          { icon: <People />, value: stats.connections, label: 'Connections', color: 'primary', progress: 70 },
+          { icon: <Message />, value: stats.messages, label: 'Messages', color: 'secondary', progress: 45 },
+          { icon: <Notifications />, value: stats.pendingRequests, label: 'Requests', color: 'warning', progress: 30 },
+          { icon: <TrendingUp />, value: `${stats.profileCompletion}%`, label: 'Profile', color: 'success', progress: stats.profileCompletion },
+          { icon: <Event />, value: stats.upcomingEvents, label: 'Events', color: 'info', progress: 50 },
+          { icon: <Groups />, value: stats.newAlumni, label: 'New Alumni', color: 'secondary', progress: 60 },
+        ].map((stat, index) => (
+          <Grid item xs={12} sm={6} md={4} lg={2} key={index}>
+            <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
+              <Card sx={{ 
+                height: '100%',
+                borderLeft: `4px solid`,
+                borderColor: `${stat.color}.main`,
+                boxShadow: '0 4px 20px rgba(0,0,0,0.05)'
+              }}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ bgcolor: 'primary.main', mr: 2 }}>
-                      <People />
+                  <Stack direction="row" alignItems="center" spacing={2}>
+                    <Avatar sx={{ 
+                      bgcolor: `${stat.color}.light`, 
+                      color: `${stat.color}.dark`,
+                      width: 48, 
+                      height: 48 
+                    }}>
+                      {stat.icon}
                     </Avatar>
                     <Box>
-                      <Typography variant="h4" component="div" sx={{ fontWeight: 700 }}>
-                        {stats.connections}
-                      </Typography>
-                      <Typography color="text.secondary">Connections</Typography>
+                      <Typography variant="h5" sx={{ fontWeight: 700 }}>{stat.value}</Typography>
+                      <Typography variant="body2" color="text.secondary">{stat.label}</Typography>
                     </Box>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={Math.min((stats.connections / 50) * 100, 100)}
-                    sx={{ height: 6, borderRadius: 3 }}
-                  />
+                  </Stack>
                 </CardContent>
               </Card>
             </motion.div>
           </Grid>
+        ))}
+      </Grid>
 
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            >
-              <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => navigate('/messages')}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ bgcolor: 'secondary.main', mr: 2 }}>
-                      <Message />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h4" component="div" sx={{ fontWeight: 700 }}>
-                        {stats.messages}
-                      </Typography>
-                      <Typography color="text.secondary">Conversations</Typography>
-                    </Box>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={Math.min((stats.messages / 20) * 100, 100)}
-                    sx={{ height: 6, borderRadius: 3, bgcolor: 'secondary.light' }}
-                    color="secondary"
-                  />
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.3 }}
-            >
-              <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => navigate('/connections')}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ bgcolor: 'warning.main', mr: 2 }}>
-                      <Notifications />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h4" component="div" sx={{ fontWeight: 700 }}>
-                        {stats.pendingRequests}
-                      </Typography>
-                      <Typography color="text.secondary">Pending Requests</Typography>
-                    </Box>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={stats.pendingRequests > 0 ? 100 : 0}
-                    sx={{ height: 6, borderRadius: 3, bgcolor: 'warning.light' }}
-                    color="warning"
-                  />
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={3}>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <Card sx={{ height: '100%', cursor: 'pointer' }} onClick={() => navigate('/profile')}>
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar sx={{ bgcolor: 'success.main', mr: 2 }}>
-                      <TrendingUp />
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h4" component="div" sx={{ fontWeight: 700 }}>
-                        {stats.profileCompletion}%
-                      </Typography>
-                      <Typography color="text.secondary">Profile Complete</Typography>
-                    </Box>
-                  </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={stats.profileCompletion}
-                    sx={{ height: 6, borderRadius: 3, bgcolor: 'success.light' }}
-                    color="success"
-                  />
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
-        </Grid>
-
-        <Grid container spacing={3}>
+      {/* Main Content */}
+      <Grid container spacing={3}>
+        {/* Left Column */}
+        <Grid item xs={12} md={8}>
           {/* Quick Actions */}
-          <Grid item xs={12} md={4}>
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.5 }}
-            >
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                    Quick Actions
-                  </Typography>
-                  <Box sx={{ mt: 2 }}>
-                    {quickActions.map((action, index) => (
-                      <motion.div
-                        key={index}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
+          <Card sx={{ mb: 3, borderRadius: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>Quick Actions</Typography>
+              <Grid container spacing={2}>
+                {quickActions.map((action, index) => (
+                  <Grid item xs={6} sm={3} key={index}>
+                    <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={action.icon}
+                        sx={{
+                          py: 2,
+                          borderRadius: 2,
+                          bgcolor: `${action.color}.main`,
+                          '&:hover': { bgcolor: `${action.color}.dark` }
+                        }}
                       >
-                        <Button
-                          fullWidth
-                          variant="outlined"
-                          startIcon={action.icon}
-                          onClick={action.action}
-                          sx={{
-                            mb: 2,
-                            justifyContent: 'flex-start',
-                            textAlign: 'left',
-                            py: 1.5,
-                            borderColor: `${action.color}.main`,
-                            color: `${action.color}.main`,
-                            '&:hover': {
-                              borderColor: `${action.color}.dark`,
-                              backgroundColor: `${action.color}.50`,
-                            },
-                          }}
-                        >
-                          <Box sx={{ textAlign: 'left', flex: 1 }}>
-                            <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                              {action.title}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {action.description}
-                            </Typography>
-                          </Box>
-                          <NavigateNextIcon />
-                        </Button>
-                      </motion.div>
-                    ))}
-                  </Box>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
+                        {action.title}
+                      </Button>
+                    </motion.div>
+                  </Grid>
+                ))}
+              </Grid>
+            </CardContent>
+          </Card>
 
           {/* Recent Activity */}
-          <Grid item xs={12} md={8}>
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-            >
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                    Recent Activity
-                  </Typography>
-                  {recentActivities.length > 0 ? (
-                    <List>
-                      {recentActivities.map((activity, index) => (
-                        <React.Fragment key={activity.id}>
-                          <ListItem 
-                            alignItems="flex-start" 
-                            button
-                            onClick={() => handleActivityClick(activity)}
-                            sx={{ borderRadius: 1, mb: 0.5 }}
-                          >
-                            <ListItemAvatar>
-                              <Avatar sx={{ bgcolor: 'primary.main' }}>
-                                {activity.avatar}
-                              </Avatar>
-                            </ListItemAvatar>
-                            <ListItemText
-                              primary={activity.message}
-                              secondary={
-                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 0.5 }}>
-                                  <CalendarToday sx={{ fontSize: 14, mr: 0.5 }} />
-                                  {activity.time}
-                                </Box>
-                              }
-                            />
-                            <NavigateNextIcon color="action" />
-                          </ListItem>
-                          {index < recentActivities.length - 1 && <Divider variant="inset" component="li" />}
-                        </React.Fragment>
-                      ))}
-                    </List>
-                  ) : (
-                    <Box textAlign="center" py={4}>
-                      <Typography variant="body2" color="text.secondary">
-                        No recent activity. Start connecting with people!
-                      </Typography>
-                    </Box>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
+          <Card sx={{ borderRadius: 3 }}>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>Recent Activity</Typography>
+                <Button size="small" color="primary">View All</Button>
+              </Stack>
+              <List disablePadding>
+                {recentActivities.map((activity, index) => (
+                  <React.Fragment key={activity.id}>
+                    <ListItem alignItems="flex-start" sx={{ py: 1.5 }}>
+                      <ListItemAvatar>
+                        <Badge
+                          overlap="circular"
+                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                          badgeContent={
+                            <Box sx={{ 
+                              bgcolor: getRoleColor(user?.role || ''),
+                              width: 12, 
+                              height: 12,
+                              borderRadius: '50%',
+                              border: '2px solid white'
+                            }} />
+                          }
+                        >
+                          <Avatar sx={{ 
+                            bgcolor: 'primary.light', 
+                            color: 'primary.dark',
+                            width: 40, 
+                            height: 40 
+                          }}>
+                            {activity.avatar}
+                          </Avatar>
+                        </Badge>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={activity.message}
+                        primaryTypographyProps={{ fontWeight: 500 }}
+                        secondary={
+                          <Stack direction="row" alignItems="center" spacing={0.5} mt={0.5}>
+                            <CalendarToday sx={{ fontSize: 14, color: 'text.secondary' }} />
+                            <Typography variant="caption" color="text.secondary">
+                              {activity.time}
+                            </Typography>
+                          </Stack>
+                        }
+                      />
+                    </ListItem>
+                    {index < recentActivities.length - 1 && (
+                      <Divider variant="inset" component="li" sx={{ ml: 7 }} />
+                    )}
+                  </React.Fragment>
+                ))}
+              </List>
+            </CardContent>
+          </Card>
         </Grid>
-      </motion.div>
+
+        {/* Right Column */}
+        <Grid item xs={12} md={4}>
+          {/* Upcoming Events - Future Feature */}
+          <Card sx={{ mb: 3, borderRadius: 3 }}>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>Upcoming Events</Typography>
+                <Button size="small" color="primary">Create</Button>
+              </Stack>
+              <List disablePadding>
+                {upcomingEvents.map((event, index) => (
+                  <React.Fragment key={event.id}>
+                    <ListItem sx={{ py: 1.5 }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: 'warning.light', color: 'warning.dark' }}>
+                          <Event />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={event.title}
+                        secondary={
+                          <Stack direction="row" spacing={1} mt={0.5}>
+                            <Chip 
+                              label={event.date} 
+                              size="small" 
+                              variant="outlined" 
+                              color="warning"
+                              icon={<CalendarToday sx={{ fontSize: 14 }} />}
+                            />
+                            <Chip 
+                              label={event.location} 
+                              size="small" 
+                              variant="outlined" 
+                              color="info"
+                              icon={<LocationOn sx={{ fontSize: 14 }} />}
+                            />
+                          </Stack>
+                        }
+                      />
+                    </ListItem>
+                    {index < upcomingEvents.length - 1 && <Divider variant="middle" />}
+                  </React.Fragment>
+                ))}
+              </List>
+              <Button fullWidth sx={{ mt: 1 }} startIcon={<Add />}>
+                Add New Event
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Suggested Connections - Future Feature */}
+          <Card sx={{ borderRadius: 3 }}>
+            <CardContent>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>Suggested Connections</Typography>
+                <Button size="small" color="primary">View All</Button>
+              </Stack>
+              <List disablePadding>
+                {suggestedConnections.map((person, index) => (
+                  <React.Fragment key={person.id}>
+                    <ListItem sx={{ py: 1.5 }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.dark' }}>
+                          {person.avatar}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={person.name}
+                        secondary={person.role}
+                      />
+                      <Button size="small" variant="outlined" color="primary">
+                        Connect
+                      </Button>
+                    </ListItem>
+                    {index < suggestedConnections.length - 1 && <Divider variant="middle" />}
+                  </React.Fragment>
+                ))}
+              </List>
+              <Button fullWidth sx={{ mt: 1 }} startIcon={<ConnectWithoutContact />}>
+                Find More Connections
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Profile Completion - Future Feature */}
+          <Card sx={{ mt: 3, borderRadius: 3 }}>
+            <CardContent>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>Profile Strength</Typography>
+              <LinearProgress 
+                variant="determinate" 
+                value={stats.profileCompletion} 
+                sx={{ 
+                  height: 8, 
+                  borderRadius: 4,
+                  mb: 1.5 
+                }} 
+              />
+              <Stack direction="row" justifyContent="space-between">
+                <Typography variant="body2" color="text.secondary">
+                  {stats.profileCompletion}% Complete
+                </Typography>
+                <Button size="small" endIcon={<RocketLaunch />}>
+                  Boost Profile
+                </Button>
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </Container>
   );
 };
 
-export default Dashboard; 
+export default Dashboard;
