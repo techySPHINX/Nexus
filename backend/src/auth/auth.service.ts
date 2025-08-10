@@ -19,7 +19,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
-  ) { }
+  ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
     const domain = dto.email.split('@')[1];
@@ -41,22 +41,21 @@ export class AuthService {
 
     const user = await this.prisma.user.create({
       data: {
-      email: dto.email,
-      password: hash,
-      name: dto.name,
-      role: dto.role || Role.STUDENT,
-      profile: {
-        create: {
-        bio: '',
-        location: '',
-        interests: '',
-        avatarUrl: '',
+        email: dto.email,
+        password: hash,
+        name: dto.name,
+        role: dto.role || Role.STUDENT,
+        profile: {
+          create: {
+            bio: '',
+            location: '',
+            interests: '',
+            avatarUrl: '',
+          },
         },
-      },
       },
       include: { profile: true },
     });
-
 
     return this.signToken(user);
   }
@@ -79,9 +78,14 @@ export class AuthService {
   }
 
   private signToken(user: any): AuthResponseDto {
-    const payload = { sub: user.id,name: user.name, email: user.email, role: user.role };
+    const payload = {
+      sub: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
     const token = this.jwt.sign(payload);
-    
+
     return {
       accessToken: token,
       user: {
