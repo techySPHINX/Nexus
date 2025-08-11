@@ -17,20 +17,58 @@ import {
   UpdateConnectionStatusDto,
   ConnectionQueryDto,
 } from './dto/connection.dto';
+import { MessagingGateway } from '../messaging/messaging.gateway';
 
 @Controller('connection')
 @UseGuards(JwtAuthGuard)
 export class ConnectionController {
-  constructor(private readonly connectionService: ConnectionService) {}
+  constructor(
+    private readonly connectionService: ConnectionService,
+    private readonly messagingGateway: MessagingGateway,
+  ) {}
 
   @Post('send')
-  sendRequest(@Body() dto: CreateConnectionDto, @Req() req) {
-    return this.connectionService.sendRequest(req.user.userId, dto.recipientId);
+  async sendRequest(@Body() dto: CreateConnectionDto, @Req() req) {
+    const result = await this.connectionService.sendRequest(req.user.userId, dto.recipientId);
+    
+    // Emit WebSocket event for connection request
+    if (result.connection) {
+      this.messagingGateway.sendToUser(dto.recipientId, 'CONNECTION_REQUEST', {
+        id: result.connection.id,
+        requester: {
+          id: req.user.userId,
+          name: req.user.name,
+          email: req.user.email
+        },
+        recipientId: dto.recipientId,
+        status: 'PENDING',
+        createdAt: new Date().toISOString()
+      });
+    }
+    
+    return result;
   }
 
   @Patch('status')
-  updateStatus(@Body() dto: UpdateConnectionStatusDto, @Req() req) {
-    return this.connectionService.updateStatus(req.user.userId, dto);
+  async updateStatus(@Body() dto: UpdateConnectionStatusDto, @Req() req) {
+    const result = await this.connectionService.updateStatus(req.user.userId, dto);
+    
+    // Emit WebSocket event for connection status update
+    if (result.connection && (dto.status === 'ACCEPTED' || dto.status === 'REJECTED')) {
+      this.messagingGateway.sendToUser(result.connection.requesterId, 'CONNECTION_STATUS_UPDATE', {
+        id: result.connection.id,
+        status: dto.status,
+        recipient: {
+          id: req.user.userId,
+          name: req.user.name,
+          email: req.user.email
+        },
+        requesterId: result.connection.requesterId,
+        updatedAt: new Date().toISOString()
+      });
+    }
+    
+    return result;
   }
 
   @Get()

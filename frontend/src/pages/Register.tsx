@@ -30,6 +30,7 @@ import {
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import ThemeToggle from '../components/ThemeToggle';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -115,6 +116,9 @@ const Register: React.FC = () => {
 
   return (
     <Container maxWidth="sm">
+      <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
+        <ThemeToggle />
+      </Box>
       <Box
         sx={{
           minHeight: '100vh',
