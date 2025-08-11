@@ -10,7 +10,6 @@ import {
   MenuItem,
   IconButton,
   Chip,
-  useTheme,
 } from '@mui/material';
 import {
   AccountCircle,
@@ -25,12 +24,13 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const theme = useTheme();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -73,9 +73,15 @@ const Navbar: React.FC = () => {
     }
   };
 
+  // If no user is logged in, show simple navbar
   if (!user) {
     return (
-      <AppBar position="fixed" elevation={0} sx={{ backgroundColor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+      <AppBar position="fixed" elevation={0} sx={{ 
+        backgroundColor: 'background.paper', 
+        borderBottom: '1px solid', 
+        borderColor: 'divider',
+        color: 'text.primary'
+      }}>
         <Toolbar>
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -102,9 +108,10 @@ const Navbar: React.FC = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
+            <ThemeToggle />
             <Button
               color="inherit"
-              sx={{ color: 'text.primary', mr: 2 }}
+              sx={{ color: 'text.primary', mr: 2, ml: 2 }}
               onClick={() => navigate('/login')}
             >
               Login
@@ -122,8 +129,14 @@ const Navbar: React.FC = () => {
     );
   }
 
+  // If user is logged in, show full navbar with navigation
   return (
-    <AppBar position="fixed" elevation={0} sx={{ backgroundColor: 'white', borderBottom: '1px solid', borderColor: 'divider' }}>
+    <AppBar position="fixed" elevation={0} sx={{ 
+      backgroundColor: 'background.paper', 
+      borderBottom: '1px solid', 
+      borderColor: 'divider',
+      color: 'text.primary'
+    }}>
       <Toolbar>
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -155,7 +168,7 @@ const Navbar: React.FC = () => {
               startIcon={<Dashboard />}
               sx={{
                 color: location.pathname === '/dashboard' ? 'primary.main' : 'text.secondary',
-                '&:hover': { backgroundColor: 'primary.50' },
+                '&:hover': { backgroundColor: 'action.hover' },
               }}
               onClick={() => navigate('/dashboard')}
             >
@@ -172,7 +185,7 @@ const Navbar: React.FC = () => {
               startIcon={<People />}
               sx={{
                 color: location.pathname === '/connections' ? 'primary.main' : 'text.secondary',
-                '&:hover': { backgroundColor: 'primary.50' },
+                '&:hover': { backgroundColor: 'action.hover' },
               }}
               onClick={() => navigate('/connections')}
             >
@@ -189,7 +202,7 @@ const Navbar: React.FC = () => {
               startIcon={<Message />}
               sx={{
                 color: location.pathname === '/messages' ? 'primary.main' : 'text.secondary',
-                '&:hover': { backgroundColor: 'primary.50' },
+                '&:hover': { backgroundColor: 'action.hover' },
               }}
               onClick={() => navigate('/messages')}
             >
@@ -206,7 +219,7 @@ const Navbar: React.FC = () => {
               startIcon={<Person />}
               sx={{
                 color: location.pathname === '/profile' ? 'primary.main' : 'text.secondary',
-                '&:hover': { backgroundColor: 'primary.50' },
+                '&:hover': { backgroundColor: 'action.hover' },
               }}
               onClick={() => navigate('/profile')}
             >
@@ -221,6 +234,8 @@ const Navbar: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.5 }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <ThemeToggle />
+            <NotificationBell userId={user.id} />
             <Chip
               icon={getRoleIcon(user.role)}
               label={user.role}
