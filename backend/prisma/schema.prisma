@@ -26,7 +26,7 @@ model User {
   Like Like[]
   Comment Comment[]
 
-  @@map("user")
+  @@map("users")
 }
 
 model Profile {

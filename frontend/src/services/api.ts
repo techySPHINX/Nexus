@@ -66,12 +66,16 @@ export const apiService = {
 
   // Connection endpoints
   connections: {
-    getAll: () => api.get('/connection'),
+    getAll: ({ page, limit, role, search }: { page: number; limit: number; role?: 'STUDENT' | 'ALUM' | 'ADMIN'; search?: string }) =>
+      api.get('/connection', { params: { page, limit, role, search } }),
     getStats: () => api.get('/connection/stats'),
-    getPendingReceived: () => api.get('/connection/pending/received'),
-    getPendingSent: () => api.get('/connection/pending/sent'),
+    getPendingReceived: ({ page, limit }: { page: number; limit: number }) =>
+      api.get('/connection/pending/received', { params: { page, limit } }),
+    getPendingSent: ({ page, limit }: { page: number; limit: number }) =>
+      api.get('/connection/pending/sent', { params: { page, limit } }),
     getStatus: (userId: string) => api.get(`/connection/status/${userId}`),
-    getSuggestions: () => api.get('/connection/suggestions'),
+    getSuggestions: ({ limit }: { limit: number }) =>
+      api.get('/connection/suggestions', { params: { limit } }),
     send: (recipientId: string) => api.post('/connection/send', { recipientId }),
     updateStatus: (connectionId: string, status: string) =>
       api.patch('/connection/status', { connectionId, status }),
