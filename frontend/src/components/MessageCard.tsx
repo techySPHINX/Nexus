@@ -15,26 +15,42 @@ interface Message {
   senderId: string;
   senderName: string;
   createdAt: string;
+  timestamp?: string;
   isRead: boolean;
 }
 
 interface MessageCardProps {
   message: Message;
   isOwnMessage: boolean;
+  showAvatar?: boolean;
+  showSenderName?: boolean;
 }
 
-const MessageCard: React.FC<MessageCardProps> = ({ message, isOwnMessage }) => {
+const MessageCard: React.FC<MessageCardProps> = ({ 
+  message, 
+  isOwnMessage, 
+  showAvatar = true, 
+  showSenderName = true 
+}) => {
   const { user } = useAuth();
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInMinutes < 1) return 'Just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
     
-    if (diffInHours < 1) return 'Just now';
-    if (diffInHours < 24) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (diffInHours < 168) return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+    });
   };
 
   return (
@@ -48,72 +64,83 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, isOwnMessage }) => {
           display: 'flex',
           justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
           mb: 2,
+          alignItems: 'flex-end',
         }}
       >
-        {!isOwnMessage && (
+        {/* Avatar for received messages */}
+        {!isOwnMessage && showAvatar && (
           <Avatar
             sx={{
-              width: 32,
-              height: 32,
+              width: 28,
+              height: 28,
               bgcolor: 'primary.main',
-              fontSize: '0.875rem',
+              fontSize: '0.75rem',
               mr: 1,
+              mb: 0.5,
             }}
           >
             {message.senderName.charAt(0).toUpperCase()}
           </Avatar>
         )}
+        
+        {/* Spacer for sent messages to align properly */}
+        {isOwnMessage && (
+          <Box sx={{ width: 29, ml: 1 }} />
+        )}
 
         <Box sx={{ maxWidth: '70%' }}>
-          {!isOwnMessage && (
+          {/* Sender name for received messages */}
+          {!isOwnMessage && showSenderName && (
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ ml: 1, mb: 0.5, display: 'block' }}
+              sx={{ ml: 1, mb: 0.5, display: 'block', fontWeight: 500 }}
             >
               {message.senderName}
             </Typography>
           )}
 
+          {/* Message Bubble */}
           <Paper
             elevation={1}
             sx={{
               p: 1.5,
-              backgroundColor: isOwnMessage ? 'primary.main' : 'background.paper',
+              backgroundColor: isOwnMessage ? 'primary.main' : 'white',
               color: isOwnMessage ? 'white' : 'text.primary',
               borderRadius: 2,
+              borderBottomRightRadius: isOwnMessage ? 0 : 2,
+              borderBottomLeftRadius: isOwnMessage ? 2 : 0,
               position: 'relative',
               '&::after': isOwnMessage ? {
                 content: '""',
                 position: 'absolute',
                 right: -8,
-                top: 12,
+                bottom: 0,
                 width: 0,
                 height: 0,
                 borderLeft: '8px solid',
                 borderLeftColor: 'primary.main',
-                borderTop: '8px solid transparent',
                 borderBottom: '8px solid transparent',
               } : {},
               '&::before': !isOwnMessage ? {
                 content: '""',
                 position: 'absolute',
                 left: -8,
-                top: 12,
+                bottom: 0,
                 width: 0,
                 height: 0,
                 borderRight: '8px solid',
-                borderRightColor: 'background.paper',
-                borderTop: '8px solid transparent',
+                borderRightColor: 'white',
                 borderBottom: '8px solid transparent',
               } : {},
             }}
           >
-            <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+            <Typography variant="body2" sx={{ wordBreak: 'break-word', lineHeight: 1.4 }}>
               {message.content}
             </Typography>
           </Paper>
 
+          {/* Time stamp and read status */}
           <Box
             sx={{
               display: 'flex',
@@ -126,9 +153,13 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, isOwnMessage }) => {
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ fontSize: '0.75rem' }}
+              sx={{ 
+                fontSize: '0.75rem',
+                ml: isOwnMessage ? 0 : 1,
+                mr: isOwnMessage ? 1 : 0,
+              }}
             >
-              {formatTime(message.createdAt)}
+              {formatTime(message.timestamp || message.createdAt)}
             </Typography>
             
             {isOwnMessage && (
@@ -137,7 +168,11 @@ const MessageCard: React.FC<MessageCardProps> = ({ message, isOwnMessage }) => {
                 size="small"
                 color={message.isRead ? 'success' : 'default'}
                 variant="outlined"
-                sx={{ height: 16, fontSize: '0.625rem' }}
+                sx={{ 
+                  height: 16, 
+                  fontSize: '0.625rem',
+                  mr: 1,
+                }}
               />
             )}
           </Box>

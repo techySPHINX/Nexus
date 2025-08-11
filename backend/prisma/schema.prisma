@@ -8,79 +8,70 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique @db.VarChar(255)
-  password  String   @db.VarChar(255)
-  name      String   @db.VarChar(100)
-  role      Role     @default(STUDENT)
-  profile   Profile?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  requestedConnections Connection[] @relation("RequestedConnections")
-  receivedConnections Connection[] @relation("ReceivedConnections")
-  sentMessages Message[] @relation("SentMessages")
-  receivedMessages Message[] @relation("ReceivedMessages")
-  Notification Notification[]
-  Post Post[]
-  Like Like[]
-  Comment Comment[]
+  id                   String         @id @default(uuid())
+  email                String         @unique @db.VarChar(255)
+  password             String         @db.VarChar(255)
+  name                 String         @db.VarChar(100)
+  role                 Role           @default(STUDENT)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  Comment              Comment[]
+  receivedConnections  Connection[]   @relation("ReceivedConnections")
+  requestedConnections Connection[]   @relation("RequestedConnections")
+  Like                 Like[]
+  receivedMessages     Message[]      @relation("ReceivedMessages")
+  sentMessages         Message[]      @relation("SentMessages")
+  Notification         Notification[]
+  Post                 Post[]
+  profile              Profile?
 
   @@map("users")
 }
 
 model Profile {
-  id         String   @id @default(uuid())
-  userId     String   @unique
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bio        String?  @db.Text
-  location   String?  @db.VarChar(100)
-  interests  String?  @db.Text
-  avatarUrl  String?  @db.VarChar(512)
-  skills     Skill[]  @relation("ProfileSkills")
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  bio       String?
+  location  String?  @db.VarChar(100)
+  interests String?
+  avatarUrl String?  @db.VarChar(512)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills    Skill[]  @relation("ProfileSkills")
 
   @@map("profile")
 }
 
 model Skill {
-  id        String    @id @default(uuid())
-  name      String    @unique @db.VarChar(50)
-  profiles  Profile[] @relation("ProfileSkills")
+  id       String    @id @default(uuid())
+  name     String    @unique @db.VarChar(50)
+  profiles Profile[] @relation("ProfileSkills")
 
   @@map("skill")
 }
 
 model Connection {
-  id           String           @id @default(uuid())
-  requesterId  String
-  recipientId  String
-  status       ConnectionStatus @default(PENDING)
-  createdAt    DateTime         @default(now())
-
-  requester    User             @relation("RequestedConnections", fields: [requesterId], references: [id])
-  recipient    User             @relation("ReceivedConnections", fields: [recipientId], references: [id])
+  id          String           @id @default(uuid())
+  requesterId String
+  recipientId String
+  status      ConnectionStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  recipient   User             @relation("ReceivedConnections", fields: [recipientId], references: [id])
+  requester   User             @relation("RequestedConnections", fields: [requesterId], references: [id])
 
   @@unique([requesterId, recipientId])
   @@map("connection")
 }
 
-enum ConnectionStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-  BLOCKED
-}
-
 model Message {
-  id          String   @id @default(uuid())
-  content     String   @db.Text
-  timestamp   DateTime @default(now())
-  senderId    String
-  receiverId  String
-  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  id         String   @id @default(uuid())
+  content    String
+  timestamp  DateTime @default(now())
+  senderId   String
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
 
   @@map("message")
 }
@@ -88,37 +79,37 @@ model Message {
 model Notification {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   message   String
-  type      String?  
+  type      String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification")
 }
 
 model Post {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   authorId  String
-  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
   content   String
-  imageUrl  String?  @db.VarChar(512)
-  type      String?  // "JOB", "UPDATE", etc.
-  createdAt DateTime @default(now())
-  Like Like[]
-  Comment Comment[]
+  imageUrl  String?   @db.VarChar(512)
+  type      String?
+  createdAt DateTime  @default(now())
+  Comment   Comment[]
+  Like      Like[]
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("post")
 }
 
 model Like {
-  id      String   @id @default(uuid())
-  userId  String
-  postId  String
-  user    User     @relation(fields: [userId], references: [id])
-  post    Post     @relation(fields: [postId], references: [id])
-  @@unique([userId, postId])
+  id     String @id @default(uuid())
+  userId String
+  postId String
+  post   Post   @relation(fields: [postId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
 
+  @@unique([userId, postId])
   @@map("like")
 }
 
@@ -127,11 +118,18 @@ model Comment {
   content   String
   userId    String
   postId    String
-  user      User     @relation(fields: [userId], references: [id])
-  post      Post     @relation(fields: [postId], references: [id])
   createdAt DateTime @default(now())
+  post      Post     @relation(fields: [postId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@map("comment")
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  BLOCKED
 }
 
 enum Role {

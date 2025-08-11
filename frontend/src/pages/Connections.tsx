@@ -50,6 +50,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, handleApiError } from '../services/api';
 import { ErrorBoundary } from 'react-error-boundary';
+import useConnections from '../hooks/useConnections';
 
 interface Connection {
   id: string;
@@ -85,7 +86,6 @@ interface PendingRequest {
       avatarUrl?: string;
       skills: string[];
     };
-
   };
   recipient?: {
     id: string;
@@ -99,24 +99,22 @@ interface PendingRequest {
       avatarUrl?: string;
       skills: string[];
     };
-
   };
 }
 
 interface ConnectionSuggestion {
   user: {
-    id: string;
-    name: string;
-    email: string;
-    role: 'STUDENT' | 'ALUM' | 'ADMIN';
-    profile?: {
-      bio?: string;
-      location?: string;
-      interests?: string;
-      avatarUrl?: string;
+  id: string;
+  name: string;
+  email: string;
+  role: 'STUDENT' | 'ALUM' | 'ADMIN';
+  profile?: {
+    bio?: string;
+    location?: string;
+    interests?: string;
+    avatarUrl?: string;
       skills: string[];
     };
-
   };
   matchScore: number;
   reasons: string[];
@@ -160,11 +158,11 @@ function TabPanel(props: TabPanelProps) {
     <div
       role="tabpanel"
       hidden={value !== index}
-      id={`connections-tabpanel-${index}`}
-      aria-labelledby={`connections-tab-${index}`}
+      id={`simple-tabpanel-${index}`}
+      aria-labelledby={`simple-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
     </div>
   );
 }
@@ -172,54 +170,51 @@ function TabPanel(props: TabPanelProps) {
 const Connections: React.FC = () => {
   const { token } = useAuth();
   const [tabValue, setTabValue] = useState(0);
-  const [connections, setConnections] = useState<Connection[]>([]);
-  const [pendingReceived, setPendingReceived] = useState<PendingRequest[]>([]);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [connectionToBlock, setConnectionToBlock] = useState<string | null>(null);
-  const [pendingSent, setPendingSent] = useState<PendingRequest[]>([]);
-  const [suggestions, setSuggestions] = useState<ConnectionSuggestion[]>([]);
-  const [stats, setStats] = useState<ConnectionStats | null>(null);
-  const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<ConnectionSuggestion['user'] | null>(null);
   const [messageDialog, setMessageDialog] = useState(false);
   const [messageContent, setMessageContent] = useState('');
+  const [messageLoading, setMessageLoading] = useState(false);
   const [filters, setFilters] = useState({
     page: 1,
     limit: 20,
     role: '' as '' | 'STUDENT' | 'ALUM' | 'ADMIN',
   });
-  const [totalCounts, setTotalCounts] = useState({
-    connections: 0,
-    pendingReceived: 0,
-    pendingSent: 0,
-    suggestions: 0,
-  });
+
+  // Convert filters to the format expected by the hook
+  const hookFilters = {
+    page: filters.page,
+    limit: filters.limit,
+    role: filters.role || undefined,
+    search: searchTerm || undefined,
+  };
+
+  // Use the custom hook for all connection logic
+  const {
+    connections,
+    pendingReceived,
+    pendingSent,
+    suggestions,
+    stats,
+    loading,
+    error,
+    fetchAll,
+    sendRequest,
+    respondToRequest,
+    cancelConnection,
+    removeConnection,
+    setError
+  } = useConnections();
 
   useEffect(() => {
     if (token) {
-      fetchConnections();
-      fetchSuggestions();
-      fetchStats();
+      fetchAll(hookFilters);
     }
-  }, [token, filters.page, filters.limit, filters.role]);
-  useEffect(() => {
-    if (!token) return;
-
-    // Load data for current tab on mount
-    switch (tabValue) {
-      case 0: fetchConnections(); break;
-      case 1: fetchPendingReceived(); break;
-      case 2: fetchPendingSent(); break;
-      case 3: fetchSuggestions(); break;
-    }
-
-    // Always fetch stats
-    fetchStats();
-  }, [token, tabValue]); // Add tabValue to dependencies
+  }, [token, filters.page, filters.limit, filters.role, searchTerm, fetchAll]);
 
   function ErrorFallback({ error, resetErrorBoundary }: any) {
     return (
@@ -231,142 +226,17 @@ const Connections: React.FC = () => {
     );
   }
 
-  // Update the fetchConnections function
-  const fetchConnections = async () => {
-    try {
-      setLoading(true);
-      const [connectionsRes, pendingReceivedRes, pendingSentRes] = await Promise.all([
-        apiService.connections.getAll({
-          page: filters.page,
-          limit: filters.limit,
-          role: filters.role || undefined,
-          search: searchTerm || undefined,
-        }),
-        apiService.connections.getPendingReceived({
-          page: filters.page,
-          limit: filters.limit,
-        }),
-        apiService.connections.getPendingSent({
-          page: filters.page,
-          limit: filters.limit,
-        }),
-      ]);
-      setConnections(connectionsRes.data?.connections || []);
-      setPendingReceived(pendingReceivedRes.data?.requests || []);
-      setPendingSent(pendingSentRes.data?.requests || []);
-
-      setTotalCounts({
-        connections: connectionsRes.data?.pagination?.total || 0,
-        pendingReceived: pendingReceivedRes.data?.pagination?.total || 0,
-        pendingSent: pendingSentRes.data?.pagination?.total || 0,
-        suggestions: suggestions.length,
-      });
-    } catch (error: any) {
-      console.error('Error fetching connections:', error);
-      setError(handleApiError(error) || 'Failed to load connections');
-    } finally {
-      setLoading(false);
-    }
-  };
-  const fetchPendingReceived = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.connections.getPendingReceived({
-        page: 1,  // Default page
-        limit: 10  // Default limit
-      });
-      setPendingReceived(response.data?.requests || []);
-      setTotalCounts(prev => ({ ...prev, pendingReceived: response.data?.requests?.length || 0 }));
-    } catch (error) {
-      setError(handleApiError(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchPendingSent = async () => {
-    try {
-      setLoading(true);
-      const response = await apiService.connections.getPendingSent({
-        page: 1,  // Default page
-        limit: 10  // Default limit
-      });
-      setPendingSent(response.data?.requests || []);
-      setTotalCounts(prev => ({ ...prev, pendingSent: response.data?.requests?.length || 0 }));
-    } catch (error) {
-      setError(handleApiError(error));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchSuggestions = async () => {
-    try {
-      const response = await apiService.connections.getSuggestions({
-        limit: filters.limit,
-      });
-      setSuggestions(response.data?.suggestions || []);
-      setTotalCounts(prev => ({
-        ...prev,
-        suggestions: response.data?.suggestions?.length || 0,
-      }));
-    } catch (error: any) {
-      console.error('Error fetching suggestions:', error);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const response = await apiService.connections.getStats();
-      setStats(response.data);
-    } catch (error: any) {
-      console.error('Error fetching stats:', error);
-    }
-  };
-
-  const sendConnectionRequest = async (userId: string) => {
-    try {
-      setActionLoading(`send-${userId}`);
-      await apiService.connections.send(userId);
-      setSuggestions(prev => prev.filter(s => s.user.id !== userId));
-      setSuccess('Connection request sent successfully!');
-      fetchStats(); // Refresh stats after sending request
-      setError(null);
-    } catch (error: any) {
-      console.error('Error sending connection request:', error);
-      setError(handleApiError(error) || 'Failed to send connection request');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const respondToConnection = async (connectionId: string, status: 'ACCEPTED' | 'REJECTED' | 'BLOCKED') => {
-    try {
-      setActionLoading(`respond-${connectionId}`);
-      await apiService.connections.updateStatus(connectionId, status);
-      setPendingReceived(prev => prev.filter(c => c.id !== connectionId));
-      if (status === 'ACCEPTED') {
-        fetchConnections();
-      }
-      fetchStats();
-      setSuccess(`Connection request ${status.toLowerCase()} successfully!`);
-      setError(null);
-    } catch (error: any) {
-      console.error('Error responding to connection:', error);
-      setError(handleApiError(error) || 'Failed to respond to connection request');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const cancelConnection = async (connectionId: string) => {
+  // Wrapper functions that use the hook functions with loading states
+  const handleCancelConnection = async (connectionId: string) => {
     try {
       setActionLoading(`cancel-${connectionId}`);
-      await apiService.connections.cancel(connectionId);
-      setPendingSent(prev => prev.filter(c => c.id !== connectionId));
-      fetchStats();
-      setSuccess('Connection request cancelled.');
+      const success = await cancelConnection(connectionId);
+      if (success) {
+        setSuccess('Connection request cancelled.');
       setError(null);
+        // Refresh data
+        fetchAll(hookFilters);
+      }
     } catch (error: any) {
       console.error('Error canceling connection:', error);
       setError(handleApiError(error) || 'Failed to cancel connection request');
@@ -375,14 +245,16 @@ const Connections: React.FC = () => {
     }
   };
 
-  const removeConnection = async (connectionId: string) => {
+  const handleRemoveConnection = async (connectionId: string) => {
     try {
       setActionLoading(`remove-${connectionId}`);
-      await apiService.connections.remove(connectionId);
-      setConnections(prev => prev.filter(c => c.id !== connectionId));
-      fetchStats();
-      setSuccess('Connection removed.');
+      const success = await removeConnection(connectionId);
+      if (success) {
+        setSuccess('Connection removed.');
       setError(null);
+        // Refresh data
+        fetchAll(hookFilters);
+      }
     } catch (error: any) {
       console.error('Error removing connection:', error);
       setError(handleApiError(error) || 'Failed to remove connection');
@@ -391,9 +263,31 @@ const Connections: React.FC = () => {
     }
   };
 
+  const sendMessage = async () => {
+    if (!selectedUser || !messageContent.trim()) return;
+
+    try {
+      setMessageLoading(true);
+      await apiService.messages.send(messageContent.trim(), selectedUser.id);
+      
+      setSuccess(`Message sent to ${selectedUser.name} successfully!`);
+      setMessageDialog(false);
+      setMessageContent('');
+      setSelectedUser(null);
+      
+      // Navigate to Messages page to show the new conversation
+      window.location.href = '/messages';
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      setError(handleApiError(error) || 'Failed to send message');
+    } finally {
+      setMessageLoading(false);
+    }
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchConnections();
+    fetchAll(hookFilters);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -432,389 +326,447 @@ const Connections: React.FC = () => {
   }
 
   return (
-    <ErrorBoundary
-      FallbackComponent={ErrorFallback}
-      onReset={() => {
-        // Reset the state of your app
-        fetchConnections();
-      }}
-    >
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45 }}
-        >
-          {/* Header + subtitle */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" mb={3} gap={2}>
-            <Box>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }} gutterBottom>
-                Connections
-              </Typography>
-              <Typography variant="subtitle1" color="text.secondary">
-                Manage and grow your network
-              </Typography>
-            </Box>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
+        {/* Header */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" gutterBottom sx={{ fontWeight: 600 }}>
+          Connections
+        </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Manage your professional network and discover new connections
+        </Typography>
+        </Box>
 
-            {/* Quick actions / stats condensed */}
-            {stats && (
-              <Stack direction="row" spacing={1} alignItems="center">
-                <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderRadius: 2 }}>
-                  <PeopleIcon color="info" />
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{stats.total}</Typography>
-                    <Typography variant="caption" color="text.secondary">Total</Typography>
-                  </Box>
-                </Paper>
-                <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderRadius: 2 }}>
-                  <TrendingUpIcon color="warning" />
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{stats.pendingReceived}</Typography>
-                    <Typography variant="caption" color="text.secondary">Pending</Typography>
-                  </Box>
-                </Paper>
-                <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderRadius: 2 }}>
-                  <SchoolIcon color="primary" />
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{stats.byRole.students}</Typography>
-                    <Typography variant="caption" color="text.secondary">Students</Typography>
-                  </Box>
-                </Paper>
-                <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderRadius: 2 }}>
-                  <WorkIcon color="secondary" />
-                  <Box>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{stats.byRole.alumni}</Typography>
-                    <Typography variant="caption" color="text.secondary">Alumni</Typography>
-                  </Box>
-                </Paper>
-              </Stack>
-            )}
-          </Box>
+        {/* Stats Cards */}
+        {stats && (
+          <Grid container spacing={3} sx={{ mb: 4 }}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ textAlign: 'center', py: 2 }}>
+                <CardContent>
+                  <PeopleIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
+                  <Typography variant="h4" component="div" sx={{ fontWeight: 600 }}>
+                    {stats.total}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Connections
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ textAlign: 'center', py: 2 }}>
+                <CardContent>
+                  <TrendingUpIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
+                  <Typography variant="h4" component="div" sx={{ fontWeight: 600 }}>
+                    {stats.pendingReceived}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Pending Requests
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ textAlign: 'center', py: 2 }}>
+                <CardContent>
+                  <SchoolIcon sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
+                  <Typography variant="h4" component="div" sx={{ fontWeight: 600 }}>
+                    {stats.byRole.students}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Students
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ textAlign: 'center', py: 2 }}>
+                <CardContent>
+                  <WorkIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
+                  <Typography variant="h4" component="div" sx={{ fontWeight: 600 }}>
+                    {stats.byRole.alumni}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Alumni
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        )}
 
-          <Divider sx={{ mb: 3 }} />
-
-          {/* Tabs */}
-          <Box sx={{ mb: 2 }}>
-            <Tabs
-              value={tabValue}
-              onChange={(e, newValue) => {
-                if (newValue !== tabValue) {
-                  setTabValue(newValue);
-                  switch (newValue) {
-                    case 0: fetchConnections(); break;
-                    case 1: fetchPendingReceived(); break;
-                    case 2: fetchPendingSent(); break;
-                    case 3: fetchSuggestions(); break;
-                  }
-                }
-              }}
-              variant="scrollable"
-              scrollButtons
-              allowScrollButtonsMobile
-            >
-              <Tab label={`Connections (${totalCounts.connections})`} />
-              <Tab label={`Pending Received (${totalCounts.pendingReceived})`} />
-              <Tab label={`Pending Sent (${totalCounts.pendingSent})`} />
-              <Tab label={`Suggestions (${totalCounts.suggestions})`} />
-            </Tabs>
-          </Box>
-
-          {/* Search + Filters */}
-          <Box component="form" onSubmit={handleSearch} sx={{ mb: 3 }}>
-            <Paper sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 1.25, borderRadius: 3 }} elevation={1}>
-              <TextField
-                size="small"
-                variant="outlined"
-                placeholder="Search connections by name, skill or email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
-              {tabValue === 0 && (
-                <FormControl size="small" sx={{ minWidth: 140 }}>
-                  <InputLabel>Role</InputLabel>
+        {/* Search and Filters */}
+        <Paper sx={{ p: 3, mb: 4 }}>
+          <form onSubmit={handleSearch}>
+            <Grid container spacing={2} alignItems="center">
+              <Grid item xs={12} md={6}>
+                <TextField
+                  fullWidth
+                  placeholder="Search connections..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <FormControl fullWidth>
+                  <InputLabel>Role Filter</InputLabel>
                   <Select
                     value={filters.role}
-                    label="Role"
-                    onChange={(e) => handleRoleFilter(e.target.value as any)}
+                    label="Role Filter"
+                    onChange={(e) => handleRoleFilter(e.target.value as '' | 'STUDENT' | 'ALUM' | 'ADMIN')}
                   >
-                    <MenuItem value="">All</MenuItem>
-                    <MenuItem value="STUDENT">Student</MenuItem>
-                    <MenuItem value="ALUM">Alum</MenuItem>
-                    <MenuItem value="ADMIN">Admin</MenuItem>
+                    <MenuItem value="">All Roles</MenuItem>
+                    <MenuItem value="STUDENT">Students</MenuItem>
+                    <MenuItem value="ALUM">Alumni</MenuItem>
+                    <MenuItem value="ADMIN">Admins</MenuItem>
                   </Select>
                 </FormControl>
-              )}
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  fullWidth
+                  startIcon={<SearchIcon />}
+                >
+                  Search
+                </Button>
+              </Grid>
+            </Grid>
+          </form>
+        </Paper>
 
-              <Button type="submit" variant="contained" sx={{ whiteSpace: 'nowrap' }}>
-                Search
-              </Button>
-            </Paper>
-          </Box>
+        {/* Tabs */}
+        <Paper sx={{ mb: 4 }}>
+          <Tabs
+            value={tabValue}
+            onChange={(_, newValue) => setTabValue(newValue)}
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab label={`Connections (${connections.length})`} />
+            <Tab label={`Pending Received (${pendingReceived.length})`} />
+            <Tab label={`Pending Sent (${pendingSent.length})`} />
+            <Tab label={`Suggestions (${suggestions.length})`} />
+          </Tabs>
 
+          {/* Error Alert */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            <Alert severity="error" sx={{ m: 2 }}>
               {error}
             </Alert>
           )}
+
+          {/* Success Alert */}
           {success && (
-            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+            <Alert severity="success" sx={{ m: 2 }}>
               {success}
             </Alert>
           )}
 
           {/* Tab Panels */}
-
-          {/* Connections Tab */}
           <TabPanel value={tabValue} index={0}>
-            {loading && (
-              <Box display="flex" justifyContent="center" my={2}>
-                <CircularProgress size={28} />
-              </Box>
-            )}
-
-            <Grid container spacing={3}>
+        {/* Connections Tab */}
+          <Grid container spacing={3}>
               {connections.map((connection) => (
-                <Grid item xs={12} sm={6} md={4} key={connection.id}>
-                  <Card sx={{ borderRadius: 3, transition: 'transform .18s ease, box-shadow .18s ease', '&:hover': { transform: 'translateY(-6px)', boxShadow: 6 } }}>
-                    <CardContent>
-                      <Box display="flex" gap={2} alignItems="center">
-                        <Avatar
-                          src={connection.user.profile?.avatarUrl}
-                          sx={{ width: 64, height: 64 }}
-                        >
-                          {!connection.user.profile?.avatarUrl && connection.user.name?.[0]}
-                        </Avatar>
-
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="h6" sx={{ fontWeight: 700 }}>{connection.user.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">{connection.user.email}</Typography>
-
-                          <Box mt={1} display="flex" gap={1} alignItems="center">
-                            <Chip label={connection.user.role} color={getRoleColor(connection.user.role) as any} size="small" />
-                            {connection.user.profile?.location && (
-                              <Typography variant="caption" color="text.secondary">📍 {connection.user.profile.location}</Typography>
-                            )}
-                          </Box>
-
-                          {connection.user.profile?.bio && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{connection.user.profile.bio}</Typography>
-                          )}
-
-                          {connection.user.profile?.skills && connection.user.profile.skills.length > 0 && (
-                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>Skills: {connection.user.profile.skills.join(', ')}</Typography>
-                          )}
-                        </Box>
-                      </Box>
-                    </CardContent>
-
-                    <Divider />
-
-                    <CardActions sx={{ px: 2, py: 1, justifyContent: 'space-between' }}>
-                      <Button size="small" startIcon={<MessageIcon />} onClick={() => { setSelectedUser({ ...connection.user }); setMessageDialog(true); }}>
-                        Message
-                      </Button>
-
-                      <Button size="small" color="error" onClick={() => removeConnection(connection.id)} disabled={actionLoading === `remove-${connection.id}`}>
-                        {actionLoading === `remove-${connection.id}` ? 'Processing...' : 'Remove'}
-                      </Button>
-                    </CardActions>
-                  </Card>
-                </Grid>
-              ))}
-
-              {connections.length === 0 && (
-                <Grid item xs={12}>
-                  <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
-                    <Typography variant="h6" color="text.secondary">No connections found</Typography>
-                    <Typography variant="body2" color="text.secondary">Start building your network by sending connection requests.</Typography>
-                  </Paper>
-                </Grid>
-              )}
-            </Grid>
-
-            {totalCounts.connections > filters.limit && (
-              <Box display="flex" justifyContent="center" mt={3} gap={1}>
-                <IconButton onClick={() => handlePageChange(filters.page - 1)} disabled={filters.page === 1}>
-                  <PrevIcon />
-                </IconButton>
-                <Button onClick={() => handlePageChange(filters.page + 1)} disabled={filters.page * filters.limit >= totalCounts.connections}>Next</Button>
-              </Box>
-            )}
-          </TabPanel>
-
-          {/* Pending Received Tab */}
-          <TabPanel value={tabValue} index={1}>
-            <List>
-              {pendingReceived.map((connection) => (
-                <Card key={connection.id} sx={{ mb: 2, borderRadius: 2 }}>
+              <Grid item xs={12} sm={6} md={4} key={connection.id}>
+                <Card>
                   <CardContent>
-                    <Box display="flex" alignItems="center" justifyContent="space-between">
-                      <Box display="flex" alignItems="center" gap={2}>
-                        <Avatar src={connection.requester?.profile?.avatarUrl}><PersonIcon /></Avatar>
-                        <Box>
-                          <Typography variant="subtitle1">{connection.requester?.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">{connection.requester?.email}</Typography>
-                          {connection.requester?.profile?.bio && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{connection.requester.profile.bio}</Typography>
-                          )}
-                        </Box>
-                      </Box>
-
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                          {connection.user.name.charAt(0).toUpperCase()}
+                      </Avatar>
                       <Box>
-                        <Button variant="contained" startIcon={<CheckIcon />} onClick={() => respondToConnection(connection.id, 'ACCEPTED')} disabled={actionLoading === `respond-${connection.id}`} sx={{ mr: 1 }}>Accept</Button>
-                        <Button variant="outlined" color="error" startIcon={<CloseIcon />} onClick={() => respondToConnection(connection.id, 'REJECTED')} disabled={actionLoading === `respond-${connection.id}`} sx={{ mr: 1 }}>Reject</Button>
-                        <Button variant="outlined" color="secondary" startIcon={<BlockIcon />} onClick={() => { setConnectionToBlock(connection.id); setBlockDialogOpen(true); }} disabled={actionLoading === `respond-${connection.id}`}>Block</Button>
-                      </Box>
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {pendingReceived.length === 0 && (
-                <Box textAlign="center" py={4}><Typography variant="h6" color="text.secondary">No pending connection requests</Typography></Box>
-              )}
-
-            </List>
-
-            {totalCounts.pendingReceived > filters.limit && (
-              <Box display="flex" justifyContent="center" mt={3}>
-                <Button onClick={() => handlePageChange(filters.page - 1)} disabled={filters.page === 1} sx={{ mr: 2 }}>Previous</Button>
-                <Button onClick={() => handlePageChange(filters.page + 1)} disabled={filters.page * filters.limit >= totalCounts.pendingReceived}>Next</Button>
-              </Box>
-            )}
-          </TabPanel>
-
-          {/* Pending Sent Tab */}
-          <TabPanel value={tabValue} index={2}>
-            <List>
-              {pendingSent.map((connection) => (
-                <Card key={connection.id} sx={{ mb: 2, borderRadius: 2 }}>
-                  <CardContent>
-                    <Box display="flex" alignItems="center" justifyContent="space-between">
-                      <Box display="flex" alignItems="center" gap={2}>
-                        <Avatar src={connection.recipient?.profile?.avatarUrl}><PersonIcon /></Avatar>
-                        <Box>
-                          <Typography variant="subtitle1">{connection.recipient?.name}</Typography>
-                          <Typography variant="caption" color="text.secondary">{connection.recipient?.email}</Typography>
+                          <Typography variant="h6" component="div">
+                          {connection.user.name}
+                        </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {connection.user.email}
+                          </Typography>
                         </Box>
                       </Box>
-
-                      <Button variant="outlined" color="error" onClick={() => cancelConnection(connection.id)} disabled={actionLoading === `cancel-${connection.id}`}>{actionLoading === `cancel-${connection.id}` ? 'Processing...' : 'Cancel'}</Button>
+                        <Chip
+                          label={connection.user.role}
+                        color={getRoleColor(connection.user.role)}
+                        size="small"
+                        sx={{ mb: 2 }}
+                      />
+                      {connection.user.profile?.skills && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Skills:
+                          </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {connection.user.profile.skills.slice(0, 3).map((skill, index) => (
+                              <Chip
+                                key={index}
+                                label={skill}
+                          size="small"
+                                variant="outlined"
+                        />
+                            ))}
+                      </Box>
                     </Box>
+                    )}
                   </CardContent>
+                  <CardActions>
+                    <Button
+                      size="small"
+                      startIcon={<MessageIcon />}
+                      onClick={() => {
+                          setSelectedUser(connection.user);
+                        setMessageDialog(true);
+                      }}
+                    >
+                      Message
+                    </Button>
+                    <Button
+                      size="small"
+                      color="error"
+                        onClick={() => {
+                          setConnectionToBlock(connection.id);
+                          setBlockDialogOpen(true);
+                        }}
+                    >
+                      Remove
+                    </Button>
+                  </CardActions>
                 </Card>
-              ))}
+              </Grid>
+            ))}
+          </Grid>
+        </TabPanel>
 
-              {pendingSent.length === 0 && (
-                <Box textAlign="center" py={4}><Typography variant="h6" color="text.secondary">No pending sent requests</Typography></Box>
-              )}
-            </List>
+          <TabPanel value={tabValue} index={1}>
+        {/* Pending Received Tab */}
+          <List>
+              {pendingReceived.map((request) => (
+                <Card key={request.id} sx={{ mb: 2 }}>
+                <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Avatar sx={{ mr: 2, bgcolor: 'secondary.main' }}>
+                        {request.requester?.name?.charAt(0).toUpperCase() || '?'}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6" component="div">
+                          {request.requester?.name || 'Unknown User'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {request.requester?.email || 'No email'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Chip
+                      label={request.requester?.role || 'Unknown'}
+                      color={getRoleColor(request.requester?.role || '')}
+                      size="small"
+                      sx={{ mb: 2 }}
+                    />
+                  </CardContent>
+                  <CardActions>
+                      <Button
+                      size="small"
+                      color="success"
+                        startIcon={<CheckIcon />}
+                      onClick={() => respondToRequest(request.id, 'ACCEPTED')}
+                      disabled={actionLoading === `accept-${request.id}`}
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                      size="small"
+                        color="error"
+                        startIcon={<CloseIcon />}
+                      onClick={() => respondToRequest(request.id, 'REJECTED')}
+                      disabled={actionLoading === `reject-${request.id}`}
+                      >
+                        Reject
+                      </Button>
+                  </CardActions>
+              </Card>
+            ))}
+          </List>
+        </TabPanel>
 
-            {totalCounts.pendingSent > filters.limit && (
-              <Box display="flex" justifyContent="center" mt={3}>
-                <Button onClick={() => handlePageChange(filters.page - 1)} disabled={filters.page === 1} sx={{ mr: 2 }}>Previous</Button>
-                <Button onClick={() => handlePageChange(filters.page + 1)} disabled={filters.page * filters.limit >= totalCounts.pendingSent}>Next</Button>
-              </Box>
-            )}
-          </TabPanel>
+          <TabPanel value={tabValue} index={2}>
+        {/* Pending Sent Tab */}
+          <List>
+              {pendingSent.map((request) => (
+                <Card key={request.id} sx={{ mb: 2 }}>
+                <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Avatar sx={{ mr: 2, bgcolor: 'info.main' }}>
+                        {request.recipient?.name?.charAt(0).toUpperCase() || '?'}
+                      </Avatar>
+                      <Box>
+                        <Typography variant="h6" component="div">
+                          {request.recipient?.name || 'Unknown User'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {request.recipient?.email || 'No email'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Chip
+                      label={request.recipient?.role || 'Unknown'}
+                      color={getRoleColor(request.recipient?.role || '')}
+                      size="small"
+                      sx={{ mb: 2 }}
+                    />
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      size="small"
+                      color="warning"
+                      onClick={() => handleCancelConnection(request.id)}
+                      disabled={actionLoading === `cancel-${request.id}`}
+                    >
+                      Cancel Request
+                    </Button>
+                  </CardActions>
+              </Card>
+            ))}
+          </List>
+        </TabPanel>
 
-          {/* Suggestions Tab */}
           <TabPanel value={tabValue} index={3}>
-            <Grid container spacing={3}>
+        {/* Suggestions Tab */}
+          <Grid container spacing={3}>
               {suggestions.map((suggestion) => (
                 <Grid item xs={12} sm={6} md={4} key={suggestion.user.id}>
-                  <Card sx={{ borderRadius: 3, transition: 'transform .18s ease, box-shadow .18s ease', '&:hover': { transform: 'translateY(-6px)', boxShadow: 6 } }}>
-                    <CardContent>
-                      <Box display="flex" gap={2} alignItems="center">
-                        <Avatar src={suggestion.user?.profile?.avatarUrl} sx={{ width: 56, height: 56 }}>{!suggestion.user?.profile?.avatarUrl && suggestion.user?.name?.[0]}</Avatar>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="h6">{suggestion.user.name}</Typography>
-                          <Box mt={1} display="flex" gap={1} alignItems="center">
-                            <Chip label={suggestion.user.role} color={getRoleColor(suggestion.user.role) as any} size="small" />
-                            {suggestion.matchScore > 0 && <Chip label={`${suggestion.matchScore} pts`} color="success" size="small" />}
-                          </Box>
-                          {suggestion.user?.profile?.bio && <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{suggestion.user.profile.bio}</Typography>}
-
-                          {suggestion.reasons && suggestion.reasons.length > 0 && (
-                            <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                              {suggestion.reasons.map((reason, index) => (
-                                <Chip key={index} label={reason} size="small" variant="outlined" />
-                              ))}
-                            </Box>
-                          )}
+                <Card>
+                  <CardContent>
+                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <Avatar sx={{ mr: 2, bgcolor: 'success.main' }}>
+                          {suggestion.user.name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <Box>
+                          <Typography variant="h6" component="div">
+                            {suggestion.user.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {suggestion.user.email}
+                        </Typography>
                         </Box>
                       </Box>
-                    </CardContent>
-                    <Divider />
-                    <CardActions sx={{ p: 2 }}>
-                      <Button fullWidth variant="contained" startIcon={<PersonAddIcon />} onClick={() => sendConnectionRequest(suggestion.user.id)} disabled={actionLoading === `send-${suggestion.user.id}`}>
-                        Connect
+                      <Chip
+                        label={suggestion.user.role}
+                        color={getRoleColor(suggestion.user.role)}
+                        size="small"
+                        sx={{ mb: 2 }}
+                      />
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Match Score: {suggestion.matchScore}%
+                      </Typography>
+                      {suggestion.reasons.length > 0 && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Why we think you'd connect:
+                      </Typography>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {suggestion.reasons.slice(0, 2).map((reason, index) => (
+                              <Chip
+                                key={index}
+                                label={reason}
+                                size="small"
+                                variant="outlined"
+                                color="info"
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                    )}
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                        size="small"
+                        color="primary"
+                      startIcon={<PersonAddIcon />}
+                        onClick={() => sendRequest(suggestion.user.id)}
+                        disabled={actionLoading === `send-${suggestion.user.id}`}
+                    >
+                      Connect
+                    </Button>
+                      <Button
+                        size="small"
+                        startIcon={<MessageIcon />}
+                        onClick={() => {
+                          setSelectedUser(suggestion.user);
+                          setMessageDialog(true);
+                        }}
+                      >
+                        Message
                       </Button>
-                    </CardActions>
-                  </Card>
-                </Grid>
-              ))}
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </TabPanel>
+        </Paper>
 
-              {suggestions.length === 0 && (
-                <Grid item xs={12}>
-                  <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
-                    <Typography variant="h6" color="text.secondary">No suggestions available</Typography>
-                    <Typography variant="body2" color="text.secondary">Check back later for new connection suggestions</Typography>
-                  </Paper>
-                </Grid>
-              )}
-            </Grid>
-          </TabPanel>
+        {/* Message Dialog */}
+        <Dialog open={messageDialog} onClose={() => setMessageDialog(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Send Message</DialogTitle>
+          <DialogContent>
+            <DialogContentText sx={{ mb: 2 }}>
+              Send a message to {selectedUser?.name}
+            </DialogContentText>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Message"
+              fullWidth
+              multiline
+              rows={4}
+              value={messageContent}
+              onChange={(e) => setMessageContent(e.target.value)}
+              placeholder="Type your message here..."
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setMessageDialog(false)}>Cancel</Button>
+            <Button onClick={sendMessage} variant="contained" disabled={!messageContent.trim() || messageLoading}>
+              {messageLoading ? 'Sending...' : 'Send'}
+            </Button>
+          </DialogActions>
+        </Dialog>
 
-          {/* Message Dialog */}
-          <Dialog open={messageDialog} onClose={() => setMessageDialog(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Send Message to {selectedUser?.name}</DialogTitle>
-            <DialogContent>
-              <TextField
-                autoFocus
-                margin="dense"
-                label="Message"
-                fullWidth
-                multiline
-                rows={4}
-                value={messageContent}
-                onChange={(e) => setMessageContent(e.target.value)}
-                placeholder="Type your message here..."
-              />
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setMessageDialog(false)}>Cancel</Button>
-              <Button /*onClick={sendMessage}*/ variant="contained" disabled={!messageContent.trim()}>
-                Send
-              </Button>
-            </DialogActions>
-          </Dialog>
-
-          {/* Block Confirmation Dialog */}
-          <Dialog open={blockDialogOpen} onClose={() => setBlockDialogOpen(false)}>
-            <DialogTitle>Confirm Block</DialogTitle>
-            <DialogContent>
-              <DialogContentText>Are you sure you want to block this user? This action cannot be undone.</DialogContentText>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setBlockDialogOpen(false)}>Cancel</Button>
-              <Button onClick={() => { if (connectionToBlock) { respondToConnection(connectionToBlock, 'BLOCKED'); } setBlockDialogOpen(false); }} color="secondary" autoFocus>Confirm Block</Button>
-            </DialogActions>
-          </Dialog>
-
-        </motion.div>
-      </Container>
+        {/* Block/Remove Dialog */}
+        <Dialog open={blockDialogOpen} onClose={() => setBlockDialogOpen(false)}>
+          <DialogTitle>Remove Connection</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to remove this connection? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setBlockDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                if (connectionToBlock) {
+                  handleRemoveConnection(connectionToBlock);
+                  setBlockDialogOpen(false);
+                  setConnectionToBlock(null);
+                }
+              }}
+              color="error"
+              variant="contained"
+            >
+              Remove
+            </Button>
+          </DialogActions>
+        </Dialog>
+    </Container>
     </ErrorBoundary>
   );
 };
 
-export default Connections;
+export default Connections; 

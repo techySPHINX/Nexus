@@ -17,7 +17,9 @@ import {
   Paper,
   LinearProgress,
   Stack,
-  Badge
+  Badge,
+  CircularProgress,
+  Alert
 } from '@mui/material';
 import {
   People,
@@ -36,10 +38,15 @@ import {
   PersonAdd,
   Assignment,
   Groups,
-  RocketLaunch
+  RocketLaunch,
+  CheckCircle,
+  Schedule
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
+import useConnections from '../hooks/useConnections';
+import { apiService } from '../services/api';
 
 interface DashboardStats {
   connections: number;
@@ -50,32 +57,227 @@ interface DashboardStats {
   newAlumni: number;
 }
 
+interface RecentActivity {
+  id: string;
+  type: 'connection' | 'message' | 'event' | 'network';
+  message: string;
+  time: string;
+  avatar: string;
+  userId?: string;
+}
+
+interface UpcomingEvent {
+  id: string;
+  title: string;
+  date: string;
+  location: string;
+  description?: string;
+}
+
+interface SuggestedConnection {
+  id: string;
+  name: string;
+  role: string;
+  avatar: string;
+  matchScore?: number;
+}
+
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
-    connections: 24,
-    messages: 5,
-    pendingRequests: 3,
-    profileCompletion: 75,
-    upcomingEvents: 2,
-    newAlumni: 8
+    connections: 0,
+    messages: 0,
+    pendingRequests: 0,
+    profileCompletion: 0,
+    upcomingEvents: 0,
+    newAlumni: 0
   });
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [suggestedConnections, setSuggestedConnections] = useState<SuggestedConnection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Simulate loading data
+  // Use the connections hook for real data
+  const { connections, pendingReceived, suggestions, stats: connectionStats } = useConnections();
+
+  // Fetch dashboard data
   useEffect(() => {
-    // In a real app, you would fetch this data from your API
-    const timer = setTimeout(() => {
-      setStats({
-        connections: 24,
-        messages: 5,
-        pendingRequests: 3,
-        profileCompletion: 75,
-        upcomingEvents: 2,
-        newAlumni: 8
+    const fetchDashboardData = async () => {
+      try {
+        console.log('🔄 Dashboard: Fetching dashboard data...');
+        setLoading(true);
+        setError(null);
+
+        // Fetch messages count
+        const messagesResponse = await apiService.messages.getAllConversations();
+        const messagesCount = messagesResponse.data?.conversations?.length || 0;
+        console.log('📊 Dashboard: Messages count:', messagesCount);
+
+        // Calculate profile completion based on user data
+        const profileCompletion = calculateProfileCompletion(user);
+        console.log('👤 Dashboard: Profile completion:', profileCompletion);
+
+        // Update stats with real data
+        const newStats = {
+          connections: connections.length,
+          messages: messagesCount,
+          pendingRequests: pendingReceived.length,
+          profileCompletion,
+          upcomingEvents: upcomingEvents.length,
+          newAlumni: 0 // This would come from a separate API
+        };
+        setStats(newStats);
+        console.log('📈 Dashboard: Stats updated:', newStats);
+
+        // Generate recent activities from real data
+        const activities = generateRecentActivities(connections, pendingReceived, messagesResponse.data?.conversations || []);
+        setRecentActivities(activities);
+        console.log('📝 Dashboard: Recent activities generated:', activities.length);
+
+        // Convert suggestions to dashboard format
+        const dashboardSuggestions = suggestions.slice(0, 3).map(suggestion => ({
+          id: suggestion.user.id,
+          name: suggestion.user.name,
+          role: suggestion.user.role,
+          avatar: suggestion.user.name.charAt(0).toUpperCase(),
+          matchScore: suggestion.matchScore
+        }));
+        setSuggestedConnections(dashboardSuggestions);
+        console.log('🔗 Dashboard: Suggested connections:', dashboardSuggestions.length);
+
+        // Mock upcoming events (in real app, this would come from events API)
+        setUpcomingEvents([
+          { id: '1', title: 'Alumni Meet 2024', date: 'Dec 15', location: 'College Campus', description: 'Annual alumni networking event' },
+          { id: '2', title: 'Career Workshop', date: 'Dec 20', location: 'Online', description: 'Professional development session' },
+        ]);
+
+        console.log('✅ Dashboard: All data loaded successfully');
+
+      } catch (err) {
+        console.error('❌ Dashboard: Error fetching data:', err);
+        setError('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+        console.log('🏁 Dashboard: Data fetching completed');
+      }
+    };
+
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user, connections, pendingReceived, suggestions]);
+
+  const calculateProfileCompletion = (user: any): number => {
+    if (!user) return 0;
+    
+    let completed = 0;
+    const total = 4; // Basic profile fields
+    
+    if (user.name) completed++;
+    if (user.email) completed++;
+    if (user.role) completed++;
+    if (user.profile?.bio || user.profile?.location || user.profile?.skills) completed++;
+    
+    return Math.round((completed / total) * 100);
+  };
+
+  const generateRecentActivities = (connections: any[], pendingRequests: any[], conversations: any[]): RecentActivity[] => {
+    const activities: RecentActivity[] = [];
+    
+    // Add recent connection activities
+    if (connections.length > 0) {
+      const recentConnection = connections[0];
+      activities.push({
+        id: `conn-${recentConnection.id}`,
+        type: 'connection',
+        message: `Connected with ${recentConnection.user.name}`,
+        time: '2h ago',
+        avatar: recentConnection.user.name.charAt(0).toUpperCase(),
+        userId: recentConnection.user.id
       });
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+
+    // Add pending request activities
+    if (pendingRequests.length > 0) {
+      const pendingRequest = pendingRequests[0];
+      activities.push({
+        id: `req-${pendingRequest.id}`,
+        type: 'network',
+        message: `New connection request from ${pendingRequest.requester?.name || 'Unknown'}`,
+        time: '4h ago',
+        avatar: pendingRequest.requester?.name?.charAt(0).toUpperCase() || '?',
+        userId: pendingRequest.requester?.id
+      });
+    }
+
+    // Add message activities
+    if (conversations && conversations.length > 0) {
+      const recentMessage = conversations[0];
+      activities.push({
+        id: `msg-${recentMessage.id}`,
+        type: 'message',
+        message: `New message from ${recentMessage.participant?.name || 'Unknown'}`,
+        time: '6h ago',
+        avatar: recentMessage.participant?.name?.charAt(0).toUpperCase() || '?',
+        userId: recentMessage.participant?.id
+      });
+    }
+
+    // Add default activities if none exist
+    if (activities.length === 0) {
+      activities.push(
+        {
+          id: 'default-1',
+          type: 'network',
+          message: 'Welcome to Nexus! Start building your network',
+          time: 'Just now',
+          avatar: 'N'
+        },
+        {
+          id: 'default-2',
+          type: 'event',
+          message: 'Check out upcoming events and workshops',
+          time: '1d ago',
+          avatar: 'E'
+        }
+      );
+    }
+
+    return activities.slice(0, 4); // Limit to 4 activities
+  };
+
+  const handleQuickAction = (action: string) => {
+    switch (action) {
+      case 'Connect':
+        navigate('/connections');
+        break;
+      case 'Message':
+        navigate('/messages');
+        break;
+      case 'Events':
+        // Navigate to events page when created
+        break;
+      case 'Resources':
+        // Navigate to resources page when created
+        break;
+    }
+  };
+
+  const handleViewAll = (section: string) => {
+    switch (section) {
+      case 'activity':
+        navigate('/connections');
+        break;
+      case 'events':
+        // Navigate to events page when created
+        break;
+      case 'suggestions':
+        navigate('/connections');
+        break;
+    }
+  };
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -86,13 +288,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const recentActivities = [
-    { id: 1, type: 'connection', message: 'John Doe accepted your connection', time: '2h ago', avatar: 'J' },
-    { id: 2, type: 'message', message: 'New message from Jane Smith', time: '4h ago', avatar: 'J' },
-    { id: 3, type: 'event', message: 'Upcoming alumni meet on Friday', time: '1d ago', avatar: 'E' },
-    { id: 4, type: 'network', message: '8 new alumni joined this week', time: '2d ago', avatar: 'N' },
-  ];
-
   const quickActions = [
     { title: 'Connect', icon: <PersonAdd />, color: 'primary' },
     { title: 'Message', icon: <Forum />, color: 'secondary' },
@@ -100,17 +295,25 @@ const Dashboard: React.FC = () => {
     { title: 'Resources', icon: <Assignment />, color: 'info' },
   ];
 
-  // Future features placeholder data
-  const upcomingEvents = [
-    { id: 1, title: 'Alumni Meet 2023', date: 'Oct 15', location: 'College Campus' },
-    { id: 2, title: 'Career Workshop', date: 'Nov 5', location: 'Online' },
-  ];
+  if (loading) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress size={60} />
+        </Box>
+      </Container>
+    );
+  }
 
-  const suggestedConnections = [
-    { id: 1, name: 'Alex Johnson', role: 'Software Engineer', avatar: 'AJ' },
-    { id: 2, name: 'Sarah Miller', role: 'Product Manager', avatar: 'SM' },
-    { id: 3, name: 'David Wilson', role: 'Data Scientist', avatar: 'DW' },
-  ];
+  if (error) {
+    return (
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -123,7 +326,7 @@ const Dashboard: React.FC = () => {
           WebkitTextFillColor: 'transparent',
           display: 'inline-block'
         }}>
-          Welcome back, {user?.name.split(' ')[0]}!
+          Welcome back, {user?.name?.split(' ')[0] || 'User'}!
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 1 }}>
           Here's what's happening in your network today
@@ -186,6 +389,7 @@ const Dashboard: React.FC = () => {
                         fullWidth
                         variant="contained"
                         startIcon={action.icon}
+                        onClick={() => handleQuickAction(action.title)}
                         sx={{
                           py: 2,
                           borderRadius: 2,
@@ -203,168 +407,206 @@ const Dashboard: React.FC = () => {
           </Card>
 
           {/* Recent Activity */}
-          <Card sx={{ borderRadius: 3 }}>
+          <Card sx={{ mb: 3, borderRadius: 3 }}>
             <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>Recent Activity</Typography>
-                <Button size="small" color="primary">View All</Button>
-              </Stack>
-              <List disablePadding>
+                <Button 
+                  size="small" 
+                  onClick={() => handleViewAll('activity')}
+                  sx={{ textTransform: 'none' }}
+                >
+                  View All
+                </Button>
+              </Box>
+              <List>
                 {recentActivities.map((activity, index) => (
                   <React.Fragment key={activity.id}>
-                    <ListItem alignItems="flex-start" sx={{ py: 1.5 }}>
+                    <ListItem alignItems="flex-start" sx={{ px: 0 }}>
                       <ListItemAvatar>
-                        <Badge
-                          overlap="circular"
-                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                          badgeContent={
-                            <Box sx={{ 
-                              bgcolor: getRoleColor(user?.role || ''),
-                              width: 12, 
-                              height: 12,
-                              borderRadius: '50%',
-                              border: '2px solid white'
-                            }} />
-                          }
-                        >
-                          <Avatar sx={{ 
-                            bgcolor: 'primary.light', 
-                            color: 'primary.dark',
-                            width: 40, 
-                            height: 40 
-                          }}>
-                            {activity.avatar}
-                          </Avatar>
-                        </Badge>
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          {activity.avatar}
+                        </Avatar>
                       </ListItemAvatar>
                       <ListItemText
                         primary={activity.message}
-                        primaryTypographyProps={{ fontWeight: 500 }}
-                        secondary={
-                          <Stack direction="row" alignItems="center" spacing={0.5} mt={0.5}>
-                            <CalendarToday sx={{ fontSize: 14, color: 'text.secondary' }} />
-                            <Typography variant="caption" color="text.secondary">
-                              {activity.time}
-                            </Typography>
-                          </Stack>
-                        }
+                        secondary={activity.time}
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                        secondaryTypographyProps={{ variant: 'caption' }}
                       />
+                      {activity.type === 'connection' && <CheckCircle color="success" />}
+                      {activity.type === 'message' && <Message color="primary" />}
+                      {activity.type === 'event' && <Schedule color="warning" />}
+                      {activity.type === 'network' && <Notifications color="info" />}
                     </ListItem>
-                    {index < recentActivities.length - 1 && (
-                      <Divider variant="inset" component="li" sx={{ ml: 7 }} />
-                    )}
+                    {index < recentActivities.length - 1 && <Divider variant="inset" component="li" />}
                   </React.Fragment>
                 ))}
               </List>
+            </CardContent>
+          </Card>
+
+          {/* Upcoming Events */}
+          <Card sx={{ borderRadius: 3 }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>Upcoming Events</Typography>
+                <Button 
+                  size="small" 
+                  onClick={() => handleViewAll('events')}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Create
+                </Button>
+              </Box>
+              <List>
+                {upcomingEvents.map((event, index) => (
+                  <React.Fragment key={event.id}>
+                    <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: 'warning.main' }}>
+                          <CalendarToday />
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={event.title}
+                        secondary={
+                          <React.Fragment>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <CalendarToday sx={{ fontSize: 16 }} />
+                              {event.date}
+                            </Box>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <LocationOn sx={{ fontSize: 16 }} />
+                              {event.location}
+                            </Box>
+                          </React.Fragment>
+                        }
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                        secondaryTypographyProps={{ variant: 'caption' }}
+                      />
+                    </ListItem>
+                    {index < upcomingEvents.length - 1 && <Divider variant="inset" component="li" />}
+                  </React.Fragment>
+                ))}
+              </List>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  variant="outlined"
+                  startIcon={<Add />}
+                  fullWidth
+                  sx={{ borderRadius: 2 }}
+                >
+                  + Add New Event
+                </Button>
+              </Box>
             </CardContent>
           </Card>
         </Grid>
 
         {/* Right Column */}
         <Grid item xs={12} md={4}>
-          {/* Upcoming Events - Future Feature */}
-          <Card sx={{ mb: 3, borderRadius: 3 }}>
+          {/* Suggested Connections */}
+          <Card sx={{ borderRadius: 3, mb: 3 }}>
             <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>Upcoming Events</Typography>
-                <Button size="small" color="primary">Create</Button>
-              </Stack>
-              <List disablePadding>
-                {upcomingEvents.map((event, index) => (
-                  <React.Fragment key={event.id}>
-                    <ListItem sx={{ py: 1.5 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'warning.light', color: 'warning.dark' }}>
-                          <Event />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={event.title}
-                        secondary={
-                          <Stack direction="row" spacing={1} mt={0.5}>
-                            <Chip 
-                              label={event.date} 
-                              size="small" 
-                              variant="outlined" 
-                              color="warning"
-                              icon={<CalendarToday sx={{ fontSize: 14 }} />}
-                            />
-                            <Chip 
-                              label={event.location} 
-                              size="small" 
-                              variant="outlined" 
-                              color="info"
-                              icon={<LocationOn sx={{ fontSize: 14 }} />}
-                            />
-                          </Stack>
-                        }
-                      />
-                    </ListItem>
-                    {index < upcomingEvents.length - 1 && <Divider variant="middle" />}
-                  </React.Fragment>
-                ))}
-              </List>
-              <Button fullWidth sx={{ mt: 1 }} startIcon={<Add />}>
-                Add New Event
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Suggested Connections - Future Feature */}
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>Suggested Connections</Typography>
-                <Button size="small" color="primary">View All</Button>
-              </Stack>
-              <List disablePadding>
-                {suggestedConnections.map((person, index) => (
-                  <React.Fragment key={person.id}>
-                    <ListItem sx={{ py: 1.5 }}>
+                <Button 
+                  size="small" 
+                  onClick={() => handleViewAll('suggestions')}
+                  sx={{ textTransform: 'none' }}
+                >
+                  View All
+                </Button>
+              </Box>
+              <List>
+                {suggestedConnections.map((connection, index) => (
+                  <React.Fragment key={connection.id}>
+                    <ListItem alignItems="flex-start" sx={{ px: 0 }}>
                       <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.dark' }}>
-                          {person.avatar}
+                        <Avatar sx={{ bgcolor: 'success.main' }}>
+                          {connection.avatar}
                         </Avatar>
                       </ListItemAvatar>
                       <ListItemText
-                        primary={person.name}
-                        secondary={person.role}
+                        primary={connection.name}
+                        secondary={
+                          <React.Fragment>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Chip 
+                                label={connection.role} 
+                                size="small" 
+                                color={getRoleColor(connection.role)}
+                                variant="outlined"
+                              />
+                            </Box>
+                            {connection.matchScore && (
+                              <Typography variant="caption" color="text.secondary">
+                                Match Score: {connection.matchScore}%
+                              </Typography>
+                            )}
+                          </React.Fragment>
+                        }
+                        primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                        secondaryTypographyProps={{ variant: 'caption' }}
                       />
-                      <Button size="small" variant="outlined" color="primary">
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<PersonAdd />}
+                        onClick={() => navigate('/connections')}
+                        sx={{ borderRadius: 2, textTransform: 'none' }}
+                      >
                         Connect
                       </Button>
                     </ListItem>
-                    {index < suggestedConnections.length - 1 && <Divider variant="middle" />}
+                    {index < suggestedConnections.length - 1 && <Divider variant="inset" component="li" />}
                   </React.Fragment>
                 ))}
               </List>
-              <Button fullWidth sx={{ mt: 1 }} startIcon={<ConnectWithoutContact />}>
-                Find More Connections
-              </Button>
+              {suggestedConnections.length === 0 && (
+                <Box sx={{ textAlign: 'center', py: 3 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No suggestions available
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate('/connections')}
+                    sx={{ mt: 2, borderRadius: 2 }}
+                  >
+                    Browse Connections
+                  </Button>
+                </Box>
+              )}
             </CardContent>
           </Card>
 
-          {/* Profile Completion - Future Feature */}
-          <Card sx={{ mt: 3, borderRadius: 3 }}>
+          {/* Profile Completion */}
+          <Card sx={{ borderRadius: 3 }}>
             <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>Profile Strength</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>Profile Completion</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48 }}>
+                  <TrendingUp />
+                </Avatar>
+                <Box>
+                  <Typography variant="h4" sx={{ fontWeight: 700 }}>{stats.profileCompletion}%</Typography>
+                  <Typography variant="body2" color="text.secondary">Complete</Typography>
+                </Box>
+              </Box>
               <LinearProgress 
                 variant="determinate" 
                 value={stats.profileCompletion} 
-                sx={{ 
-                  height: 8, 
-                  borderRadius: 4,
-                  mb: 1.5 
-                }} 
+                sx={{ height: 8, borderRadius: 4 }}
               />
-              <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">
-                  {stats.profileCompletion}% Complete
-                </Typography>
-                <Button size="small" endIcon={<RocketLaunch />}>
-                  Boost Profile
-                </Button>
-              </Stack>
+              <Button
+                variant="outlined"
+                fullWidth
+                onClick={() => navigate('/profile')}
+                sx={{ mt: 2, borderRadius: 2, textTransform: 'none' }}
+              >
+                Complete Profile
+              </Button>
             </CardContent>
           </Card>
         </Grid>
