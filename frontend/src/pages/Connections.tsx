@@ -26,6 +26,10 @@ import {
   FormControl,
   InputLabel,
   DialogContentText,
+  InputAdornment,
+  IconButton,
+  Stack,
+  Divider,
 } from '@mui/material';
 import {
   PersonAdd as PersonAddIcon,
@@ -39,6 +43,8 @@ import {
   School as SchoolIcon,
   Work as WorkIcon,
   Block as BlockIcon,
+  NavigateBefore as PrevIcon,
+  NavigateNext as NextIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -67,7 +73,7 @@ interface Connection {
 interface PendingRequest {
   id: string;
   createdAt: string;
-  requester?: {  // For received requests
+  requester?: {
     id: string;
     name: string;
     email: string;
@@ -81,7 +87,7 @@ interface PendingRequest {
     };
 
   };
-  recipient?: {  // For sent requests
+  recipient?: {
     id: string;
     name: string;
     email: string;
@@ -193,7 +199,6 @@ const Connections: React.FC = () => {
     suggestions: 0,
   });
 
-
   useEffect(() => {
     if (token) {
       fetchConnections();
@@ -246,10 +251,6 @@ const Connections: React.FC = () => {
           limit: filters.limit,
         }),
       ]);
-      console.log("Connections:", connectionsRes.data);
-      console.log("Pending Received:", pendingReceivedRes.data);
-      console.log("Pending Sent:", pendingSentRes.data);
-
       setConnections(connectionsRes.data?.connections || []);
       setPendingReceived(pendingReceivedRes.data?.requests || []);
       setPendingSent(pendingSentRes.data?.requests || []);
@@ -313,7 +314,6 @@ const Connections: React.FC = () => {
       console.error('Error fetching suggestions:', error);
     }
   };
-  console.log("Suggestions:", suggestions);
 
   const fetchStats = async () => {
     try {
@@ -443,14 +443,122 @@ const Connections: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.45 }}
         >
-          <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
-            Connections
-          </Typography>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            Manage your network connections
-          </Typography>
+          {/* Header + subtitle */}
+          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" mb={3} gap={2}>
+            <Box>
+              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }} gutterBottom>
+                Connections
+              </Typography>
+              <Typography variant="subtitle1" color="text.secondary">
+                Manage and grow your network
+              </Typography>
+            </Box>
+
+            {/* Quick actions / stats condensed */}
+            {stats && (
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderRadius: 2 }}>
+                  <PeopleIcon color="info" />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{stats.total}</Typography>
+                    <Typography variant="caption" color="text.secondary">Total</Typography>
+                  </Box>
+                </Paper>
+                <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderRadius: 2 }}>
+                  <TrendingUpIcon color="warning" />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{stats.pendingReceived}</Typography>
+                    <Typography variant="caption" color="text.secondary">Pending</Typography>
+                  </Box>
+                </Paper>
+                <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderRadius: 2 }}>
+                  <SchoolIcon color="primary" />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{stats.byRole.students}</Typography>
+                    <Typography variant="caption" color="text.secondary">Students</Typography>
+                  </Box>
+                </Paper>
+                <Paper sx={{ display: 'flex', alignItems: 'center', gap: 2, px: 2, py: 1, borderRadius: 2 }}>
+                  <WorkIcon color="secondary" />
+                  <Box>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>{stats.byRole.alumni}</Typography>
+                    <Typography variant="caption" color="text.secondary">Alumni</Typography>
+                  </Box>
+                </Paper>
+              </Stack>
+            )}
+          </Box>
+
+          <Divider sx={{ mb: 3 }} />
+
+          {/* Tabs */}
+          <Box sx={{ mb: 2 }}>
+            <Tabs
+              value={tabValue}
+              onChange={(e, newValue) => {
+                if (newValue !== tabValue) {
+                  setTabValue(newValue);
+                  switch (newValue) {
+                    case 0: fetchConnections(); break;
+                    case 1: fetchPendingReceived(); break;
+                    case 2: fetchPendingSent(); break;
+                    case 3: fetchSuggestions(); break;
+                  }
+                }
+              }}
+              variant="scrollable"
+              scrollButtons
+              allowScrollButtonsMobile
+            >
+              <Tab label={`Connections (${totalCounts.connections})`} />
+              <Tab label={`Pending Received (${totalCounts.pendingReceived})`} />
+              <Tab label={`Pending Sent (${totalCounts.pendingSent})`} />
+              <Tab label={`Suggestions (${totalCounts.suggestions})`} />
+            </Tabs>
+          </Box>
+
+          {/* Search + Filters */}
+          <Box component="form" onSubmit={handleSearch} sx={{ mb: 3 }}>
+            <Paper sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 1.25, borderRadius: 3 }} elevation={1}>
+              <TextField
+                size="small"
+                variant="outlined"
+                placeholder="Search connections by name, skill or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                fullWidth
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              {tabValue === 0 && (
+                <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <InputLabel>Role</InputLabel>
+                  <Select
+                    value={filters.role}
+                    label="Role"
+                    onChange={(e) => handleRoleFilter(e.target.value as any)}
+                  >
+                    <MenuItem value="">All</MenuItem>
+                    <MenuItem value="STUDENT">Student</MenuItem>
+                    <MenuItem value="ALUM">Alum</MenuItem>
+                    <MenuItem value="ADMIN">Admin</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+
+              <Button type="submit" variant="contained" sx={{ whiteSpace: 'nowrap' }}>
+                Search
+              </Button>
+            </Paper>
+          </Box>
 
           {error && (
             <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
@@ -463,517 +571,205 @@ const Connections: React.FC = () => {
             </Alert>
           )}
 
-          {/* Connection Stats */}
-          {stats && (
-            <Box sx={{ mb: 3 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Paper sx={{ p: 2, textAlign: 'center' }}>
-                    <PeopleIcon color="primary" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h4" fontWeight="bold" color="primary">
-                      {stats.total}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Total Connections
-                    </Typography>
-                  </Paper>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Paper sx={{ p: 2, textAlign: 'center' }}>
-                    <TrendingUpIcon color="warning" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h4" fontWeight="bold" color="warning.main">
-                      {stats.pendingReceived}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Pending Requests
-                    </Typography>
-                  </Paper>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Paper sx={{ p: 2, textAlign: 'center' }}>
-                    <SchoolIcon color="info" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h4" fontWeight="bold" color="info.main">
-                      {stats.byRole.students}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Student Connections
-                    </Typography>
-                  </Paper>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                  <Paper sx={{ p: 2, textAlign: 'center' }}>
-                    <WorkIcon color="secondary" sx={{ fontSize: 40, mb: 1 }} />
-                    <Typography variant="h4" fontWeight="bold" color="secondary.main">
-                      {stats.byRole.alumni}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Alumni Connections
-                    </Typography>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </Box>
-          )}
-
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs
-              value={tabValue}
-              onChange={(e, newValue) => {
-                if (newValue !== tabValue) {
-                  setTabValue(newValue);
-                  // Trigger refresh based on selected tab
-                  switch (newValue) {
-                    case 0: // Connections tab
-                      fetchConnections();
-                      break;
-                    case 1: // Pending Received tab
-                      fetchPendingReceived();
-                      break;
-                    case 2: // Pending Sent tab
-                      fetchPendingSent();
-                      break;
-                    case 3: // Suggestions tab
-                      fetchSuggestions();
-                      break;
-                  }
-                }
-              }}
-              aria-label="connections tabs"
-            >
-              <Tab label={`Connections (${totalCounts.connections})`} />
-              <Tab label={`Pending Received (${totalCounts.pendingReceived})`} />
-              <Tab label={`Pending Sent (${totalCounts.pendingSent})`} />
-              <Tab label={`Suggestions (${totalCounts.suggestions})`} />
-            </Tabs>
-          </Box>
-
-          <Box component="form" onSubmit={handleSearch} sx={{ mb: 3, display: 'flex', gap: 2 }}>
-            <TextField
-              fullWidth
-              placeholder="Search connections..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-              }}
-              size="small"
-            />
-            {tabValue === 0 && (
-              <FormControl sx={{ minWidth: 120 }} size="small">
-                <InputLabel>Role</InputLabel>
-                <Select
-                  value={filters.role}
-                  onChange={(e) => handleRoleFilter(e.target.value as any)}
-                  label="Role"
-                >
-                  <MenuItem value="">All</MenuItem>
-                  <MenuItem value="STUDENT">Student</MenuItem>
-                  <MenuItem value="ALUM">Alum</MenuItem>
-                  <MenuItem value="ADMIN">Admin</MenuItem>
-                </Select>
-              </FormControl>
-            )}
-            <Button type="submit" variant="contained">Search</Button>
-          </Box>
+          {/* Tab Panels */}
 
           {/* Connections Tab */}
           <TabPanel value={tabValue} index={0}>
-            {loading && tabValue === 0 && ( // Only shows for this tab
+            {loading && (
               <Box display="flex" justifyContent="center" my={2}>
-                <CircularProgress size={24} />
+                <CircularProgress size={28} />
               </Box>
             )}
+
             <Grid container spacing={3}>
               {connections.map((connection) => (
                 <Grid item xs={12} sm={6} md={4} key={connection.id}>
-                  <Card>
+                  <Card sx={{ borderRadius: 3, transition: 'transform .18s ease, box-shadow .18s ease', '&:hover': { transform: 'translateY(-6px)', boxShadow: 6 } }}>
                     <CardContent>
-                      <Box display="flex" alignItems="center" mb={2}>
+                      <Box display="flex" gap={2} alignItems="center">
                         <Avatar
                           src={connection.user.profile?.avatarUrl}
-                          sx={{ width: 56, height: 56, mr: 2 }}
+                          sx={{ width: 64, height: 64 }}
                         >
-                          <PersonIcon />
+                          {!connection.user.profile?.avatarUrl && connection.user.name?.[0]}
                         </Avatar>
-                        <Box>
-                          <Typography variant="h6" gutterBottom>
-                            {connection.user.name}
-                          </Typography>
-                          <Chip
-                            label={connection.user.role}
-                            color={getRoleColor(connection.user.role) as any}
-                            size="small"
-                          />
+
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="h6" sx={{ fontWeight: 700 }}>{connection.user.name}</Typography>
+                          <Typography variant="body2" color="text.secondary">{connection.user.email}</Typography>
+
+                          <Box mt={1} display="flex" gap={1} alignItems="center">
+                            <Chip label={connection.user.role} color={getRoleColor(connection.user.role) as any} size="small" />
+                            {connection.user.profile?.location && (
+                              <Typography variant="caption" color="text.secondary">📍 {connection.user.profile.location}</Typography>
+                            )}
+                          </Box>
+
+                          {connection.user.profile?.bio && (
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{connection.user.profile.bio}</Typography>
+                          )}
+
+                          {connection.user.profile?.skills && connection.user.profile.skills.length > 0 && (
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>Skills: {connection.user.profile.skills.join(', ')}</Typography>
+                          )}
                         </Box>
                       </Box>
-                      {connection.user.profile?.bio && (
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                          {connection.user.profile?.bio}
-                        </Typography>
-                      )}
-                      {connection.user?.profile?.location && (
-                        <Typography variant="body2" color="text.secondary">
-                          📍 {connection.user.profile?.location}
-                        </Typography>
-                      )}
-                      {connection.user.profile?.skills && connection.user.profile?.skills.length > 0 && (
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Skills: {connection.user?.profile.skills.join(', ')}
-                          </Typography>
-                        </Box>
-                      )}
                     </CardContent>
-                    <CardActions>
-                      <Button
-                        size="small"
-                        startIcon={<MessageIcon />}
-                        onClick={() => {
-                          setSelectedUser({
-                            ...connection.user,
-                          });
-                          setMessageDialog(true);
-                        }}
-                      >
+
+                    <Divider />
+
+                    <CardActions sx={{ px: 2, py: 1, justifyContent: 'space-between' }}>
+                      <Button size="small" startIcon={<MessageIcon />} onClick={() => { setSelectedUser({ ...connection.user }); setMessageDialog(true); }}>
                         Message
                       </Button>
-                      <Button
-                        size="small"
-                        color="error"
-                        onClick={() => removeConnection(connection.id)}
-                        disabled={actionLoading === `remove-${connection.id}`}
-                      >
+
+                      <Button size="small" color="error" onClick={() => removeConnection(connection.id)} disabled={actionLoading === `remove-${connection.id}`}>
                         {actionLoading === `remove-${connection.id}` ? 'Processing...' : 'Remove'}
                       </Button>
                     </CardActions>
                   </Card>
                 </Grid>
               ))}
+
               {connections.length === 0 && (
                 <Grid item xs={12}>
-                  <Box textAlign="center" py={4}>
-                    <Typography variant="h6" color="text.secondary">
-                      No connections found
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Start building your network by sending connection requests
-                    </Typography>
-                  </Box>
+                  <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
+                    <Typography variant="h6" color="text.secondary">No connections found</Typography>
+                    <Typography variant="body2" color="text.secondary">Start building your network by sending connection requests.</Typography>
+                  </Paper>
                 </Grid>
               )}
             </Grid>
+
             {totalCounts.connections > filters.limit && (
-              <Box display="flex" justifyContent="center" mt={3}>
-                <Button
-                  onClick={() => handlePageChange(filters.page - 1)}
-                  disabled={filters.page === 1}
-                  sx={{ mr: 2 }}
-                >
-                  Previous
-                </Button>
-                <Button
-                  onClick={() => handlePageChange(filters.page + 1)}
-                  disabled={filters.page * filters.limit >= totalCounts.connections}
-                >
-                  Next
-                </Button>
+              <Box display="flex" justifyContent="center" mt={3} gap={1}>
+                <IconButton onClick={() => handlePageChange(filters.page - 1)} disabled={filters.page === 1}>
+                  <PrevIcon />
+                </IconButton>
+                <Button onClick={() => handlePageChange(filters.page + 1)} disabled={filters.page * filters.limit >= totalCounts.connections}>Next</Button>
               </Box>
             )}
           </TabPanel>
 
           {/* Pending Received Tab */}
           <TabPanel value={tabValue} index={1}>
-            {loading && tabValue === 0 && ( // Only shows for this tab
-              <Box display="flex" justifyContent="center" my={2}>
-                <CircularProgress size={24} />
-              </Box>
-            )}
             <List>
               {pendingReceived.map((connection) => (
-                <Card key={connection.id} sx={{ mb: 2 }}>
+                <Card key={connection.id} sx={{ mb: 2, borderRadius: 2 }}>
                   <CardContent>
                     <Box display="flex" alignItems="center" justifyContent="space-between">
-                      <Box display="flex" alignItems="center">
-                        <Avatar
-                          src={connection.requester?.profile?.avatarUrl}
-                          sx={{ mr: 2 }}
-                        >
-                          <PersonIcon />
-                        </Avatar>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Avatar src={connection.requester?.profile?.avatarUrl}><PersonIcon /></Avatar>
                         <Box>
-                          <Typography variant="h6">{connection.requester?.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {connection.requester?.email}
-                          </Typography>
-                          <Chip
-                            label={connection.requester?.role}
-                            color={getRoleColor(connection.requester?.role || '') as any}
-                            size="small"
-                            sx={{ mt: 1 }}
-                          />
+                          <Typography variant="subtitle1">{connection.requester?.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{connection.requester?.email}</Typography>
                           {connection.requester?.profile?.bio && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                              {connection.requester?.profile.bio}
-                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{connection.requester.profile.bio}</Typography>
                           )}
                         </Box>
                       </Box>
+
                       <Box>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          startIcon={<CheckIcon />}
-                          onClick={() => respondToConnection(connection.id, 'ACCEPTED')}
-                          disabled={actionLoading === `respond-${connection.id}`}
-                          sx={{ mr: 1 }}
-                        >
-                          Accept
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          startIcon={<CloseIcon />}
-                          onClick={() => respondToConnection(connection.id, 'REJECTED')}
-                          disabled={actionLoading === `respond-${connection.id}`}
-                          sx={{ mr: 1 }}
-                        >
-                          Reject
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="secondary"
-                          startIcon={<BlockIcon />}
-                          onClick={() => {
-                            setConnectionToBlock(connection.id);
-                            setBlockDialogOpen(true);
-                          }}
-                          disabled={actionLoading === `respond-${connection.id}`}
-                        >
-                          Block
-                        </Button>
+                        <Button variant="contained" startIcon={<CheckIcon />} onClick={() => respondToConnection(connection.id, 'ACCEPTED')} disabled={actionLoading === `respond-${connection.id}`} sx={{ mr: 1 }}>Accept</Button>
+                        <Button variant="outlined" color="error" startIcon={<CloseIcon />} onClick={() => respondToConnection(connection.id, 'REJECTED')} disabled={actionLoading === `respond-${connection.id}`} sx={{ mr: 1 }}>Reject</Button>
+                        <Button variant="outlined" color="secondary" startIcon={<BlockIcon />} onClick={() => { setConnectionToBlock(connection.id); setBlockDialogOpen(true); }} disabled={actionLoading === `respond-${connection.id}`}>Block</Button>
                       </Box>
                     </Box>
                   </CardContent>
                 </Card>
               ))}
-              {/* Block Confirmation Dialog */}
-              <Dialog
-                open={blockDialogOpen}
-                onClose={() => setBlockDialogOpen(false)}
-              >
-                <DialogTitle>Confirm Block</DialogTitle>
-                <DialogContent>
-                  <DialogContentText>
-                    Are you sure you want to block this user? This action cannot be undone.
-                  </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                  <Button onClick={() => setBlockDialogOpen(false)}>Cancel</Button>
-                  <Button
-                    onClick={() => {
-                      if (connectionToBlock) {
-                        respondToConnection(connectionToBlock, 'BLOCKED');
-                      }
-                      setBlockDialogOpen(false);
-                    }}
-                    color="secondary"
-                    autoFocus
-                  >
-                    Confirm Block
-                  </Button>
-                </DialogActions>
-              </Dialog>
-
 
               {pendingReceived.length === 0 && (
-                <Box textAlign="center" py={4}>
-                  <Typography variant="h6" color="text.secondary">
-                    No pending connection requests
-                  </Typography>
-                </Box>
+                <Box textAlign="center" py={4}><Typography variant="h6" color="text.secondary">No pending connection requests</Typography></Box>
               )}
+
             </List>
+
             {totalCounts.pendingReceived > filters.limit && (
               <Box display="flex" justifyContent="center" mt={3}>
-                <Button
-                  onClick={() => handlePageChange(filters.page - 1)}
-                  disabled={filters.page === 1}
-                  sx={{ mr: 2 }}
-                >
-                  Previous
-                </Button>
-                <Button
-                  onClick={() => handlePageChange(filters.page + 1)}
-                  disabled={filters.page * filters.limit >= totalCounts.pendingReceived}
-                >
-                  Next
-                </Button>
+                <Button onClick={() => handlePageChange(filters.page - 1)} disabled={filters.page === 1} sx={{ mr: 2 }}>Previous</Button>
+                <Button onClick={() => handlePageChange(filters.page + 1)} disabled={filters.page * filters.limit >= totalCounts.pendingReceived}>Next</Button>
               </Box>
             )}
           </TabPanel>
 
           {/* Pending Sent Tab */}
           <TabPanel value={tabValue} index={2}>
-            {loading && tabValue === 0 && ( // Only shows for this tab
-              <Box display="flex" justifyContent="center" my={2}>
-                <CircularProgress size={24} />
-              </Box>
-            )}
             <List>
               {pendingSent.map((connection) => (
-                <Card key={connection.id} sx={{ mb: 2 }}>
+                <Card key={connection.id} sx={{ mb: 2, borderRadius: 2 }}>
                   <CardContent>
                     <Box display="flex" alignItems="center" justifyContent="space-between">
-                      <Box display="flex" alignItems="center">
-                        <Avatar
-                          src={connection.recipient?.profile?.avatarUrl}
-                          sx={{ mr: 2 }}
-                        >
-                          <PersonIcon />
-                        </Avatar>
+                      <Box display="flex" alignItems="center" gap={2}>
+                        <Avatar src={connection.recipient?.profile?.avatarUrl}><PersonIcon /></Avatar>
                         <Box>
-                          <Typography variant="h6">{connection.recipient?.name}</Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {connection.recipient?.email}
-                          </Typography>
-                          <Chip
-                            label={connection.recipient?.role}
-                            color={getRoleColor(connection.recipient?.role || '') as any}
-                            size="small"
-                            sx={{ mt: 1 }}
-                          />
-                          {connection.recipient?.profile?.bio && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                              {connection.recipient?.profile.bio}
-                            </Typography>
-                          )}
+                          <Typography variant="subtitle1">{connection.recipient?.name}</Typography>
+                          <Typography variant="caption" color="text.secondary">{connection.recipient?.email}</Typography>
                         </Box>
                       </Box>
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        onClick={() => cancelConnection(connection.id)}
-                        disabled={actionLoading === `cancel-${connection.id}`}
-                      >
-                        {actionLoading === `cancel-${connection.id}` ? 'Processing...' : 'Cancel'}
-                      </Button>
+
+                      <Button variant="outlined" color="error" onClick={() => cancelConnection(connection.id)} disabled={actionLoading === `cancel-${connection.id}`}>{actionLoading === `cancel-${connection.id}` ? 'Processing...' : 'Cancel'}</Button>
                     </Box>
                   </CardContent>
                 </Card>
               ))}
+
               {pendingSent.length === 0 && (
-                <Box textAlign="center" py={4}>
-                  <Typography variant="h6" color="text.secondary">
-                    No pending sent requests
-                  </Typography>
-                </Box>
+                <Box textAlign="center" py={4}><Typography variant="h6" color="text.secondary">No pending sent requests</Typography></Box>
               )}
             </List>
+
             {totalCounts.pendingSent > filters.limit && (
               <Box display="flex" justifyContent="center" mt={3}>
-                <Button
-                  onClick={() => handlePageChange(filters.page - 1)}
-                  disabled={filters.page === 1}
-                  sx={{ mr: 2 }}
-                >
-                  Previous
-                </Button>
-                <Button
-                  onClick={() => handlePageChange(filters.page + 1)}
-                  disabled={filters.page * filters.limit >= totalCounts.pendingSent}
-                >
-                  Next
-                </Button>
+                <Button onClick={() => handlePageChange(filters.page - 1)} disabled={filters.page === 1} sx={{ mr: 2 }}>Previous</Button>
+                <Button onClick={() => handlePageChange(filters.page + 1)} disabled={filters.page * filters.limit >= totalCounts.pendingSent}>Next</Button>
               </Box>
             )}
           </TabPanel>
 
           {/* Suggestions Tab */}
           <TabPanel value={tabValue} index={3}>
-            {loading && tabValue === 0 && ( // Only shows for this tab
-              <Box display="flex" justifyContent="center" my={2}>
-                <CircularProgress size={24} />
-              </Box>
-            )}
             <Grid container spacing={3}>
               {suggestions.map((suggestion) => (
                 <Grid item xs={12} sm={6} md={4} key={suggestion.user.id}>
-                  <Card>
+                  <Card sx={{ borderRadius: 3, transition: 'transform .18s ease, box-shadow .18s ease', '&:hover': { transform: 'translateY(-6px)', boxShadow: 6 } }}>
                     <CardContent>
-                      <Box display="flex" alignItems="center" mb={2}>
-                        <Avatar
-                          src={suggestion.user?.profile?.avatarUrl}
-                          sx={{ width: 56, height: 56, mr: 2 }}
-                        >
-                          <PersonIcon />
-                        </Avatar>
-                        <Box>
-                          <Typography variant="h6" gutterBottom>
-                            {suggestion.user.name}
-                          </Typography>
-                          <Chip
-                            label={suggestion.user.role}
-                            color={getRoleColor(suggestion.user.role) as any}
-                            size="small"
-                          />
-                          {suggestion.matchScore > 0 && (
-                            <Chip
-                              label={`${suggestion.matchScore} pts`}
-                              color="success"
-                              size="small"
-                              sx={{ ml: 1 }}
-                            />
+                      <Box display="flex" gap={2} alignItems="center">
+                        <Avatar src={suggestion.user?.profile?.avatarUrl} sx={{ width: 56, height: 56 }}>{!suggestion.user?.profile?.avatarUrl && suggestion.user?.name?.[0]}</Avatar>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="h6">{suggestion.user.name}</Typography>
+                          <Box mt={1} display="flex" gap={1} alignItems="center">
+                            <Chip label={suggestion.user.role} color={getRoleColor(suggestion.user.role) as any} size="small" />
+                            {suggestion.matchScore > 0 && <Chip label={`${suggestion.matchScore} pts`} color="success" size="small" />}
+                          </Box>
+                          {suggestion.user?.profile?.bio && <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>{suggestion.user.profile.bio}</Typography>}
+
+                          {suggestion.reasons && suggestion.reasons.length > 0 && (
+                            <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                              {suggestion.reasons.map((reason, index) => (
+                                <Chip key={index} label={reason} size="small" variant="outlined" />
+                              ))}
+                            </Box>
                           )}
                         </Box>
                       </Box>
-                      {suggestion.user?.profile?.bio && (
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                          {suggestion.user?.profile.bio}
-                        </Typography>
-                      )}
-                      {suggestion.reasons && suggestion.reasons.length > 0 && (
-                        <Box sx={{ mb: 2 }}>
-                          {suggestion.reasons.map((reason, index) => (
-                            <Chip
-                              key={index}
-                              label={reason}
-                              size="small"
-                              variant="outlined"
-                              sx={{ mr: 0.5, mb: 0.5 }}
-                            />
-                          ))}
-                        </Box>
-                      )}
-                      {suggestion.user?.profile?.skills && suggestion.user?.profile.skills.length > 0 && (
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                          Skills: {suggestion.user?.profile.skills.join(', ')}
-                        </Typography>
-                      )}
                     </CardContent>
-                    <CardActions>
-                      <Button
-                        variant="contained"
-                        startIcon={<PersonAddIcon />}
-                        onClick={() => sendConnectionRequest(suggestion.user.id)}
-                        disabled={actionLoading === `send-${suggestion.user.id}`}
-                        fullWidth
-                      >
+                    <Divider />
+                    <CardActions sx={{ p: 2 }}>
+                      <Button fullWidth variant="contained" startIcon={<PersonAddIcon />} onClick={() => sendConnectionRequest(suggestion.user.id)} disabled={actionLoading === `send-${suggestion.user.id}`}>
                         Connect
                       </Button>
                     </CardActions>
                   </Card>
                 </Grid>
               ))}
+
               {suggestions.length === 0 && (
                 <Grid item xs={12}>
-                  <Box textAlign="center" py={4}>
-                    <Typography variant="h6" color="text.secondary">
-                      No suggestions available
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Check back later for new connection suggestions
-                    </Typography>
-                  </Box>
+                  <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
+                    <Typography variant="h6" color="text.secondary">No suggestions available</Typography>
+                    <Typography variant="body2" color="text.secondary">Check back later for new connection suggestions</Typography>
+                  </Paper>
                 </Grid>
               )}
             </Grid>
@@ -1002,6 +798,19 @@ const Connections: React.FC = () => {
               </Button>
             </DialogActions>
           </Dialog>
+
+          {/* Block Confirmation Dialog */}
+          <Dialog open={blockDialogOpen} onClose={() => setBlockDialogOpen(false)}>
+            <DialogTitle>Confirm Block</DialogTitle>
+            <DialogContent>
+              <DialogContentText>Are you sure you want to block this user? This action cannot be undone.</DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setBlockDialogOpen(false)}>Cancel</Button>
+              <Button onClick={() => { if (connectionToBlock) { respondToConnection(connectionToBlock, 'BLOCKED'); } setBlockDialogOpen(false); }} color="secondary" autoFocus>Confirm Block</Button>
+            </DialogActions>
+          </Dialog>
+
         </motion.div>
       </Container>
     </ErrorBoundary>
