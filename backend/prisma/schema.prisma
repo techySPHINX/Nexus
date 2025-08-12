@@ -8,22 +8,24 @@ datasource db {
 }
 
 model User {
-  id                   String         @id @default(uuid())
-  email                String         @unique @db.VarChar(255)
-  password             String         @db.VarChar(255)
-  name                 String         @db.VarChar(100)
-  role                 Role           @default(STUDENT)
-  createdAt            DateTime       @default(now())
-  updatedAt            DateTime       @updatedAt
+  id                   String                @id @default(uuid())
+  email                String                @unique @db.VarChar(255)
+  password             String                @db.VarChar(255)
+  name                 String                @db.VarChar(100)
+  role                 Role                  @default(STUDENT)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
   Comment              Comment[]
-  receivedConnections  Connection[]   @relation("ReceivedConnections")
-  requestedConnections Connection[]   @relation("RequestedConnections")
+  receivedConnections  Connection[]          @relation("ReceivedConnections")
+  requestedConnections Connection[]          @relation("RequestedConnections")
   Like                 Like[]
-  receivedMessages     Message[]      @relation("ReceivedMessages")
-  sentMessages         Message[]      @relation("SentMessages")
+  receivedMessages     Message[]             @relation("ReceivedMessages")
+  sentMessages         Message[]             @relation("SentMessages")
   Notification         Notification[]
   Post                 Post[]
   profile              Profile?
+  postedReferrals      Referral[]            @relation("PostedReferrals")
+  referralApplications ReferralApplication[]
 
   @@map("users")
 }
@@ -125,6 +127,38 @@ model Comment {
   @@map("comment")
 }
 
+model Referral {
+  id           String                @id @default(uuid())
+  company      String
+  jobTitle     String
+  description  String
+  requirements String
+  location     String
+  status       ReferralStatus        @default(PENDING)
+  postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
+  alumniId     String
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+  applications ReferralApplication[]
+
+  @@map("referrals")
+}
+
+model ReferralApplication {
+  id          String            @id @default(uuid())
+  referral    Referral          @relation(fields: [referralId], references: [id])
+  referralId  String
+  student     User              @relation(fields: [studentId], references: [id])
+  studentId   String
+  resumeUrl   String
+  coverLetter String?
+  status      ApplicationStatus @default(PENDING)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("referral_applications")
+}
+
 enum ConnectionStatus {
   PENDING
   ACCEPTED
@@ -136,4 +170,17 @@ enum Role {
   STUDENT
   ALUM
   ADMIN
+}
+
+enum ReferralStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWED
+  ACCEPTED
+  REJECTED
 }
