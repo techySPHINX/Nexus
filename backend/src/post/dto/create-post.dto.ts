@@ -6,9 +6,9 @@ export class CreatePostDto {
 
   @IsOptional()
   @IsString()
-  imageUrl?: string;
+  imageFile?: string;
 
   @IsOptional()
   @IsString()
-  type?: string; // e.g., "JOB", "UPDATE", "ANNOUNCEMENT"
+  type?: string;
 }
