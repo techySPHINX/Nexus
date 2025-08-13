@@ -11,6 +11,7 @@ import Connections from './pages/Connections';
 import Messages from './pages/Messages';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
+import Notification from './pages/Notification';
 
 function App() {
   return (
@@ -52,6 +53,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Messages />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/notification"
+                  element={
+                    <ProtectedRoute>
+                      <Notification />
                     </ProtectedRoute>
                   }
                 />
