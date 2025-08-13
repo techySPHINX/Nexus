@@ -287,4 +287,62 @@ export class ReferralService {
 
     return updatedApplication;
   }
+
+  async getMyApplications(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    return this.prisma.referralApplication.findMany({
+      where: { studentId: userId },
+      include: {
+        referral: {
+          select: {
+            id: true,
+            company: true,
+            jobTitle: true,
+            location: true,
+            status: true,
+          },
+        },
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async getReferralApplications(referralId: string, alumniId: string) {
+    const referral = await this.prisma.referral.findUnique({
+      where: { id: referralId },
+    });
+    if (!referral) {
+      throw new NotFoundException('Referral not found.');
+    }
+    if (referral.alumniId !== alumniId) {
+      throw new ForbiddenException('You can only view applications for your own referrals.');
+    }
+
+    return this.prisma.referralApplication.findMany({
+      where: { referralId },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }
