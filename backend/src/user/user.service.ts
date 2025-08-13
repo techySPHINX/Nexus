@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { hash } from 'bcryptjs';
@@ -9,12 +13,12 @@ export class UserService {
 
   async findAll() {
     return this.prisma.user.findMany({
-      include: { 
-        profile: { 
-          include: { 
-            skills: true 
-          } 
-        } 
+      include: {
+        profile: {
+          include: {
+            skills: true,
+          },
+        },
       },
     });
   }
@@ -22,12 +26,12 @@ export class UserService {
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: { 
-        profile: { 
-          include: { 
-            skills: true 
-          } 
-        } 
+      include: {
+        profile: {
+          include: {
+            skills: true,
+          },
+        },
       },
     });
 
@@ -54,7 +58,9 @@ export class UserService {
     if (name) userUpdateData.name = name;
     if (password) {
       if (password.length < 6) {
-        throw new BadRequestException('Password must be at least 6 characters long');
+        throw new BadRequestException(
+          'Password must be at least 6 characters long',
+        );
       }
       userUpdateData.password = await hash(password, 10);
     }
@@ -105,14 +111,14 @@ export class UserService {
           set: skillConnections,
         },
       },
-      include: { 
-        skills: true 
+      include: {
+        skills: true,
       },
     });
 
-    return { 
-      ...updatedUser, 
-      profile 
+    return {
+      ...updatedUser,
+      profile,
     };
   }
 
@@ -127,13 +133,13 @@ export class UserService {
     }
 
     // Delete profile first (due to foreign key constraint)
-    await this.prisma.profile.deleteMany({ 
-      where: { userId: id } 
+    await this.prisma.profile.deleteMany({
+      where: { userId: id },
     });
-    
+
     // Delete user
-    return this.prisma.user.delete({ 
-      where: { id } 
+    return this.prisma.user.delete({
+      where: { id },
     });
   }
 }

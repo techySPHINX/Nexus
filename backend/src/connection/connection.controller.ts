@@ -29,8 +29,11 @@ export class ConnectionController {
 
   @Post('send')
   async sendRequest(@Body() dto: CreateConnectionDto, @Req() req) {
-    const result = await this.connectionService.sendRequest(req.user.userId, dto.recipientId);
-    
+    const result = await this.connectionService.sendRequest(
+      req.user.userId,
+      dto.recipientId,
+    );
+
     // Emit WebSocket event for connection request
     if (result.connection) {
       this.messagingGateway.sendToUser(dto.recipientId, 'CONNECTION_REQUEST', {
@@ -38,36 +41,46 @@ export class ConnectionController {
         requester: {
           id: req.user.userId,
           name: req.user.name,
-          email: req.user.email
+          email: req.user.email,
         },
         recipientId: dto.recipientId,
         status: 'PENDING',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
     }
-    
+
     return result;
   }
 
   @Patch('status')
   async updateStatus(@Body() dto: UpdateConnectionStatusDto, @Req() req) {
-    const result = await this.connectionService.updateStatus(req.user.userId, dto);
-    
+    const result = await this.connectionService.updateStatus(
+      req.user.userId,
+      dto,
+    );
+
     // Emit WebSocket event for connection status update
-    if (result.connection && (dto.status === 'ACCEPTED' || dto.status === 'REJECTED')) {
-      this.messagingGateway.sendToUser(result.connection.requesterId, 'CONNECTION_STATUS_UPDATE', {
-        id: result.connection.id,
-        status: dto.status,
-        recipient: {
-          id: req.user.userId,
-          name: req.user.name,
-          email: req.user.email
+    if (
+      result.connection &&
+      (dto.status === 'ACCEPTED' || dto.status === 'REJECTED')
+    ) {
+      this.messagingGateway.sendToUser(
+        result.connection.requesterId,
+        'CONNECTION_STATUS_UPDATE',
+        {
+          id: result.connection.id,
+          status: dto.status,
+          recipient: {
+            id: req.user.userId,
+            name: req.user.name,
+            email: req.user.email,
+          },
+          requesterId: result.connection.requesterId,
+          updatedAt: new Date().toISOString(),
         },
-        requesterId: result.connection.requesterId,
-        updatedAt: new Date().toISOString()
-      });
+      );
     }
-    
+
     return result;
   }
 

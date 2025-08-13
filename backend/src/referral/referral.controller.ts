@@ -115,6 +115,10 @@ export class ReferralController {
     @Param('id') id: string,
     @Body() dto: UpdateReferralApplicationDto,
   ) {
-    return this.referralService.updateReferralApplicationStatus(userId, id, dto);
+    return this.referralService.updateReferralApplicationStatus(
+      userId,
+      id,
+      dto,
+    );
   }
 }

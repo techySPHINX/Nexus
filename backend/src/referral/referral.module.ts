@@ -7,7 +7,6 @@ import { FilesModule } from 'src/files/files.module';
 @Module({
   imports: [NotificationModule, FilesModule],
   controllers: [ReferralController],
-  providers: [ReferralService]
+  providers: [ReferralService],
 })
 export class ReferralModule {}
-
