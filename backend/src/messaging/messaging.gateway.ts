@@ -13,11 +13,20 @@ import { JwtService } from '@nestjs/jwt';
 import { MessagingService } from './messaging.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 
+/**
+ * Interface for an authenticated WebSocket client socket.
+ * Extends the base Socket with optional userId and userEmail properties.
+ */
 interface AuthenticatedSocket extends Socket {
   userId?: string;
   userEmail?: string;
 }
 
+/**
+ * WebSocket Gateway for real-time messaging functionality.
+ * Handles WebSocket connections, disconnections, and message events.
+ * Provides real-time communication for sending messages, typing indicators, and read receipts.
+ */
 @WebSocketGateway({
   cors: {
     origin: ['http://localhost:3001', 'http://localhost:3000'],
@@ -38,10 +47,21 @@ export class MessagingGateway
     private readonly jwtService: JwtService,
   ) {}
 
+  /**
+   * Called after the gateway has been initialized.
+   * Logs a message indicating the gateway is ready.
+   */
   afterInit() {
     console.log('WebSocket Gateway initialized');
   }
 
+  /**
+   * Handles new WebSocket connections.
+   * Authenticates the client using a JWT token from query parameters.
+   * Stores connected user information and joins them to a personal room.
+   * Broadcasts user online status.
+   * @param client - The connected WebSocket client socket.
+   */
   async handleConnection(client: AuthenticatedSocket) {
     try {
       // Extract user info from query parameters
@@ -94,6 +114,11 @@ export class MessagingGateway
     }
   }
 
+  /**
+   * Handles WebSocket disconnections.
+   * Removes the user from connected users and broadcasts user offline status.
+   * @param client - The disconnected WebSocket client socket.
+   */
   handleDisconnect(client: AuthenticatedSocket) {
     if (client.userId) {
       // Remove from connected users
@@ -111,6 +136,14 @@ export class MessagingGateway
     }
   }
 
+  /**
+   * Handles incoming 'NEW_MESSAGE' events.
+   * Saves the message to the database and broadcasts it to the recipient.
+   * Sends a confirmation back to the sender.
+   * @param data - The message data (receiverId, content).
+   * @param client - The authenticated WebSocket client socket.
+   * @returns An object indicating success or error.
+   */
   @SubscribeMessage('NEW_MESSAGE')
   async handleNewMessage(
     @MessageBody() data: CreateMessageDto,
@@ -170,6 +203,12 @@ export class MessagingGateway
     }
   }
 
+  /**
+   * Handles 'TYPING_START' events.
+   * Broadcasts a typing indicator to the specified receiver.
+   * @param data - Object containing the receiverId.
+   * @param client - The authenticated WebSocket client socket.
+   */
   @SubscribeMessage('TYPING_START')
   handleTypingStart(
     @MessageBody() data: { receiverId: string },
@@ -188,6 +227,12 @@ export class MessagingGateway
     });
   }
 
+  /**
+   * Handles 'TYPING_STOP' events.
+   * Broadcasts a typing stop indicator to the specified receiver.
+   * @param data - Object containing the receiverId.
+   * @param client - The authenticated WebSocket client socket.
+   */
   @SubscribeMessage('TYPING_STOP')
   handleTypingStop(
     @MessageBody() data: { receiverId: string },
@@ -206,6 +251,12 @@ export class MessagingGateway
     });
   }
 
+  /**
+   * Handles 'MESSAGE_READ' events.
+   * Broadcasts a read receipt to the sender of the message.
+   * @param data - Object containing the messageId and receiverId.
+   * @param client - The authenticated WebSocket client socket.
+   */
   @SubscribeMessage('MESSAGE_READ')
   handleMessageRead(
     @MessageBody() data: { messageId: string; receiverId: string },
@@ -222,6 +273,11 @@ export class MessagingGateway
     });
   }
 
+  /**
+   * Handles 'PING' events from clients.
+   * Responds with a 'PONG' event to maintain connection heartbeat.
+   * @param client - The authenticated WebSocket client socket.
+   */
   @SubscribeMessage('PING')
   handlePing(@ConnectedSocket() client: AuthenticatedSocket) {
     // Respond with PONG
@@ -232,12 +288,20 @@ export class MessagingGateway
     });
   }
 
-  // Helper method to get connected users
+  /**
+   * Returns a list of currently connected user IDs.
+   * @returns An array of strings representing connected user IDs.
+   */
   getConnectedUsers(): string[] {
     return Array.from(this.connectedUsers.keys());
   }
 
-  // Helper method to send message to specific user
+  /**
+   * Sends a WebSocket event to a specific user.
+   * @param userId - The ID of the user to send the event to.
+   * @param event - The name of the event to emit.
+   * @param data - The data payload for the event.
+   */
   sendToUser(userId: string, event: string, data: any) {
     const userSocket = this.connectedUsers.get(userId);
     if (userSocket) {
