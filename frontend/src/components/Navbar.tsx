@@ -33,9 +33,9 @@ import {
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavbar } from '../contexts/NavbarContext';
-import AppleNotification from './AppleNotification';
 import ThemeToggle from './ThemeToggle';
 import NavbarToggle from './NavbarToggle';
+import NotificationIndicator from './Notification/NotificationIndicator';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
@@ -43,37 +43,8 @@ const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
-  
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-
-  // Mock notifications for demo - replace with real data
-  const [notifications, setNotifications] = useState([
-    {
-      id: '1',
-      type: 'message' as const,
-      title: 'New Message',
-      message: 'You have a new message from John Doe',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-      isRead: false
-    },
-    {
-      id: '2',
-      type: 'connection' as const,
-      title: 'Connection Request',
-      message: 'Sarah Wilson wants to connect with you',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-      isRead: false
-    },
-    {
-      id: '3',
-      type: 'referral' as const,
-      title: 'New Job Referral',
-      message: 'A new job referral has been posted in your field',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-      isRead: true
-    }
-  ]);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -93,33 +64,6 @@ const Navbar: React.FC = () => {
     navigate('/');
   };
 
-  const handleMarkAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(n => n.id === id ? { ...n, isRead: true } : n)
-    );
-  };
-
-  const handleDeleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
-  };
-
-  const handleNotificationClick = (notification: any) => {
-    // Handle notification click - navigate to appropriate page
-    switch (notification.type) {
-      case 'message':
-        navigate('/messages');
-        break;
-      case 'connection':
-        navigate('/connections');
-        break;
-      case 'referral':
-        navigate('/referrals');
-        break;
-      default:
-        break;
-    }
-  };
-
   const navigationItems = [
     { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
     { text: 'Connections', icon: <People />, path: '/connections' },
@@ -132,9 +76,9 @@ const Navbar: React.FC = () => {
 
   // Top Navbar Component
   const TopNavbar = () => (
-    <AppBar 
-      position="fixed" 
-      sx={{ 
+    <AppBar
+      position="fixed"
+      sx={{
         zIndex: theme.zIndex.drawer + 1,
         bgcolor: 'primary.main',
         boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
@@ -187,17 +131,12 @@ const Navbar: React.FC = () => {
 
         {/* Right side - Actions and User Menu */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                     {user ? (
-             <>
-               <AppleNotification 
-                 notifications={notifications} 
-                 onMarkAsRead={handleMarkAsRead} 
-                 onDelete={handleDeleteNotification} 
-                 onNotificationClick={handleNotificationClick} 
-               />
-               <ThemeToggle />
-               <NavbarToggle />
-              
+          {user ? (
+            <>
+              <NotificationIndicator />
+              <ThemeToggle />
+              <NavbarToggle />
+
               <IconButton
                 onClick={handleUserMenuOpen}
                 sx={{ color: 'white' }}
@@ -211,6 +150,11 @@ const Navbar: React.FC = () => {
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={handleUserMenuClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right',
+                }}
                 PaperProps={{
                   sx: {
                     mt: 1,
@@ -224,6 +168,12 @@ const Navbar: React.FC = () => {
                     <Person />
                   </ListItemIcon>
                   Profile
+                </MenuItem>
+                <MenuItem component={Link} to="/notifications" onClick={handleUserMenuClose}>
+                  <ListItemIcon>
+                    <Person />
+                  </ListItemIcon>
+                  Notification
                 </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout}>
@@ -345,7 +295,7 @@ const Navbar: React.FC = () => {
                   <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
                     {item.icon}
                   </ListItemIcon>
-                  <ListItemText 
+                  <ListItemText
                     primary={item.text}
                     primaryTypographyProps={{
                       fontWeight: isActive(item.path) ? 600 : 400
@@ -357,19 +307,14 @@ const Navbar: React.FC = () => {
 
             <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2, my: 2 }} />
 
-                         <Box sx={{ p: 2 }}>
-               <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                 <ThemeToggle />
-                 <NavbarToggle />
-               </Stack>
-               
-               <AppleNotification 
-                 notifications={notifications} 
-                 onMarkAsRead={handleMarkAsRead} 
-                 onDelete={handleDeleteNotification} 
-                 onNotificationClick={handleNotificationClick} 
-               />
-             </Box>
+            <Box sx={{ p: 2 }}>
+              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
+                <ThemeToggle />
+                <NavbarToggle />
+              </Stack>
+
+              <NotificationIndicator />
+            </Box>
           </Box>
         ) : (
           <Box sx={{ p: 3, mt: 4 }}>
@@ -473,6 +418,12 @@ const Navbar: React.FC = () => {
             </ListItemIcon>
             Profile
           </MenuItem>
+          <MenuItem component={Link} to="/notifications" onClick={handleUserMenuClose}>
+            <ListItemIcon>
+              <Person />
+            </ListItemIcon>
+            Notification
+          </MenuItem>
           <Divider />
           <MenuItem onClick={handleLogout}>
             <ListItemIcon>
@@ -493,7 +444,7 @@ const Navbar: React.FC = () => {
         }}
         sx={{
           display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': { 
+          '& .MuiDrawer-paper': {
             width: 280,
             bgcolor: 'primary.main',
             color: 'white'
@@ -505,7 +456,7 @@ const Navbar: React.FC = () => {
             Nexus
           </Typography>
         </Box>
-        
+
         <List sx={{ px: 2 }}>
           {navigationItems.map((item) => (
             <ListItem

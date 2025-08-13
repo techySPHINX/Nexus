@@ -18,6 +18,8 @@ import Referrals from './pages/Referrals';
 import Files from './pages/Files';
 import Landing from './pages/Landing';
 import './App.css';
+import Notification from './pages/Notification';
+import { NotificationProvider } from './contexts/NotificationContext';
 
 // Layout component that handles navbar positioning
 const Layout: React.FC = () => {
@@ -50,6 +52,7 @@ const Layout: React.FC = () => {
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
             <Route path="/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
           </Routes>
         </Box>
       </Box>
@@ -62,9 +65,11 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <NavbarProvider>
+          <NotificationProvider>
           <Router>
             <Layout />
           </Router>
+          </NotificationProvider>
         </NavbarProvider>
       </AuthProvider>
     </ThemeProvider>
