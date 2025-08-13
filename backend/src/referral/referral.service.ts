@@ -7,12 +7,14 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReferralDto } from './dto/create-referral.dto';
 import { UpdateReferralDto } from './dto/update-referral.dto';
-import { CreateReferralApplicationDto } from './dto/create-referral-application.dto';
 import { UpdateReferralApplicationDto } from './dto/update-referral-application.dto';
 import { FilterReferralsDto } from './dto/filter-referrals.dto';
 import { FilterReferralApplicationsDto } from './dto/filter-referral-applications.dto';
-import { Role, ReferralStatus, ApplicationStatus } from '@prisma/client';
-import { NotificationService, NotificationType } from 'src/notification/notification.service';
+import { Role } from '@prisma/client';
+import {
+  NotificationService,
+  NotificationType,
+} from 'src/notification/notification.service';
 
 @Injectable()
 export class ReferralService {
@@ -171,15 +173,19 @@ export class ReferralService {
       throw new NotFoundException('Referral not found.');
     }
 
-    const existingApplication = await this.prisma.referralApplication.findFirst({
-      where: {
-        referralId: dto.referralId,
-        studentId: userId,
+    const existingApplication = await this.prisma.referralApplication.findFirst(
+      {
+        where: {
+          referralId: dto.referralId,
+          studentId: userId,
+        },
       },
-    });
+    );
 
     if (existingApplication) {
-      throw new BadRequestException('You have already applied for this referral.');
+      throw new BadRequestException(
+        'You have already applied for this referral.',
+      );
     }
 
     const application = await this.prisma.referralApplication.create({
@@ -191,7 +197,6 @@ export class ReferralService {
       },
     });
 
-    // Notify the alum who posted the referral
     await this.notificationService.create({
       userId: referral.alumniId,
       message: `${user.name} has applied for your referral: ${referral.jobTitle} at ${referral.company}.`,
@@ -221,7 +226,9 @@ export class ReferralService {
     return application;
   }
 
-  async getFilteredReferralApplications(filterDto: FilterReferralApplicationsDto) {
+  async getFilteredReferralApplications(
+    filterDto: FilterReferralApplicationsDto,
+  ) {
     const { referralId, studentId, status, skip, take } = filterDto;
 
     const where: any = {};
@@ -254,13 +261,15 @@ export class ReferralService {
   }
 
   async updateReferralApplicationStatus(
-    userId: string, // This userId will be the admin's ID
+    userId: string,
     applicationId: string,
     dto: UpdateReferralApplicationDto,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (user.role !== Role.ADMIN) {
-      throw new ForbiddenException('Only admins can update referral application status.');
+      throw new ForbiddenException(
+        'Only admins can update referral application status.',
+      );
     }
 
     const application = await this.prisma.referralApplication.findUnique({
@@ -276,7 +285,6 @@ export class ReferralService {
       data: dto,
     });
 
-    // Notify the student about the application status change
     if (dto.status && dto.status !== application.status) {
       await this.notificationService.create({
         userId: application.studentId,

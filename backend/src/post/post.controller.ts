@@ -6,7 +6,12 @@ import {
   Param,
   Delete,
   Patch,
+  UseGuards,
+  Query,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiTags,
   ApiOperation,
@@ -17,56 +22,100 @@ import {
 import { PostService } from './post.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
+import { FilesService } from 'src/files/files.service';
 
 @ApiTags('posts')
 @Controller('posts')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class PostController {
-  constructor(private readonly postService: PostService) {}
+  constructor(
+    private readonly postService: PostService,
+    private readonly filesService: FilesService,
+  ) {}
 
-  @Post(':userId')
-  @ApiOperation({ summary: 'Create a post for a user' })
-  @ApiParam({ name: 'userId', type: String })
+  @Post()
+  @ApiOperation({ summary: 'Create a post for the current user' })
   @ApiBody({ type: CreatePostDto })
   @ApiResponse({ status: 201, description: 'Post created successfully.' })
-  create(@Param('userId') userId: string, @Body() dto: CreatePostDto) {
-    return this.postService.create(userId, dto);
+  @UseInterceptors(FileInterceptor('image'))
+  async create(
+    @GetCurrentUser('sub') userId: string,
+    @Body() dto: CreatePostDto,
+    @UploadedFile() image: Express.Multer.File,
+  ) {
+    let imageUrl: string | undefined;
+    if (image) {
+      imageUrl = await this.filesService.saveFile(image);
+    }
+
+    return this.postService.create(userId, {
+      ...dto,
+      imageUrl: imageUrl,
+    });
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all posts' })
   @ApiResponse({ status: 200, description: 'List of all posts.' })
-  findAll() {
-    return this.postService.findAll();
+  findAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Query('type') type?: string,
+  ) {
+    return this.postService.findAll(page, limit, type);
   }
 
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get posts by user' })
   @ApiParam({ name: 'userId', type: String })
   @ApiResponse({ status: 200, description: 'List of posts by user.' })
-  findByUser(@Param('userId') userId: string) {
-    return this.postService.findByUser(userId);
+  findByUser(
+    @Param('userId') userId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ) {
+    return this.postService.findByUser(userId, page, limit);
   }
 
-  @Patch(':id/user/:userId')
-  @ApiOperation({ summary: 'Update a post by id and user' })
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single post by ID' })
   @ApiParam({ name: 'id', type: String })
-  @ApiParam({ name: 'userId', type: String })
+  @ApiResponse({ status: 200, description: 'Post found.' })
+  findOne(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
+    return this.postService.findOne(id, userId);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Update a post by id (only by author)' })
+  @ApiParam({ name: 'id', type: String })
   @ApiBody({ type: UpdatePostDto })
   @ApiResponse({ status: 200, description: 'Post updated successfully.' })
-  update(
+  @UseInterceptors(FileInterceptor('image'))
+  async update(
     @Param('id') id: string,
-    @Param('userId') userId: string,
+    @GetCurrentUser('sub') userId: string,
     @Body() dto: UpdatePostDto,
+    @UploadedFile() image: Express.Multer.File,
   ) {
-    return this.postService.update(id, userId, dto);
+    let imageUrl: string | undefined;
+    if (image) {
+      imageUrl = await this.filesService.saveFile(image);
+    }
+
+    return this.postService.update(id, userId, {
+      ...dto,
+      imageUrl: imageUrl,
+    });
   }
 
-  @Delete(':id/user/:userId')
-  @ApiOperation({ summary: 'Delete a post by id and user' })
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete a post by id (only by author)' })
   @ApiParam({ name: 'id', type: String })
-  @ApiParam({ name: 'userId', type: String })
   @ApiResponse({ status: 200, description: 'Post deleted successfully.' })
-  remove(@Param('id') id: string, @Param('userId') userId: string) {
+  remove(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
     return this.postService.remove(id, userId);
   }
 }
