@@ -56,9 +56,7 @@ export class NotificationController {
   }
 
   @Get('stats')
-  getStats(
-    @Req() req,
-  ): Promise<{
+  getStats(@Req() req): Promise<{
     total: any;
     unread: any;
     read: any;

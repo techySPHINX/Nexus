@@ -9,7 +9,6 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { UseGuards } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { MessagingService } from './messaging.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -26,7 +25,9 @@ interface AuthenticatedSocket extends Socket {
   },
   namespace: '/ws',
 })
-export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+export class MessagingGateway
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -37,7 +38,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     private readonly jwtService: JwtService,
   ) {}
 
-  afterInit(server: Server) {
+  afterInit() {
     console.log('WebSocket Gateway initialized');
   }
 
@@ -47,7 +48,10 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       const userId = client.handshake.query.userId as string;
       const token = client.handshake.query.token as string;
 
-      console.log('WebSocket connection attempt:', { userId, hasToken: !!token });
+      console.log('WebSocket connection attempt:', {
+        userId,
+        hasToken: !!token,
+      });
 
       if (!userId || !token) {
         console.log('WebSocket connection rejected: missing userId or token');
@@ -81,7 +85,9 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`User ${userId} connected to WebSocket. Total connected: ${this.connectedUsers.size}`);
+      console.log(
+        `User ${userId} connected to WebSocket. Total connected: ${this.connectedUsers.size}`,
+      );
     } catch (error) {
       console.error('WebSocket connection error:', error);
       client.disconnect();
@@ -99,7 +105,9 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`User ${client.userId} disconnected from WebSocket. Total connected: ${this.connectedUsers.size}`);
+      console.log(
+        `User ${client.userId} disconnected from WebSocket. Total connected: ${this.connectedUsers.size}`,
+      );
     }
   }
 
@@ -113,10 +121,17 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
         return { error: 'User not authenticated' };
       }
 
-      console.log('Handling new message:', { from: client.userId, to: data.receiverId, content: data.content });
+      console.log('Handling new message:', {
+        from: client.userId,
+        to: data.receiverId,
+        content: data.content,
+      });
 
       // Create the message in the database
-      const message = await this.messagingService.sendMessage(client.userId, data);
+      const message = await this.messagingService.sendMessage(
+        client.userId,
+        data,
+      );
 
       // Broadcast to recipient
       const recipientRoom = `user_${data.receiverId}`;
@@ -129,8 +144,8 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
         sender: {
           id: message.senderId,
           name: client.userId, // We'll need to get the actual name from user service
-          email: client.userId
-        }
+          email: client.userId,
+        },
       });
 
       // Send confirmation to sender
@@ -139,7 +154,7 @@ export class MessagingGateway implements OnGatewayInit, OnGatewayConnection, OnG
         content: message.content,
         senderId: message.senderId,
         receiverId: message.receiverId,
-        timestamp: message.timestamp
+        timestamp: message.timestamp,
       });
 
       console.log('Message sent successfully via WebSocket');
