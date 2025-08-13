@@ -9,6 +9,9 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateConnectionStatusDto } from './dto/connection.dto';
 import { NotificationService } from 'src/notification/notification.service';
 
+/**
+ * Service for managing user connections, including sending/accepting requests, and retrieving connection data.
+ */
 @Injectable()
 export class ConnectionService {
   constructor(
@@ -16,6 +19,17 @@ export class ConnectionService {
     private notificationService: NotificationService,
   ) {}
 
+  /**
+   * Sends a connection request from one user to another.
+   * Prevents duplicate requests, self-connection, and handles existing connections.
+   * @param requesterId - The ID of the user sending the request.
+   * @param recipientId - The ID of the user receiving the request.
+   * @returns A promise that resolves to a success message and the created/updated connection.
+   * @throws {BadRequestException} If trying to connect to self.
+   * @throws {NotFoundException} If requester or recipient user is not found.
+   * @throws {ConflictException} If a request is already pending or users are already connected.
+   * @throws {ForbiddenException} If the connection is blocked.
+   */
   async sendRequest(requesterId: string, recipientId: string) {
     if (requesterId === recipientId) {
       throw new BadRequestException('Cannot connect to yourself');
@@ -128,6 +142,16 @@ export class ConnectionService {
     };
   }
 
+  /**
+   * Updates the status of a connection request (e.g., ACCEPTED, REJECTED).
+   * Only the recipient of the request can update its status.
+   * @param userId - The ID of the user attempting to update the status (must be the recipient).
+   * @param dto - Data transfer object containing the connection ID and the new status.
+   * @returns A promise that resolves to a success message and the updated connection.
+   * @throws {NotFoundException} If the connection request is not found.
+   * @throws {ForbiddenException} If the user is not the recipient of the request.
+   * @throws {BadRequestException} If the request is not in PENDING status.
+   */
   async updateStatus(userId: string, dto: UpdateConnectionStatusDto) {
     const connection = await this.prisma.connection.findUnique({
       where: { id: dto.connectionId },
@@ -229,6 +253,17 @@ export class ConnectionService {
     };
   }
 
+  /**
+   * Retrieves a list of accepted connections for a user.
+   * Supports pagination, filtering by connected user's role, and searching by name/email.
+   * @param userId - The ID of the user whose connections are to be retrieved.
+   * @param page - The page number for pagination.
+   * @param limit - The number of connections per page.
+   * @param role - Optional. Filters connections by the role of the connected user.
+   * @param search - Optional. Searches connected users by name or email.
+   * @returns A promise that resolves to an object containing paginated connections and pagination details.
+   * @throws {BadRequestException} If pagination parameters are invalid.
+   */
   async getConnections(
     userId: string,
     page = 1,
@@ -252,10 +287,16 @@ export class ConnectionService {
         {
           OR: [
             {
-              AND: [{ requesterId: userId }, { recipient: { role } }],
+              AND: [
+                { requesterId: userId },
+                { recipient: { role } },
+              ],
             },
             {
-              AND: [{ recipientId: userId }, { requester: { role } }],
+              AND: [
+                { recipientId: userId },
+                { requester: { role } },
+              ],
             },
           ],
         },
@@ -381,6 +422,14 @@ export class ConnectionService {
     };
   }
 
+  /**
+   * Retrieves a list of pending connection requests received by a user.
+   * @param userId - The ID of the user to retrieve pending requests for.
+   * @param page - The page number for pagination.
+   * @param limit - The number of requests per page.
+   * @returns A promise that resolves to an object containing paginated pending requests and pagination details.
+   * @throws {BadRequestException} If pagination parameters are invalid.
+   */
   async getPendingRequests(userId: string, page = 1, limit = 20) {
     if (page < 1 || limit < 1 || limit > 100) {
       throw new BadRequestException('Invalid pagination parameters');
@@ -722,6 +771,13 @@ export class ConnectionService {
     };
   }
 
+  /**
+   * Suggests potential connections for a user based on shared skills, interests, and location.
+   * Excludes already connected users and the user themselves.
+   * @param userId - The ID of the user for whom to suggest connections.
+   * @param limit - The maximum number of suggestions to return.
+   * @returns A promise that resolves to an object containing suggested user profiles with match scores and reasons.
+   */
   async suggestConnections(userId: string, limit = 10) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -895,3 +951,4 @@ export class ConnectionService {
     };
   }
 }
+

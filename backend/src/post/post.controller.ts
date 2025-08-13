@@ -1,4 +1,4 @@
-'''import {
+import {
   Controller,
   Post,
   Get,
@@ -32,6 +32,11 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { FilesService } from 'src/files/files.service';
 
+/**
+ * Controller for handling post-related operations.
+ * Provides endpoints for creating, retrieving, updating, and deleting posts.
+ * Also includes functionalities for post moderation (approve/reject) by admins.
+ */
 @ApiTags('posts')
 @ApiBearerAuth()
 @Controller('posts')
@@ -42,6 +47,14 @@ export class PostController {
     private readonly filesService: FilesService,
   ) {}
 
+  /**
+   * Creates a new post for the current authenticated user.
+   * An optional image can be uploaded with the post.
+   * @param userId - The ID of the current user (extracted from JWT).
+   * @param dto - The data for creating the post.
+   * @param image - The uploaded image file (optional).
+   * @returns A promise that resolves to the created post.
+   */
   @Post()
   @ApiOperation({ summary: 'Create a post for the current user' })
   @ApiBody({ type: CreatePostDto })
@@ -63,40 +76,68 @@ export class PostController {
     });
   }
 
-  '''@Get('feed')
-  @ApiOperation({ summary: 'Get the user's feed' })
-  @ApiResponse({ status: 200, description: 'The user's feed.' })
+  /**
+   * Retrieves the personalized feed for the current authenticated user.
+   * @param userId - The ID of the current user (extracted from JWT).
+   * @param page - The page number for pagination (defaults to 1).
+   * @param limit - The number of posts per page (defaults to 10).
+   * @returns A promise that resolves to an array of posts for the user's feed.
+   */
+  @Get('feed')
+  @ApiOperation({ summary: "Get the user's feed" })
+  @ApiResponse({ status: 200, description: "The user's feed." })
   getFeed(
     @GetCurrentUser('sub') userId: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
-    return this.postService.getFeed(userId, page, limit);
-  }'''
+    const pageNum = page ?? 1;
+    const limitNum = limit ?? 10;
+    return this.postService.getFeed(userId, pageNum, limitNum);
+  }
 
+  /**
+   * Retrieves all posts that are pending approval. Only accessible by ADMINs.
+   * @param page - The page number for pagination (defaults to 1).
+   * @param limit - The number of posts per page (defaults to 10).
+   */
   @Get('pending')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Get all pending posts (for admins)' })
   @ApiResponse({ status: 200, description: 'List of all pending posts.' })
   getPendingPosts(
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
-    return this.postService.getPendingPosts(page, limit);
+    const pageNum = page ?? 1;
+    const limitNum = limit ?? 10;
+    return this.postService.getPendingPosts(pageNum, limitNum);
   }
 
+  /**
+   * Retrieves all posts created by a specific user.
+   * @param userId - The ID of the user whose posts are to be retrieved.
+   */
   @Get('user/:userId')
   @ApiOperation({ summary: 'Get posts by user' })
   @ApiParam({ name: 'userId', type: String })
   @ApiResponse({ status: 200, description: 'List of posts by user.' })
   findByUser(
     @Param('userId') userId: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 10,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
-    return this.postService.findByUser(userId, page, limit);
+    const pageNum = page ?? 1;
+    const limitNum = limit ?? 10;
+    return this.postService.findByUser(userId, pageNum, limitNum);
   }
 
+  /**
+   * Retrieves a single post by its ID.
+   * @param id - The ID of the post to retrieve.
+   * @param userId - The ID of the current user (for authorization checks).
+   * @returns A promise that resolves to the post object.
+   */
   @Get(':id')
   @ApiOperation({ summary: 'Get a single post by ID' })
   @ApiParam({ name: 'id', type: String })
@@ -105,6 +146,15 @@ export class PostController {
     return this.postService.findOne(id, userId);
   }
 
+  /**
+   * Updates an existing post. Only the author of the post can update it.
+   * An optional new image can be uploaded.
+   * @param id - The ID of the post to update.
+   * @param userId - The ID of the current user (extracted from JWT).
+   * @param dto - The data to update the post with.
+   * @param image - The new image file (optional).
+   * @returns A promise that resolves to the updated post.
+   */
   @Patch(':id')
   @ApiOperation({ summary: 'Update a post by id (only by author)' })
   @ApiParam({ name: 'id', type: String })
@@ -128,6 +178,11 @@ export class PostController {
     });
   }
 
+  /**
+   * Approves a pending post. Only accessible by ADMINs.
+   * @param id - The ID of the post to approve.
+   * @returns A promise that resolves when the post has been approved.
+   */
   @Patch(':id/approve')
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -138,6 +193,11 @@ export class PostController {
     return this.postService.approvePost(id);
   }
 
+  /**
+   * Rejects a pending post. Only accessible by ADMINs.
+   * @param id - The ID of the post to reject.
+   * @returns A promise that resolves when the post has been rejected.
+   */
   @Patch(':id/reject')
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -148,6 +208,12 @@ export class PostController {
     return this.postService.rejectPost(id);
   }
 
+  /**
+   * Deletes a post. Only the author of the post can delete it.
+   * @param id - The ID of the post to delete.
+   * @param userId - The ID of the current user (extracted from JWT).
+   * @returns A promise that resolves when the post has been deleted.
+   */
   @Delete(':id')
   @ApiOperation({ summary: 'Delete a post by id (only by author)' })
   @ApiParam({ name: 'id', type: String })
@@ -156,4 +222,3 @@ export class PostController {
     return this.postService.remove(id, userId);
   }
 }
-'''
