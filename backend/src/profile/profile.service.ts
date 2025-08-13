@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { FilterProfilesDto } from './dto/filter-profiles.dto';
 
 @Injectable()
 export class ProfileService {
@@ -26,6 +27,55 @@ export class ProfileService {
     });
     if (!profile) throw new NotFoundException('Profile not found');
     return profile;
+  }
+
+  async getFilteredProfiles(filterDto: FilterProfilesDto) {
+    const { name, email, roles, location, skills, skip, take } = filterDto;
+
+    const where: any = {};
+
+    if (name) {
+      where.user = { ...where.user, name: { contains: name, mode: 'insensitive' } };
+    }
+
+    if (email) {
+      where.user = { ...where.user, email: { contains: email, mode: 'insensitive' } };
+    }
+
+    if (roles && roles.length > 0) {
+      where.user = { ...where.user, role: { in: roles } };
+    }
+
+    if (location) {
+      where.location = { contains: location, mode: 'insensitive' };
+    }
+
+    if (skills && skills.length > 0) {
+      where.skills = {
+        some: {
+          name: { in: skills, mode: 'insensitive' },
+        },
+      };
+    }
+
+    const profiles = await this.prisma.profile.findMany({
+      where,
+      include: {
+        skills: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+      skip,
+      take,
+    });
+
+    return profiles;
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
