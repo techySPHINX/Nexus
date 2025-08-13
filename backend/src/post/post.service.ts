@@ -5,14 +5,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { CreatePostDto } from './dto/create-post.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
 
 @Injectable()
 export class PostService {
   constructor(private prisma: PrismaService) {}
 
-  async create(userId: string, dto: CreatePostDto) {
+  async create(
+    userId: string,
+    dto: { content: string; imageUrl?: string; type?: string },
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -214,7 +215,11 @@ export class PostService {
     };
   }
 
-  async update(id: string, userId: string, dto: UpdatePostDto) {
+  async update(
+    id: string,
+    userId: string,
+    dto: { content?: string; imageUrl?: string; type?: string },
+  ) {
     const post = await this.prisma.post.findUnique({
       where: { id },
       select: { authorId: true },
@@ -284,72 +289,6 @@ export class PostService {
     await this.prisma.post.delete({ where: { id } });
 
     return { message: 'Post deleted successfully' };
-  }
-
-  async likePost(postId: string, userId: string) {
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
-    });
-
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
-
-    const existingLike = await this.prisma.like.findUnique({
-      where: {
-        userId_postId: {
-          userId,
-          postId,
-        },
-      },
-    });
-
-    if (existingLike) {
-      throw new BadRequestException('Post already liked');
-    }
-
-    await this.prisma.like.create({
-      data: {
-        userId,
-        postId,
-      },
-    });
-
-    return { message: 'Post liked successfully' };
-  }
-
-  async unlikePost(postId: string, userId: string) {
-    const post = await this.prisma.post.findUnique({
-      where: { id: postId },
-    });
-
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
-
-    const existingLike = await this.prisma.like.findUnique({
-      where: {
-        userId_postId: {
-          userId,
-          postId,
-        },
-      },
-    });
-
-    if (!existingLike) {
-      throw new BadRequestException('Post not liked yet');
-    }
-
-    await this.prisma.like.delete({
-      where: {
-        userId_postId: {
-          userId,
-          postId,
-        },
-      },
-    });
-
-    return { message: 'Post unliked successfully' };
   }
 
   async getPostStats(id: string) {

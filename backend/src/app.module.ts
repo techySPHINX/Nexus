@@ -5,24 +5,14 @@ import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UserModule } from './user/user.module';
-import { ConnectionService } from './connection/connection.service';
-import { ConnectionController } from './connection/connection.controller';
 import { ConnectionModule } from './connection/connection.module';
-import { MessagingService } from './messaging/messaging.service';
-import { MessagingController } from './messaging/messaging.controller';
 import { MessagingModule } from './messaging/messaging.module';
-import { NotificationController } from './notification/notification.controller';
-import { NotificationService } from './notification/notification.service';
 import { NotificationModule } from './notification/notification.module';
-import { PostService } from './post/post.service';
-import { PostController } from './post/post.controller';
 import { PostModule } from './post/post.module';
-import { EngagementController } from './engagement/engagement.controller';
-import { EngagementService } from './engagement/engagement.service';
 import { ProfileModule } from './profile/profile.module';
-import { ProfileController } from './profile/profile.controller';
-import { ProfileService } from './profile/profile.service';
 import { EngagementModule } from './engagement/engagement.module';
+import { ReferralModule } from './referral/referral.module';
+import { FilesModule } from './files/files.module';
 
 @Module({
   imports: [
@@ -36,24 +26,10 @@ import { EngagementModule } from './engagement/engagement.module';
     PostModule,
     ProfileModule,
     EngagementModule,
+    ReferralModule,
+    FilesModule,
   ],
-  controllers: [
-    AppController,
-    ConnectionController,
-    MessagingController,
-    NotificationController,
-    PostController,
-    ProfileController,
-    EngagementController,
-  ],
-  providers: [
-    AppService,
-    ConnectionService,
-    MessagingService,
-    NotificationService,
-    PostService,
-    ProfileService,
-    EngagementService,
-  ],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
