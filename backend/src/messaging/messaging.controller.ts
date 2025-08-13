@@ -13,11 +13,21 @@ import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator
 import { CreateMessageDto } from './dto/create-message.dto';
 import { FilterMessagesDto } from './dto/filter-messages.dto';
 
+/**
+ * Controller for handling messaging-related HTTP requests.
+ * All endpoints are protected by JWT authentication.
+ */
 @UseGuards(JwtAuthGuard)
 @Controller('messages')
 export class MessagingController {
   constructor(private readonly messagingService: MessagingService) {}
 
+  /**
+   * Sends a new message from the current user to a specified recipient.
+   * @param senderId - The ID of the authenticated user sending the message.
+   * @param dto - The data transfer object containing recipient ID and message content.
+   * @returns A promise that resolves to the created message.
+   */
   @Post()
   sendMessage(
     @GetCurrentUser('userId') senderId: string,
@@ -26,6 +36,14 @@ export class MessagingController {
     return this.messagingService.sendMessage(senderId, dto);
   }
 
+  /**
+   * Retrieves the conversation history between the current user and another specified user.
+   * Supports pagination for fetching messages.
+   * @param userId - The ID of the authenticated user.
+   * @param otherUserId - The ID of the other user in the conversation.
+   * @param dto - Data transfer object for filtering messages (e.g., pagination).
+   * @returns A promise that resolves to an object containing messages and pagination details.
+   */
   @Get('conversation/:otherUserId')
   getConversation(
     @GetCurrentUser('userId') userId: string,
@@ -35,6 +53,12 @@ export class MessagingController {
     return this.messagingService.getConversation(userId, otherUserId, dto);
   }
 
+  /**
+   * Retrieves a list of all conversations the current user is part of.
+   * Each conversation includes the last message and the other participant's details.
+   * @param userId - The ID of the authenticated user.
+   * @returns A promise that resolves to an array of conversation summaries.
+   */
   @Get('conversations/all')
   getAllConversations(@GetCurrentUser('userId') userId: string) {
     return this.messagingService.getAllConversations(userId);

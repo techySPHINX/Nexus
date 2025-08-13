@@ -6,10 +6,22 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 
+/**
+ * Service for managing user engagement with posts, including likes and comments.
+ */
 @Injectable()
 export class EngagementService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Allows a user to like a specific post.
+   * Prevents a user from liking the same post multiple times.
+   * @param userId - The ID of the user liking the post.
+   * @param postId - The ID of the post to be liked.
+   * @returns A promise that resolves to the created like record.
+   * @throws {NotFoundException} If the post is not found.
+   * @throws {BadRequestException} If the post has already been liked by the user.
+   */
   async likePost(userId: string, postId: string) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
@@ -29,6 +41,14 @@ export class EngagementService {
     });
   }
 
+  /**
+   * Allows a user to unlike a specific post.
+   * @param userId - The ID of the user unliking the post.
+   * @param postId - The ID of the post to be unliked.
+   * @returns A promise that resolves to the deleted like record.
+   * @throws {NotFoundException} If the post is not found.
+   * @throws {BadRequestException} If the post has not been liked by the user.
+   */
   async unlikePost(userId: string, postId: string) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
@@ -48,6 +68,15 @@ export class EngagementService {
     });
   }
 
+  /**
+   * Allows a user to add a comment to a specific post.
+   * @param userId - The ID of the user making the comment.
+   * @param postId - The ID of the post to comment on.
+   * @param content - The content of the comment.
+   * @returns A promise that resolves to the created comment record.
+   * @throws {NotFoundException} If the post is not found.
+   * @throws {BadRequestException} If the comment content is empty or too long.
+   */
   async commentOnPost(userId: string, postId: string, content: string) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
@@ -73,6 +102,15 @@ export class EngagementService {
     });
   }
 
+  /**
+   * Retrieves all comments for a specific post with pagination.
+   * @param postId - The ID of the post to retrieve comments for.
+   * @param page - The page number for pagination.
+   * @param limit - The number of comments per page.
+   * @returns A promise that resolves to an object containing paginated comments and pagination details.
+   * @throws {NotFoundException} If the post is not found.
+   * @throws {BadRequestException} If pagination parameters are invalid.
+   */
   async getCommentsForPost(postId: string, page = 1, limit = 10) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
@@ -119,6 +157,17 @@ export class EngagementService {
     };
   }
 
+  /**
+   * Updates an existing comment.
+   * Only the author of the comment can update it.
+   * @param commentId - The ID of the comment to update.
+   * @param userId - The ID of the user attempting to update the comment.
+   * @param content - The new content for the comment.
+   * @returns A promise that resolves to the updated comment record.
+   * @throws {NotFoundException} If the comment is not found.
+   * @throws {ForbiddenException} If the user is not the author of the comment.
+   * @throws {BadRequestException} If the comment content is empty or too long.
+   */
   async updateComment(commentId: string, userId: string, content: string) {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
@@ -148,6 +197,15 @@ export class EngagementService {
     });
   }
 
+  /**
+   * Deletes an existing comment.
+   * Only the author of the comment can delete it.
+   * @param commentId - The ID of the comment to delete.
+   * @param userId - The ID of the user attempting to delete the comment.
+   * @returns A promise that resolves to a success message.
+   * @throws {NotFoundException} If the comment is not found.
+   * @throws {ForbiddenException} If the user is not the author of the comment.
+   */
   async deleteComment(commentId: string, userId: string) {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
@@ -165,6 +223,11 @@ export class EngagementService {
     return { message: 'Comment deleted successfully' };
   }
 
+  /**
+   * Retrieves a recommended feed of posts, ordered by creation date and then by like count.
+   * This is a basic recommendation logic and can be expanded.
+   * @returns A promise that resolves to an array of recommended posts.
+   */
   async getRecommendedFeed() {
     return this.prisma.post.findMany({
       orderBy: [{ createdAt: 'desc' }, { Like: { _count: 'desc' } }],

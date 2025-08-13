@@ -7,10 +7,17 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { hash } from 'bcryptjs';
 
+/**
+ * Service for handling user-related operations.
+ */
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Retrieves all users with their profiles and skills.
+   * @returns A promise that resolves to an array of all users.
+   */
   async findAll() {
     return this.prisma.user.findMany({
       include: {
@@ -23,6 +30,12 @@ export class UserService {
     });
   }
 
+  /**
+   * Retrieves a specific user by their ID, including their profile and skills.
+   * @param id - The ID of the user to retrieve.
+   * @returns A promise that resolves to the user object.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -41,6 +54,14 @@ export class UserService {
     return user;
   }
 
+  /**
+   * Updates a user's information, including their profile and skills.
+   * @param id - The ID of the user to update.
+   * @param dto - The data to update the user with.
+   * @returns A promise that resolves to the updated user object.
+   * @throws {NotFoundException} If the user is not found.
+   * @throws {BadRequestException} If the password is less than 6 characters long.
+   */
   async update(id: string, dto: UpdateUserDto) {
     // Check if user exists
     const existingUser = await this.prisma.user.findUnique({
@@ -122,6 +143,12 @@ export class UserService {
     };
   }
 
+  /**
+   * Deletes a user and their associated profile.
+   * @param id - The ID of the user to delete.
+   * @returns A promise that resolves when the user has been deleted.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async remove(id: string) {
     // Check if user exists
     const existingUser = await this.prisma.user.findUnique({

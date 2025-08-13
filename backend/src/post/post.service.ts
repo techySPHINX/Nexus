@@ -1,4 +1,4 @@
-'''import {
+import {
   Injectable,
   NotFoundException,
   ForbiddenException,
@@ -7,10 +7,22 @@
 import { PrismaService } from 'src/prisma/prisma.service';
 import { PostStatus, Role } from '@prisma/client';
 
+/**
+ * Service for managing posts, including creation, retrieval, updates, and moderation.
+ */
 @Injectable()
 export class PostService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Creates a new post.
+   * Students' posts are set to PENDING status, while others are APPROVED.
+   * @param userId - The ID of the author.
+   * @param dto - The data for creating the post.
+   * @returns A promise that resolves to the created post.
+   * @throws {NotFoundException} If the user is not found.
+   * @throws {BadRequestException} If content is empty or too long.
+   */
   async create(
     userId: string,
     dto: { content: string; imageUrl?: string; type?: string },
@@ -64,7 +76,17 @@ export class PostService {
     });
   }
 
-  '''async getFeed(userId: string, page = 1, limit = 10) {
+  /**
+   * Retrieves a personalized feed of approved posts for a user.
+   * Posts are ranked based on connections, interests, skills, and engagement.
+   * @param userId - The ID of the user requesting the feed.
+   * @param page - The page number for pagination.
+   * @param limit - The number of posts per page.
+   * @returns A promise that resolves to an object containing paginated posts and pagination details.
+   * @throws {BadRequestException} If pagination parameters are invalid.
+   * @throws {NotFoundException} If the user is not found.
+   */
+  async getFeed(userId: string, page = 1, limit = 10) {
     if (page < 1 || limit < 1 || limit > 50) {
       throw new BadRequestException('Invalid pagination parameters');
     }
@@ -134,7 +156,8 @@ export class PostService {
 
         // Interest Score
         const postContent = post.content.toLowerCase();
-        const authorSkills = post.author.profile?.skills.map((s) => s.name.toLowerCase()) || [];
+        const authorSkills =
+          post.author.profile?.skills.map((s) => s.name.toLowerCase()) || [];
 
         for (const interest of userInterests) {
           if (postContent.includes(interest.toLowerCase())) {
@@ -174,8 +197,16 @@ export class PostService {
         hasPrev: page > 1,
       },
     };
-  }'''
+  }
 
+  /**
+   * Retrieves a single post by its ID.
+   * Optionally checks if the current user has liked the post.
+   * @param id - The ID of the post to retrieve.
+   * @param userId - Optional. The ID of the current user.
+   * @returns A promise that resolves to the post object with like status.
+   * @throws {NotFoundException} If the post is not found.
+   */
   async findOne(id: string, userId?: string) {
     const post = await this.prisma.post.findUnique({
       where: { id },
@@ -229,6 +260,15 @@ export class PostService {
     };
   }
 
+  /**
+   * Retrieves all posts by a specific user with pagination.
+   * @param userId - The ID of the user whose posts are to be retrieved.
+   * @param page - The page number for pagination.
+   * @param limit - The number of posts per page.
+   * @returns A promise that resolves to an object containing paginated posts and pagination details.
+   * @throws {NotFoundException} If the user is not found.
+   * @throws {BadRequestException} If pagination parameters are invalid.
+   */
   async findByUser(userId: string, page = 1, limit = 10) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -284,6 +324,17 @@ export class PostService {
     };
   }
 
+  /**
+   * Updates an existing post.
+   * Only the author of the post can update it.
+   * @param id - The ID of the post to update.
+   * @param userId - The ID of the user attempting to update the post.
+   * @param dto - The data to update the post with.
+   * @returns A promise that resolves to the updated post.
+   * @throws {NotFoundException} If the post is not found.
+   * @throws {ForbiddenException} If the user is not the author of the post.
+   * @throws {BadRequestException} If content is empty or too long.
+   */
   async update(
     id: string,
     userId: string,
@@ -341,6 +392,15 @@ export class PostService {
     });
   }
 
+  /**
+   * Deletes a post.
+   * Only the author of the post can delete it.
+   * @param id - The ID of the post to delete.
+   * @param userId - The ID of the user attempting to delete the post.
+   * @returns A promise that resolves to a success message.
+   * @throws {NotFoundException} If the post is not found.
+   * @throws {ForbiddenException} If the user is not the author of the post.
+   */
   async remove(id: string, userId: string) {
     const post = await this.prisma.post.findUnique({
       where: { id },
@@ -360,6 +420,12 @@ export class PostService {
     return { message: 'Post deleted successfully' };
   }
 
+  /**
+   * Retrieves engagement statistics (likes and comments) for a specific post.
+   * @param id - The ID of the post to retrieve stats for.
+   * @returns A promise that resolves to an object containing like and comment counts.
+   * @throws {NotFoundException} If the post is not found.
+   */
   async getPostStats(id: string) {
     const stats = await this.prisma.post.findUnique({
       where: { id },
@@ -383,6 +449,14 @@ export class PostService {
     };
   }
 
+  /**
+   * Searches for approved posts based on a query string with pagination.
+   * @param query - The search query string.
+   * @param page - The page number for pagination.
+   * @param limit - The number of posts per page.
+   * @returns A promise that resolves to an object containing paginated posts, the query, and pagination details.
+   * @throws {BadRequestException} If the search query is empty or pagination parameters are invalid.
+   */
   async searchPosts(query: string, page = 1, limit = 10) {
     if (!query || query.trim().length === 0) {
       throw new BadRequestException('Search query cannot be empty');
@@ -449,6 +523,13 @@ export class PostService {
     };
   }
 
+  /**
+   * Retrieves all posts that are pending approval with pagination.
+   * @param page - The page number for pagination.
+   * @param limit - The number of posts per page.
+   * @returns A promise that resolves to an object containing paginated pending posts and pagination details.
+   * @throws {BadRequestException} If pagination parameters are invalid.
+   */
   async getPendingPosts(page = 1, limit = 10) {
     if (page < 1 || limit < 1 || limit > 50) {
       throw new BadRequestException('Invalid pagination parameters');
@@ -490,6 +571,13 @@ export class PostService {
     };
   }
 
+  /**
+   * Approves a post, changing its status from PENDING to APPROVED.
+   * @param id - The ID of the post to approve.
+   * @returns A promise that resolves to the updated post.
+   * @throws {NotFoundException} If the post is not found.
+   * @throws {BadRequestException} If the post is not in PENDING status.
+   */
   async approvePost(id: string) {
     const post = await this.prisma.post.findUnique({
       where: { id },
@@ -509,6 +597,13 @@ export class PostService {
     });
   }
 
+  /**
+   * Rejects a post, changing its status from PENDING to REJECTED.
+   * @param id - The ID of the post to reject.
+   * @returns A promise that resolves to the updated post.
+   * @throws {NotFoundException} If the post is not found.
+   * @throws {BadRequestException} If the post is not in PENDING status.
+   */
   async rejectPost(id: string) {
     const post = await this.prisma.post.findUnique({
       where: { id },
@@ -528,4 +623,3 @@ export class PostService {
     });
   }
 }
-''
