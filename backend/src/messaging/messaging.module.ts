@@ -8,7 +8,7 @@ import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
-    PrismaModule, 
+    PrismaModule,
     AuthModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'fallback-secret',
