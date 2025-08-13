@@ -7,10 +7,20 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { FilterProfilesDto } from './dto/filter-profiles.dto';
 
+/**
+ * Service for managing user profiles, including retrieval, updates, skill endorsements, and badge awards.
+ */
 @Injectable()
 export class ProfileService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Retrieves a user's profile by their user ID.
+   * Includes associated skills, user details, and endorsements.
+   * @param userId - The ID of the user whose profile is to be retrieved.
+   * @returns A promise that resolves to the user's profile.
+   * @throws {NotFoundException} If the profile is not found.
+   */
   async getProfile(userId: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { userId: userId },
@@ -35,6 +45,11 @@ export class ProfileService {
     return profile;
   }
 
+  /**
+   * Retrieves a list of profiles based on various filters.
+   * @param filterDto - DTO containing criteria for filtering profiles (e.g., name, email, roles, location, skills).
+   * @returns A promise that resolves to an array of filtered profiles.
+   */
   async getFilteredProfiles(filterDto: FilterProfilesDto) {
     const { name, email, roles, location, skills, skip, take } = filterDto;
 
@@ -90,6 +105,14 @@ export class ProfileService {
     return profiles;
   }
 
+  /**
+   * Updates a user's profile information.
+   * Creates or updates skills associated with the profile.
+   * @param userId - The ID of the user whose profile is to be updated.
+   * @param dto - The data to update the profile with.
+   * @returns A promise that resolves to the updated profile.
+   * @throws {NotFoundException} If the profile is not found.
+   */
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('Profile not found');
@@ -134,6 +157,15 @@ export class ProfileService {
     });
   }
 
+  /**
+   * Endorses a specific skill for a user's profile.
+   * @param endorserId - The ID of the user performing the endorsement.
+   * @param profileId - The ID of the profile whose skill is being endorsed.
+   * @param skillId - The ID of the skill to endorse.
+   * @returns A promise that resolves to the created endorsement record.
+   * @throws {NotFoundException} If the profile or skill is not found.
+   * @throws {ConflictException} If the endorser has already endorsed this skill for this user.
+   */
   async endorseSkill(endorserId: string, profileId: string, skillId: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { id: profileId },
@@ -170,6 +202,14 @@ export class ProfileService {
     });
   }
 
+  /**
+   * Awards a badge to a specific user.
+   * @param userId - The ID of the user to award the badge to.
+   * @param badgeId - The ID of the badge to award.
+   * @returns A promise that resolves to the created user-badge association record.
+   * @throws {NotFoundException} If the user or badge is not found.
+   * @throws {ConflictException} If the user already has this badge.
+   */
   async awardBadge(userId: string, badgeId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
@@ -200,6 +240,12 @@ export class ProfileService {
     });
   }
 
+  /**
+   * Retrieves all badges awarded to a specific user.
+   * @param userId - The ID of the user to retrieve badges for.
+   * @returns A promise that resolves to an array of badge associations for the user.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async getBadgesForUser(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');

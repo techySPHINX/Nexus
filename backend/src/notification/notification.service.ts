@@ -7,6 +7,9 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 
+/**
+ * Enum for different types of notifications.
+ */
 export enum NotificationType {
   CONNECTION_REQUEST = 'CONNECTION_REQUEST',
   CONNECTION_ACCEPTED = 'CONNECTION_ACCEPTED',
@@ -20,10 +23,21 @@ export enum NotificationType {
   REFERRAL_APPLICATION_STATUS_UPDATE = 'REFERRAL_APPLICATION_STATUS_UPDATE',
 }
 
+/**
+ * Service for managing user notifications.
+ * Handles creation, retrieval, marking as read/unread, and deletion of notifications.
+ */
 @Injectable()
 export class NotificationService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Creates a new notification.
+   * @param dto - The data for creating the notification.
+   * @returns A promise that resolves to the created notification.
+   * @throws {NotFoundException} If the target user is not found.
+   * @throws {BadRequestException} If the message is empty, too long, or the type is invalid.
+   */
   async create(dto: CreateNotificationDto) {
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
@@ -57,6 +71,17 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Retrieves notifications for a specific user with pagination and optional filtering.
+   * @param userId - The ID of the user to retrieve notifications for.
+   * @param page - The page number for pagination.
+   * @param limit - The number of notifications per page.
+   * @param unreadOnly - If true, only retrieves unread notifications.
+   * @param type - Optional. Filters notifications by type.
+   * @returns A promise that resolves to an object containing paginated notifications, unread count, and pagination details.
+   * @throws {NotFoundException} If the user is not found.
+   * @throws {BadRequestException} If pagination parameters are invalid or the type is invalid.
+   */
   async findAllForUser(
     userId: string,
     page = 1,
@@ -118,6 +143,12 @@ export class NotificationService {
     };
   }
 
+  /**
+   * Retrieves the count of unread notifications for a specific user.
+   * @param userId - The ID of the user.
+   * @returns A promise that resolves to an object containing the unread count.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async getUnreadCount(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -134,6 +165,14 @@ export class NotificationService {
     return { unreadCount: count };
   }
 
+  /**
+   * Marks a specific notification as read.
+   * @param id - The ID of the notification to mark.
+   * @param userId - The ID of the user who owns the notification.
+   * @returns A promise that resolves to a success message.
+   * @throws {NotFoundException} If the notification is not found.
+   * @throws {ForbiddenException} If the user does not own the notification.
+   */
   async markAsRead(id: string, userId: string) {
     const notification = await this.prisma.notification.findUnique({
       where: { id },
@@ -162,6 +201,12 @@ export class NotificationService {
     return { message: 'Notification marked as read' };
   }
 
+  /**
+   * Marks all unread notifications for a specific user as read.
+   * @param userId - The ID of the user.
+   * @returns A promise that resolves to an object containing a success message and the count of updated notifications.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async markAllAsRead(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -182,6 +227,14 @@ export class NotificationService {
     };
   }
 
+  /**
+   * Marks a specific notification as unread.
+   * @param id - The ID of the notification to mark.
+   * @param userId - The ID of the user who owns the notification.
+   * @returns A promise that resolves to a success message.
+   * @throws {NotFoundException} If the notification is not found.
+   * @throws {ForbiddenException} If the user does not own the notification.
+   */
   async markAsUnread(id: string, userId: string) {
     const notification = await this.prisma.notification.findUnique({
       where: { id },
@@ -210,6 +263,14 @@ export class NotificationService {
     return { message: 'Notification marked as unread' };
   }
 
+  /**
+   * Deletes a specific notification.
+   * @param id - The ID of the notification to delete.
+   * @param userId - The ID of the user who owns the notification.
+   * @returns A promise that resolves to a success message.
+   * @throws {NotFoundException} If the notification is not found.
+   * @throws {ForbiddenException} If the user does not own the notification.
+   */
   async remove(id: string, userId: string) {
     const notification = await this.prisma.notification.findUnique({
       where: { id },
@@ -231,6 +292,12 @@ export class NotificationService {
     return { message: 'Notification deleted successfully' };
   }
 
+  /**
+   * Deletes all read notifications for a specific user.
+   * @param userId - The ID of the user.
+   * @returns A promise that resolves to an object containing a success message and the count of deleted notifications.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async removeAllRead(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -250,6 +317,12 @@ export class NotificationService {
     };
   }
 
+  /**
+   * Deletes all notifications for a specific user.
+   * @param userId - The ID of the user.
+   * @returns A promise that resolves to an object containing a success message and the count of deleted notifications.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async removeAll(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -269,6 +342,12 @@ export class NotificationService {
     };
   }
 
+  /**
+   * Creates a system notification for a user.
+   * @param userId - The ID of the user to notify.
+   * @param message - The content of the system notification.
+   * @returns A promise that resolves to the created notification.
+   */
   async createSystemNotification(userId: string, message: string) {
     return this.create({
       userId,
@@ -277,6 +356,12 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Creates a connection request notification.
+   * @param recipientId - The ID of the user receiving the request.
+   * @param senderName - The name of the user who sent the request.
+   * @returns A promise that resolves to the created notification.
+   */
   async createConnectionRequestNotification(
     recipientId: string,
     senderName: string,
@@ -288,6 +373,12 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Creates a connection accepted notification.
+   * @param recipientId - The ID of the user whose request was accepted.
+   * @param accepterName - The name of the user who accepted the request.
+   * @returns A promise that resolves to the created notification.
+   */
   async createConnectionAcceptedNotification(
     recipientId: string,
     accepterName: string,
@@ -299,6 +390,13 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Creates a post like notification.
+   * @param postAuthorId - The ID of the author of the liked post.
+   * @param likerName - The name of the user who liked the post.
+   * @param postContent - The content of the liked post (for truncation).
+   * @returns A promise that resolves to the created notification.
+   */
   async createPostLikeNotification(
     postAuthorId: string,
     likerName: string,
@@ -316,6 +414,13 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Creates a post comment notification.
+   * @param postAuthorId - The ID of the author of the commented post.
+   * @param commenterName - The name of the user who commented.
+   * @param postContent - The content of the commented post (for truncation).
+   * @returns A promise that resolves to the created notification.
+   */
   async createPostCommentNotification(
     postAuthorId: string,
     commenterName: string,
@@ -333,6 +438,13 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Creates a new message notification.
+   * @param recipientId - The ID of the user receiving the message.
+   * @param senderName - The name of the user who sent the message.
+   * @param messagePreview - A preview of the message content (for truncation).
+   * @returns A promise that resolves to the created notification.
+   */
   async createMessageNotification(
     recipientId: string,
     senderName: string,
@@ -350,6 +462,13 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Retrieves various statistics about notifications for a specific user.
+   * Includes total, unread, read counts, recent (last 24h) count, and counts by type.
+   * @param userId - The ID of the user.
+   * @returns A promise that resolves to an object containing notification statistics.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async getNotificationStats(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
