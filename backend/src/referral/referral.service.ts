@@ -12,7 +12,10 @@ import { UpdateReferralApplicationDto } from './dto/update-referral-application.
 import { FilterReferralsDto } from './dto/filter-referrals.dto';
 import { FilterReferralApplicationsDto } from './dto/filter-referral-applications.dto';
 import { Role, ReferralStatus, ApplicationStatus } from '@prisma/client';
-import { NotificationService, NotificationType } from 'src/notification/notification.service';
+import {
+  NotificationService,
+  NotificationType,
+} from 'src/notification/notification.service';
 
 @Injectable()
 export class ReferralService {
@@ -171,15 +174,19 @@ export class ReferralService {
       throw new NotFoundException('Referral not found.');
     }
 
-    const existingApplication = await this.prisma.referralApplication.findFirst({
-      where: {
-        referralId: dto.referralId,
-        studentId: userId,
+    const existingApplication = await this.prisma.referralApplication.findFirst(
+      {
+        where: {
+          referralId: dto.referralId,
+          studentId: userId,
+        },
       },
-    });
+    );
 
     if (existingApplication) {
-      throw new BadRequestException('You have already applied for this referral.');
+      throw new BadRequestException(
+        'You have already applied for this referral.',
+      );
     }
 
     const application = await this.prisma.referralApplication.create({
@@ -221,7 +228,9 @@ export class ReferralService {
     return application;
   }
 
-  async getFilteredReferralApplications(filterDto: FilterReferralApplicationsDto) {
+  async getFilteredReferralApplications(
+    filterDto: FilterReferralApplicationsDto,
+  ) {
     const { referralId, studentId, status, skip, take } = filterDto;
 
     const where: any = {};
@@ -254,13 +263,15 @@ export class ReferralService {
   }
 
   async updateReferralApplicationStatus(
-    userId: string, // This userId will be the admin's ID
+    userId: string,
     applicationId: string,
     dto: UpdateReferralApplicationDto,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (user.role !== Role.ADMIN) {
-      throw new ForbiddenException('Only admins can update referral application status.');
+      throw new ForbiddenException(
+        'Only admins can update referral application status.',
+      );
     }
 
     const application = await this.prisma.referralApplication.findUnique({
@@ -286,5 +297,70 @@ export class ReferralService {
     }
 
     return updatedApplication;
+  }
+
+  // Get user's own applications
+  async getMyApplications(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    return this.prisma.referralApplication.findMany({
+      where: { studentId: userId },
+      include: {
+        referral: {
+          select: {
+            id: true,
+            company: true,
+            jobTitle: true,
+            location: true,
+            status: true,
+          },
+        },
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // Get applications for a specific referral (for alumni)
+  async getReferralApplications(referralId: string, alumniId: string) {
+    // Verify the referral belongs to the requesting alumni
+    const referral = await this.prisma.referral.findUnique({
+      where: { id: referralId },
+    });
+
+    if (!referral) {
+      throw new NotFoundException('Referral not found.');
+    }
+
+    if (referral.alumniId !== alumniId) {
+      throw new ForbiddenException(
+        'You are not authorized to view applications for this referral.',
+      );
+    }
+
+    return this.prisma.referralApplication.findMany({
+      where: { referralId },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 }

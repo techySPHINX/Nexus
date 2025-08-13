@@ -26,6 +26,7 @@ model User {
   profile              Profile?
   postedReferrals      Referral[]            @relation("PostedReferrals")
   referralApplications ReferralApplication[]
+  files                File[]                @relation("UserFiles")
 
   @@map("users")
 }
@@ -157,6 +158,22 @@ model ReferralApplication {
   updatedAt   DateTime          @updatedAt
 
   @@map("referral_applications")
+}
+
+model File {
+  id        String   @id @default(uuid())
+  filename  String
+  originalName String
+  mimeType  String
+  size      Int
+  path      String
+  uploadedBy String
+  userId    String
+  user      User     @relation("UserFiles", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("files")
 }
 
 enum ConnectionStatus {

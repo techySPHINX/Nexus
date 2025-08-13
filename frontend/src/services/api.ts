@@ -92,6 +92,39 @@ export const apiService = {
     getAllConversations: () => api.get('/messages/conversations/all'),
   },
 
+  // Referral endpoints
+  referrals: {
+    create: (data: any) => api.post('/referral', data),
+    getAll: () => api.get('/referral'),
+    getById: (id: string) => api.get(`/referral/${id}`),
+    update: (id: string, data: any) => api.put(`/referral/${id}`, data),
+    delete: (id: string) => api.delete(`/referral/${id}`),
+    apply: (data: any) => api.post('/referral/apply', data),
+    getApplications: (referralId: string) => api.get(`/referral/applications/${referralId}`),
+    getAllApplications: () => api.get('/referral/applications'),
+    updateApplicationStatus: (id: string, status: string) => 
+      api.put(`/referral/applications/${id}/status`, { status }),
+    getMyApplications: () => api.get('/referral/applications/my'),
+  },
+
+  // Files endpoints
+  files: {
+    upload: (formData: FormData) => api.post('/files/upload', formData),
+    getAll: (accessToken?: string, refreshToken?: string) => 
+      api.get(`/files${accessToken ? `?access_token=${accessToken}${refreshToken ? `&refresh_token=${refreshToken}` : ''}` : ''}`),
+    getById: (id: string) => api.get(`/files/${id}`),
+    delete: (id: string, body?: any) => api.delete(`/files/${id}`, { data: body }),
+    download: (id: string) => api.get(`/files/${id}/download`),
+    getDownloadUrl: (id: string, accessToken: string, refreshToken?: string) => 
+      api.get(`/files/${id}/download?access_token=${accessToken}${refreshToken ? `&refresh_token=${refreshToken}` : ''}`),
+    share: (id: string, userEmail: string, accessToken: string, refreshToken?: string) => 
+      api.post(`/files/${id}/share`, { userEmail, access_token: accessToken, refresh_token: refreshToken }),
+    getGoogleAuthUrl: () => api.get('/files/auth/google'),
+    handleGoogleCallback: (code: string) => api.post('/files/auth/google/callback', { code }),
+    refreshGoogleToken: (refreshToken: string) => api.post('/files/auth/google/refresh', { refresh_token: refreshToken }),
+    validateGoogleTokens: (tokens: { access_token: string; refresh_token?: string }) => api.post('/files/auth/google/validate', tokens),
+  },
+
   // Post endpoints
   posts: {
     create: (userId: string, data: any) => api.post(`/posts/${userId}`, data),
