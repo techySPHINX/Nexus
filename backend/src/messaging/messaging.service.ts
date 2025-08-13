@@ -1,16 +1,32 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { FilterMessagesDto } from './dto/filter-messages.dto';
 
+/**
+ * Service for handling messaging operations.
+ * Manages sending messages, retrieving conversations, and listing all conversations.
+ */
 @Injectable()
 export class MessagingService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Sends a new message from a sender to a receiver.
+   * Requires an existing accepted connection between sender and receiver.
+   * @param senderId - The ID of the user sending the message.
+   * @param dto - The data transfer object containing the receiver ID and message content.
+   * @returns A promise that resolves to the created message object.
+   * @throws {NotFoundException} If the receiver user is not found.
+   * @throws {ForbiddenException} If there is no accepted connection between the sender and receiver.
+   */
   async sendMessage(senderId: string, dto: CreateMessageDto) {
     const { receiverId, content } = dto;
 
-    // Check if receiver exists
     const receiver = await this.prisma.user.findUnique({
       where: { id: receiverId },
     });
@@ -19,7 +35,6 @@ export class MessagingService {
       throw new NotFoundException('Receiver user not found');
     }
 
-    // Check if users are connected
     const isConnected = await this.prisma.connection.findFirst({
       where: {
         status: 'ACCEPTED',
@@ -31,7 +46,9 @@ export class MessagingService {
     });
 
     if (!isConnected) {
-      throw new ForbiddenException('You can only send messages to users you are connected with');
+      throw new ForbiddenException(
+        'You can only send messages to users you are connected with',
+      );
     }
 
     return this.prisma.message.create({
@@ -59,6 +76,16 @@ export class MessagingService {
     });
   }
 
+  /**
+   * Retrieves the conversation history between two users.
+   * Requires an existing accepted connection between the two users.
+   * Supports pagination for fetching messages.
+   * @param userId - The ID of the current user.
+   * @param otherUserId - The ID of the other user in the conversation.
+   * @param dto - Data transfer object for filtering messages (e.g., skip, take).
+   * @returns A promise that resolves to an array of message objects in the conversation.
+   * @throws {ForbiddenException} If there is no accepted connection between the two users.
+   */
   async getConversation(
     userId: string,
     otherUserId: string,
@@ -66,7 +93,6 @@ export class MessagingService {
   ) {
     const { skip = 0, take = 20 } = dto;
 
-    // Check if users are connected
     const isConnected = await this.prisma.connection.findFirst({
       where: {
         status: 'ACCEPTED',
@@ -78,7 +104,9 @@ export class MessagingService {
     });
 
     if (!isConnected) {
-      throw new ForbiddenException('You can only view conversations with users you are connected with');
+      throw new ForbiddenException(
+        'You can only view conversations with users you are connected with',
+      );
     }
 
     return this.prisma.message.findMany({
@@ -110,6 +138,12 @@ export class MessagingService {
     });
   }
 
+  /**
+   * Retrieves a list of all conversations for a given user.
+   * Each conversation includes the last message and details of the other participant.
+   * @param userId - The ID of the user to retrieve conversations for.
+   * @returns A promise that resolves to an array of conversation summary objects.
+   */
   async getAllConversations(userId: string) {
     // Get all unique conversations for the user
     const conversations = await this.prisma.message.groupBy({
@@ -122,9 +156,10 @@ export class MessagingService {
     // Get the latest message for each conversation
     const conversationDetails = await Promise.all(
       conversations.map(async (conversation) => {
-        const otherUserId = conversation.senderId === userId 
-          ? conversation.receiverId 
-          : conversation.senderId;
+        const otherUserId =
+          conversation.senderId === userId
+            ? conversation.receiverId
+            : conversation.senderId;
 
         const latestMessage = await this.prisma.message.findFirst({
           where: {
@@ -172,7 +207,7 @@ export class MessagingService {
           otherUser,
           latestMessage,
         };
-      })
+      }),
     );
 
     return conversationDetails;

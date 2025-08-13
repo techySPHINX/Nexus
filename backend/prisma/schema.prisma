@@ -27,31 +27,68 @@ model User {
   postedReferrals      Referral[]            @relation("PostedReferrals")
   referralApplications ReferralApplication[]
   files                File[]                @relation("UserFiles")
+  endorsements         Endorsement[]
+  badges               UsersOnBadges[]
 
   @@map("users")
 }
 
 model Profile {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  bio       String?
-  location  String?  @db.VarChar(100)
-  interests String?
-  avatarUrl String?  @db.VarChar(512)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skills    Skill[]  @relation("ProfileSkills")
+  id          String        @id @default(uuid())
+  userId      String        @unique
+  bio         String?
+  location    String?       @db.VarChar(100)
+  interests   String?
+  avatarUrl   String?       @db.VarChar(512)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills      Skill[]       @relation("ProfileSkills")
+  endorsements Endorsement[]
 
   @@map("profile")
 }
 
 model Skill {
-  id       String    @id @default(uuid())
-  name     String    @unique @db.VarChar(50)
-  profiles Profile[] @relation("ProfileSkills")
+  id           String        @id @default(uuid())
+  name         String        @unique @db.VarChar(50)
+  profiles     Profile[]     @relation("ProfileSkills")
+  endorsements Endorsement[]
 
   @@map("skill")
+}
+
+model Endorsement {
+  id          String   @id @default(uuid())
+  profile     Profile  @relation(fields: [profileId], references: [id])
+  profileId   String
+  skill       Skill    @relation(fields: [skillId], references: [id])
+  skillId     String
+  endorser    User     @relation(fields: [endorserId], references: [id])
+  endorserId  String
+  createdAt   DateTime @default(now())
+
+  @@unique([profileId, skillId, endorserId])
+  @@map("endorsement")
+}
+
+model Badge {
+  id      String   @id @default(uuid())
+  name    String   @unique @db.VarChar(50)
+  icon    String
+  users   UsersOnBadges[]
+  
+  @@map("badge")
+}
+
+model UsersOnBadges {
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  badge      Badge    @relation(fields: [badgeId], references: [id])
+  badgeId    String
+  assignedAt DateTime @default(now())
+
+  @@id([userId, badgeId])
 }
 
 model Connection {
@@ -97,6 +134,7 @@ model Post {
   content   String
   imageUrl  String?   @db.VarChar(512)
   type      String?
+  status    PostStatus @default(PENDING)
   createdAt DateTime  @default(now())
   Comment   Comment[]
   Like      Like[]
@@ -199,5 +237,11 @@ enum ApplicationStatus {
   PENDING
   REVIEWED
   ACCEPTED
+  REJECTED
+}
+
+enum PostStatus {
+  PENDING
+  APPROVED
   REJECTED
 }

@@ -4,11 +4,20 @@ import { FilesService } from './files.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 
+/**
+ * Controller for handling file upload operations.
+ */
 @Controller('files')
 @UseGuards(JwtAuthGuard)
 export class FilesController {
   constructor(private readonly filesService: FilesService) {}
 
+  /**
+   * Uploads a single file.
+   * @param file - The file to be uploaded.
+   * @returns A promise that resolves to an object containing the URL of the uploaded file.
+   * @throws {BadRequestException} If no file is uploaded.
+   */
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadFile(

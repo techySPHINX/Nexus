@@ -1,33 +1,50 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { hash } from 'bcryptjs';
 
+/**
+ * Service for handling user-related operations.
+ */
 @Injectable()
 export class UserService {
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Retrieves all users with their profiles and skills.
+   * @returns A promise that resolves to an array of all users.
+   */
   async findAll() {
     return this.prisma.user.findMany({
-      include: { 
-        profile: { 
-          include: { 
-            skills: true 
-          } 
-        } 
+      include: {
+        profile: {
+          include: {
+            skills: true,
+          },
+        },
       },
     });
   }
 
+  /**
+   * Retrieves a specific user by their ID, including their profile and skills.
+   * @param id - The ID of the user to retrieve.
+   * @returns A promise that resolves to the user object.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async findOne(id: string) {
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: { 
-        profile: { 
-          include: { 
-            skills: true 
-          } 
-        } 
+      include: {
+        profile: {
+          include: {
+            skills: true,
+          },
+        },
       },
     });
 
@@ -37,6 +54,14 @@ export class UserService {
     return user;
   }
 
+  /**
+   * Updates a user's information, including their profile and skills.
+   * @param id - The ID of the user to update.
+   * @param dto - The data to update the user with.
+   * @returns A promise that resolves to the updated user object.
+   * @throws {NotFoundException} If the user is not found.
+   * @throws {BadRequestException} If the password is less than 6 characters long.
+   */
   async update(id: string, dto: UpdateUserDto) {
     // Check if user exists
     const existingUser = await this.prisma.user.findUnique({
@@ -54,7 +79,9 @@ export class UserService {
     if (name) userUpdateData.name = name;
     if (password) {
       if (password.length < 6) {
-        throw new BadRequestException('Password must be at least 6 characters long');
+        throw new BadRequestException(
+          'Password must be at least 6 characters long',
+        );
       }
       userUpdateData.password = await hash(password, 10);
     }
@@ -105,17 +132,23 @@ export class UserService {
           set: skillConnections,
         },
       },
-      include: { 
-        skills: true 
+      include: {
+        skills: true,
       },
     });
 
-    return { 
-      ...updatedUser, 
-      profile 
+    return {
+      ...updatedUser,
+      profile,
     };
   }
 
+  /**
+   * Deletes a user and their associated profile.
+   * @param id - The ID of the user to delete.
+   * @returns A promise that resolves when the user has been deleted.
+   * @throws {NotFoundException} If the user is not found.
+   */
   async remove(id: string) {
     // Check if user exists
     const existingUser = await this.prisma.user.findUnique({
@@ -127,13 +160,13 @@ export class UserService {
     }
 
     // Delete profile first (due to foreign key constraint)
-    await this.prisma.profile.deleteMany({ 
-      where: { userId: id } 
+    await this.prisma.profile.deleteMany({
+      where: { userId: id },
     });
-    
+
     // Delete user
-    return this.prisma.user.delete({ 
-      where: { id } 
+    return this.prisma.user.delete({
+      where: { id },
     });
   }
 }

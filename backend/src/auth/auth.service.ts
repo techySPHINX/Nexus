@@ -14,6 +14,10 @@ import { Role } from '@prisma/client';
 
 const ALLOWED_DOMAIN = 'kiit.ac.in';
 
+/**
+ * Service responsible for handling authentication logic,
+ * including user registration, login, and JWT token generation.
+ */
 @Injectable()
 export class AuthService {
   constructor(
@@ -21,6 +25,14 @@ export class AuthService {
     private readonly jwt: JwtService,
   ) {}
 
+  /**
+   * Registers a new user.
+   *
+   * @param dto - The data required to register a new user.
+   * @returns A promise that resolves to an authentication response, including a JWT token.
+   * @throws {ForbiddenException} If the email does not belong to the allowed domain.
+   * @throws {BadRequestException} If the email is already registered.
+   */
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
     const domain = dto.email.split('@')[1];
     if (domain !== ALLOWED_DOMAIN) {
@@ -60,6 +72,13 @@ export class AuthService {
     return this.signToken(user);
   }
 
+  /**
+   * Logs in an existing user.
+   *
+   * @param dto - The data required to log in a user.
+   * @returns A promise that resolves to an authentication response, including a JWT token.
+   * @throws {UnauthorizedException} If the credentials are invalid.
+   */
   async login(dto: LoginDto): Promise<AuthResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -77,6 +96,12 @@ export class AuthService {
     return this.signToken(user);
   }
 
+  /**
+   * Generates a JWT token for the given user.
+   *
+   * @param user - The user object for whom the token should be generated.
+   * @returns An authentication response containing the JWT token and user information.
+   */
   private signToken(user: any): AuthResponseDto {
     const payload = {
       sub: user.id,

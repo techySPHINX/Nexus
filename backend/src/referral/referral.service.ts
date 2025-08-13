@@ -17,6 +17,10 @@ import {
   NotificationType,
 } from 'src/notification/notification.service';
 
+/**
+ * Service for managing job referrals and referral applications.
+ * Handles creation, retrieval, updates, and deletion of referrals and applications.
+ */
 @Injectable()
 export class ReferralService {
   constructor(
@@ -26,6 +30,14 @@ export class ReferralService {
 
   // Referral methods
 
+  /**
+   * Creates a new job referral.
+   * Only users with the ALUM role can create referrals.
+   * @param userId - The ID of the user creating the referral.
+   * @param dto - The data for creating the referral.
+   * @returns A promise that resolves to the created referral.
+   * @throws {ForbiddenException} If the user is not an ALUM.
+   */
   async createReferral(userId: string, dto: CreateReferralDto) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (user.role !== Role.ALUM) {
@@ -40,6 +52,13 @@ export class ReferralService {
     });
   }
 
+  /**
+   * Retrieves a single job referral by its ID.
+   * Includes information about the poster and applications.
+   * @param referralId - The ID of the referral to retrieve.
+   * @returns A promise that resolves to the referral object.
+   * @throws {NotFoundException} If the referral is not found.
+   */
   async getReferralById(referralId: string) {
     const referral = await this.prisma.referral.findUnique({
       where: { id: referralId },
@@ -60,6 +79,11 @@ export class ReferralService {
     return referral;
   }
 
+  /**
+   * Retrieves a list of job referrals based on various filters.
+   * @param filterDto - DTO containing criteria for filtering referrals (e.g., company, job title, location, status).
+   * @returns A promise that resolves to an array of filtered referrals.
+   */
   async getFilteredReferrals(filterDto: FilterReferralsDto) {
     const { company, jobTitle, location, status, skip, take } = filterDto;
 
@@ -94,6 +118,17 @@ export class ReferralService {
     });
   }
 
+  /**
+   * Updates an existing job referral.
+   * Only the creator of the referral or an ADMIN can update it.
+   * Notifies the alum if the referral status changes due to an admin update.
+   * @param userId - The ID of the user attempting to update the referral.
+   * @param referralId - The ID of the referral to update.
+   * @param dto - The data to update the referral with.
+   * @returns A promise that resolves to the updated referral.
+   * @throws {NotFoundException} If the referral is not found.
+   * @throws {ForbiddenException} If the user is not authorized to update the referral.
+   */
   async updateReferral(
     userId: string,
     referralId: string,
@@ -135,6 +170,15 @@ export class ReferralService {
     return updatedReferral;
   }
 
+  /**
+   * Deletes a job referral.
+   * Only the creator of the referral or an ADMIN can delete it.
+   * @param userId - The ID of the user attempting to delete the referral.
+   * @param referralId - The ID of the referral to delete.
+   * @returns A promise that resolves to a success message.
+   * @throws {NotFoundException} If the referral is not found.
+   * @throws {ForbiddenException} If the user is not authorized to delete the referral.
+   */
   async deleteReferral(userId: string, referralId: string) {
     const referral = await this.prisma.referral.findUnique({
       where: { id: referralId },
@@ -157,6 +201,16 @@ export class ReferralService {
 
   // Referral Application methods
 
+  /**
+   * Creates a new referral application for a job referral.
+   * Only users with the STUDENT role can apply for referrals.
+   * @param userId - The ID of the student applying.
+   * @param dto - Data for the referral application, including referral ID, resume URL, and optional cover letter.
+   * @returns A promise that resolves to the created referral application.
+   * @throws {ForbiddenException} If the user is not a STUDENT.
+   * @throws {NotFoundException} If the referral is not found.
+   * @throws {BadRequestException} If the student has already applied for this referral.
+   */
   async createReferralApplication(
     userId: string,
     dto: { referralId: string; resumeUrl: string; coverLetter?: string },
@@ -208,6 +262,13 @@ export class ReferralService {
     return application;
   }
 
+  /**
+   * Retrieves a single referral application by its ID.
+   * Includes associated referral and student details.
+   * @param applicationId - The ID of the referral application to retrieve.
+   * @returns A promise that resolves to the referral application object.
+   * @throws {NotFoundException} If the referral application is not found.
+   */
   async getReferralApplicationById(applicationId: string) {
     const application = await this.prisma.referralApplication.findUnique({
       where: { id: applicationId },
@@ -228,6 +289,11 @@ export class ReferralService {
     return application;
   }
 
+  /**
+   * Retrieves a list of referral applications based on various filters.
+   * @param filterDto - DTO containing criteria for filtering applications (e.g., referral ID, student ID, status).
+   * @returns A promise that resolves to an array of filtered referral applications.
+   */
   async getFilteredReferralApplications(
     filterDto: FilterReferralApplicationsDto,
   ) {
@@ -262,6 +328,17 @@ export class ReferralService {
     });
   }
 
+  /**
+   * Updates the status of a referral application.
+   * Only users with the ADMIN role can update application statuses.
+   * Notifies the student if their application status changes.
+   * @param userId - The ID of the user attempting to update the status.
+   * @param applicationId - The ID of the referral application to update.
+   * @param dto - The data to update the application status with.
+   * @returns A promise that resolves to the updated referral application.
+   * @throws {ForbiddenException} If the user is not an ADMIN.
+   * @throws {NotFoundException} If the referral application is not found.
+   */
   async updateReferralApplicationStatus(
     userId: string,
     applicationId: string,
