@@ -1,7 +1,7 @@
 import {
-  BadRequestException,
   Injectable,
   NotFoundException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -23,6 +23,12 @@ export class ProfileService {
             email: true,
           },
         },
+        endorsements: {
+          include: {
+            skill: true,
+            endorser: true,
+          },
+        },
       },
     });
     if (!profile) throw new NotFoundException('Profile not found');
@@ -35,11 +41,17 @@ export class ProfileService {
     const where: any = {};
 
     if (name) {
-      where.user = { ...where.user, name: { contains: name, mode: 'insensitive' } };
+      where.user = {
+        ...where.user,
+        name: { contains: name, mode: 'insensitive' },
+      };
     }
 
     if (email) {
-      where.user = { ...where.user, email: { contains: email, mode: 'insensitive' } };
+      where.user = {
+        ...where.user,
+        email: { contains: email, mode: 'insensitive' },
+      };
     }
 
     if (roles && roles.length > 0) {
@@ -79,17 +91,6 @@ export class ProfileService {
   }
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
-    if (dto.avatarUrl && dto.avatarUrl.length > 512) {
-      throw new BadRequestException(
-        'Avatar URL must be less than 512 characters.',
-      );
-    }
-    if (dto.avatarUrl && !/^https?:\/\//.test(dto.avatarUrl)) {
-      throw new BadRequestException(
-        'Avatar URL must start with http or https.',
-      );
-    }
-
     const profile = await this.prisma.profile.findUnique({ where: { userId } });
     if (!profile) throw new NotFoundException('Profile not found');
 
@@ -129,6 +130,84 @@ export class ProfileService {
             email: true,
           },
         },
+      },
+    });
+  }
+
+  async endorseSkill(endorserId: string, profileId: string, skillId: string) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { id: profileId },
+    });
+    if (!profile) throw new NotFoundException('Profile not found');
+
+    const skill = await this.prisma.skill.findUnique({
+      where: { id: skillId },
+    });
+    if (!skill) throw new NotFoundException('Skill not found');
+
+    const existingEndorsement = await this.prisma.endorsement.findUnique({
+      where: {
+        profileId_skillId_endorserId: {
+          profileId,
+          skillId,
+          endorserId,
+        },
+      },
+    });
+
+    if (existingEndorsement) {
+      throw new ConflictException(
+        'You have already endorsed this skill for this user.',
+      );
+    }
+
+    return this.prisma.endorsement.create({
+      data: {
+        profileId,
+        skillId,
+        endorserId,
+      },
+    });
+  }
+
+  async awardBadge(userId: string, badgeId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const badge = await this.prisma.badge.findUnique({
+      where: { id: badgeId },
+    });
+    if (!badge) throw new NotFoundException('Badge not found');
+
+    const existingBadge = await this.prisma.usersOnBadges.findUnique({
+      where: {
+        userId_badgeId: {
+          userId,
+          badgeId,
+        },
+      },
+    });
+
+    if (existingBadge) {
+      throw new ConflictException('User already has this badge.');
+    }
+
+    return this.prisma.usersOnBadges.create({
+      data: {
+        userId,
+        badgeId,
+      },
+    });
+  }
+
+  async getBadgesForUser(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    return this.prisma.usersOnBadges.findMany({
+      where: { userId },
+      include: {
+        badge: true,
       },
     });
   }
