@@ -1,13 +1,13 @@
 import {
   Controller,
-  Post,
   Get,
-  Put,
-  Delete,
+  Post,
   Body,
   Param,
-  Query,
+  Delete,
+  Put,
   UseGuards,
+  Query,
   UseInterceptors,
   UploadedFile,
   BadRequestException,
@@ -20,12 +20,12 @@ import { CreateReferralApplicationDto } from './dto/create-referral-application.
 import { UpdateReferralApplicationDto } from './dto/update-referral-application.dto';
 import { FilterReferralsDto } from './dto/filter-referrals.dto';
 import { FilterReferralApplicationsDto } from './dto/filter-referral-applications.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/common/guards/roles.guard';
-import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
-import { Roles } from 'src/common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { FilesService } from 'src/files/files.service';
+import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
+import { LegacyFilesService } from '../files/legacy-files.service';
 
 /**
  * Controller for managing job referrals and referral applications.
@@ -36,7 +36,7 @@ import { FilesService } from 'src/files/files.service';
 export class ReferralController {
   constructor(
     private readonly referralService: ReferralService,
-    private readonly filesService: FilesService,
+    private readonly legacyFilesService: LegacyFilesService,
   ) {}
 
   // Referral Endpoints
@@ -129,7 +129,7 @@ export class ReferralController {
       throw new BadRequestException('Resume file is required.');
     }
 
-    const resumeUrl = await this.filesService.saveFile(resume);
+    const resumeUrl = await this.legacyFilesService.saveFile(resume, userId);
 
     return this.referralService.createReferralApplication(userId, {
       ...dto,
@@ -179,5 +179,22 @@ export class ReferralController {
       id,
       dto,
     );
+  }
+
+  // Get user's own applications
+  @Get('applications/my')
+  @Roles(Role.STUDENT)
+  async getMyApplications(@GetCurrentUser('sub') userId: string) {
+    return this.referralService.getMyApplications(userId);
+  }
+
+  // Get applications for a specific referral (for alumni)
+  @Get(':id/applications')
+  @Roles(Role.ALUM)
+  async getReferralApplications(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') referralId: string,
+  ) {
+    return this.referralService.getReferralApplications(referralId, userId);
   }
 }

@@ -28,6 +28,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
+import { LegacyFilesService } from 'src/files/legacy-files.service';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { FilesService } from 'src/files/files.service';
@@ -44,7 +45,7 @@ import { FilesService } from 'src/files/files.service';
 export class PostController {
   constructor(
     private readonly postService: PostService,
-    private readonly filesService: FilesService,
+    private readonly legacyFilesService: LegacyFilesService,
   ) {}
 
   /**
@@ -67,7 +68,7 @@ export class PostController {
   ) {
     let imageUrl: string | undefined;
     if (image) {
-      imageUrl = await this.filesService.saveFile(image);
+      imageUrl = await this.legacyFilesService.saveFile(image, userId);
     }
 
     return this.postService.create(userId, {
@@ -169,7 +170,7 @@ export class PostController {
   ) {
     let imageUrl: string | undefined;
     if (image) {
-      imageUrl = await this.filesService.saveFile(image);
+      imageUrl = await this.legacyFilesService.saveFile(image, userId);
     }
 
     return this.postService.update(id, userId, {
