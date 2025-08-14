@@ -2,33 +2,23 @@ import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from './google-drive.service';
 import { ConfigService } from '@nestjs/config';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Service for handling file operations, specifically saving uploaded files.
  */
 @Injectable()
 export class FilesService {
-<<<<<<< HEAD
-  constructor(
+// Defines the directory where uploaded files will be stored.
+  // It resolves to a 'uploads' folder at the root of the project.
+  private readonly uploadPath = path.join(__dirname, '..', '..', 'uploads');  
+
+constructor(
     private readonly prisma: PrismaService,
     private readonly googleDriveService: GoogleDriveService,
     private readonly configService: ConfigService,
-  ) {}
-
-  async saveFile(
-    file: Express.Multer.File, 
-    userId: string, 
-    userTokens: { access_token: string; refresh_token?: string },
-    description?: string, 
-    tags?: string
-  ): Promise<any> {
-=======
-  // Defines the directory where uploaded files will be stored.
-  // It resolves to a 'uploads' folder at the root of the project.
-  private readonly uploadPath = path.join(__dirname, '..', '..', 'uploads');
-
-  constructor() {
-    // Ensures the upload directory exists when the service is initialized.
+  ) {
     this.ensureUploadDirectoryExists();
   }
 
@@ -49,18 +39,35 @@ export class FilesService {
    * @returns A promise that resolves to the relative URL of the saved file.
    * @throws {BadRequestException} If no file is provided or if saving the file fails.
    */
-  async saveFile(file: Express.Multer.File): Promise<string> {
->>>>>>> origin/main
+
+  async saveFile(
+    file: Express.Multer.File, 
+    userId: string, 
+    userTokens: { access_token: string; refresh_token?: string },
+    description?: string, 
+    tags?: string
+  ): Promise<any> {
     if (!file) {
       throw new BadRequestException('No file provided.');
     }
 
-<<<<<<< HEAD
     if (!userTokens?.access_token) {
       throw new UnauthorizedException('Google Drive access not authorized.');
     }
 
+    // Create a unique filename using a timestamp and the original filename.
+    const filename = `${Date.now()}-${file.originalname}`;
+    // Construct the full path where the file will be saved.
+    const filePath = path.join(this.uploadPath, filename);
+
     try {
+
+      // Write the file buffer to the specified path.
+      await fs.promises.writeFile(filePath, file.buffer);
+      // Return the URL that can be used to access the file.
+      return `/uploads/${filename}`;
+
+      
       // Upload to user's Google Drive
       const driveResult = await this.googleDriveService.uploadFile(
         userTokens,
@@ -95,21 +102,6 @@ file.mimetype,
       };
     } catch (error) {
       throw new BadRequestException(`Failed to save file: ${error.message}`);
-=======
-    // Create a unique filename using a timestamp and the original filename.
-    const filename = `${Date.now()}-${file.originalname}`;
-    // Construct the full path where the file will be saved.
-    const filePath = path.join(this.uploadPath, filename);
-
-    try {
-      // Write the file buffer to the specified path.
-      await fs.promises.writeFile(filePath, file.buffer);
-      // Return the URL that can be used to access the file.
-      return `/uploads/${filename}`;
-    } catch {
-      // Catch any errors during file writing and throw a BadRequestException.
-      throw new BadRequestException('Failed to save file.');
->>>>>>> origin/main
     }
   }
 

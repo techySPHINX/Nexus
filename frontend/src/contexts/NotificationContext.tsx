@@ -15,7 +15,7 @@ interface Notification {
     id: string;
     type: NotificationType;
     message: string;
-    timestamp: Date;
+    createdAt: Date;
     read: boolean;
 }
 
