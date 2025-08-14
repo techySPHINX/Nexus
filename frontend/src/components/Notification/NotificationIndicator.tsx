@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Badge,
     IconButton,
@@ -11,8 +11,6 @@ import {
     Box,
     Button,
     Divider,
-    Avatar,
-    ListItemAvatar,
     Chip,
     Snackbar,
     Alert,
