@@ -440,7 +440,7 @@ const Notification: React.FC = () => {
                                                     variant="body2"
                                                     color="text.secondary"
                                                 >
-                                                    {dayjs(notification.timestamp).fromNow()}
+                                                    {dayjs(notification.createdAt).fromNow()}
                                                 </Typography>
                                             }
                                             sx={{
