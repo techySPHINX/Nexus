@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PostStatus, Role } from '@prisma/client';
+import { PostStatus } from '@prisma/client';
 
 /**
  * Service for managing posts, including creation, retrieval, updates, and moderation.
@@ -25,7 +25,12 @@ export class PostService {
    */
   async create(
     userId: string,
-    dto: { content: string; imageUrl?: string; type?: string },
+    dto: {
+      content: string;
+      imageUrl?: string;
+      type?: string;
+      subCommunityId?: string;
+    },
   ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -45,8 +50,22 @@ export class PostService {
       );
     }
 
-    const postStatus =
-      user.role === Role.STUDENT ? PostStatus.PENDING : PostStatus.APPROVED;
+    // If subCommunityId is provided, check if the user is a member of that sub-community
+    if (dto.subCommunityId) {
+      const member = await this.prisma.subCommunityMember.findFirst({
+        where: {
+          userId: userId,
+          subCommunityId: dto.subCommunityId,
+        },
+      });
+      if (!member) {
+        throw new ForbiddenException(
+          'You must be a member of the sub-community to post in it.',
+        );
+      }
+    }
+
+    const postStatus = PostStatus.PENDING;
 
     return this.prisma.post.create({
       data: {
@@ -55,6 +74,7 @@ export class PostService {
         type: dto.type || 'UPDATE',
         authorId: userId,
         status: postStatus,
+        subCommunityId: dto.subCommunityId,
       },
       include: {
         author: {
@@ -86,7 +106,7 @@ export class PostService {
    * @throws {BadRequestException} If pagination parameters are invalid.
    * @throws {NotFoundException} If the user is not found.
    */
-  async getFeed(userId: string, page = 1, limit = 10) {
+  async getFeed(userId: string, page = 1, limit = 10, subCommunityId?: string) {
     if (page < 1 || limit < 1 || limit > 50) {
       throw new BadRequestException('Invalid pagination parameters');
     }
@@ -107,6 +127,9 @@ export class PostService {
           where: { status: 'ACCEPTED' },
           select: { requesterId: true },
         },
+        subCommunityMemberships: {
+          select: { subCommunityId: true },
+        },
       },
     });
 
@@ -122,10 +145,30 @@ export class PostService {
     const userInterests = user.profile?.interests?.split(',') || [];
     const userSkills = user.profile?.skills.map((s) => s.name) || [];
 
+    const whereClause: any = {
+      status: PostStatus.APPROVED,
+      subCommunityId: null, // Ensure only non-subcommunity posts appear on the main feed
+    };
+
+    if (subCommunityId) {
+      // If a specific subCommunityId is provided, filter posts for that sub-community
+      // And ensure the user is a member of that sub-community
+      const isMember = user.subCommunityMemberships.some(
+        (membership) => membership.subCommunityId === subCommunityId,
+      );
+      if (!isMember) {
+        throw new ForbiddenException(
+          'You are not a member of this sub-community.',
+        );
+      }
+      whereClause.subCommunityId = subCommunityId;
+    } else {
+      // For the universal feed, exclude posts that belong to any sub-community
+      whereClause.subCommunityId = null;
+    }
+
     const posts = await this.prisma.post.findMany({
-      where: {
-        status: PostStatus.APPROVED,
-      },
+      where: whereClause,
       include: {
         author: {
           include: {
@@ -194,6 +237,80 @@ export class PostService {
         total: posts.length,
         totalPages: Math.ceil(posts.length / limit),
         hasNext: page < Math.ceil(posts.length / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
+
+  async getSubCommunityFeed(
+    subCommunityId: string,
+    userId: string,
+    page = 1,
+    limit = 10,
+  ) {
+    if (page < 1 || limit < 1 || limit > 50) {
+      throw new BadRequestException('Invalid pagination parameters');
+    }
+
+    // Check if the user is a member of the sub-community
+    const member = await this.prisma.subCommunityMember.findFirst({
+      where: {
+        userId: userId,
+        subCommunityId: subCommunityId,
+      },
+    });
+
+    if (!member) {
+      throw new ForbiddenException(
+        'You are not a member of this sub-community.',
+      );
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [posts, total] = await Promise.all([
+      this.prisma.post.findMany({
+        where: {
+          subCommunityId: subCommunityId,
+          status: PostStatus.APPROVED, // Only approved posts are visible in the sub-community feed
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              profile: {
+                select: { bio: true, avatarUrl: true },
+              },
+            },
+          },
+          _count: {
+            select: {
+              Like: true,
+              Comment: true,
+            },
+          },
+        },
+      }),
+      this.prisma.post.count({
+        where: {
+          subCommunityId: subCommunityId,
+          status: PostStatus.APPROVED,
+        },
+      }),
+    ]);
+
+    return {
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
         hasPrev: page > 1,
       },
     };
@@ -338,11 +455,16 @@ export class PostService {
   async update(
     id: string,
     userId: string,
-    dto: { content?: string; imageUrl?: string; type?: string },
+    dto: {
+      content?: string;
+      imageUrl?: string;
+      type?: string;
+      subCommunityId?: string;
+    },
   ) {
     const post = await this.prisma.post.findUnique({
       where: { id },
-      select: { authorId: true },
+      select: { authorId: true, subCommunityId: true },
     });
 
     if (!post) {
@@ -351,6 +473,21 @@ export class PostService {
 
     if (post.authorId !== userId) {
       throw new ForbiddenException('You can only update your own posts');
+    }
+
+    // If subCommunityId is being changed, ensure user is member of new sub-community
+    if (dto.subCommunityId && dto.subCommunityId !== post.subCommunityId) {
+      const member = await this.prisma.subCommunityMember.findFirst({
+        where: {
+          userId: userId,
+          subCommunityId: dto.subCommunityId,
+        },
+      });
+      if (!member) {
+        throw new ForbiddenException(
+          'You must be a member of the target sub-community to move the post to it.',
+        );
+      }
     }
 
     if (dto.content !== undefined) {
@@ -371,6 +508,9 @@ export class PostService {
         ...(dto.content && { content: dto.content.trim() }),
         ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
         ...(dto.type && { type: dto.type }),
+        ...(dto.subCommunityId !== undefined && {
+          subCommunityId: dto.subCommunityId,
+        }),
       },
       include: {
         author: {
@@ -457,7 +597,12 @@ export class PostService {
    * @returns A promise that resolves to an object containing paginated posts, the query, and pagination details.
    * @throws {BadRequestException} If the search query is empty or pagination parameters are invalid.
    */
-  async searchPosts(query: string, page = 1, limit = 10) {
+  async searchPosts(
+    query: string,
+    page = 1,
+    limit = 10,
+    subCommunityId?: string,
+  ) {
     if (!query || query.trim().length === 0) {
       throw new BadRequestException('Search query cannot be empty');
     }
@@ -466,17 +611,27 @@ export class PostService {
       throw new BadRequestException('Invalid pagination parameters');
     }
 
+    const whereClause: any = {
+      content: {
+        contains: query.trim(),
+        mode: 'insensitive',
+      },
+      status: PostStatus.APPROVED,
+    };
+
+    if (subCommunityId) {
+      // If subCommunityId is provided, search only within that sub-community
+      whereClause.subCommunityId = subCommunityId;
+    } else {
+      // For universal search, exclude posts that belong to any sub-community
+      whereClause.subCommunityId = null;
+    }
+
     const skip = (page - 1) * limit;
 
     const [posts, total] = await Promise.all([
       this.prisma.post.findMany({
-        where: {
-          content: {
-            contains: query.trim(),
-            mode: 'insensitive',
-          },
-          status: PostStatus.APPROVED,
-        },
+        where: whereClause,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -499,13 +654,7 @@ export class PostService {
         },
       }),
       this.prisma.post.count({
-        where: {
-          content: {
-            contains: query.trim(),
-            mode: 'insensitive',
-          },
-          status: PostStatus.APPROVED,
-        },
+        where: whereClause,
       }),
     ]);
 

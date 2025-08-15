@@ -31,7 +31,6 @@ import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator
 import { LegacyFilesService } from 'src/files/legacy-files.service';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
-import { FilesService } from 'src/files/files.service';
 
 /**
  * Controller for handling post-related operations.
@@ -82,6 +81,7 @@ export class PostController {
    * @param userId - The ID of the current user (extracted from JWT).
    * @param page - The page number for pagination (defaults to 1).
    * @param limit - The number of posts per page (defaults to 10).
+   * @param subCommunityId - Optional. The ID of the sub-community to filter posts by.
    * @returns A promise that resolves to an array of posts for the user's feed.
    */
   @Get('feed')
@@ -95,6 +95,30 @@ export class PostController {
     const pageNum = page ?? 1;
     const limitNum = limit ?? 10;
     return this.postService.getFeed(userId, pageNum, limitNum);
+  }
+
+  @Get('subcommunity/:subCommunityId/feed')
+  @ApiOperation({ summary: "Get the sub-community's feed" })
+  @ApiParam({
+    name: 'subCommunityId',
+    type: String,
+    description: 'ID of the sub-community',
+  })
+  @ApiResponse({ status: 200, description: "The sub-community's feed." })
+  getSubCommunityFeed(
+    @Param('subCommunityId') subCommunityId: string,
+    @GetCurrentUser('sub') userId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const pageNum = page ?? 1;
+    const limitNum = limit ?? 10;
+    return this.postService.getSubCommunityFeed(
+      subCommunityId,
+      userId,
+      pageNum,
+      limitNum,
+    );
   }
 
   /**
@@ -221,5 +245,35 @@ export class PostController {
   @ApiResponse({ status: 200, description: 'Post deleted successfully.' })
   remove(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
     return this.postService.remove(id, userId);
+  }
+
+  /**
+   * Searches for approved posts based on a query string with pagination.
+   * @param query - The search query string.
+   * @param page - The page number for pagination.
+   * @param limit - The number of posts per page.
+   * @param subCommunityId - Optional. The ID of the sub-community to filter search results by.
+   * @returns A promise that resolves to an object containing paginated posts, the query, and pagination details.
+   */
+  @Get('search')
+  @ApiOperation({ summary: 'Search for posts' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of posts matching the search query.',
+  })
+  searchPosts(
+    @Query('query') query: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('subCommunityId') subCommunityId?: string,
+  ) {
+    const pageNum = page ?? 1;
+    const limitNum = limit ?? 10;
+    return this.postService.searchPosts(
+      query,
+      pageNum,
+      limitNum,
+      subCommunityId,
+    );
   }
 }
