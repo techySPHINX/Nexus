@@ -8,29 +8,151 @@ datasource db {
 }
 
 model User {
-  id                   String                @id @default(uuid())
-  email                String                @unique @db.VarChar(255)
-  password             String                @db.VarChar(255)
-  name                 String                @db.VarChar(100)
-  role                 Role                  @default(STUDENT)
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  Comment              Comment[]
-  receivedConnections  Connection[]          @relation("ReceivedConnections")
-  requestedConnections Connection[]          @relation("RequestedConnections")
-  Like                 Like[]
-  receivedMessages     Message[]             @relation("ReceivedMessages")
-  sentMessages         Message[]             @relation("SentMessages")
-  Notification         Notification[]
-  Post                 Post[]
-  profile              Profile?
-  postedReferrals      Referral[]            @relation("PostedReferrals")
-  referralApplications ReferralApplication[]
-  files                File[]                @relation("UserFiles")
-  endorsements         Endorsement[]
-  badges               UsersOnBadges[]
+  id                          String                 @id @default(uuid())
+  email                       String                 @unique @db.VarChar(255)
+  password                    String                 @db.VarChar(255)
+  name                        String                 @db.VarChar(100)
+  role                        Role                   @default(STUDENT)
+  createdAt                   DateTime               @default(now())
+  updatedAt                   DateTime               @updatedAt
+  Comment                     Comment[]
+  receivedConnections         Connection[]           @relation("ReceivedConnections")
+  requestedConnections        Connection[]           @relation("RequestedConnections")
+  Like                        Like[]
+  receivedMessages            Message[]              @relation("ReceivedMessages")
+  sentMessages                Message[]              @relation("SentMessages")
+  Notification                Notification[]
+  Post                        Post[]
+  profile                     Profile?
+  postedReferrals             Referral[]             @relation("PostedReferrals")
+  referralApplications        ReferralApplication[]
+  files                       File[]                 @relation("UserFiles")
+  endorsements                Endorsement[]
+  badges                      UsersOnBadges[]
+  mentorshipsAsMentor         Mentorship[]           @relation("Mentor")
+  mentorshipsAsMentee         Mentorship[]           @relation("Mentee")
+  mentorSettings              MentorSettings?
+  mentorshipRequestsAsMentor  MentorshipRequest[]    @relation("MentorshipRequestMentor")
+  mentorshipRequestsAsMentee  MentorshipRequest[]    @relation("MentorshipRequestMentee")
+  feedbackGiven               Feedback[]             @relation("FeedbackGiven")
+  feedbackReceived            Feedback[]             @relation("FeedbackReceived")
+  projects                    Project[]
+  supportedProjects           ProjectSupport[]
+  followedProjects            ProjectFollower[]
+  collaborationRequests       ProjectCollaborationRequest[]
+  projectComments             ProjectComment[]
+  teamMemberships             ProjectTeamMember[]
 
   @@map("users")
+}
+
+model Project {
+  id                      String                        @id @default(uuid())
+  ownerId                 String
+  owner                   User                          @relation(fields: [ownerId], references: [id])
+  title                   String
+  description             String
+  githubUrl               String?
+  websiteUrl              String?
+  imageUrl                String?
+  videoUrl                String?
+  tags                    String[]
+  supporters              ProjectSupport[]
+  followers               ProjectFollower[]
+  collaborationRequests   ProjectCollaborationRequest[]
+  comments                ProjectComment[]
+  teamMembers             ProjectTeamMember[]
+  createdAt               DateTime                      @default(now())
+  updatedAt               DateTime                      @updatedAt
+
+  @@map("projects")
+}
+
+model ProjectTeamMember {
+  id          String      @id @default(uuid())
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id])
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  role        ProjectRole @default(MEMBER)
+  createdAt   DateTime    @default(now())
+
+  @@unique([projectId, userId])
+  @@map("project_team_members")
+}
+
+enum ProjectRole {
+  OWNER
+  MEMBER
+}
+
+model ProjectComment {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  comment     String
+  createdAt   DateTime @default(now())
+
+  @@map("project_comments")
+}
+
+model ProjectSupport {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@map("project_supports")
+}
+
+model ProjectFollower {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, userId])
+  @@map("project_followers")
+}
+
+model ProjectCollaborationRequest {
+  id          String   @id @default(uuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  message     String?
+  status      CollaborationStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("project_collaboration_requests")
+}
+
+enum CollaborationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Feedback {
+  id          String   @id @default(uuid())
+  rating      Int
+  comment     String?
+  mentorId    String
+  menteeId    String
+  mentor      User     @relation("FeedbackReceived", fields: [mentorId], references: [id])
+  mentee      User     @relation("FeedbackGiven", fields: [menteeId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@map("feedback")
 }
 
 model Profile {
@@ -225,6 +347,54 @@ enum Role {
   STUDENT
   ALUM
   ADMIN
+  MENTOR
+}
+
+model Mentorship {
+  id        String   @id @default(uuid())
+  mentorId  String
+  menteeId  String
+  mentor    User     @relation("Mentor", fields: [mentorId], references: [id])
+  mentee    User     @relation("Mentee", fields: [menteeId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([mentorId, menteeId])
+  @@map("mentorship")
+}
+
+model MentorSettings {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isAvailable Boolean  @default(true)
+  skills      String[]
+  bio         String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("mentor_settings")
+}
+
+model MentorshipRequest {
+  id          String                   @id @default(uuid())
+  mentorId    String
+  menteeId    String
+  mentor      User                     @relation("MentorshipRequestMentor", fields: [mentorId], references: [id])
+  mentee      User                     @relation("MentorshipRequestMentee", fields: [menteeId], references: [id])
+  message     String?
+  status      MentorshipRequestStatus @default(PENDING)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  @@unique([mentorId, menteeId])
+  @@map("mentorship_request")
+}
+
+enum MentorshipRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
 
 enum ReferralStatus {
