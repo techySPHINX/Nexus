@@ -19,6 +19,9 @@ import { MentorshipService } from './mentorship.service';
 import { ShowcaseModule } from './showcase.module';
 import { ShowcaseController } from './showcase.controller';
 import { ShowcaseService } from './showcase.service';
+import { SubCommunityModule } from './sub-community/sub-community.module';
+import { SubCommunityRequestModule } from './sub-community-request/sub-community-request.module';
+import { GamificationModule } from './gamification/gamification.module';
 
 @Module({
   imports: [
@@ -36,6 +39,9 @@ import { ShowcaseService } from './showcase.service';
     FilesModule,
     MentorshipModule,
     ShowcaseModule,
+    SubCommunityModule,
+    SubCommunityRequestModule,
+    GamificationModule,
   ],
   controllers: [AppController, MentorshipController, ShowcaseController],
   providers: [AppService, MentorshipService, ShowcaseService],
