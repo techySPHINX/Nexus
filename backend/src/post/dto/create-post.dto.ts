@@ -29,4 +29,12 @@ export class CreatePostDto {
   @IsOptional()
   @IsString()
   type?: string;
+
+  /**
+   * Optional. The ID of the sub-community this post belongs to.
+   * @example "clx0xxxxxxxxx"
+   */
+  @IsOptional()
+  @IsString()
+  subCommunityId?: string;
 }

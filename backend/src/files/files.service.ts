@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { GoogleDriveService } from './google-drive.service';
 import { ConfigService } from '@nestjs/config';
@@ -10,11 +14,11 @@ import * as path from 'path';
  */
 @Injectable()
 export class FilesService {
-// Defines the directory where uploaded files will be stored.
+  // Defines the directory where uploaded files will be stored.
   // It resolves to a 'uploads' folder at the root of the project.
-  private readonly uploadPath = path.join(__dirname, '..', '..', 'uploads');  
+  private readonly uploadPath = path.join(__dirname, '..', '..', 'uploads');
 
-constructor(
+  constructor(
     private readonly prisma: PrismaService,
     private readonly googleDriveService: GoogleDriveService,
     private readonly configService: ConfigService,
@@ -41,11 +45,11 @@ constructor(
    */
 
   async saveFile(
-    file: Express.Multer.File, 
-    userId: string, 
+    file: Express.Multer.File,
+    userId: string,
     userTokens: { access_token: string; refresh_token?: string },
-    description?: string, 
-    tags?: string
+    description?: string,
+    tags?: string,
   ): Promise<any> {
     if (!file) {
       throw new BadRequestException('No file provided.');
@@ -61,21 +65,19 @@ constructor(
     const filePath = path.join(this.uploadPath, filename);
 
     try {
-
       // Write the file buffer to the specified path.
       await fs.promises.writeFile(filePath, file.buffer);
       // Return the URL that can be used to access the file.
       return `/uploads/${filename}`;
 
-      
       // Upload to user's Google Drive
       const driveResult = await this.googleDriveService.uploadFile(
         userTokens,
         file.originalname,
-file.mimetype,
+        file.mimetype,
         file.buffer,
         description,
-        tags
+        tags,
       );
 
       // Save file metadata to database
@@ -105,7 +107,10 @@ file.mimetype,
     }
   }
 
-  async getUserFiles(userId: string, userTokens: { access_token: string; refresh_token?: string }): Promise<any[]> {
+  async getUserFiles(
+    userId: string,
+    userTokens: { access_token: string; refresh_token?: string },
+  ): Promise<any[]> {
     try {
       if (!userTokens?.access_token) {
         throw new UnauthorizedException('Google Drive access not authorized.');
@@ -118,11 +123,14 @@ file.mimetype,
       });
 
       // Get additional info from Google Drive
-      const driveResult = await this.googleDriveService.listUserFiles(userTokens);
-      
+      const driveResult =
+        await this.googleDriveService.listUserFiles(userTokens);
+
       // Merge database and drive information
-      const enrichedFiles = dbFiles.map(dbFile => {
-        const driveFile = driveResult.files.find(df => df.id === dbFile.filename);
+      const enrichedFiles = dbFiles.map((dbFile) => {
+        const driveFile = driveResult.files.find(
+          (df) => df.id === dbFile.filename,
+        );
         return {
           ...dbFile,
           webViewLink: driveFile?.webViewLink || dbFile.path,
@@ -135,11 +143,17 @@ file.mimetype,
 
       return enrichedFiles;
     } catch (error) {
-      throw new BadRequestException(`Failed to get user files: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to get user files: ${error.message}`,
+      );
     }
   }
 
-  async deleteFile(fileId: string, userId: string, userTokens: { access_token: string; refresh_token?: string }): Promise<void> {
+  async deleteFile(
+    fileId: string,
+    userId: string,
+    userTokens: { access_token: string; refresh_token?: string },
+  ): Promise<void> {
     try {
       if (!userTokens?.access_token) {
         throw new UnauthorizedException('Google Drive access not authorized.');
@@ -170,7 +184,10 @@ file.mimetype,
     }
   }
 
-  async getFileInfo(fileId: string, userTokens: { access_token: string; refresh_token?: string }): Promise<any> {
+  async getFileInfo(
+    fileId: string,
+    userTokens: { access_token: string; refresh_token?: string },
+  ): Promise<any> {
     try {
       if (!userTokens?.access_token) {
         throw new UnauthorizedException('Google Drive access not authorized.');
@@ -185,7 +202,10 @@ file.mimetype,
       }
 
       // Get additional info from Google Drive
-      const driveInfo = await this.googleDriveService.getFileInfo(userTokens, file.filename);
+      const driveInfo = await this.googleDriveService.getFileInfo(
+        userTokens,
+        file.filename,
+      );
 
       return {
         ...file,
@@ -196,15 +216,17 @@ file.mimetype,
         tags: driveInfo.properties?.tags || '',
       };
     } catch (error) {
-      throw new BadRequestException(`Failed to get file info: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to get file info: ${error.message}`,
+      );
     }
   }
 
   async shareFile(
-    fileId: string, 
-    userEmail: string, 
-    userId: string, 
-    userTokens: { access_token: string; refresh_token?: string }
+    fileId: string,
+    userEmail: string,
+    userId: string,
+    userTokens: { access_token: string; refresh_token?: string },
   ): Promise<void> {
     try {
       if (!userTokens?.access_token) {
@@ -224,13 +246,20 @@ file.mimetype,
       }
 
       // Share file in Google Drive
-      await this.googleDriveService.shareFile(userTokens, file.filename, userEmail);
+      await this.googleDriveService.shareFile(
+        userTokens,
+        file.filename,
+        userEmail,
+      );
     } catch (error) {
       throw new BadRequestException(`Failed to share file: ${error.message}`);
     }
   }
 
-  async getDownloadUrl(fileId: string, userTokens: { access_token: string; refresh_token?: string }): Promise<string> {
+  async getDownloadUrl(
+    fileId: string,
+    userTokens: { access_token: string; refresh_token?: string },
+  ): Promise<string> {
     try {
       if (!userTokens?.access_token) {
         throw new UnauthorizedException('Google Drive access not authorized.');
@@ -245,10 +274,15 @@ file.mimetype,
       }
 
       // Get download URL from Google Drive
-      const driveInfo = await this.googleDriveService.getFileInfo(userTokens, file.filename);
+      const driveInfo = await this.googleDriveService.getFileInfo(
+        userTokens,
+        file.filename,
+      );
       return driveInfo.webContentLink;
     } catch (error) {
-      throw new BadRequestException(`Failed to get download URL: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to get download URL: ${error.message}`,
+      );
     }
   }
 
@@ -258,17 +292,26 @@ file.mimetype,
   }
 
   // Exchange authorization code for tokens
-  async getTokensFromCode(code: string): Promise<{ access_token: string; refresh_token?: string; expires_in: number }> {
+  async getTokensFromCode(code: string): Promise<{
+    access_token: string;
+    refresh_token?: string;
+    expires_in: number;
+  }> {
     return this.googleDriveService.getTokensFromCode(code);
   }
 
   // Refresh access token
-  async refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
+  async refreshAccessToken(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     return this.googleDriveService.refreshAccessToken(refreshToken);
   }
 
   // Validate user's tokens
-  async validateTokens(userTokens: { access_token: string; refresh_token?: string }): Promise<boolean> {
+  async validateTokens(userTokens: {
+    access_token: string;
+    refresh_token?: string;
+  }): Promise<boolean> {
     return this.googleDriveService.validateTokens(userTokens);
   }
 }
