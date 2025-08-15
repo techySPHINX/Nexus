@@ -5,5 +5,6 @@ import { SubCommunityController } from './sub-community.controller';
 @Module({
   controllers: [SubCommunityController],
   providers: [SubCommunityService],
+  exports: [SubCommunityService],
 })
 export class SubCommunityModule {}
