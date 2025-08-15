@@ -22,6 +22,7 @@ export class ProfileService {
    * @throws {NotFoundException} If the profile is not found.
    */
   async getProfile(userId: string) {
+    console.log(`Fetching profile for userId: ${userId}`);
     const profile = await this.prisma.profile.findUnique({
       where: { userId: userId },
       include: {
@@ -41,6 +42,7 @@ export class ProfileService {
         },
       },
     });
+    console.log('Found profile:', profile); // Add this logging
     if (!profile) throw new NotFoundException('Profile not found');
     return profile;
   }
