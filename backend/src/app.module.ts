@@ -13,6 +13,12 @@ import { ProfileModule } from './profile/profile.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { ReferralModule } from './referral/referral.module';
 import { FilesModule } from './files/files.module';
+import { MentorshipModule } from './mentorship.module';
+import { MentorshipController } from './mentorship.controller';
+import { MentorshipService } from './mentorship.service';
+import { ShowcaseModule } from './showcase.module';
+import { ShowcaseController } from './showcase.controller';
+import { ShowcaseService } from './showcase.service';
 
 @Module({
   imports: [
@@ -28,8 +34,10 @@ import { FilesModule } from './files/files.module';
     EngagementModule,
     ReferralModule,
     FilesModule,
+    MentorshipModule,
+    ShowcaseModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, MentorshipController, ShowcaseController],
+  providers: [AppService, MentorshipService, ShowcaseService],
 })
 export class AppModule {}
