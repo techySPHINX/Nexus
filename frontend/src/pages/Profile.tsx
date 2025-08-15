@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Container, Paper, TextField, Typography, Box, Button, Avatar,
   InputAdornment, Alert, Divider, Stack, Chip, Grid, CircularProgress,
@@ -23,79 +23,99 @@ import {
 import axios from 'axios';
 
 const Profile: React.FC = () => {
-  const { user, token, loading: authLoading } = useAuth();
-  const {
-    profile,
-    badges,
-    loading: profileLoading,
-    error,
-    refreshProfile,
-    endorseSkill,
-    awardBadge,
-    setError // Destructure setError from context
-  } = useProfile();
-  const [isEditing, setIsEditing] = useState(false);
-  const [localProfile, setLocalProfile] = useState({
-    bio: '',
-    location: '',
-    interests: '',
-    avatarUrl: ''
-  });
-  const [skillsInput, setSkillsInput] = useState('');
-  const [success, setSuccess] = useState('');
-  const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
-  const [selectedBadge, setSelectedBadge] = useState('');
-  const [availableBadges, setAvailableBadges] = useState<ProfileBadge[]>([]);
-  // Add error state
-  const [apiError, setApiError] = useState<string | null>(null);
+    const {
+        user,
+        profile,
+        badges,
+        loading: profileLoading,
+        error,
+        refreshProfile,
+        endorseSkill,
+        awardBadge,
+        setError
+    } = useProfile();
 
-  const api = axios.create({
-          baseURL: 'http://localhost:3000', // Your backend URL
-      });
-  
-      // Add interceptors for auth tokens if needed
-      api.interceptors.request.use(config => {
-          const token = localStorage.getItem('token');
-          if (token) {
-              config.headers.Authorization = `Bearer ${token}`;
-          }
-          return config;
-      });
+    const [isEditing, setIsEditing] = useState(false);
+    const [localProfile, setLocalProfile] = useState({
+        bio: '',
+        location: '',
+        interests: '',
+        avatarUrl: ''
+    });
+    const [skillsInput, setSkillsInput] = useState('');
+    const [success, setSuccess] = useState('');
+    const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
+    const [selectedBadge, setSelectedBadge] = useState('');
+    const [availableBadges, setAvailableBadges] = useState<ProfileBadge[]>([]);
+    const [apiError, setApiError] = useState<string | null>(null);
 
-  // Initialize local profile
-  useEffect(() => {
-    if (profile) {
-      setLocalProfile({
-        bio: profile.bio || '',
-        location: profile.location || '',
-        interests: profile.interests || '',
-        avatarUrl: profile.avatarUrl || ''
-      });
-      setSkillsInput(profile.skills?.map(s => s.name).join(', ') || '');
-    }
-  }, [profile]);
-
-  // Fetch available badges for admin
-  useEffect(() => {
-    if (user?.role === 'ADMIN') {
-      const controller = new AbortController();
-
-      const fetchBadges = async () => {
-        try {
-          const res = await api.get('/badges', { signal: controller.signal });
-          setAvailableBadges(res.data);
-        } catch (err) {
-          if (!axios.isCancel(err)) {
-            console.error('Failed to fetch badges', err);
-          }
+    const api = useMemo(() => {
+        const instance = axios.create({
+            baseURL: 'http://localhost:3000',
+        });
+        instance.interceptors.request.use(config => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
+            return config;
+        });
+        return instance;
+    }, []);
+// Initialize local profile
+    useEffect(() => {
+        if (profile) {
+            setLocalProfile({
+                bio: profile.bio || '',
+                location: profile.location || '',
+                interests: profile.interests || '',
+                avatarUrl: profile.avatarUrl || ''
+            });
+            setSkillsInput(profile.skills?.map(s => s.name).join(', ') || '');
         }
-      };
+    }, [profile]);
 
-      fetchBadges();
+    // Fetch available badges for admin
+    useEffect(() => {
+        if (user?.role === 'ADMIN') {
+            const controller = new AbortController();
 
-      return () => controller.abort();
-    }
-  }, [user?.role]);
+            const fetchBadges = async () => {
+                try {
+                    const res = await api.get(`profile/${user.id}/badges`, { signal: controller.signal });
+                    setAvailableBadges(res.data);
+                } catch (err) {
+                    if (!axios.isCancel(err)) {
+                        console.error('Failed to fetch badges', err);
+                    }
+                }
+            };
+
+            fetchBadges();
+
+            return () => controller.abort();
+        }
+    }, [user?.role, api, user?.id]);
+
+    // Fetch profile data when user changes
+    useEffect(() => {
+        if (!user?.id) return;
+        
+        let isMounted = true;
+        
+        const loadProfile = async () => {
+            try {
+                await refreshProfile();
+                if (isMounted) console.log('Profile loaded');
+            } catch (err) {
+                if (isMounted) setApiError('Failed to load profile');
+            }
+        };
+
+        loadProfile();
+
+        return () => { isMounted = false };
+    }, [user?.id, refreshProfile]);
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -158,9 +178,8 @@ const Profile: React.FC = () => {
   };
 
   const handleAwardBadge = async () => {
-    if (!profile || !selectedBadge) return;
     try {
-      await awardBadge(profile.user.id, selectedBadge);
+      await awardBadge(profile?.user?.id || '', selectedBadge);
       setSuccess('Badge awarded successfully!');
       setBadgeDialogOpen(false);
     } catch (err: any) {
@@ -196,16 +215,7 @@ const Profile: React.FC = () => {
     </Box>
   );
 
-  useEffect(() => {
-    console.log('Auth status:', {
-      user,
-      token,
-      authLoading,
-      profileLoading
-    });
-  }, [user, token, authLoading, profileLoading]);
-
-  if (authLoading || profileLoading) {
+  if (profileLoading) {
     return (
       <Container maxWidth="md">
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
@@ -216,30 +226,36 @@ const Profile: React.FC = () => {
     );
   }
 
-  useEffect(() => {
-    console.log('Current user:', user); // Log user object
-    console.log('Current token:', token); // Log token
-  }, [user, token]);
+  // // In Profile.tsx's useEffect
+  // useEffect(() => {
+  //   let isMounted = true;
+  //   console.log('Fetching profile data...');
+  //   const fetchData = async () => {  // <-- Proper async wrapper
+  //     try {
+  //       console.log('Fetching profile data...2');
+  //       await refreshProfile();
+  //       console.log('Profile data fetched successfully');
+  //       console.log('Profile state:', profile);
+  //       console.log('Badges state:', badges);
+  //       if (isMounted) console.log('Fetch complete');
+  //     } catch (err) {
+  //       if (isMounted) setApiError('Fetch failed');
+  //     }
+  //   };
 
-  useEffect(() => {
-    console.log('3rd useEffect')
-    const fetchProfile = async () => {
-      try {
-        console.log('3rd useEffect fetch profile')
-        await refreshProfile();
-        console.log('3rd useEffect fetched profile')
-        console.log('Current profile state 3:', profile); // Add this logging
-      } catch (err) {
-        setApiError('Failed to load profile data');
-        console.error('Profile loading error:', err);
-      }
-    };
+  //   if (user?.id) {
+  //     console.log('User ID found, fetching profile...');
+  //     (async () => {
+  //     await fetchData();
+  //     console.log('3rd useEffect fetch profile called'); // now runs after it's done
+  //   })();
+  //   }
 
-    if (user?.id) {
-      fetchProfile();
-      console.log('3rd useEffect fetch profile called')
-    }
-  }, [ refreshProfile]);
+  //   return () => {
+  //     isMounted = false;  // <-- Cleanup
+  //   };
+  // }, [user?.id]);  // <-- Correct dependencies
+
 
   // useEffect(() => {
   //   if (!user?.id || !token) return;
