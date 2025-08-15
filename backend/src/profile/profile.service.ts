@@ -31,6 +31,13 @@ export class ProfileService {
             id: true,
             name: true,
             email: true,
+            subCommunityMemberships: {
+              include: {
+                subCommunity: {
+                  select: { id: true, name: true, description: true },
+                },
+              },
+            },
           },
         },
         endorsements: {
@@ -95,6 +102,13 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            subCommunityMemberships: {
+              include: {
+                subCommunity: {
+                  select: { id: true, name: true, description: true },
+                },
+              },
+            },
           },
         },
       },
