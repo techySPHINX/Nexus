@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MentorshipController } from './mentorship.controller';
 import { MentorshipService } from './mentorship.service';
-import { NotificationModule } from './notification/notification.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [NotificationModule],
