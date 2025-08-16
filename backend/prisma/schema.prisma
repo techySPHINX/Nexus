@@ -51,6 +51,9 @@ model User {
 
   userPoints UserPoints?
 
+  mentorshipListings          MentorshipListing[]    @relation("MentorshipListings")
+  mentorshipApplications      MentorshipApplication[] @relation("MentorshipApplications")
+
   @@map("users")
 }
 
@@ -151,16 +154,22 @@ enum CollaborationStatus {
 }
 
 model Feedback {
-  id          String   @id @default(uuid())
+  id          String      @id @default(uuid())
   rating      Int
   comment     String?
-  mentorId    String
-  menteeId    String
-  mentor      User     @relation("FeedbackReceived", fields: [mentorId], references: [id])
-  mentee      User     @relation("FeedbackGiven", fields: [menteeId], references: [id])
-  createdAt   DateTime @default(now())
+  authorId    String
+  receiverId  String
+  author      User        @relation("FeedbackGiven", fields: [authorId], references: [id])
+  receiver    User        @relation("FeedbackReceived", fields: [receiverId], references: [id])
+  feedbackFor FeedbackFor
+  createdAt   DateTime    @default(now())
 
   @@map("feedback")
+}
+
+enum FeedbackFor {
+  MENTOR
+  MENTEE
 }
 
 model Profile {
@@ -362,16 +371,40 @@ enum Role {
 }
 
 model Mentorship {
-  id        String   @id @default(uuid())
-  mentorId  String
-  menteeId  String
-  mentor    User     @relation("Mentor", fields: [mentorId], references: [id])
-  mentee    User     @relation("Mentee", fields: [menteeId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(uuid())
+  mentorId    String
+  menteeId    String
+  mentor      User     @relation("Mentor", fields: [mentorId], references: [id])
+  mentee      User     @relation("Mentee", fields: [menteeId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  goals       Goal[]
+  progress    Float    @default(0)
+  meetings    Meeting[]
+  agreement   MentorshipAgreement?
+
 
   @@unique([mentorId, menteeId])
   @@map("mentorship")
+}
+
+model Goal {
+  id           String     @id @default(uuid())
+  mentorshipId String
+  mentorship   Mentorship @relation(fields: [mentorshipId], references: [id])
+  title        String
+  description  String
+  status       GoalStatus @default(IN_PROGRESS)
+  dueDate      DateTime
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("goals")
+}
+
+enum GoalStatus {
+  IN_PROGRESS
+  COMPLETED
 }
 
 model MentorSettings {
@@ -524,4 +557,87 @@ model PointTransaction {
   createdAt DateTime @default(now())
 
   @@map("point_transactions")
+}
+
+model MentorshipListing {
+  id                      String                  @id @default(uuid())
+  mentorId                String
+  mentor                  User                    @relation("MentorshipListings", fields: [mentorId], references: [id])
+  title                   String
+  description             String
+  skills                  String[]
+  goals                   String[]
+  communicationChannels   String[]
+  availability            String
+  status                  MentorshipListingStatus @default(OPEN)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  applications            MentorshipApplication[]
+
+  @@map("mentorship_listings")
+}
+
+model MentorshipApplication {
+  id          String                   @id @default(uuid())
+  menteeId    String
+  mentee      User                     @relation("MentorshipApplications", fields: [menteeId], references: [id])
+  listingId   String
+  listing     MentorshipListing        @relation(fields: [listingId], references: [id])
+  message     String
+  status      MentorshipApplicationStatus @default(PENDING)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  @@unique([menteeId, listingId])
+  @@map("mentorship_applications")
+}
+
+enum MentorshipListingStatus {
+  OPEN
+  CLOSED
+}
+
+enum MentorshipApplicationStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model Meeting {
+  id           String        @id @default(uuid())
+  mentorshipId String
+  mentorship   Mentorship    @relation(fields: [mentorshipId], references: [id])
+  title        String
+  description  String?
+  startTime    DateTime
+  endTime      DateTime
+  status       MeetingStatus @default(PENDING)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("meetings")
+}
+
+enum MeetingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}
+
+model MentorshipAgreement {
+  id           String          @id @default(uuid())
+  mentorshipId String          @unique
+  mentorship   Mentorship      @relation(fields: [mentorshipId], references: [id])
+  content      String
+  status       AgreementStatus @default(PENDING)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("mentorship_agreements")
+}
+
+enum AgreementStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }

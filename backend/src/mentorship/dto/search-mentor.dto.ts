@@ -14,4 +14,17 @@ export class SearchMentorDto {
   @IsString({ each: true })
   @IsOptional()
   interests?: string[];
+
+  @IsString()
+  @IsOptional()
+  location?: string;
+
+  @IsString()
+  @IsOptional()
+  availability?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  communicationChannels?: string[];
 }
