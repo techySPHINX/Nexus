@@ -144,7 +144,14 @@ export class MentorshipService {
   }
 
   async searchMentors(searchMentorDto: SearchMentorDto) {
-    const { name, skills, interests, location, availability, communicationChannels } = searchMentorDto;
+    const {
+      name,
+      skills,
+      interests,
+      location,
+      availability,
+      communicationChannels,
+    } = searchMentorDto;
     const where: any = {};
 
     if (name) {
@@ -223,20 +230,20 @@ export class MentorshipService {
 
   async getFeedbackForMentor(mentorId: string) {
     return this.prisma.feedback.findMany({
-      where: { 
+      where: {
         receiverId: mentorId,
         feedbackFor: 'MENTOR',
-       },
+      },
       include: { author: true },
     });
   }
 
   async getFeedbackForMentee(menteeId: string) {
     return this.prisma.feedback.findMany({
-      where: { 
+      where: {
         receiverId: menteeId,
         feedbackFor: 'MENTEE',
-       },
+      },
       include: { author: true },
     });
   }
@@ -499,7 +506,10 @@ export class MentorshipService {
     });
   }
 
-  async updateAgreement(agreementId: string, updateAgreementDto: UpdateAgreementDto) {
+  async updateAgreement(
+    agreementId: string,
+    updateAgreementDto: UpdateAgreementDto,
+  ) {
     const agreement = await this.prisma.mentorshipAgreement.update({
       where: { id: agreementId },
       data: updateAgreementDto,

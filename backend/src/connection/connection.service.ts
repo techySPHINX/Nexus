@@ -287,16 +287,10 @@ export class ConnectionService {
         {
           OR: [
             {
-              AND: [
-                { requesterId: userId },
-                { recipient: { role } },
-              ],
+              AND: [{ requesterId: userId }, { recipient: { role } }],
             },
             {
-              AND: [
-                { recipientId: userId },
-                { requester: { role } },
-              ],
+              AND: [{ recipientId: userId }, { requester: { role } }],
             },
           ],
         },
@@ -951,4 +945,3 @@ export class ConnectionService {
     };
   }
 }
-
