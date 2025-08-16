@@ -65,5 +65,6 @@ export class UpdateProfileDto {
   @Matches(/^https?:\/\//, {
     message: 'Avatar URL must start with http or https.',
   })
+  @Transform(({ value }) => (value === '' ? undefined : value))
   avatarUrl?: string;
 }
