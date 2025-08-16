@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext';
 
 // Export enums and types that will be used in other files
 export enum Role {
@@ -38,10 +38,12 @@ export interface Endorsement {
 }
 
 export interface ProfileBadge {
-    id: string;
+    badge:{
+        id: string;
     name: string;
     icon: string;
     assignedAt?: string;
+    }
 }
 
 export interface Connection {
