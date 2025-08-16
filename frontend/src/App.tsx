@@ -20,6 +20,7 @@ import Landing from './pages/Landing';
 import './App.css';
 import Notification from './pages/Notification';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ProfileProvider } from './contexts/ProfileContext';
 
 // Layout component that handles navbar positioning
 const Layout: React.FC = () => {
@@ -38,7 +39,7 @@ const Layout: React.FC = () => {
         }}
       >
         {/* Main Content */}
-        <Box sx={{ 
+        <Box sx={{
           pr: position === 'left' ? 0 : 0, // No right padding for notifications
           transition: 'all 0.3s ease'
         }}>
@@ -66,9 +67,11 @@ function App() {
       <AuthProvider>
         <NavbarProvider>
           <NotificationProvider>
-          <Router>
-            <Layout />
-          </Router>
+            <ProfileProvider>
+              <Router>
+                <Layout />
+              </Router>
+            </ProfileProvider>
           </NotificationProvider>
         </NavbarProvider>
       </AuthProvider>

@@ -34,7 +34,7 @@ export class ProfileController {
    * @returns A promise that resolves to the user's profile.
    */
   @Get('me')
-  async getMe(@GetCurrentUser('sub') userId: string) {
+  async getMe(@GetCurrentUser('userId') userId: string) {
     return this.profileService.getProfile(userId);
   }
 
@@ -71,9 +71,9 @@ export class ProfileController {
   async update(
     @Param('userId') userId: string,
     @Body() dto: UpdateProfileDto,
-    @GetCurrentUser() user: { sub: string; role: Role },
+    @GetCurrentUser() user: { userId: string},
   ) {
-    if (user.sub !== userId && user.role !== Role.ADMIN) {
+    if (user.userId !== userId ) {
       throw new ForbiddenException(
         'You are not authorized to update this profile.',
       );

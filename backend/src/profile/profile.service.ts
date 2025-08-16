@@ -31,6 +31,7 @@ export class ProfileService {
             id: true,
             name: true,
             email: true,
+            role: true,
             subCommunityMemberships: {
               include: {
                 subCommunity: {
