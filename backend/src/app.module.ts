@@ -13,12 +13,7 @@ import { ProfileModule } from './profile/profile.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { ReferralModule } from './referral/referral.module';
 import { FilesModule } from './files/files.module';
-import { MentorshipModule } from './mentorship.module';
-import { MentorshipController } from './mentorship.controller';
-import { MentorshipService } from './mentorship.service';
-import { ShowcaseModule } from './showcase.module';
-import { ShowcaseController } from './showcase.controller';
-import { ShowcaseService } from './showcase.service';
+import { MentorshipModule } from './mentorship/mentorship.module';
 import { SubCommunityModule } from './sub-community/sub-community.module';
 import { SubCommunityRequestModule } from './sub-community-request/sub-community-request.module';
 import { GamificationModule } from './gamification/gamification.module';
@@ -38,12 +33,11 @@ import { GamificationModule } from './gamification/gamification.module';
     ReferralModule,
     FilesModule,
     MentorshipModule,
-    ShowcaseModule,
     SubCommunityModule,
     SubCommunityRequestModule,
     GamificationModule,
   ],
-  controllers: [AppController, MentorshipController, ShowcaseController],
-  providers: [AppService, MentorshipService, ShowcaseService],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}

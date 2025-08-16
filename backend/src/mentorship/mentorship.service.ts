@@ -16,7 +16,10 @@ export class MentorshipService {
     private readonly notificationService: NotificationService,
   ) {}
 
-  async createMentorSettings(userId: string, createMentorSettingsDto: CreateMentorSettingsDto) {
+  async createMentorSettings(
+    userId: string,
+    createMentorSettingsDto: CreateMentorSettingsDto,
+  ) {
     await this.prisma.user.update({
       where: { id: userId },
       data: { role: Role.MENTOR },
@@ -30,7 +33,10 @@ export class MentorshipService {
     });
   }
 
-  async updateMentorSettings(userId: string, updateMentorSettingsDto: UpdateMentorSettingsDto) {
+  async updateMentorSettings(
+    userId: string,
+    updateMentorSettingsDto: UpdateMentorSettingsDto,
+  ) {
     return this.prisma.mentorSettings.update({
       where: { userId },
       data: updateMentorSettingsDto,
@@ -43,7 +49,10 @@ export class MentorshipService {
     });
   }
 
-  async createMentorshipRequest(menteeId: string, createMentorshipRequestDto: CreateMentorshipRequestDto) {
+  async createMentorshipRequest(
+    menteeId: string,
+    createMentorshipRequestDto: CreateMentorshipRequestDto,
+  ) {
     const request = await this.prisma.mentorshipRequest.create({
       data: {
         menteeId,
@@ -60,8 +69,14 @@ export class MentorshipService {
     return request;
   }
 
-  async updateMentorshipRequest(mentorId: string, requestId: string, updateMentorshipRequestDto: UpdateMentorshipRequestDto) {
-    const request = await this.prisma.mentorshipRequest.findUnique({ where: { id: requestId } });
+  async updateMentorshipRequest(
+    mentorId: string,
+    requestId: string,
+    updateMentorshipRequestDto: UpdateMentorshipRequestDto,
+  ) {
+    const request = await this.prisma.mentorshipRequest.findUnique({
+      where: { id: requestId },
+    });
 
     if (!request || request.mentorId !== mentorId) {
       throw new Error('Request not found or you are not the mentor');
@@ -191,12 +206,18 @@ export class MentorshipService {
 
     const mentors = await this.prisma.mentorSettings.findMany({
       where: { isAvailable: true },
-      include: { user: { include: { profile: { include: { skills: true } } } } },
+      include: {
+        user: { include: { profile: { include: { skills: true } } } },
+      },
     });
 
     const suggestions = mentors.map((mentor) => {
-      const mentorSkills = mentor.user.profile.skills.map((skill) => skill.name);
-      const commonSkills = mentorSkills.filter((skill) => menteeSkills.includes(skill));
+      const mentorSkills = mentor.user.profile.skills.map(
+        (skill) => skill.name,
+      );
+      const commonSkills = mentorSkills.filter((skill) =>
+        menteeSkills.includes(skill),
+      );
       const score = commonSkills.length;
 
       return { mentor, score };
