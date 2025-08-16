@@ -92,7 +92,7 @@ export class ProfileController {
   async endorseSkill(
     @Param('profileId') profileId: string,
     @Body() dto: EndorseSkillDto,
-    @GetCurrentUser('sub') endorserId: string,
+    @GetCurrentUser('userId') endorserId: string,
   ) {
     return this.profileService.endorseSkill(endorserId, profileId, dto.skillId);
   }
@@ -110,7 +110,7 @@ export class ProfileController {
   async awardBadge(
     @Param('userId') userId: string,
     @Body() dto: AwardBadgeDto,
-    @GetCurrentUser() user: { sub: string; role: Role },
+    @GetCurrentUser() user: { userId: string; role: Role },
   ) {
     if (user.role !== Role.ADMIN) {
       throw new ForbiddenException('You are not authorized to award badges.');
