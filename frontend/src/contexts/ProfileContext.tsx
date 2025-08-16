@@ -127,7 +127,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setLoading(true);
         try {
             const [profileRes, badgesRes] = await Promise.all([
-                api.get(`/profile/${user.id}`),
+                api.get(`/profile/me`),
                 api.get(`/profile/${user.id}/badges`)
             ]);
             setProfile(profileRes.data);

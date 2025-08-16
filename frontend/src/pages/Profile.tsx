@@ -483,8 +483,8 @@ const Profile: React.FC = () => {
                               <Tooltip
                                 key={skill.id}
                                 title={
-                                  skill.endorsements.length > 0 ?
-                                    `Endorsed by ${skill.endorsements.map(e => e.endorser.name).join(', ')}` :
+                                  skill?.endorsements?.length > 0 ?
+                                    `Endorsed by ${skill?.endorsements.map(e => e.endorser.name).join(', ')}` :
                                     'No endorsements yet'
                                 }
                               >
