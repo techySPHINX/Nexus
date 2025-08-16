@@ -164,17 +164,17 @@ model Feedback {
 }
 
 model Profile {
-  id          String        @id @default(uuid())
-  userId      String        @unique
-  bio         String?
-  location    String?       @db.VarChar(100)
-  interests   String?
-  avatarUrl   String?       @db.VarChar(512)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skills      Skill[]       @relation("ProfileSkills")
+  id           String        @id @default(uuid())
+  userId       String        @unique
+  bio          String?
+  location     String?       @db.VarChar(100)
+  interests    String?
+  avatarUrl    String?       @db.VarChar(512)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
   endorsements Endorsement[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skills       Skill[]       @relation("ProfileSkills")
 
   @@map("profile")
 }
@@ -182,41 +182,41 @@ model Profile {
 model Skill {
   id           String        @id @default(uuid())
   name         String        @unique @db.VarChar(50)
-  profiles     Profile[]     @relation("ProfileSkills")
   endorsements Endorsement[]
+  profiles     Profile[]     @relation("ProfileSkills")
 
   @@map("skill")
 }
 
 model Endorsement {
-  id          String   @id @default(uuid())
-  profile     Profile  @relation(fields: [profileId], references: [id])
-  profileId   String
-  skill       Skill    @relation(fields: [skillId], references: [id])
-  skillId     String
-  endorser    User     @relation(fields: [endorserId], references: [id])
-  endorserId  String
-  createdAt   DateTime @default(now())
+  id         String   @id @default(uuid())
+  profileId  String
+  skillId    String
+  endorserId String
+  createdAt  DateTime @default(now())
+  endorser   User     @relation(fields: [endorserId], references: [id])
+  profile    Profile  @relation(fields: [profileId], references: [id])
+  skill      Skill    @relation(fields: [skillId], references: [id])
 
   @@unique([profileId, skillId, endorserId])
   @@map("endorsement")
 }
 
 model Badge {
-  id      String   @id @default(uuid())
-  name    String   @unique @db.VarChar(50)
-  icon    String
-  users   UsersOnBadges[]
-  
+  id    String          @id @default(uuid())
+  name  String          @unique @db.VarChar(50)
+  icon  String
+  users UsersOnBadges[]
+
   @@map("badge")
 }
 
 model UsersOnBadges {
-  user       User     @relation(fields: [userId], references: [id])
   userId     String
-  badge      Badge    @relation(fields: [badgeId], references: [id])
   badgeId    String
   assignedAt DateTime @default(now())
+  badge      Badge    @relation(fields: [badgeId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
 
   @@id([userId, badgeId])
 }
@@ -259,16 +259,16 @@ model Notification {
 }
 
 model Post {
-  id        String    @id @default(uuid())
+  id        String     @id @default(uuid())
   authorId  String
   content   String
-  imageUrl  String?   @db.VarChar(512)
+  imageUrl  String?    @db.VarChar(512)
   type      String?
+  createdAt DateTime   @default(now())
   status    PostStatus @default(PENDING)
-  createdAt DateTime  @default(now())
   Comment   Comment[]
   Like      Like[]
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  author    User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   subCommunity   SubCommunity? @relation(fields: [subCommunityId], references: [id])
   subCommunityId String?
@@ -307,42 +307,42 @@ model Referral {
   requirements String
   location     String
   status       ReferralStatus        @default(PENDING)
-  postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
   alumniId     String
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
   applications ReferralApplication[]
+  postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
 
   @@map("referrals")
 }
 
 model ReferralApplication {
   id          String            @id @default(uuid())
-  referral    Referral          @relation(fields: [referralId], references: [id])
   referralId  String
-  student     User              @relation(fields: [studentId], references: [id])
   studentId   String
   resumeUrl   String
   coverLetter String?
   status      ApplicationStatus @default(PENDING)
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+  referral    Referral          @relation(fields: [referralId], references: [id])
+  student     User              @relation(fields: [studentId], references: [id])
 
   @@map("referral_applications")
 }
 
 model File {
-  id        String   @id @default(uuid())
-  filename  String
+  id           String   @id @default(uuid())
+  filename     String
   originalName String
-  mimeType  String
-  size      Int
-  path      String
-  uploadedBy String
-  userId    String
-  user      User     @relation("UserFiles", fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  mimeType     String
+  size         Int
+  path         String
+  uploadedBy   String
+  userId       String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation("UserFiles", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("files")
 }
