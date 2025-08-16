@@ -2,12 +2,25 @@ import { Injectable } from '@nestjs/common';
 import * as sendgrid from '@sendgrid/mail';
 import { SendOtpDto } from './dto/send-otp.dto';
 
+/**
+ * Service for sending emails, primarily for OTP verification.
+ * Uses SendGrid as the email service provider.
+ */
 @Injectable()
 export class EmailService {
   constructor() {
+    // Set SendGrid API key from environment variables.
+    // Ensure SENDGRID_API_KEY is configured in your .env file.
     sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
   }
 
+  /**
+   * Sends a One-Time Password (OTP) to a user's email address for verification.
+   * The email content is a pre-defined HTML template.
+   * @param dto - Data transfer object containing the recipient's email, OTP, and name.
+   * @returns A promise that resolves when the email has been sent.
+   * @throws Logs an error to the console if email sending fails.
+   */
   async sendOtp(dto: SendOtpDto): Promise<void> {
     const { email, otp, name } = dto;
     const msg = {

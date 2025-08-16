@@ -13,19 +13,19 @@ async function seedUsers() {
         email: '22051285@kiit.ac.in',
         password: '22051285',
         name: 'Test User 1',
-        role: 'STUDENT'
+        role: 'STUDENT',
       },
       {
-        email: '22051280@kiit.ac.in', 
+        email: '22051280@kiit.ac.in',
         password: '22051280',
         name: 'Test User 2',
-        role: 'STUDENT'
-      }
+        role: 'STUDENT',
+      },
     ];
 
     for (const userData of users) {
       const hashedPassword = await bcrypt.hash(userData.password, 10);
-      
+
       const user = await prisma.user.upsert({
         where: { email: userData.email },
         update: {},
@@ -38,10 +38,10 @@ async function seedUsers() {
             create: {
               bio: `This is ${userData.name}'s profile`,
               location: 'KIIT University',
-              interests: 'Technology, Networking, Learning'
-            }
-          }
-        }
+              interests: 'Technology, Networking, Learning',
+            },
+          },
+        },
       });
 
       console.log(`✅ Created user: ${user.email} (ID: ${user.id})`);

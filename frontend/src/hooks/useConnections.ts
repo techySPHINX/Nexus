@@ -6,7 +6,6 @@ import type {
   PendingRequest,
   ConnectionSuggestion,
   ConnectionStats,
-  ConnectionResponse
 } from '../types/connections';
 
 const useConnections = () => {

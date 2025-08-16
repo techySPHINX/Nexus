@@ -14,10 +14,8 @@ import {
   ListItemText,
   ListItemAvatar,
   Divider,
-  Paper,
   LinearProgress,
   Stack,
-  Badge,
   CircularProgress,
   Alert
 } from '@mui/material';
@@ -25,20 +23,14 @@ import {
   People,
   Message,
   TrendingUp,
-  School,
-  Work,
-  AdminPanelSettings,
-  Add,
   Notifications,
   CalendarToday,
   LocationOn,
   Event,
   Forum,
-  ConnectWithoutContact,
   PersonAdd,
   Assignment,
   Groups,
-  RocketLaunch,
   CheckCircle,
   Schedule
 } from '@mui/icons-material';
@@ -493,7 +485,7 @@ const Dashboard: React.FC = () => {
               <Box sx={{ mt: 2 }}>
                 <Button
                   variant="outlined"
-                  startIcon={<Add />}
+                  startIcon={<PersonAdd />}
                   fullWidth
                   sx={{ borderRadius: 2 }}
                 >

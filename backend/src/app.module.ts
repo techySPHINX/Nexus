@@ -13,6 +13,10 @@ import { ProfileModule } from './profile/profile.module';
 import { EngagementModule } from './engagement/engagement.module';
 import { ReferralModule } from './referral/referral.module';
 import { FilesModule } from './files/files.module';
+import { MentorshipModule } from './mentorship/mentorship.module';
+import { SubCommunityModule } from './sub-community/sub-community.module';
+import { SubCommunityRequestModule } from './sub-community-request/sub-community-request.module';
+import { GamificationModule } from './gamification/gamification.module';
 
 @Module({
   imports: [
@@ -28,6 +32,10 @@ import { FilesModule } from './files/files.module';
     EngagementModule,
     ReferralModule,
     FilesModule,
+    MentorshipModule,
+    SubCommunityModule,
+    SubCommunityRequestModule,
+    GamificationModule,
   ],
   controllers: [AppController],
   providers: [AppService],

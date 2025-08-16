@@ -1,65 +1,79 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box } from '@mui/material';
-import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { NavbarProvider } from './contexts/NavbarContext';
+import { useNavbar } from './contexts/NavbarContext';
+import Navbar from './components/Navbar';
+import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
-import Profile from './pages/Profile';
 import Connections from './pages/Connections';
 import Messages from './pages/Messages';
-import ProtectedRoute from './components/ProtectedRoute';
-import Navbar from './components/Navbar';
+import Profile from './pages/Profile';
+import Referrals from './pages/Referrals';
+import Files from './pages/Files';
+import Landing from './pages/Landing';
+import './App.css';
+import Notification from './pages/Notification';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { ProfileProvider } from './contexts/ProfileContext';
+
+// Layout component that handles navbar positioning
+const Layout: React.FC = () => {
+  const { position } = useNavbar();
+
+  return (
+    <div className="App">
+      <Navbar />
+      <Box
+        sx={{
+          pt: position === 'top' ? 8 : 0,
+          pl: position === 'left' ? '280px' : 0,
+          minHeight: '100vh',
+          bgcolor: 'background.default',
+          position: 'relative'
+        }}
+      >
+        {/* Main Content */}
+        <Box sx={{
+          pr: position === 'left' ? 0 : 0, // No right padding for notifications
+          transition: 'all 0.3s ease'
+        }}>
+          <Routes>
+            <Route path="/" element={<Landing />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/connections" element={<ProtectedRoute><Connections /></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
+            <Route path="/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
+          </Routes>
+        </Box>
+      </Box>
+    </div>
+  );
+};
 
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Router>
-          <Box sx={{ minHeight: '100vh', backgroundColor: 'background.default' }}>
-            <Navbar />
-            <Box sx={{ pt: 8 }}>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/connections"
-                  element={
-                    <ProtectedRoute>
-                      <Connections />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/messages"
-                  element={
-                    <ProtectedRoute>
-                      <Messages />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </Box>
-          </Box>
-        </Router>
+        <NavbarProvider>
+          <NotificationProvider>
+            <ProfileProvider>
+              <Router>
+                <Layout />
+              </Router>
+            </ProfileProvider>
+          </NotificationProvider>
+        </NavbarProvider>
       </AuthProvider>
     </ThemeProvider>
   );
