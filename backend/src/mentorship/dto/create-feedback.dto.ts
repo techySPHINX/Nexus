@@ -1,8 +1,9 @@
-import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUUID, Max, Min, IsEnum } from 'class-validator';
+import { FeedbackFor } from '@prisma/client';
 
 export class CreateFeedbackDto {
   @IsUUID()
-  mentorId: string;
+  receiverId: string;
 
   @IsInt()
   @Min(1)
@@ -12,4 +13,7 @@ export class CreateFeedbackDto {
   @IsString()
   @IsOptional()
   comment?: string;
+
+  @IsEnum(FeedbackFor)
+  feedbackFor: FeedbackFor;
 }
