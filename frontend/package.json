@@ -10,6 +10,7 @@
     "@mui/lab": "^5.0.0-alpha.155",
     "@mui/material": "^5.14.20",
     "axios": "^1.6.2",
+    "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
     "framer-motion": "^10.16.16",
     "react": "^18.2.0",
