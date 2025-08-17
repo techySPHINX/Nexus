@@ -33,9 +33,13 @@ export class ProfileService {
             email: true,
             role: true,
             subCommunityMemberships: {
-              include: {
+              select: {
                 subCommunity: {
-                  select: { id: true, name: true, description: true },
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                  },
                 },
               },
             },
@@ -104,9 +108,13 @@ export class ProfileService {
             email: true,
             role: true,
             subCommunityMemberships: {
-              include: {
+              select: {
                 subCommunity: {
-                  select: { id: true, name: true, description: true },
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                  },
                 },
               },
             },
