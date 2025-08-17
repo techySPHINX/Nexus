@@ -37,10 +37,9 @@ import {
     Markunread as UnreadIcon,
 } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
-import dayjs from 'dayjs';
+import { formatDistanceToNow } from 'date-fns';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-dayjs.extend(relativeTime);
 
 enum NotificationType {
     CONNECTION_REQUEST = 'CONNECTION_REQUEST',
@@ -440,7 +439,7 @@ const Notification: React.FC = () => {
                                                     variant="body2"
                                                     color="text.secondary"
                                                 >
-                                                    {dayjs(notification.createdAt).fromNow()}
+                                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                                                 </Typography>
                                             }
                                             sx={{
