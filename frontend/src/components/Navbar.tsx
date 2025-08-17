@@ -175,6 +175,12 @@ const Navbar: React.FC = () => {
                   </ListItemIcon>
                   Notification
                 </MenuItem>
+                <MenuItem component={Link} to="/feed" onClick={handleUserMenuClose}>
+                  <ListItemIcon>
+                    <Person />
+                  </ListItemIcon>
+                  My Feed
+                </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
@@ -423,6 +429,12 @@ const Navbar: React.FC = () => {
               <Person />
             </ListItemIcon>
             Notification
+          </MenuItem>
+          <MenuItem component={Link} to="/feed" onClick={handleUserMenuClose}>
+            <ListItemIcon>
+              <Person />
+            </ListItemIcon>
+            My Feed
           </MenuItem>
           <Divider />
           <MenuItem onClick={handleLogout}>

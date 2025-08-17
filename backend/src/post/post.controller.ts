@@ -61,7 +61,7 @@ export class PostController {
   @ApiResponse({ status: 201, description: 'Post created successfully.' })
   @UseInterceptors(FileInterceptor('image'))
   async create(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body() dto: CreatePostDto,
     @UploadedFile() image: Express.Multer.File,
   ) {
@@ -88,7 +88,7 @@ export class PostController {
   @ApiOperation({ summary: "Get the user's feed" })
   @ApiResponse({ status: 200, description: "The user's feed." })
   getFeed(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
@@ -107,7 +107,7 @@ export class PostController {
   @ApiResponse({ status: 200, description: "The sub-community's feed." })
   getSubCommunityFeed(
     @Param('subCommunityId') subCommunityId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
@@ -167,7 +167,7 @@ export class PostController {
   @ApiOperation({ summary: 'Get a single post by ID' })
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({ status: 200, description: 'Post found.' })
-  findOne(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
+  findOne(@Param('id') id: string, @GetCurrentUser('userId') userId: string) {
     return this.postService.findOne(id, userId);
   }
 
@@ -188,7 +188,7 @@ export class PostController {
   @UseInterceptors(FileInterceptor('image'))
   async update(
     @Param('id') id: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body() dto: UpdatePostDto,
     @UploadedFile() image: Express.Multer.File,
   ) {
@@ -243,7 +243,7 @@ export class PostController {
   @ApiOperation({ summary: 'Delete a post by id (only by author)' })
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({ status: 200, description: 'Post deleted successfully.' })
-  remove(@Param('id') id: string, @GetCurrentUser('sub') userId: string) {
+  remove(@Param('id') id: string, @GetCurrentUser('userId') userId: string) {
     return this.postService.remove(id, userId);
   }
 
