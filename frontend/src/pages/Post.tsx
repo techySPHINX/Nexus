@@ -80,6 +80,8 @@ interface PostProps {
   onDelete?: () => void;
   showActions?: boolean;
   isAdminView?: boolean;
+  onApprove?: () => void;
+  onReject?: () => void;
 }
 
 export const Post: React.FC<PostProps> = ({
@@ -87,7 +89,9 @@ export const Post: React.FC<PostProps> = ({
   onUpdate,
   onDelete,
   showActions = true,
-  isAdminView = false
+  isAdminView = false,
+  onApprove,
+  onReject
 }) => {
   const { user } = useAuth();
   const {
@@ -98,13 +102,13 @@ export const Post: React.FC<PostProps> = ({
   } = usePosts();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedContent, setEditedContent] = useState(post.content);
+  const [editedContent, setEditedContent] = useState(post?.content ?? 0);
   const [showComments, setShowComments] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(post?._count?.Like ?? 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | undefined>(post.imageUrl);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(post?.imageUrl ?? undefined);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -225,14 +229,26 @@ export const Post: React.FC<PostProps> = ({
                   </>
                 )}
                 {isAdminView && isAdmin && (
-                  <>
-                    <MenuItem onClick={handleApprove}>
-                      <Check sx={{ mr: 1 }} /> Approve
-                    </MenuItem>
-                    <MenuItem onClick={handleReject}>
-                      <Close sx={{ mr: 1 }} /> Reject
-                    </MenuItem>
-                  </>
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <Button
+                      variant="contained"
+                      color="success"
+                      size="small"
+                      startIcon={<Check />}
+                      onClick={handleApprove}
+                    >
+                      Approve
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      size="small"
+                      startIcon={<Close />}
+                      onClick={handleReject}
+                    >
+                      Reject
+                    </Button>
+                  </Box>
                 )}
               </Menu>
             </>
@@ -240,13 +256,13 @@ export const Post: React.FC<PostProps> = ({
         }
         title={post.author.name}
         subheader={
-        <>
-          Posted {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-          {post.updatedAt !== post.createdAt && (
-            <> • Updated {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}</>
-          )}
-        </>
-      }
+          <>
+            Posted {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+            {post.updatedAt !== post.createdAt && (
+              <> • Updated {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}</>
+            )}
+          </>
+        }
       />
       {post.subCommunity && (
         <Box sx={{ px: 2 }}>
@@ -327,7 +343,7 @@ export const Post: React.FC<PostProps> = ({
           <IconButton onClick={() => setShowComments(!showComments)}>
             <Comment />
           </IconButton>
-          <Typography variant="body2">{post._count.Comment}</Typography>
+          <Typography variant="body2">{post?._count?.Comment}</Typography>
           <IconButton>
             <Share />
           </IconButton>

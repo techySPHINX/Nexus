@@ -272,6 +272,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
   },[]);
 
   const approvePost = useCallback(async (id: string) => {
+    if(!token) return;
     try {
       setLoading(true);
       await api.patch(`/posts/${id}/approve`);
@@ -280,7 +281,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       handleError(err);
     }
-  },[]);
+  },[token]);
 
   const rejectPost = useCallback(async (id: string) => {
     try {

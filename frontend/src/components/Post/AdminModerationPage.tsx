@@ -1,10 +1,34 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePosts } from '../../contexts/PostContext';
 import { Post } from '../../pages/Post';
-import { Box, Typography, Button, CircularProgress } from '@mui/material';
+import { 
+  Box, 
+  Typography, 
+  Button, 
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+  Alert
+} from '@mui/material';
 
 export const AdminModerationPage: React.FC = () => {
-  const { pendingPosts, getPendingPosts, pagination, loading } = usePosts();
+  const { 
+    pendingPosts, 
+    getPendingPosts, 
+    pagination, 
+    loading,
+    approvePost,
+    rejectPost
+  } = usePosts();
+  
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
   useEffect(() => {
     getPendingPosts();
@@ -12,6 +36,51 @@ export const AdminModerationPage: React.FC = () => {
 
   const handleLoadMore = () => {
     getPendingPosts(pagination.page + 1);
+  };
+
+  const handleApprove = (postId: string) => {
+    setSelectedPostId(postId);
+    setActionType('approve');
+  };
+
+  const handleReject = (postId: string) => {
+    setSelectedPostId(postId);
+    setActionType('reject');
+  };
+
+  const handleConfirmAction = async () => {
+    if (!selectedPostId || !actionType) return;
+
+    try {
+      if (actionType === 'approve') {
+        await approvePost(selectedPostId);
+        setSnackbarMessage('Post approved successfully!');
+        setSnackbarSeverity('success');
+      } else {
+        await rejectPost(selectedPostId);
+        setSnackbarMessage('Post rejected successfully!');
+        setSnackbarSeverity('success');
+      }
+      setSnackbarOpen(true);
+      // Refresh the list after action
+      getPendingPosts(1); // Reset to first page
+    } catch (error) {
+      setSnackbarMessage('Failed to process post. Please try again.');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    } finally {
+      setSelectedPostId(null);
+      setActionType(null);
+    }
+  };
+
+  const handleCancelAction = () => {
+    setSelectedPostId(null);
+    setActionType(null);
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbarOpen(false);
   };
 
   return (
@@ -34,7 +103,14 @@ export const AdminModerationPage: React.FC = () => {
       ) : (
         <>
           {pendingPosts.map((post) => (
-            <Post key={post.id} post={post} isAdminView showActions={false} />
+            <Post 
+              key={post.id} 
+              post={post} 
+              isAdminView ={true}
+              showActions={true}
+              onApprove={() => handleApprove(post.id)}
+              onReject={() => handleReject(post.id)}
+            />
           ))}
           
           {pagination.hasNext && (
@@ -50,6 +126,49 @@ export const AdminModerationPage: React.FC = () => {
           )}
         </>
       )}
+
+      {/* Confirmation Dialog */}
+      <Dialog open={!!actionType} onClose={handleCancelAction}>
+        <DialogTitle>
+          {actionType === 'approve' ? 'Approve Post' : 'Reject Post'}
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to {actionType} this post?
+          </Typography>
+          {actionType === 'reject' && (
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              This action cannot be undone.
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelAction}>Cancel</Button>
+          <Button 
+            onClick={handleConfirmAction} 
+            color={actionType === 'approve' ? 'success' : 'error'}
+            variant="contained"
+          >
+            {actionType === 'approve' ? 'Approve' : 'Reject'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar for feedback */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbarSeverity}
+          sx={{ width: '100%' }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
