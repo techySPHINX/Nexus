@@ -90,7 +90,7 @@ const NotificationIndicator = () => {
     useEffect(() => {
         const interval = setInterval(() => {
             fetchNotifications();
-        }, 40000); // Poll every 40 seconds
+        }, 5000); // Poll every 40 seconds
 
         return () => clearInterval(interval);
     }, [fetchNotifications]);
