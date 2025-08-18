@@ -2,12 +2,17 @@ import React from 'react';
 import { Grid, Card, CardContent, Box, Avatar, Typography, Chip, CardActions, Button } from "@mui/material";
 import { Message as MessageIcon } from '@mui/icons-material';
 
+interface Skill {
+  id: string;
+  name: string;
+}
+
 interface Profile {
   bio?: string;
   location?: string;
   interests?: string;
   avatarUrl?: string;
-  skills: string[];
+  skills: Skill[];
 }
 
 interface User {
@@ -124,7 +129,7 @@ const ConnectionTab: React.FC<ConnectionTabProps> = ({
                     {connection.user.profile.skills.slice(0, 3).map((skill, index) => (
                       <Chip
                         key={index}
-                        label={skill}
+                        label={skill.name}
                         size="small"
                         sx={{
                           background: (theme) => theme.palette.mode === 'dark'
