@@ -25,8 +25,14 @@ export class ShowcaseService {
     });
   }
 
-  async updateProject(userId: string, projectId: string, updateProjectDto: UpdateProjectDto) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+  async updateProject(
+    userId: string,
+    projectId: string,
+    updateProjectDto: UpdateProjectDto,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project || project.ownerId !== userId) {
       throw new Error('Project not found or you are not the owner');
     }
@@ -37,7 +43,9 @@ export class ShowcaseService {
   }
 
   async deleteProject(userId: string, projectId: string) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project || project.ownerId !== userId) {
       throw new Error('Project not found or you are not the owner');
     }
@@ -100,12 +108,21 @@ export class ShowcaseService {
   async getProjectById(projectId: string) {
     return this.prisma.project.findUnique({
       where: { id: projectId },
-      include: { owner: true, supporters: true, followers: true, collaborationRequests: true, comments: true, teamMembers: true },
+      include: {
+        owner: true,
+        supporters: true,
+        followers: true,
+        collaborationRequests: true,
+        comments: true,
+        teamMembers: true,
+      },
     });
   }
 
   async supportProject(userId: string, projectId: string) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project) {
       throw new Error('Project not found');
     }
@@ -119,7 +136,7 @@ export class ShowcaseService {
 
     await this.notificationService.create({
       userId: project.ownerId,
-      message: `Your project "${project.title}" has a new supporter.`, 
+      message: `Your project "${project.title}" has a new supporter.`,
       type: 'PROJECT_SUPPORT',
     });
 
@@ -138,7 +155,9 @@ export class ShowcaseService {
   }
 
   async followProject(userId: string, projectId: string) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project) {
       throw new Error('Project not found');
     }
@@ -152,7 +171,7 @@ export class ShowcaseService {
 
     await this.notificationService.create({
       userId: project.ownerId,
-      message: `Your project "${project.title}" has a new follower.`, 
+      message: `Your project "${project.title}" has a new follower.`,
       type: 'PROJECT_FOLLOW',
     });
 
@@ -170,8 +189,14 @@ export class ShowcaseService {
     });
   }
 
-  async createCollaborationRequest(userId: string, projectId: string, createCollaborationRequestDto: CreateCollaborationRequestDto) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+  async createCollaborationRequest(
+    userId: string,
+    projectId: string,
+    createCollaborationRequestDto: CreateCollaborationRequestDto,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project) {
       throw new Error('Project not found');
     }
@@ -186,27 +211,36 @@ export class ShowcaseService {
 
     await this.notificationService.create({
       userId: project.ownerId,
-      message: `You have a new collaboration request for your project "${project.title}".`, 
+      message: `You have a new collaboration request for your project "${project.title}".`,
       type: 'PROJECT_COLLABORATION_REQUEST',
     });
 
     return request;
   }
 
-  async updateCollaborationRequest(userId: string, requestId: string, updateCollaborationRequestDto: UpdateCollaborationRequestDto) {
-    const request = await this.prisma.projectCollaborationRequest.findUnique({ where: { id: requestId }, include: { project: true, user: true } });
+  async updateCollaborationRequest(
+    userId: string,
+    requestId: string,
+    updateCollaborationRequestDto: UpdateCollaborationRequestDto,
+  ) {
+    const request = await this.prisma.projectCollaborationRequest.findUnique({
+      where: { id: requestId },
+      include: { project: true, user: true },
+    });
     if (!request || request.project.ownerId !== userId) {
       throw new Error('Request not found or you are not the project owner');
     }
 
-    const updatedRequest = await this.prisma.projectCollaborationRequest.update({
-      where: { id: requestId },
-      data: { status: updateCollaborationRequestDto.status },
-    });
+    const updatedRequest = await this.prisma.projectCollaborationRequest.update(
+      {
+        where: { id: requestId },
+        data: { status: updateCollaborationRequestDto.status },
+      },
+    );
 
     await this.notificationService.create({
       userId: request.userId,
-      message: `Your collaboration request for the project "${request.project.title}" has been ${updatedRequest.status.toLowerCase()}.`, 
+      message: `Your collaboration request for the project "${request.project.title}" has been ${updatedRequest.status.toLowerCase()}.`,
       type: 'PROJECT_COLLABORATION_REQUEST_UPDATE',
     });
 
@@ -214,7 +248,9 @@ export class ShowcaseService {
   }
 
   async getCollaborationRequests(userId: string, projectId: string) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project || project.ownerId !== userId) {
       throw new Error('Project not found or you are not the owner');
     }
@@ -224,8 +260,14 @@ export class ShowcaseService {
     });
   }
 
-  async createComment(userId: string, projectId: string, createCommentDto: CreateCommentDto) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+  async createComment(
+    userId: string,
+    projectId: string,
+    createCommentDto: CreateCommentDto,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project) {
       throw new Error('Project not found');
     }
@@ -240,7 +282,7 @@ export class ShowcaseService {
 
     await this.notificationService.create({
       userId: project.ownerId,
-      message: `Your project "${project.title}" has a new comment.`, 
+      message: `Your project "${project.title}" has a new comment.`,
       type: 'PROJECT_COMMENT',
     });
 
@@ -254,8 +296,14 @@ export class ShowcaseService {
     });
   }
 
-  async addTeamMember(userId: string, projectId: string, addTeamMemberDto: AddTeamMemberDto) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+  async addTeamMember(
+    userId: string,
+    projectId: string,
+    addTeamMemberDto: AddTeamMemberDto,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project || project.ownerId !== userId) {
       throw new Error('Project not found or you are not the owner');
     }
@@ -267,8 +315,14 @@ export class ShowcaseService {
     });
   }
 
-  async removeTeamMember(userId: string, projectId: string, teamMemberId: string) {
-    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+  async removeTeamMember(
+    userId: string,
+    projectId: string,
+    teamMemberId: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
     if (!project || project.ownerId !== userId) {
       throw new Error('Project not found or you are not the owner');
     }

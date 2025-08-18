@@ -96,17 +96,17 @@ export class PostService {
     });
   }
 
-    /**
-     * Retrieves a personalized feed of approved posts for a user.
-     * Posts are ranked based on connections, interests, skills, and engagement.
-     * @param userId - The ID of the user requesting the feed.
-     * @param page - The page number for pagination.
-     * @param limit - The number of posts per page.
-     * @returns A promise that resolves to an object containing paginated posts and pagination details.
-     * @throws {BadRequestException} If pagination parameters are invalid.
-     * @throws {NotFoundException} If the user is not found.
-     */
-    async getFeed(userId: string, page = 1, limit = 10, subCommunityId?: string) {
+  /**
+   * Retrieves a personalized feed of approved posts for a user.
+   * Posts are ranked based on connections, interests, skills, and engagement.
+   * @param userId - The ID of the user requesting the feed.
+   * @param page - The page number for pagination.
+   * @param limit - The number of posts per page.
+   * @returns A promise that resolves to an object containing paginated posts and pagination details.
+   * @throws {BadRequestException} If pagination parameters are invalid.
+   * @throws {NotFoundException} If the user is not found.
+   */
+  async getFeed(userId: string, page = 1, limit = 10, subCommunityId?: string) {
     if (page < 1 || limit < 1 || limit > 50) {
       throw new BadRequestException('Invalid pagination parameters');
     }
