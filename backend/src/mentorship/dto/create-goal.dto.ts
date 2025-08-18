@@ -1,5 +1,4 @@
-
-import { IsNotEmpty, IsString, IsDateString, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsString, IsDateString } from 'class-validator';
 
 export class CreateGoalDto {
   @IsNotEmpty()

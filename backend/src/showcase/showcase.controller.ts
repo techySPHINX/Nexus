@@ -1,4 +1,14 @@
-import { Controller, Post, Body, UseGuards, Put, Get, Param, Delete, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Put,
+  Get,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { ShowcaseService } from './showcase.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -16,7 +26,10 @@ export class ShowcaseController {
   constructor(private readonly showcaseService: ShowcaseService) {}
 
   @Post()
-  createProject(@GetCurrentUser('sub') userId: string, @Body() createProjectDto: CreateProjectDto) {
+  createProject(
+    @GetCurrentUser('sub') userId: string,
+    @Body() createProjectDto: CreateProjectDto,
+  ) {
     return this.showcaseService.createProject(userId, createProjectDto);
   }
 
@@ -26,11 +39,18 @@ export class ShowcaseController {
     @Param('id') projectId: string,
     @Body() updateProjectDto: UpdateProjectDto,
   ) {
-    return this.showcaseService.updateProject(userId, projectId, updateProjectDto);
+    return this.showcaseService.updateProject(
+      userId,
+      projectId,
+      updateProjectDto,
+    );
   }
 
   @Delete(':id')
-  deleteProject(@GetCurrentUser('sub') userId: string, @Param('id') projectId: string) {
+  deleteProject(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') projectId: string,
+  ) {
     return this.showcaseService.deleteProject(userId, projectId);
   }
 
@@ -45,22 +65,34 @@ export class ShowcaseController {
   }
 
   @Post(':id/support')
-  supportProject(@GetCurrentUser('sub') userId: string, @Param('id') projectId: string) {
+  supportProject(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') projectId: string,
+  ) {
     return this.showcaseService.supportProject(userId, projectId);
   }
 
   @Delete(':id/support')
-  unsupportProject(@GetCurrentUser('sub') userId: string, @Param('id') projectId: string) {
+  unsupportProject(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') projectId: string,
+  ) {
     return this.showcaseService.unsupportProject(userId, projectId);
   }
 
   @Post(':id/follow')
-  followProject(@GetCurrentUser('sub') userId: string, @Param('id') projectId: string) {
+  followProject(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') projectId: string,
+  ) {
     return this.showcaseService.followProject(userId, projectId);
   }
 
   @Delete(':id/follow')
-  unfollowProject(@GetCurrentUser('sub') userId: string, @Param('id') projectId: string) {
+  unfollowProject(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') projectId: string,
+  ) {
     return this.showcaseService.unfollowProject(userId, projectId);
   }
 
@@ -70,7 +102,11 @@ export class ShowcaseController {
     @Param('id') projectId: string,
     @Body() createCollaborationRequestDto: CreateCollaborationRequestDto,
   ) {
-    return this.showcaseService.createCollaborationRequest(userId, projectId, createCollaborationRequestDto);
+    return this.showcaseService.createCollaborationRequest(
+      userId,
+      projectId,
+      createCollaborationRequestDto,
+    );
   }
 
   @Put('collaborate/:id')
@@ -79,11 +115,18 @@ export class ShowcaseController {
     @Param('id') requestId: string,
     @Body() updateCollaborationRequestDto: UpdateCollaborationRequestDto,
   ) {
-    return this.showcaseService.updateCollaborationRequest(userId, requestId, updateCollaborationRequestDto);
+    return this.showcaseService.updateCollaborationRequest(
+      userId,
+      requestId,
+      updateCollaborationRequestDto,
+    );
   }
 
   @Get(':id/collaborate')
-  getCollaborationRequests(@GetCurrentUser('sub') userId: string, @Param('id') projectId: string) {
+  getCollaborationRequests(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') projectId: string,
+  ) {
     return this.showcaseService.getCollaborationRequests(userId, projectId);
   }
 
@@ -93,7 +136,11 @@ export class ShowcaseController {
     @Param('id') projectId: string,
     @Body() createCommentDto: CreateCommentDto,
   ) {
-    return this.showcaseService.createComment(userId, projectId, createCommentDto);
+    return this.showcaseService.createComment(
+      userId,
+      projectId,
+      createCommentDto,
+    );
   }
 
   @Get(':id/comments')
@@ -107,7 +154,11 @@ export class ShowcaseController {
     @Param('id') projectId: string,
     @Body() addTeamMemberDto: AddTeamMemberDto,
   ) {
-    return this.showcaseService.addTeamMember(userId, projectId, addTeamMemberDto);
+    return this.showcaseService.addTeamMember(
+      userId,
+      projectId,
+      addTeamMemberDto,
+    );
   }
 
   @Delete(':id/team/:memberId')

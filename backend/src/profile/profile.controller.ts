@@ -71,9 +71,9 @@ export class ProfileController {
   async update(
     @Param('userId') userId: string,
     @Body() dto: UpdateProfileDto,
-    @GetCurrentUser() user: { userId: string},
+    @GetCurrentUser() user: { userId: string },
   ) {
-    if (user.userId !== userId ) {
+    if (user.userId !== userId) {
       throw new ForbiddenException(
         'You are not authorized to update this profile.',
       );
