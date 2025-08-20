@@ -8,6 +8,7 @@ import { NavbarProvider } from './contexts/NavbarContext';
 import { useNavbar } from './contexts/NavbarContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminRoute from './route/AdminRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -21,6 +22,15 @@ import './App.css';
 import Notification from './pages/Notification';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ProfileProvider } from './contexts/ProfileContext';
+import { FeedPage } from './components/Post/FeedPage';
+import { PostDetailPage } from './components/Post/PostDetailPage';
+import { UserPostsPage } from './components/Post/UserPostsPage';
+import { SubCommunitiesPage } from './components/Post/SubCommunitiesPage';
+import { SubCommunityPage } from './components/Post/SubCommunityPage';
+import { SearchResultsPage } from './components/Post/SearchResultsPage';
+import { AdminModerationPage } from './components/Post/AdminModerationPage';
+import { PostProvider } from './contexts/PostContext';
+import { SubCommunityProvider } from './contexts/SubCommunityContext';
 
 // Layout component that handles navbar positioning
 const Layout: React.FC = () => {
@@ -54,6 +64,16 @@ const Layout: React.FC = () => {
             <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
             <Route path="/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
+            {/* Post-related routes */}
+            <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
+            <Route path="/posts/:id" element={<ProtectedRoute><PostDetailPage /></ProtectedRoute>} />
+            <Route path="/users/:userId/posts" element={<ProtectedRoute><UserPostsPage /></ProtectedRoute>} />
+            <Route path="/subcommunities" element={<ProtectedRoute><SubCommunitiesPage /></ProtectedRoute>} />
+            <Route path="/subcommunities/:subCommunityId" element={<ProtectedRoute><SubCommunityPage /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute><SearchResultsPage /></ProtectedRoute>} />
+
+            {/* Admin-only routes */}
+            <Route path="/admin/moderation" element={<AdminRoute><AdminModerationPage /></AdminRoute>} />
           </Routes>
         </Box>
       </Box>
@@ -68,9 +88,13 @@ function App() {
         <NavbarProvider>
           <NotificationProvider>
             <ProfileProvider>
-              <Router>
-                <Layout />
-              </Router>
+              <SubCommunityProvider>
+                <PostProvider>
+                  <Router>
+                    <Layout />
+                  </Router>
+                </PostProvider>
+              </SubCommunityProvider>
             </ProfileProvider>
           </NotificationProvider>
         </NavbarProvider>

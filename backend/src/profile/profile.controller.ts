@@ -71,9 +71,9 @@ export class ProfileController {
   async update(
     @Param('userId') userId: string,
     @Body() dto: UpdateProfileDto,
-    @GetCurrentUser() user: { userId: string},
+    @GetCurrentUser() user: { userId: string },
   ) {
-    if (user.userId !== userId ) {
+    if (user.userId !== userId) {
       throw new ForbiddenException(
         'You are not authorized to update this profile.',
       );
@@ -92,7 +92,7 @@ export class ProfileController {
   async endorseSkill(
     @Param('profileId') profileId: string,
     @Body() dto: EndorseSkillDto,
-    @GetCurrentUser('sub') endorserId: string,
+    @GetCurrentUser('userId') endorserId: string,
   ) {
     return this.profileService.endorseSkill(endorserId, profileId, dto.skillId);
   }
@@ -110,7 +110,7 @@ export class ProfileController {
   async awardBadge(
     @Param('userId') userId: string,
     @Body() dto: AwardBadgeDto,
-    @GetCurrentUser() user: { sub: string; role: Role },
+    @GetCurrentUser() user: { userId: string; role: Role },
   ) {
     if (user.role !== Role.ADMIN) {
       throw new ForbiddenException('You are not authorized to award badges.');

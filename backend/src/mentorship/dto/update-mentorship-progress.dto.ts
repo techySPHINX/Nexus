@@ -1,4 +1,3 @@
-
 import { IsNotEmpty, IsNumber, Min, Max } from 'class-validator';
 
 export class UpdateMentorshipProgressDto {

@@ -112,36 +112,36 @@ interface ConnectionSuggestion {
   reasons: string[];
 }
 
-interface ConnectionResponse {
-  connections?: Connection[];
-  requests?: PendingRequest[];
-  suggestions?: ConnectionSuggestion[];
-  pagination?: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
+// interface ConnectionResponse {
+//   connections?: Connection[];
+//   requests?: PendingRequest[];
+//   suggestions?: ConnectionSuggestion[];
+//   pagination?: {
+//     page: number;
+//     limit: number;
+//     total: number;
+//     totalPages: number;
+//     hasNext: boolean;
+//     hasPrev: boolean;
+//   };
+// }
 
-interface ConnectionStats {
-  total: number;
-  pendingReceived: number;
-  pendingSent: number;
-  byRole: {
-    students: number;
-    alumni: number;
-  };
-  recent30Days: number;
-}
+// interface ConnectionStats {
+//   total: number;
+//   pendingReceived: number;
+//   pendingSent: number;
+//   byRole: {
+//     students: number;
+//     alumni: number;
+//   };
+//   recent30Days: number;
+//}
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
+// interface TabPanelProps {
+//   children?: React.ReactNode;
+//   index: number;
+//   value: number;
+// }
 
 
 const Connections: React.FC = () => {

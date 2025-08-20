@@ -15,7 +15,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip,
 } from '@mui/material';
 import {
   Visibility,
@@ -101,18 +100,18 @@ const Register: React.FC = () => {
     }
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'STUDENT':
-        return 'primary';
-      case 'ALUM':
-        return 'secondary';
-      case 'ADMIN':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
+  // const getRoleColor = (role: string) => {
+  //   switch (role) {
+  //     case 'STUDENT':
+  //       return 'primary';
+  //     case 'ALUM':
+  //       return 'secondary';
+  //     case 'ADMIN':
+  //       return 'error';
+  //     default:
+  //       return 'default';
+  //   }
+  // };
 
   return (
     <Container maxWidth="sm">

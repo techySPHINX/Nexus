@@ -17,7 +17,7 @@ export class LegacyFilesService {
     }
   }
 
-  async saveFile(file: Express.Multer.File, userId: string, description?: string): Promise<string> {
+  async saveFile(file: Express.Multer.File, userId: string): Promise<string> {
     if (!file) {
       throw new BadRequestException('No file provided.');
     }
@@ -29,7 +29,6 @@ export class LegacyFilesService {
       // Save file to local storage
       await fs.promises.writeFile(filePath, file.buffer);
 
-      // Save file metadata to database
       await this.prisma.file.create({
         data: {
           filename: filename,

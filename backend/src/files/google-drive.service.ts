@@ -9,11 +9,14 @@ export class GoogleDriveService {
   constructor(private configService: ConfigService) {}
 
   // Create OAuth2 client for a specific user
-  private createOAuth2Client(userTokens: { access_token: string; refresh_token?: string }) {
+  private createOAuth2Client(userTokens: {
+    access_token: string;
+    refresh_token?: string;
+  }) {
     const oauth2Client = new google.auth.OAuth2(
       this.configService.get('GOOGLE_CLIENT_ID'),
       this.configService.get('GOOGLE_CLIENT_SECRET'),
-      this.configService.get('GOOGLE_REDIRECT_URI')
+      this.configService.get('GOOGLE_REDIRECT_URI'),
     );
 
     oauth2Client.setCredentials({
@@ -29,7 +32,7 @@ export class GoogleDriveService {
     const oauth2Client = new google.auth.OAuth2(
       this.configService.get('GOOGLE_CLIENT_ID'),
       this.configService.get('GOOGLE_CLIENT_SECRET'),
-      this.configService.get('GOOGLE_REDIRECT_URI')
+      this.configService.get('GOOGLE_REDIRECT_URI'),
     );
 
     return oauth2Client.generateAuthUrl({
@@ -37,18 +40,22 @@ export class GoogleDriveService {
       scope: [
         'https://www.googleapis.com/auth/drive.file',
         'https://www.googleapis.com/auth/userinfo.email',
-        'https://www.googleapis.com/auth/userinfo.profile'
+        'https://www.googleapis.com/auth/userinfo.profile',
       ],
-      prompt: 'consent' // Force consent screen to get refresh token
+      prompt: 'consent', // Force consent screen to get refresh token
     });
   }
 
   // Exchange authorization code for tokens
-  async getTokensFromCode(code: string): Promise<{ access_token: string; refresh_token?: string; expires_in: number }> {
+  async getTokensFromCode(code: string): Promise<{
+    access_token: string;
+    refresh_token?: string;
+    expires_in: number;
+  }> {
     const oauth2Client = new google.auth.OAuth2(
       this.configService.get('GOOGLE_CLIENT_ID'),
       this.configService.get('GOOGLE_CLIENT_SECRET'),
-      this.configService.get('GOOGLE_REDIRECT_URI')
+      this.configService.get('GOOGLE_REDIRECT_URI'),
     );
 
     try {
@@ -56,7 +63,9 @@ export class GoogleDriveService {
       return {
         access_token: tokens.access_token,
         refresh_token: tokens.refresh_token,
-        expires_in: tokens.expiry_date ? Math.floor((tokens.expiry_date - Date.now()) / 1000) : 3600
+        expires_in: tokens.expiry_date
+          ? Math.floor((tokens.expiry_date - Date.now()) / 1000)
+          : 3600,
       };
     } catch (error) {
       this.logger.error('Error getting tokens from code:', error);
@@ -65,11 +74,13 @@ export class GoogleDriveService {
   }
 
   // Refresh access token using refresh token
-  async refreshAccessToken(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
+  async refreshAccessToken(
+    refreshToken: string,
+  ): Promise<{ access_token: string; expires_in: number }> {
     const oauth2Client = new google.auth.OAuth2(
       this.configService.get('GOOGLE_CLIENT_ID'),
       this.configService.get('GOOGLE_CLIENT_SECRET'),
-      this.configService.get('GOOGLE_REDIRECT_URI')
+      this.configService.get('GOOGLE_REDIRECT_URI'),
     );
 
     oauth2Client.setCredentials({ refresh_token: refreshToken });
@@ -78,7 +89,9 @@ export class GoogleDriveService {
       const { credentials } = await oauth2Client.refreshAccessToken();
       return {
         access_token: credentials.access_token,
-        expires_in: credentials.expiry_date ? Math.floor((credentials.expiry_date - Date.now()) / 1000) : 3600
+        expires_in: credentials.expiry_date
+          ? Math.floor((credentials.expiry_date - Date.now()) / 1000)
+          : 3600,
       };
     } catch (error) {
       this.logger.error('Error refreshing access token:', error);
@@ -93,8 +106,13 @@ export class GoogleDriveService {
     mimeType: string,
     fileBuffer: Buffer,
     description?: string,
-    tags?: string
-  ): Promise<{ fileId: string; webViewLink: string; downloadLink: string; size: number }> {
+    tags?: string,
+  ): Promise<{
+    fileId: string;
+    webViewLink: string;
+    downloadLink: string;
+    size: number;
+  }> {
     try {
       const oauth2Client = this.createOAuth2Client(userTokens);
       const drive = google.drive({ version: 'v3', auth: oauth2Client });
@@ -105,8 +123,8 @@ export class GoogleDriveService {
         description: description || '',
         properties: {
           tags: tags || '',
-          uploadedVia: 'Nexus Platform'
-        }
+          uploadedVia: 'Nexus Platform',
+        },
       };
 
       // Upload file
@@ -127,7 +145,7 @@ export class GoogleDriveService {
         fileId: file.data.id,
         webViewLink: file.data.webViewLink,
         downloadLink: file.data.webContentLink,
-        size: typeof file.data.size === 'number' ? file.data.size : 0
+        size: typeof file.data.size === 'number' ? file.data.size : 0,
       };
     } catch (error) {
       this.logger.error('Error uploading file to Google Drive:', error);
@@ -138,7 +156,7 @@ export class GoogleDriveService {
   // Get file info from user's Google Drive
   async getFileInfo(
     userTokens: { access_token: string; refresh_token?: string },
-    fileId: string
+    fileId: string,
   ): Promise<any> {
     try {
       const oauth2Client = this.createOAuth2Client(userTokens);
@@ -146,7 +164,8 @@ export class GoogleDriveService {
 
       const file = await drive.files.get({
         fileId,
-        fields: 'id,name,mimeType,size,createdTime,webViewLink,webContentLink,description,properties'
+        fields:
+          'id,name,mimeType,size,createdTime,webViewLink,webContentLink,description,properties',
       });
 
       return file.data;
@@ -160,7 +179,7 @@ export class GoogleDriveService {
   async listUserFiles(
     userTokens: { access_token: string; refresh_token?: string },
     pageSize: number = 50,
-    pageToken?: string
+    pageToken?: string,
   ): Promise<{ files: any[]; nextPageToken?: string }> {
     try {
       const oauth2Client = this.createOAuth2Client(userTokens);
@@ -169,14 +188,15 @@ export class GoogleDriveService {
       const response = await drive.files.list({
         pageSize,
         pageToken,
-        fields: 'nextPageToken, files(id,name,mimeType,size,createdTime,webViewLink,webContentLink,description,properties)',
+        fields:
+          'nextPageToken, files(id,name,mimeType,size,createdTime,webViewLink,webContentLink,description,properties)',
         orderBy: 'createdTime desc',
-        q: "trashed=false and 'me' in owners" // Only files owned by the user
+        q: "trashed=false and 'me' in owners", // Only files owned by the user
       });
 
       return {
         files: response.data.files || [],
-        nextPageToken: response.data.nextPageToken
+        nextPageToken: response.data.nextPageToken,
       };
     } catch (error) {
       this.logger.error('Error listing user files from Google Drive:', error);
@@ -187,7 +207,7 @@ export class GoogleDriveService {
   // Delete file from user's Google Drive
   async deleteFile(
     userTokens: { access_token: string; refresh_token?: string },
-    fileId: string
+    fileId: string,
   ): Promise<void> {
     try {
       const oauth2Client = this.createOAuth2Client(userTokens);
@@ -206,7 +226,7 @@ export class GoogleDriveService {
     userTokens: { access_token: string; refresh_token?: string },
     fileId: string,
     userEmail: string,
-    role: 'reader' | 'writer' | 'commenter' = 'reader'
+    role: 'reader' | 'writer' | 'commenter' = 'reader',
   ): Promise<void> {
     try {
       const oauth2Client = this.createOAuth2Client(userTokens);
@@ -229,19 +249,20 @@ export class GoogleDriveService {
   }
 
   // Get user profile information
-  async getUserProfile(
-    userTokens: { access_token: string; refresh_token?: string }
-  ): Promise<{ email: string; name: string; picture?: string }> {
+  async getUserProfile(userTokens: {
+    access_token: string;
+    refresh_token?: string;
+  }): Promise<{ email: string; name: string; picture?: string }> {
     try {
       const oauth2Client = this.createOAuth2Client(userTokens);
       const oauth2 = google.oauth2({ version: 'v2', auth: oauth2Client });
 
       const profile = await oauth2.userinfo.get();
-      
+
       return {
         email: profile.data.email,
         name: profile.data.name,
-        picture: profile.data.picture
+        picture: profile.data.picture,
       };
     } catch (error) {
       this.logger.error('Error getting user profile:', error);
@@ -250,9 +271,10 @@ export class GoogleDriveService {
   }
 
   // Check if user's tokens are still valid
-  async validateTokens(
-    userTokens: { access_token: string; refresh_token?: string }
-  ): Promise<boolean> {
+  async validateTokens(userTokens: {
+    access_token: string;
+    refresh_token?: string;
+  }): Promise<boolean> {
     try {
       const oauth2Client = this.createOAuth2Client(userTokens);
       const drive = google.drive({ version: 'v3', auth: oauth2Client });

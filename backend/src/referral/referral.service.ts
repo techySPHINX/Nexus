@@ -5,13 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Role } from '@prisma/client';
 import { CreateReferralDto } from './dto/create-referral.dto';
 import { UpdateReferralDto } from './dto/update-referral.dto';
-import { CreateReferralApplicationDto } from './dto/create-referral-application.dto';
 import { UpdateReferralApplicationDto } from './dto/update-referral-application.dto';
 import { FilterReferralsDto } from './dto/filter-referrals.dto';
 import { FilterReferralApplicationsDto } from './dto/filter-referral-applications.dto';
-import { Role, ReferralStatus, ApplicationStatus } from '@prisma/client';
 import {
   NotificationService,
   NotificationType,

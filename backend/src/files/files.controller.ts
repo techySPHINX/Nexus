@@ -1,4 +1,15 @@
-import { Controller, Post, UseInterceptors, UploadedFile, UseGuards, Get, Delete, Param, Body, Req, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  UseInterceptors,
+  UploadedFile,
+  UseGuards,
+  Get,
+  Delete,
+  Param,
+  Body,
+  Query,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { FilesService } from './files.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -23,14 +34,26 @@ export class FilesController {
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @GetCurrentUser('sub') userId: string,
-    @Body() body: { description?: string; tags?: string; access_token: string; refresh_token?: string },
+    @Body()
+    body: {
+      description?: string;
+      tags?: string;
+      access_token: string;
+      refresh_token?: string;
+    },
   ) {
     const userTokens = {
       access_token: body.access_token,
       refresh_token: body.refresh_token,
     };
 
-    return this.filesService.saveFile(file, userId, userTokens, body.description, body.tags);
+    return this.filesService.saveFile(
+      file,
+      userId,
+      userTokens,
+      body.description,
+      body.tags,
+    );
   }
 
   @Get()
@@ -49,7 +72,7 @@ export class FilesController {
 
   @Get(':id')
   async getFileInfo(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @GetCurrentUser('sub') userId: string,
     @Query('access_token') accessToken: string,
     @Query('refresh_token') refreshToken?: string,
@@ -64,7 +87,7 @@ export class FilesController {
 
   @Delete(':id')
   async deleteFile(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @GetCurrentUser('sub') userId: string,
     @Body() body: { access_token: string; refresh_token?: string },
   ) {
@@ -80,7 +103,8 @@ export class FilesController {
   @Post(':id/share')
   async shareFile(
     @Param('id') id: string,
-    @Body() body: { userEmail: string; access_token: string; refresh_token?: string },
+    @Body()
+    body: { userEmail: string; access_token: string; refresh_token?: string },
     @GetCurrentUser('sub') userId: string,
   ) {
     const userTokens = {
@@ -94,7 +118,7 @@ export class FilesController {
 
   @Get(':id/download')
   async getDownloadUrl(
-    @Param('id') id: string, 
+    @Param('id') id: string,
     @GetCurrentUser('sub') userId: string,
     @Query('access_token') accessToken: string,
     @Query('refresh_token') refreshToken?: string,
@@ -123,12 +147,16 @@ export class FilesController {
 
   @Post('auth/google/refresh')
   async refreshGoogleToken(@Body() body: { refresh_token: string }) {
-    const tokens = await this.filesService.refreshAccessToken(body.refresh_token);
+    const tokens = await this.filesService.refreshAccessToken(
+      body.refresh_token,
+    );
     return tokens;
   }
 
   @Post('auth/google/validate')
-  async validateGoogleTokens(@Body() body: { access_token: string; refresh_token?: string }) {
+  async validateGoogleTokens(
+    @Body() body: { access_token: string; refresh_token?: string },
+  ) {
     const isValid = await this.filesService.validateTokens(body);
     return { isValid };
   }

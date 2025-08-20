@@ -23,99 +23,101 @@ import {
 import axios from 'axios';
 
 const Profile: React.FC = () => {
-    const {
-        user,
-        profile,
-        badges,
-        loading: profileLoading,
-        error,
-        refreshProfile,
-        endorseSkill,
-        awardBadge,
-        setError
-    } = useProfile();
+  const {
+    user,
+    profile,
+    badges,
+    loading: profileLoading,
+    error,
+    refreshProfile,
+    endorseSkill,
+    awardBadge,
+    setError
+  } = useProfile();
 
-    const [isEditing, setIsEditing] = useState(false);
-    const [localProfile, setLocalProfile] = useState({
-        bio: '',
-        location: '',
-        interests: '',
-        avatarUrl: ''
+  const [isEditing, setIsEditing] = useState(false);
+  const [localProfile, setLocalProfile] = useState({
+    bio: '',
+    location: '',
+    interests: '',
+    avatarUrl: ''
+  });
+  const [skillsInput, setSkillsInput] = useState('');
+  const [success, setSuccess] = useState('');
+  const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState('');
+  const [availableBadges, setAvailableBadges] = useState<ProfileBadge[]>([]);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const api = useMemo(() => {
+    const instance = axios.create({
+      baseURL: 'http://localhost:3000',
     });
-    const [skillsInput, setSkillsInput] = useState('');
-    const [success, setSuccess] = useState('');
-    const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
-    const [selectedBadge, setSelectedBadge] = useState('');
-    const [availableBadges, setAvailableBadges] = useState<ProfileBadge[]>([]);
-    const [apiError, setApiError] = useState<string | null>(null);
+    instance.interceptors.request.use(config => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    });
+    return instance;
+  }, []);
+  // Initialize local profile
+  useEffect(() => {
+    if (profile) {
+      setLocalProfile({
+        bio: profile.bio || '',
+        location: profile.location || '',
+        interests: profile.interests || '',
+        avatarUrl: profile.avatarUrl || ''
+      });
+      setSkillsInput(profile.skills?.map(s => s.name).join(', ') || '');
+    }
+  }, [profile]);
 
-    const api = useMemo(() => {
-        const instance = axios.create({
-            baseURL: 'http://localhost:3000',
-        });
-        instance.interceptors.request.use(config => {
-            const token = localStorage.getItem('token');
-            if (token) {
-                config.headers.Authorization = `Bearer ${token}`;
-            }
-            return config;
-        });
-        return instance;
-    }, []);
-// Initialize local profile
-    useEffect(() => {
-        if (profile) {
-            setLocalProfile({
-                bio: profile.bio || '',
-                location: profile.location || '',
-                interests: profile.interests || '',
-                avatarUrl: profile.avatarUrl || ''
-            });
-            setSkillsInput(profile.skills?.map(s => s.name).join(', ') || '');
+  // Fetch available badges for admin
+  useEffect(() => {
+    // if (user?.role === 'ADMIN') {
+    if (!user?.id) return;
+
+    const controller = new AbortController();
+
+    const fetchBadges = async () => {
+      try {
+        const res = await api.get(`profile/${user.id}/badges`, { signal: controller.signal });
+        setAvailableBadges(res.data);
+      } catch (err) {
+        if (!axios.isCancel(err)) {
+          console.error('Failed to fetch badges', err);
         }
-    }, [profile]);
+      }
+    };
 
-    // Fetch available badges for admin
-    useEffect(() => {
-        if (user?.role === 'ADMIN') {
-            const controller = new AbortController();
+    fetchBadges();
 
-            const fetchBadges = async () => {
-                try {
-                    const res = await api.get(`profile/${user.id}/badges`, { signal: controller.signal });
-                    setAvailableBadges(res.data);
-                } catch (err) {
-                    if (!axios.isCancel(err)) {
-                        console.error('Failed to fetch badges', err);
-                    }
-                }
-            };
+    return () => controller.abort();
+    // }
+  }, [user?.role, api, user?.id]);
 
-            fetchBadges();
+  // Fetch profile data when user changes
+  useEffect(() => {
+    if (!user?.id) return;
 
-            return () => controller.abort();
-        }
-    }, [user?.role, api, user?.id]);
+    let isMounted = true;
 
-    // Fetch profile data when user changes
-    useEffect(() => {
-        if (!user?.id) return;
-        
-        let isMounted = true;
-        
-        const loadProfile = async () => {
-            try {
-                await refreshProfile();
-                if (isMounted) console.log('Profile loaded');
-            } catch (err) {
-                if (isMounted) setApiError('Failed to load profile');
-            }
-        };
+    const loadProfile = async () => {
+      try {
+        await refreshProfile();
+        if (isMounted) console.log('Profile loaded');
+      } catch (err) {
+        if (isMounted) setApiError('Failed to load profile');
+      }
+    };
 
-        loadProfile();
+    loadProfile();
 
-        return () => { isMounted = false };
-    }, [user?.id, refreshProfile]);
+    return () => { isMounted = false };
+  }, [user?.id, refreshProfile]);
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -513,9 +515,18 @@ const Profile: React.FC = () => {
                           </Typography>
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                             {badges.map((badge) => (
-                              <Tooltip key={badge.id} title={badge.name}>
-                                <Avatar src={badge.icon} sx={{ width: 40, height: 40 }} />
+                              <Tooltip
+                                key={badge.badge.id}
+                                title={
+                                  <Box sx={{ px: 1, py: 0.5, bgcolor: 'grey.900', color: 'white', borderRadius: 1 }}>
+                                    {badge.badge.name}
+                                  </Box>
+                                }
+                                arrow
+                              >
+                                <Avatar src={badge.badge.icon} sx={{ width: 40, height: 40, cursor: 'pointer' }} />
                               </Tooltip>
+
                             ))}
                           </Box>
                         </Box>
@@ -651,10 +662,10 @@ const Profile: React.FC = () => {
               label="Select Badge"
             >
               {availableBadges.map(badge => (
-                <MenuItem key={badge.id} value={badge.id}>
+                <MenuItem key={badge.badge.id} value={badge.badge.id}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar src={badge.icon} sx={{ width: 24, height: 24 }} />
-                    {badge.name}
+                    <Avatar src={badge.badge.icon} sx={{ width: 24, height: 24 }} />
+                    {badge.badge.name}
                   </Box>
                 </MenuItem>
               ))}
