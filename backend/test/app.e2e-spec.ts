@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import * as testing from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from './../src/app.module';
@@ -8,9 +8,10 @@ describe('AppController (e2e)', () => {
   let app: INestApplication;
 
   beforeEach(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
+    const moduleFixture: testing.TestingModule =
+      await testing.Test.createTestingModule({
+        imports: [AppModule],
+      }).compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
@@ -23,7 +24,3 @@ describe('AppController (e2e)', () => {
       .expect('Hello World!');
   });
 });
-function beforeEach(arg0: () => Promise<void>) {
-  throw new Error('Function not implemented.');
-}
-

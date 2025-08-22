@@ -25,8 +25,6 @@ import {
   Share,
   MoreVert,
   Send,
-  ExpandMore,
-  ExpandLess,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -57,11 +55,10 @@ interface PostCardProps {
   onDelete?: (postId: string) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment }) => {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const isLiked = user && post.likes.includes(user.id);
   const canDelete = user && (user.id === post.userId || user.role === 'ADMIN');
@@ -79,23 +76,22 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
     }
   };
 
-  const handleDelete = () => {
-    if (onDelete) {
-      onDelete(post.id);
-    }
-    setAnchorEl(null);
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
+    const diffInHours = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    );
+
     if (diffInHours < 1) return 'Just now';
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
     return date.toLocaleDateString();
   };
+
+  function setAnchorEl(_currentTarget: EventTarget & HTMLButtonElement): void {
+    throw new Error('Function not implemented.');
+  }
 
   return (
     <motion.div
@@ -135,7 +131,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
           }
           subheader={formatDate(post.createdAt)}
         />
-        
+
         <CardContent>
           <Typography variant="body1" sx={{ mb: 2 }}>
             {post.content}
@@ -176,19 +172,23 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment, onDelete }
         <Collapse in={showComments}>
           <Box sx={{ px: 2, pb: 2 }}>
             <Divider sx={{ mb: 2 }} />
-            
+
             {post.comments.length > 0 && (
               <List dense>
                 {post.comments.map((comment) => (
                   <ListItem key={comment.id} sx={{ px: 0 }}>
                     <ListItemAvatar>
-                      <Avatar sx={{ width: 32, height: 32, fontSize: '0.875rem' }}>
+                      <Avatar
+                        sx={{ width: 32, height: 32, fontSize: '0.875rem' }}
+                      >
                         {comment.userName.charAt(0).toUpperCase()}
                       </Avatar>
                     </ListItemAvatar>
                     <ListItemText
                       primary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
                           <Typography variant="subtitle2" fontWeight={600}>
                             {comment.userName}
                           </Typography>

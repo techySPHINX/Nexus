@@ -19,7 +19,7 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
 } from '@mui/material';
 import {
   MoreVert,
@@ -90,8 +90,6 @@ export const Post: React.FC<PostProps> = ({
   onDelete,
   showActions = true,
   isAdminView = false,
-  onApprove,
-  onReject
 }) => {
   const { user } = useAuth();
   const {
@@ -108,7 +106,9 @@ export const Post: React.FC<PostProps> = ({
   const [likeCount, setLikeCount] = useState(post?._count?.Like ?? 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | undefined>(post?.imageUrl ?? undefined);
+  const [imagePreview, setImagePreview] = useState<string | undefined>(
+    post?.imageUrl ?? undefined
+  );
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -198,7 +198,7 @@ export const Post: React.FC<PostProps> = ({
       <CardHeader
         // avatar
         avatar={
-          <Link to={'/profile'} style={{ textDecoration: "none" }}>
+          <Link to={'/profile'} style={{ textDecoration: 'none' }}>
             <Avatar
               src={post.author.profile?.avatarUrl}
               sx={{ bgcolor: 'primary.light', cursor: 'pointer' }}
@@ -208,7 +208,8 @@ export const Post: React.FC<PostProps> = ({
           </Link>
         }
         action={
-          showActions && (isAuthor || isAdmin) && (
+          showActions &&
+          (isAuthor || isAdmin) && (
             <>
               <IconButton onClick={handleMenuOpen}>
                 <MoreVert />
@@ -257,9 +258,16 @@ export const Post: React.FC<PostProps> = ({
         title={post.author.name}
         subheader={
           <>
-            Posted {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+            Posted{' '}
+            {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             {post.updatedAt !== post.createdAt && (
-              <> • Updated {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}</>
+              <>
+                {' '}
+                • Updated{' '}
+                {formatDistanceToNow(new Date(post.updatedAt), {
+                  addSuffix: true,
+                })}
+              </>
             )}
           </>
         }
@@ -350,9 +358,7 @@ export const Post: React.FC<PostProps> = ({
         </CardActions>
       )}
 
-      {showComments && (
-        <CommentSection postId={post.id} />
-      )}
+      {showComments && <CommentSection postId={post.id} />}
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>

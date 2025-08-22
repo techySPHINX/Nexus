@@ -60,7 +60,8 @@ interface Conversation {
 const Messages: React.FC = () => {
   const { user, token } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [selectedConversation, setSelectedConversation] =
+    useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -79,7 +80,7 @@ const Messages: React.FC = () => {
     if (token) {
       fetchConversations();
     }
-    
+
     // Cleanup on unmount
     return () => {
       webSocketService.disconnect();
@@ -91,21 +92,26 @@ const Messages: React.FC = () => {
 
   useEffect(() => {
     if (selectedConversation) {
-      console.log('Conversation selected, fetching messages and starting real-time updates...', {
-        conversation: selectedConversation,
-        user: user?.id,
-        hasToken: !!token
-      });
-      
+      console.log(
+        'Conversation selected, fetching messages and starting real-time updates...',
+        {
+          conversation: selectedConversation,
+          user: user?.id,
+          hasToken: !!token,
+        }
+      );
+
       fetchMessages(selectedConversation.otherUser.id);
-      
+
       // Only start real-time updates if we have all required data
       if (user && token) {
         startRealTimeUpdates();
       } else {
-        console.log('Cannot start real-time updates yet - missing user or token');
+        console.log(
+          'Cannot start real-time updates yet - missing user or token'
+        );
       }
-      
+
       setNewMessageCount(0); // Reset new message count when switching conversations
     } else {
       console.log('No conversation selected, stopping real-time updates');
@@ -123,19 +129,26 @@ const Messages: React.FC = () => {
 
   const startRealTimeUpdates = useCallback(async () => {
     if (!selectedConversation || !user || !token) {
-      console.log('Cannot start real-time updates: missing conversation, user, or token');
+      console.log(
+        'Cannot start real-time updates: missing conversation, user, or token'
+      );
       return;
     }
 
     try {
-      console.log('Starting WebSocket connection...', { userId: user.id, hasToken: !!token });
-      
+      console.log('Starting WebSocket connection...', {
+        userId: user.id,
+        hasToken: !!token,
+      });
+
       // Connect to WebSocket
       await webSocketService.connect(user.id, token);
       setIsRealTimeEnabled(true);
-      
-      console.log('WebSocket connected successfully, setting up message handlers...');
-      
+
+      console.log(
+        'WebSocket connected successfully, setting up message handlers...'
+      );
+
       // Set up message handlers
       webSocketService.on('NEW_MESSAGE', (message: WebSocketMessage) => {
         console.log('Received NEW_MESSAGE:', message);
@@ -147,14 +160,14 @@ const Messages: React.FC = () => {
       webSocketService.on('TYPING_START', (message: WebSocketMessage) => {
         console.log('Received TYPING_START:', message);
         if (message.data.receiverId === user.id) {
-          setTypingUsers(prev => new Set(prev).add(message.data.senderId));
+          setTypingUsers((prev) => new Set(prev).add(message.data.senderId));
         }
       });
 
       webSocketService.on('TYPING_STOP', (message: WebSocketMessage) => {
         console.log('Received TYPING_STOP:', message);
         if (message.data.receiverId === user.id) {
-          setTypingUsers(prev => {
+          setTypingUsers((prev) => {
             const newSet = new Set(prev);
             newSet.delete(message.data.senderId);
             return newSet;
@@ -179,7 +192,6 @@ const Messages: React.FC = () => {
       });
 
       console.log('WebSocket message handlers set up successfully');
-
     } catch (error: any) {
       console.error('WebSocket connection failed:', error);
       setIsRealTimeEnabled(false);
@@ -193,53 +205,62 @@ const Messages: React.FC = () => {
     setTypingUsers(new Set());
   }, []);
 
-  const handleNewMessage = useCallback((newMessage: Message) => {
-    // Only add if it's not already in the messages array
-    setMessages(prev => {
-      const exists = prev.some(msg => msg.id === newMessage.id);
-      if (!exists) {
-        // Play notification sound for new messages (if not from current user)
-        if (newMessage.senderId !== user?.id) {
-          playNotificationSound();
-          setNewMessageCount(prev => prev + 1);
+  const handleNewMessage = useCallback(
+    (newMessage: Message) => {
+      // Only add if it's not already in the messages array
+      setMessages((prev) => {
+        const exists = prev.some((msg) => msg.id === newMessage.id);
+        if (!exists) {
+          // Play notification sound for new messages (if not from current user)
+          if (newMessage.senderId !== user?.id) {
+            playNotificationSound();
+            setNewMessageCount((prev) => prev + 1);
+          }
+
+          return [...prev, newMessage].sort(
+            (a, b) =>
+              new Date(a.timestamp || a.createdAt).getTime() -
+              new Date(b.timestamp || b.createdAt).getTime()
+          );
         }
-        
-        return [...prev, newMessage].sort((a, b) => 
-          new Date(a.timestamp || a.createdAt).getTime() - new Date(b.timestamp || b.createdAt).getTime()
-        );
-      }
-      return prev;
-    });
+        return prev;
+      });
 
-    // Update conversation list
-    setConversations(prev => 
-      prev.map(conv => 
-        conv.id === selectedConversation?.id 
-          ? { ...conv, lastMessage: newMessage }
-          : conv
-      )
-    );
+      // Update conversation list
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === selectedConversation?.id
+            ? { ...conv, lastMessage: newMessage }
+            : conv
+        )
+      );
 
-    // Update last message ID reference
-    lastMessageIdRef.current = newMessage.id;
-  }, [selectedConversation, user]);
+      // Update last message ID reference
+      lastMessageIdRef.current = newMessage.id;
+    },
+    [selectedConversation, user]
+  );
 
   const playNotificationSound = () => {
     try {
       // Create a simple notification sound
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
-      
+
       oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
       oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-      
+
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
-      
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + 0.2
+      );
+
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
     } catch (error) {
@@ -264,11 +285,13 @@ const Messages: React.FC = () => {
     try {
       const response = await apiService.messages.getConversation(otherUserId);
       // Ensure messages are sorted chronologically (oldest first)
-      const sortedMessages = response.data.sort((a: Message, b: Message) => 
-        new Date(a.timestamp || a.createdAt).getTime() - new Date(b.timestamp || b.createdAt).getTime()
+      const sortedMessages = response.data.sort(
+        (a: Message, b: Message) =>
+          new Date(a.timestamp || a.createdAt).getTime() -
+          new Date(b.timestamp || b.createdAt).getTime()
       );
       setMessages(sortedMessages);
-      
+
       // Update last message ID reference
       if (sortedMessages.length > 0) {
         lastMessageIdRef.current = sortedMessages[sortedMessages.length - 1].id;
@@ -284,7 +307,10 @@ const Messages: React.FC = () => {
 
     try {
       // Stop typing indicator
-      webSocketService.sendTypingIndicator(selectedConversation.otherUser.id, false);
+      webSocketService.sendTypingIndicator(
+        selectedConversation.otherUser.id,
+        false
+      );
       setIsTyping(false);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -296,23 +322,23 @@ const Messages: React.FC = () => {
       );
 
       const sentMessage = response.data;
-      
+
       // Send message via WebSocket for real-time delivery
       webSocketService.sendChatMessage({
         content: newMessage,
         senderId: user!.id,
-        receiverId: selectedConversation.otherUser.id
+        receiverId: selectedConversation.otherUser.id,
       });
 
       // Add new message to the end of the messages array (maintaining chronological order)
-      setMessages(prev => [...prev, sentMessage]);
+      setMessages((prev) => [...prev, sentMessage]);
       setNewMessage('');
       setSuccess('Message sent successfully!');
-      
+
       // Update conversation list with new message
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === selectedConversation.id 
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === selectedConversation.id
             ? { ...conv, lastMessage: sentMessage }
             : conv
         )
@@ -338,22 +364,28 @@ const Messages: React.FC = () => {
 
   const handleTyping = (event: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(event.target.value);
-    
+
     // Send typing indicator
     if (selectedConversation && !isTyping) {
       setIsTyping(true);
-      webSocketService.sendTypingIndicator(selectedConversation.otherUser.id, true);
+      webSocketService.sendTypingIndicator(
+        selectedConversation.otherUser.id,
+        true
+      );
     }
-    
+
     // Clear typing indicator after 2 seconds of no typing
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    
+
     typingTimeoutRef.current = window.setTimeout(() => {
       if (selectedConversation) {
         setIsTyping(false);
-        webSocketService.sendTypingIndicator(selectedConversation.otherUser.id, false);
+        webSocketService.sendTypingIndicator(
+          selectedConversation.otherUser.id,
+          false
+        );
       }
     }, 2000);
   };
@@ -369,7 +401,9 @@ const Messages: React.FC = () => {
   const formatMessageTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
+    );
     const diffInHours = Math.floor(diffInMinutes / 60);
     const diffInDays = Math.floor(diffInHours / 24);
 
@@ -377,55 +411,60 @@ const Messages: React.FC = () => {
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInDays < 7) return `${diffInDays}d ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
   };
 
   const formatConversationTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    const diffInHours = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    );
     const diffInDays = Math.floor(diffInHours / 24);
 
     if (diffInHours < 1) return 'Just now';
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInDays < 7) return `${diffInDays}d ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
   };
 
   const formatDateHeader = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    const diffInDays = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     if (diffInDays === 0) return 'Today';
     if (diffInDays === 1) return 'Yesterday';
-    if (diffInDays < 7) return date.toLocaleDateString('en-US', { weekday: 'long' });
-    
-    return date.toLocaleDateString('en-US', { 
+    if (diffInDays < 7)
+      return date.toLocaleDateString('en-US', { weekday: 'long' });
+
+    return date.toLocaleDateString('en-US', {
       weekday: 'long',
-      month: 'long', 
+      month: 'long',
       day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
   };
 
   const groupMessagesByDate = (messages: Message[]) => {
     const groups: { [key: string]: Message[] } = {};
-    
-    messages.forEach(message => {
+
+    messages.forEach((message) => {
       const date = new Date(message.timestamp || message.createdAt);
       const dateKey = date.toDateString();
-      
+
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -433,22 +472,29 @@ const Messages: React.FC = () => {
     });
 
     // Sort dates chronologically (oldest first)
-    const sortedDates = Object.keys(groups).sort((a, b) => 
-      new Date(a).getTime() - new Date(b).getTime()
+    const sortedDates = Object.keys(groups).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime()
     );
 
-    return sortedDates.map(dateKey => ({
+    return sortedDates.map((dateKey) => ({
       date: new Date(dateKey),
-      messages: groups[dateKey].sort((a, b) => 
-        new Date(a.timestamp || a.createdAt).getTime() - new Date(b.timestamp || b.createdAt).getTime()
-      )
+      messages: groups[dateKey].sort(
+        (a, b) =>
+          new Date(a.timestamp || a.createdAt).getTime() -
+          new Date(b.timestamp || b.createdAt).getTime()
+      ),
     }));
   };
 
   if (loading && conversations.length === 0) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress />
         </Box>
       </Container>
@@ -462,9 +508,19 @@ const Messages: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <Box>
-            <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+            <Typography
+              variant="h3"
+              component="h1"
+              gutterBottom
+              sx={{ fontWeight: 700 }}
+            >
               Messages
             </Typography>
             <Typography variant="h6" color="text.secondary" gutterBottom>
@@ -474,7 +530,11 @@ const Messages: React.FC = () => {
           {isRealTimeEnabled && (
             <Box display="flex" alignItems="center" gap={1}>
               <WifiIcon sx={{ fontSize: 16, color: 'success.main' }} />
-              <Typography variant="body2" color="success.main" sx={{ fontWeight: 500 }}>
+              <Typography
+                variant="body2"
+                color="success.main"
+                sx={{ fontWeight: 500 }}
+              >
                 WebSocket Connected
               </Typography>
             </Box>
@@ -482,7 +542,11 @@ const Messages: React.FC = () => {
           {!isRealTimeEnabled && (
             <Box display="flex" alignItems="center" gap={1}>
               <WifiOffIcon sx={{ fontSize: 16, color: 'warning.main' }} />
-              <Typography variant="body2" color="warning.main" sx={{ fontWeight: 500 }}>
+              <Typography
+                variant="body2"
+                color="warning.main"
+                sx={{ fontWeight: 500 }}
+              >
                 WebSocket Disconnected
               </Typography>
             </Box>
@@ -496,7 +560,11 @@ const Messages: React.FC = () => {
         )}
 
         {success && (
-          <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+          <Alert
+            severity="success"
+            sx={{ mb: 2 }}
+            onClose={() => setSuccess(null)}
+          >
             {success}
           </Alert>
         )}
@@ -557,13 +625,26 @@ const Messages: React.FC = () => {
                       </ListItemAvatar>
                       <ListItemText
                         primary={
-                          <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          <Box
+                            display="flex"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Typography
+                              variant="subtitle1"
+                              sx={{ fontWeight: 600 }}
+                            >
                               {conversation.otherUser.name}
                             </Typography>
                             {conversation.lastMessage && (
-                              <Typography variant="caption" color="text.secondary">
-                                {formatConversationTime(conversation.lastMessage.timestamp || conversation.lastMessage.createdAt)}
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {formatConversationTime(
+                                  conversation.lastMessage.timestamp ||
+                                    conversation.lastMessage.createdAt
+                                )}
                               </Typography>
                             )}
                           </Box>
@@ -571,14 +652,24 @@ const Messages: React.FC = () => {
                         secondary={
                           <Box>
                             {conversation.otherUser.role && (
-                              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                                sx={{ display: 'block', mb: 0.5 }}
+                              >
                                 {conversation.otherUser.role}
                               </Typography>
                             )}
                             <Typography
                               variant="body2"
-                              color={conversation.unreadCount > 0 ? 'text.primary' : 'text.secondary'}
-                              fontWeight={conversation.unreadCount > 0 ? 600 : 400}
+                              color={
+                                conversation.unreadCount > 0
+                                  ? 'text.primary'
+                                  : 'text.secondary'
+                              }
+                              fontWeight={
+                                conversation.unreadCount > 0 ? 600 : 400
+                              }
                               sx={{
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
@@ -603,8 +694,14 @@ const Messages: React.FC = () => {
                   ))}
                   {conversations.length === 0 && (
                     <Box sx={{ p: 3, textAlign: 'center' }}>
-                      <PersonIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                      <PersonIcon
+                        sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }}
+                      />
+                      <Typography
+                        variant="h6"
+                        color="text.secondary"
+                        gutterBottom
+                      >
                         No conversations yet
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
@@ -619,12 +716,18 @@ const Messages: React.FC = () => {
 
           {/* Chat Area */}
           <Grid item xs={12} md={8}>
-            <Card sx={{ height: 700, display: 'flex', flexDirection: 'column' }}>
+            <Card
+              sx={{ height: 700, display: 'flex', flexDirection: 'column' }}
+            >
               {selectedConversation ? (
                 <>
                   {/* Chat Header */}
                   <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                    <Box
+                      display="flex"
+                      justifyContent="space-between"
+                      alignItems="center"
+                    >
                       <Box display="flex" alignItems="center">
                         <Avatar
                           src={selectedConversation.otherUser.avatarUrl}
@@ -637,14 +740,21 @@ const Messages: React.FC = () => {
                             {selectedConversation.otherUser.name}
                           </Typography>
                           <Box display="flex" alignItems="center" gap={1}>
-                            <CircleIcon sx={{ fontSize: 12, color: 'success.main' }} />
+                            <CircleIcon
+                              sx={{ fontSize: 12, color: 'success.main' }}
+                            />
                             <Typography variant="body2" color="text.secondary">
                               Online
                             </Typography>
                             {isRealTimeEnabled && (
                               <Box display="flex" alignItems="center" gap={0.5}>
-                                <CircleIcon sx={{ fontSize: 8, color: 'success.main' }} />
-                                <Typography variant="caption" color="success.main">
+                                <CircleIcon
+                                  sx={{ fontSize: 8, color: 'success.main' }}
+                                />
+                                <Typography
+                                  variant="caption"
+                                  color="success.main"
+                                >
                                   Real-time
                                 </Typography>
                               </Box>
@@ -666,11 +776,11 @@ const Messages: React.FC = () => {
                   </Box>
 
                   {/* Messages */}
-                  <Box 
+                  <Box
                     ref={chatContainerRef}
-                    sx={{ 
-                      flex: 1, 
-                      overflow: 'auto', 
+                    sx={{
+                      flex: 1,
+                      overflow: 'auto',
                       p: 2,
                       backgroundColor: 'grey.50',
                       display: 'flex',
@@ -709,144 +819,185 @@ const Messages: React.FC = () => {
                           }}
                         >
                           <CircleIcon sx={{ fontSize: 16 }} />
-                          <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                            {newMessageCount} new message{newMessageCount > 1 ? 's' : ''}
+                          <Typography
+                            variant="caption"
+                            sx={{ fontWeight: 600 }}
+                          >
+                            {newMessageCount} new message
+                            {newMessageCount > 1 ? 's' : ''}
                           </Typography>
                         </Paper>
                       </motion.div>
                     )}
-                    
+
                     {/* Messages are displayed chronologically: oldest (top) to newest (bottom) */}
                     <AnimatePresence>
-                      {groupMessagesByDate(messages).map(({ date, messages: dateMessages }) => (
-                        <Box key={date.toDateString()} sx={{ mb: 3 }}>
-                          {/* Date Header */}
-                          <Box sx={{ textAlign: 'center', mb: 2 }}>
-                            <Paper
-                              sx={{
-                                display: 'inline-block',
-                                px: 2,
-                                py: 0.5,
-                                backgroundColor: 'white',
-                                border: 1,
-                                borderColor: 'divider',
-                                borderRadius: 2,
-                              }}
-                            >
-                              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
-                                {formatDateHeader(date.toDateString())}
-                              </Typography>
-                            </Paper>
-                          </Box>
-
-                          {/* Messages for this date */}
-                          {dateMessages.map((message, index) => {
-                            const isOwnMessage = message.senderId === user?.id;
-                            const showAvatar = !isOwnMessage && (
-                              index === 0 || 
-                              dateMessages[index - 1]?.senderId !== message.senderId
-                            );
-                            
-                            return (
-                              <motion.div
-                                key={message.id}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.2 }}
+                      {groupMessagesByDate(messages).map(
+                        ({ date, messages: dateMessages }) => (
+                          <Box key={date.toDateString()} sx={{ mb: 3 }}>
+                            {/* Date Header */}
+                            <Box sx={{ textAlign: 'center', mb: 2 }}>
+                              <Paper
+                                sx={{
+                                  display: 'inline-block',
+                                  px: 2,
+                                  py: 0.5,
+                                  backgroundColor: 'white',
+                                  border: 1,
+                                  borderColor: 'divider',
+                                  borderRadius: 2,
+                                }}
                               >
-                                <Box
-                                  sx={{
-                                    display: 'flex',
-                                    justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
-                                    mb: 1,
-                                    alignItems: 'flex-end',
-                                  }}
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                  sx={{ fontWeight: 500 }}
                                 >
-                                  {/* Avatar for received messages */}
-                                  {showAvatar && (
-                                    <Avatar
-                                      src={selectedConversation.otherUser.avatarUrl}
-                                      sx={{ 
-                                        width: 28, 
-                                        height: 28, 
-                                        mr: 1,
-                                        mb: 0.5,
-                                      }}
-                                    >
-                                      <PersonIcon />
-                                    </Avatar>
-                                  )}
-                                  
-                                  {/* Spacer for sent messages to align properly */}
-                                  {isOwnMessage && (
-                                    <Box sx={{ width: 29, ml: 1 }} />
-                                  )}
+                                  {formatDateHeader(date.toDateString())}
+                                </Typography>
+                              </Paper>
+                            </Box>
 
-                                  {/* Message Bubble */}
-                                  <Box sx={{ maxWidth: '70%' }}>
-                                    <Paper
-                                      elevation={1}
-                                      sx={{
-                                        p: 1.5,
-                                        backgroundColor: isOwnMessage ? 'primary.main' : 'white',
-                                        color: isOwnMessage ? 'white' : 'text.primary',
-                                        borderRadius: 2,
-                                        borderBottomRightRadius: isOwnMessage ? 0 : 2,
-                                        borderBottomLeftRadius: isOwnMessage ? 2 : 0,
-                                        position: 'relative',
-                                        '&::after': isOwnMessage ? {
-                                          content: '""',
-                                          position: 'absolute',
-                                          right: -8,
-                                          bottom: 0,
-                                          width: 0,
-                                          height: 0,
-                                          borderLeft: '8px solid',
-                                          borderLeftColor: 'primary.main',
-                                          borderBottom: '8px solid transparent',
-                                        } : {},
-                                        '&::before': !isOwnMessage ? {
-                                          content: '""',
-                                          position: 'absolute',
-                                          left: -8,
-                                          bottom: 0,
-                                          width: 0,
-                                          height: 0,
-                                          borderRight: '8px solid',
-                                          borderRightColor: 'white',
-                                          borderBottom: '8px solid transparent',
-                                        } : {},
-                                      }}
-                                    >
-                                      <Typography variant="body2" sx={{ wordBreak: 'break-word', lineHeight: 1.4 }}>
-                                        {message.content}
+                            {/* Messages for this date */}
+                            {dateMessages.map((message, index) => {
+                              const isOwnMessage =
+                                message.senderId === user?.id;
+                              const showAvatar =
+                                !isOwnMessage &&
+                                (index === 0 ||
+                                  dateMessages[index - 1]?.senderId !==
+                                    message.senderId);
+
+                              return (
+                                <motion.div
+                                  key={message.id}
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  <Box
+                                    sx={{
+                                      display: 'flex',
+                                      justifyContent: isOwnMessage
+                                        ? 'flex-end'
+                                        : 'flex-start',
+                                      mb: 1,
+                                      alignItems: 'flex-end',
+                                    }}
+                                  >
+                                    {/* Avatar for received messages */}
+                                    {showAvatar && (
+                                      <Avatar
+                                        src={
+                                          selectedConversation.otherUser
+                                            .avatarUrl
+                                        }
+                                        sx={{
+                                          width: 28,
+                                          height: 28,
+                                          mr: 1,
+                                          mb: 0.5,
+                                        }}
+                                      >
+                                        <PersonIcon />
+                                      </Avatar>
+                                    )}
+
+                                    {/* Spacer for sent messages to align properly */}
+                                    {isOwnMessage && (
+                                      <Box sx={{ width: 29, ml: 1 }} />
+                                    )}
+
+                                    {/* Message Bubble */}
+                                    <Box sx={{ maxWidth: '70%' }}>
+                                      <Paper
+                                        elevation={1}
+                                        sx={{
+                                          p: 1.5,
+                                          backgroundColor: isOwnMessage
+                                            ? 'primary.main'
+                                            : 'white',
+                                          color: isOwnMessage
+                                            ? 'white'
+                                            : 'text.primary',
+                                          borderRadius: 2,
+                                          borderBottomRightRadius: isOwnMessage
+                                            ? 0
+                                            : 2,
+                                          borderBottomLeftRadius: isOwnMessage
+                                            ? 2
+                                            : 0,
+                                          position: 'relative',
+                                          '&::after': isOwnMessage
+                                            ? {
+                                                content: '""',
+                                                position: 'absolute',
+                                                right: -8,
+                                                bottom: 0,
+                                                width: 0,
+                                                height: 0,
+                                                borderLeft: '8px solid',
+                                                borderLeftColor: 'primary.main',
+                                                borderBottom:
+                                                  '8px solid transparent',
+                                              }
+                                            : {},
+                                          '&::before': !isOwnMessage
+                                            ? {
+                                                content: '""',
+                                                position: 'absolute',
+                                                left: -8,
+                                                bottom: 0,
+                                                width: 0,
+                                                height: 0,
+                                                borderRight: '8px solid',
+                                                borderRightColor: 'white',
+                                                borderBottom:
+                                                  '8px solid transparent',
+                                              }
+                                            : {},
+                                        }}
+                                      >
+                                        <Typography
+                                          variant="body2"
+                                          sx={{
+                                            wordBreak: 'break-word',
+                                            lineHeight: 1.4,
+                                          }}
+                                        >
+                                          {message.content}
+                                        </Typography>
+                                      </Paper>
+
+                                      {/* Time stamp */}
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                        sx={{
+                                          display: 'block',
+                                          mt: 0.5,
+                                          ml: isOwnMessage ? 0 : 1,
+                                          mr: isOwnMessage ? 1 : 0,
+                                          textAlign: isOwnMessage
+                                            ? 'right'
+                                            : 'left',
+                                          fontSize: '0.75rem',
+                                        }}
+                                      >
+                                        {formatMessageTime(
+                                          message.timestamp || message.createdAt
+                                        )}
                                       </Typography>
-                                    </Paper>
-                                    
-                                    {/* Time stamp */}
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
-                                      sx={{
-                                        display: 'block',
-                                        mt: 0.5,
-                                        ml: isOwnMessage ? 0 : 1,
-                                        mr: isOwnMessage ? 1 : 0,
-                                        textAlign: isOwnMessage ? 'right' : 'left',
-                                        fontSize: '0.75rem',
-                                      }}
-                                    >
-                                      {formatMessageTime(message.timestamp || message.createdAt)}
-                                    </Typography>
+                                    </Box>
                                   </Box>
-                                </Box>
-                              </motion.div>
-                            );
-                          })}
-                        </Box>
-                      ))}
+                                </motion.div>
+                              );
+                            })}
+                          </Box>
+                        )
+                      )}
                     </AnimatePresence>
-                    
+
                     {/* Typing Indicator */}
                     {typingUsers.has(selectedConversation.otherUser.id) && (
                       <motion.div
@@ -878,22 +1029,35 @@ const Messages: React.FC = () => {
                         </Box>
                       </motion.div>
                     )}
-                    
+
                     {/* Invisible div to scroll to bottom */}
                     <div ref={messagesEndRef} />
                   </Box>
 
                   {/* Message Input */}
-                  <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider', backgroundColor: 'white' }}>
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderTop: 1,
+                      borderColor: 'divider',
+                      backgroundColor: 'white',
+                    }}
+                  >
                     <Box display="flex" gap={1} alignItems="flex-end">
                       <Box sx={{ display: 'flex', gap: 0.5, mb: 1 }}>
                         <Tooltip title="Attach file">
-                          <IconButton size="small" sx={{ color: 'text.secondary' }}>
+                          <IconButton
+                            size="small"
+                            sx={{ color: 'text.secondary' }}
+                          >
                             <AttachFileIcon />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="Add emoji">
-                          <IconButton size="small" sx={{ color: 'text.secondary' }}>
+                          <IconButton
+                            size="small"
+                            sx={{ color: 'text.secondary' }}
+                          >
                             <EmojiIcon />
                           </IconButton>
                         </Tooltip>
@@ -918,8 +1082,8 @@ const Messages: React.FC = () => {
                         variant="contained"
                         onClick={sendMessage}
                         disabled={!newMessage.trim()}
-                        sx={{ 
-                          minWidth: 56, 
+                        sx={{
+                          minWidth: 56,
                           height: 40,
                           borderRadius: 3,
                           px: 2,
@@ -957,4 +1121,4 @@ const Messages: React.FC = () => {
   );
 };
 
-export default Messages; 
+export default Messages;

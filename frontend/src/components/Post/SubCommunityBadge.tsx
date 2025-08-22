@@ -10,7 +10,9 @@ interface SubCommunityBadgeProps {
   };
 }
 
-export const SubCommunityBadge: React.FC<SubCommunityBadgeProps> = ({ subCommunity }) => {
+export const SubCommunityBadge: React.FC<SubCommunityBadgeProps> = ({
+  subCommunity,
+}) => {
   return (
     <Chip
       label={subCommunity.name}

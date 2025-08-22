@@ -7,7 +7,8 @@ import { CreatePostForm } from '../Post/CreatePostForm';
 
 export const SubCommunityPage: React.FC = () => {
   const { subCommunityId } = useParams<{ subCommunityId: string }>();
-  const { subCommunityFeed, getSubCommunityFeed, pagination, loading } = usePosts();
+  const { subCommunityFeed, getSubCommunityFeed, pagination, loading } =
+    usePosts();
 
   useEffect(() => {
     if (subCommunityId) {
@@ -26,9 +27,9 @@ export const SubCommunityPage: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Sub-Community Feed
       </Typography>
-      
+
       <CreatePostForm subCommunityId={subCommunityId} />
-      
+
       {loading && pagination.page === 1 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
@@ -42,7 +43,7 @@ export const SubCommunityPage: React.FC = () => {
           {subCommunityFeed.map((post) => (
             <Post key={post.id} post={post} />
           ))}
-          
+
           {pagination.hasNext && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Button

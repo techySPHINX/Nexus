@@ -1,24 +1,47 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
-  Container, Paper, TextField, Typography, Box, Button, Avatar,
-  InputAdornment, Alert, Divider, Stack, Chip, Grid, CircularProgress,
-  Badge as MuiBadge, IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
-  DialogActions, Select, MenuItem, FormControl, InputLabel, List, ListItem,
-  ListItemAvatar, ListItemText,
-  Badge
+  Container,
+  Paper,
+  TextField,
+  Typography,
+  Box,
+  Button,
+  Avatar,
+  InputAdornment,
+  Alert,
+  Stack,
+  Chip,
+  Grid,
+  CircularProgress,
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Badge,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
 import {
   useProfile,
   Role,
-  ConnectionStatus,
-  ProfileBadge // Import the renamed interface
+  ProfileBadge, // Import the renamed interface
 } from '../contexts/ProfileContext';
 import {
-  LocationOn, Info, Interests, Upload as UploadIcon, Work, Email,
-  School, Score, CalendarToday, Warning, Notifications, Edit,
-  Add, Check, Close, ThumbUp, MilitaryTech, People, Link, Business
+  LocationOn,
+  Info,
+  Interests,
+  Upload as UploadIcon,
+  Work,
+  Email,
+  Score,
+  Edit,
+  ThumbUp,
+  MilitaryTech,
+  Business,
 } from '@mui/icons-material';
 import axios from 'axios';
 
@@ -32,7 +55,7 @@ const Profile: React.FC = () => {
     refreshProfile,
     endorseSkill,
     awardBadge,
-    setError
+    setError,
   } = useProfile();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -40,7 +63,7 @@ const Profile: React.FC = () => {
     bio: '',
     location: '',
     interests: '',
-    avatarUrl: ''
+    avatarUrl: '',
   });
   const [skillsInput, setSkillsInput] = useState('');
   const [success, setSuccess] = useState('');
@@ -53,7 +76,7 @@ const Profile: React.FC = () => {
     const instance = axios.create({
       baseURL: 'http://localhost:3000',
     });
-    instance.interceptors.request.use(config => {
+    instance.interceptors.request.use((config) => {
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
@@ -69,9 +92,9 @@ const Profile: React.FC = () => {
         bio: profile.bio || '',
         location: profile.location || '',
         interests: profile.interests || '',
-        avatarUrl: profile.avatarUrl || ''
+        avatarUrl: profile.avatarUrl || '',
       });
-      setSkillsInput(profile.skills?.map(s => s.name).join(', ') || '');
+      setSkillsInput(profile.skills?.map((s) => s.name).join(', ') || '');
     }
   }, [profile]);
 
@@ -84,7 +107,9 @@ const Profile: React.FC = () => {
 
     const fetchBadges = async () => {
       try {
-        const res = await api.get(`profile/${user.id}/badges`, { signal: controller.signal });
+        const res = await api.get(`profile/${user.id}/badges`, {
+          signal: controller.signal,
+        });
         setAvailableBadges(res.data);
       } catch (err) {
         if (!axios.isCancel(err)) {
@@ -116,30 +141,42 @@ const Profile: React.FC = () => {
 
     loadProfile();
 
-    return () => { isMounted = false };
+    return () => {
+      isMounted = false;
+    };
   }, [user?.id, refreshProfile]);
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'STUDENT': return 'primary';
-      case 'ALUM': return 'secondary';
-      case 'ADMIN': return 'error';
-      default: return 'inherit';
+      case 'STUDENT':
+        return 'primary';
+      case 'ALUM':
+        return 'secondary';
+      case 'ADMIN':
+        return 'error';
+      default:
+        return 'inherit';
     }
   };
 
   const getRoleColor2 = (role: string) => {
     switch (role) {
-      case 'STUDENT': return 'primary';
-      case 'ALUM': return 'secondary';
-      case 'ADMIN': return 'error';
-      default: return 'default';
+      case 'STUDENT':
+        return 'primary';
+      case 'ALUM':
+        return 'secondary';
+      case 'ADMIN':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
-  const handleChange = (field: keyof typeof localProfile) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    setLocalProfile(prev => ({ ...prev, [field]: e.target.value }));
-  };
+  const handleChange =
+    (field: keyof typeof localProfile) =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setLocalProfile((prev) => ({ ...prev, [field]: e.target.value }));
+    };
 
   const handleSkillsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSkillsInput(e.target.value);
@@ -154,14 +191,14 @@ const Profile: React.FC = () => {
 
     const skillsArray = skillsInput
       .split(',')
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean);
 
     try {
-      await api.put(
-        `/profile/${user?.id}`,
-        { ...localProfile, skills: skillsArray }
-      );
+      await api.put(`/profile/${user?.id}`, {
+        ...localProfile,
+        skills: skillsArray,
+      });
       await refreshProfile();
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
@@ -206,11 +243,21 @@ const Profile: React.FC = () => {
     children?: React.ReactNode;
   }> = ({ icon, title, value, multiline = false, children }) => (
     <Box>
-      <Typography variant="subtitle2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center' }}>
-        {icon} <Box component="span" sx={{ ml: 1 }}>{title}</Box>
+      <Typography
+        variant="subtitle2"
+        color="text.secondary"
+        sx={{ display: 'flex', alignItems: 'center' }}
+      >
+        {icon}{' '}
+        <Box component="span" sx={{ ml: 1 }}>
+          {title}
+        </Box>
       </Typography>
       {children || (
-        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: multiline ? 'normal' : 'nowrap' }}>
+        <Typography
+          variant="body2"
+          sx={{ mt: 0.5, whiteSpace: multiline ? 'normal' : 'nowrap' }}
+        >
           {value || '—'}
         </Typography>
       )}
@@ -220,7 +267,14 @@ const Profile: React.FC = () => {
   if (profileLoading) {
     return (
       <Container maxWidth="md">
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            height: '80vh',
+          }}
+        >
           <CircularProgress />
           <Typography sx={{ ml: 2 }}>Loading profile data...</Typography>
         </Box>
@@ -258,7 +312,6 @@ const Profile: React.FC = () => {
   //   };
   // }, [user?.id]);  // <-- Correct dependencies
 
-
   // useEffect(() => {
   //   if (!user?.id || !token) return;
   //   console.log('Current profile state:', profile); // Add this logging
@@ -294,18 +347,32 @@ const Profile: React.FC = () => {
         >
           {/* Status Messages */}
           {error && (
-            <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setError('')}>
+            <Alert
+              severity="error"
+              sx={{ mb: 3, borderRadius: 2 }}
+              onClose={() => setError('')}
+            >
               {error}
             </Alert>
           )}
           {success && (
-            <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setSuccess('')}>
+            <Alert
+              severity="success"
+              sx={{ mb: 3, borderRadius: 2 }}
+              onClose={() => setSuccess('')}
+            >
               {success}
             </Alert>
           )}
 
           <Paper elevation={3} sx={{ p: 4, borderRadius: 4 }}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                gap: 4,
+              }}
+            >
               {/* Left Column - Avatar and Basic Info */}
               <Box sx={{ minWidth: 250 }}>
                 <Box sx={{ textAlign: 'center', mb: 3 }}>
@@ -328,15 +395,21 @@ const Profile: React.FC = () => {
                         mb: 2,
                         border: '3px solid',
                         borderColor: getRoleColor(profile.user.role),
-                        boxShadow: 3
+                        boxShadow: 3,
                       }}
                     />
                   </Badge>
                   <Typography variant="h5" sx={{ fontWeight: 700 }}>
                     {profile.user.name}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                    <Email sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }} />
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                  >
+                    <Email
+                      sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }}
+                    />
                     {profile.user.email}
                   </Typography>
                   <Chip
@@ -347,7 +420,7 @@ const Profile: React.FC = () => {
                       mt: 1,
                       fontWeight: 600,
                       textTransform: 'uppercase',
-                      fontSize: '0.7rem'
+                      fontSize: '0.7rem',
                     }}
                   />
                 </Box>
@@ -420,20 +493,38 @@ const Profile: React.FC = () => {
                     <Stack spacing={3}>
                       {/* About Section */}
                       <Box>
-                        <Typography variant="h6" sx={{ mb: 2 }}>About</Typography>
+                        <Typography variant="h6" sx={{ mb: 2 }}>
+                          About
+                        </Typography>
                         <Grid container spacing={2}>
                           <Grid item xs={12} sm={6}>
                             <InfoCard
-                              icon={<Business color={getRoleColor(profile.user.role)} />}
+                              icon={
+                                <Business
+                                  color={getRoleColor(profile.user.role)}
+                                />
+                              }
                               title="Department"
-                              value={profile.user.role === Role.STUDENT ? 'Computer Science' : 'Alumni'}
+                              value={
+                                profile.user.role === Role.STUDENT
+                                  ? 'Computer Science'
+                                  : 'Alumni'
+                              }
                             />
                           </Grid>
                           <Grid item xs={12} sm={6}>
                             <InfoCard
-                              icon={<Score color={getRoleColor(profile.user.role)} />}
+                              icon={
+                                <Score
+                                  color={getRoleColor(profile.user.role)}
+                                />
+                              }
                               title="Graduation Year"
-                              value={profile.user.role === Role.STUDENT ? '2024' : '2018'}
+                              value={
+                                profile.user.role === Role.STUDENT
+                                  ? '2024'
+                                  : '2018'
+                              }
                             />
                           </Grid>
                         </Grid>
@@ -449,52 +540,74 @@ const Profile: React.FC = () => {
 
                       {/* Location */}
                       <InfoCard
-                        icon={<LocationOn color={getRoleColor(profile.user.role)} />}
+                        icon={
+                          <LocationOn color={getRoleColor(profile.user.role)} />
+                        }
                         title="Location"
                         value={profile.location}
                       />
 
                       {/* Interests */}
                       <InfoCard
-                        icon={<Interests color={getRoleColor(profile.user.role)} />}
+                        icon={
+                          <Interests color={getRoleColor(profile.user.role)} />
+                        }
                         title="Interests"
                       >
                         {profile.interests ? (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 0.5 }}>
-                            {profile.interests.split(',').map((interest, idx) => (
-                              <Chip
-                                key={idx}
-                                label={interest.trim()}
-                                variant="outlined"
-                                color="primary"
-                                size="small"
-                              />
-                            ))}
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              flexWrap: 'wrap',
+                              gap: 1,
+                              mt: 0.5,
+                            }}
+                          >
+                            {profile.interests
+                              .split(',')
+                              .map((interest, idx) => (
+                                <Chip
+                                  key={idx}
+                                  label={interest.trim()}
+                                  variant="outlined"
+                                  color="primary"
+                                  size="small"
+                                />
+                              ))}
                           </Box>
                         ) : null}
                       </InfoCard>
 
                       {/* Skills */}
                       <Box>
-                        <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ display: 'flex', alignItems: 'center', mb: 1 }}
+                        >
                           <Work sx={{ mr: 1 }} /> Skills
                         </Typography>
                         {profile.skills.length > 0 ? (
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          <Box
+                            sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
+                          >
                             {profile.skills.map((skill) => (
                               <Tooltip
                                 key={skill.id}
                                 title={
-                                  skill?.endorsements?.length > 0 ?
-                                    `Endorsed by ${skill?.endorsements.map(e => e.endorser.name).join(', ')}` :
-                                    'No endorsements yet'
+                                  skill?.endorsements?.length > 0
+                                    ? `Endorsed by ${skill?.endorsements.map((e) => e.endorser.name).join(', ')}`
+                                    : 'No endorsements yet'
                                 }
                               >
                                 <Chip
                                   label={skill.name}
                                   variant="outlined"
                                   color="primary"
-                                  onDelete={profile.user.id !== user?.id ? () => handleEndorse(skill.id) : undefined}
+                                  onDelete={
+                                    profile.user.id !== user?.id
+                                      ? () => handleEndorse(skill.id)
+                                      : undefined
+                                  }
                                   deleteIcon={<ThumbUp />}
                                 />
                               </Tooltip>
@@ -510,23 +623,46 @@ const Profile: React.FC = () => {
                       {/* Badges */}
                       {badges.length > 0 && (
                         <Box>
-                          <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              mb: 1,
+                            }}
+                          >
                             <MilitaryTech sx={{ mr: 1 }} /> Badges
                           </Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                          <Box
+                            sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
+                          >
                             {badges.map((badge) => (
                               <Tooltip
                                 key={badge.badge.id}
                                 title={
-                                  <Box sx={{ px: 1, py: 0.5, bgcolor: 'grey.900', color: 'white', borderRadius: 1 }}>
+                                  <Box
+                                    sx={{
+                                      px: 1,
+                                      py: 0.5,
+                                      bgcolor: 'grey.900',
+                                      color: 'white',
+                                      borderRadius: 1,
+                                    }}
+                                  >
                                     {badge.badge.name}
                                   </Box>
                                 }
                                 arrow
                               >
-                                <Avatar src={badge.badge.icon} sx={{ width: 40, height: 40, cursor: 'pointer' }} />
+                                <Avatar
+                                  src={badge.badge.icon}
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    cursor: 'pointer',
+                                  }}
+                                />
                               </Tooltip>
-
                             ))}
                           </Box>
                         </Box>
@@ -560,7 +696,7 @@ const Profile: React.FC = () => {
                             <InputAdornment position="start">
                               <Info color="action" />
                             </InputAdornment>
-                          )
+                          ),
                         }}
                       />
 
@@ -574,7 +710,7 @@ const Profile: React.FC = () => {
                             <InputAdornment position="start">
                               <LocationOn color="action" />
                             </InputAdornment>
-                          )
+                          ),
                         }}
                       />
 
@@ -589,7 +725,7 @@ const Profile: React.FC = () => {
                             <InputAdornment position="start">
                               <Interests color="action" />
                             </InputAdornment>
-                          )
+                          ),
                         }}
                       />
 
@@ -604,7 +740,7 @@ const Profile: React.FC = () => {
                             <InputAdornment position="start">
                               <Work color="action" />
                             </InputAdornment>
-                          )
+                          ),
                         }}
                       />
 
@@ -618,7 +754,7 @@ const Profile: React.FC = () => {
                             <InputAdornment position="start">
                               <UploadIcon color="action" />
                             </InputAdornment>
-                          )
+                          ),
                         }}
                       />
 
@@ -630,7 +766,11 @@ const Profile: React.FC = () => {
                           disabled={profileLoading}
                           sx={{ flex: 1 }}
                         >
-                          {profileLoading ? <CircularProgress size={24} /> : 'Save Changes'}
+                          {profileLoading ? (
+                            <CircularProgress size={24} />
+                          ) : (
+                            'Save Changes'
+                          )}
                         </Button>
                         <Button
                           variant="outlined"
@@ -661,10 +801,13 @@ const Profile: React.FC = () => {
               onChange={(e) => setSelectedBadge(e.target.value as string)}
               label="Select Badge"
             >
-              {availableBadges.map(badge => (
+              {availableBadges.map((badge) => (
                 <MenuItem key={badge.badge.id} value={badge.badge.id}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar src={badge.badge.icon} sx={{ width: 24, height: 24 }} />
+                    <Avatar
+                      src={badge.badge.icon}
+                      sx={{ width: 24, height: 24 }}
+                    />
                     {badge.badge.name}
                   </Box>
                 </MenuItem>
