@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
+import type { AxiosError } from 'axios';
 
 interface Post {
   id: string;
@@ -48,14 +49,37 @@ interface PostContextType {
     hasNext: boolean;
     hasPrev: boolean;
   };
-  createPost: (content: string, image?: File, subCommunityId?: string, type?: string) => Promise<void>;
-  updatePost: (id: string, content: string, image?: File, subCommunityId?: string) => Promise<void>;
+  createPost: (
+    content: string,
+    image?: File,
+    subCommunityId?: string,
+    type?: string
+  ) => Promise<void>;
+  updatePost: (
+    id: string,
+    content: string,
+    image?: File,
+    subCommunityId?: string
+  ) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
   getPost: (id: string) => Promise<void>;
   getFeed: (page?: number, limit?: number) => Promise<void>;
-  getSubCommunityFeed: (subCommunityId: string, page?: number, limit?: number) => Promise<void>;
-  getUserPosts: (userId: string, page?: number, limit?: number) => Promise<void>;
-  searchPosts: (query: string, page?: number, limit?: number, subCommunityId?: string) => Promise<void>;
+  getSubCommunityFeed: (
+    subCommunityId: string,
+    page?: number,
+    limit?: number
+  ) => Promise<void>;
+  getUserPosts: (
+    userId: string,
+    page?: number,
+    limit?: number
+  ) => Promise<void>;
+  searchPosts: (
+    query: string,
+    page?: number,
+    limit?: number,
+    subCommunityId?: string
+  ) => Promise<void>;
   approvePost: (id: string) => Promise<void>;
   rejectPost: (id: string) => Promise<void>;
   getPendingPosts: (page?: number, limit?: number) => Promise<void>;
@@ -64,7 +88,9 @@ interface PostContextType {
 
 const PostContext = createContext<PostContextType | undefined>(undefined);
 
-export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
   const [feed, setFeed] = useState<Post[]>([]);
@@ -83,29 +109,40 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hasPrev: false,
   });
 
-  const { user, token } = useAuth();
+  const { token } = useAuth();
 
   const api = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: 'http://localhost:3000',
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 
-  const handleError = (err: any) => {
-    setError(err.response?.data?.message || err.message || 'Something went wrong');
+  const handleError = (err: AxiosError | Error) => {
+    if (
+      'response' in err &&
+      err.response &&
+      (err as AxiosError).response?.data
+    ) {
+      const errorData = (err as AxiosError).response?.data as
+        | { message?: string }
+        | undefined;
+      setError(errorData?.message || err.message || 'Something went wrong');
+    } else {
+      setError(err.message || 'Something went wrong');
+    }
     setLoading(false);
     throw err;
   };
 
   const clearError = () => setError(null);
 
-<<<<<<< HEAD
-  const createPost = async (content: string, image?: File, subCommunityId?: string, type = 'UPDATE') => {
-=======
-  const createPost = useCallback(async (content: string, image?: File, subCommunityId?: string, type = 'UPDATE') => {
-    if(!token) return;
->>>>>>> origin
+  const createPost = async (
+    content: string,
+    image?: File,
+    subCommunityId?: string,
+    type = 'UPDATE'
+  ) => {
     try {
       setLoading(true);
       const formData = new FormData();
@@ -120,19 +157,20 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
 
-      setPosts(prev => [data, ...prev]);
+      setPosts((prev) => [data, ...prev]);
       setLoading(false);
       return data;
     } catch (err) {
       handleError(err);
     }
-<<<<<<< HEAD
   };
-=======
-  },[token]);
->>>>>>> origin
 
-  const updatePost = useCallback(async (id: string, content: string, image?: File, subCommunityId?: string) => {
+  const updatePost = async (
+    id: string,
+    content: string,
+    image?: File,
+    subCommunityId?: string
+  ) => {
     try {
       setLoading(true);
       const formData = new FormData();
@@ -146,36 +184,41 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         },
       });
 
-      setPosts(prev => prev.map(post => (post.id === id ? data : post)));
-      setFeed(prev => prev.map(post => (post.id === id ? data : post)));
-      setSubCommunityFeed(prev => prev.map(post => (post.id === id ? data : post)));
-      setUserPosts(prev => prev.map(post => (post.id === id ? data : post)));
-      setSearchResults(prev => prev.map(post => (post.id === id ? data : post)));
+      setPosts((prev) => prev.map((post) => (post.id === id ? data : post)));
+      setFeed((prev) => prev.map((post) => (post.id === id ? data : post)));
+      setSubCommunityFeed((prev) =>
+        prev.map((post) => (post.id === id ? data : post))
+      );
+      setUserPosts((prev) =>
+        prev.map((post) => (post.id === id ? data : post))
+      );
+      setSearchResults((prev) =>
+        prev.map((post) => (post.id === id ? data : post))
+      );
       if (currentPost?.id === id) setCurrentPost(data);
       setLoading(false);
       return data;
     } catch (err) {
       handleError(err);
     }
-  },[]);
-
-  const deletePost = useCallback(async (id: string) => {
+  };
+  const deletePost = async (id: string) => {
     try {
       setLoading(true);
       await api.delete(`/posts/${id}`);
-      setPosts(prev => prev.filter(post => post.id !== id));
-      setFeed(prev => prev.filter(post => post.id !== id));
-      setSubCommunityFeed(prev => prev.filter(post => post.id !== id));
-      setUserPosts(prev => prev.filter(post => post.id !== id));
-      setSearchResults(prev => prev.filter(post => post.id !== id));
+      setPosts((prev) => prev.filter((post) => post.id !== id));
+      setFeed((prev) => prev.filter((post) => post.id !== id));
+      setSubCommunityFeed((prev) => prev.filter((post) => post.id !== id));
+      setUserPosts((prev) => prev.filter((post) => post.id !== id));
+      setSearchResults((prev) => prev.filter((post) => post.id !== id));
       if (currentPost?.id === id) setCurrentPost(null);
       setLoading(false);
     } catch (err) {
       handleError(err);
     }
-  },[]);
+  };
 
-  const getPost = useCallback(async (id: string) => {
+  const getPost = async (id: string) => {
     try {
       setLoading(true);
       const { data } = await api.get(`/posts/${id}`);
@@ -185,80 +228,99 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       handleError(err);
     }
-  },[]);
+  };
 
-  const getFeed = useCallback(async (page = 1, limit = 10) => {
-    if (!token) {
-      console.error("No token available");
-      return;
-    }
-    try {
-      setLoading(true);
-      const { data } = await api.get('/posts/feed', {
-        params: { page, limit },
-      });
-      console.log("Feed data:", data);
-      setFeed(data.posts);
-      setPagination({
-        page,
-        limit,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages,
-        hasNext: data.pagination.hasNext,
-        hasPrev: data.pagination.hasPrev,
-      });
-      setLoading(false);
-      return data;
-    } catch (err) {
-      handleError(err);
-    }
-  }, [token]);
+  const getFeed = useCallback(
+    async (page = 1, limit = 10) => {
+      if (!token) {
+        console.error('No token available');
+        return;
+      }
+      try {
+        setLoading(true);
+        const { data } = await api.get('/posts/feed', {
+          params: { page, limit },
+        });
+        console.log('Feed data:', data);
+        setFeed(data.posts);
+        setPagination({
+          page,
+          limit,
+          total: data.pagination.total,
+          totalPages: data.pagination.totalPages,
+          hasNext: data.pagination.hasNext,
+          hasPrev: data.pagination.hasPrev,
+        });
+        setLoading(false);
+        return data;
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [api, token]
+  );
 
-  const getSubCommunityFeed = useCallback(async (subCommunityId: string, page = 1, limit = 10) => {
-    try {
-      setLoading(true);
-      const { data } = await api.get(`/posts/subcommunity/${subCommunityId}/feed`, {
-        params: { page, limit },
-      });
-      setSubCommunityFeed(data.posts);
-      setPagination({
-        page,
-        limit,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages,
-        hasNext: data.pagination.hasNext,
-        hasPrev: data.pagination.hasPrev,
-      });
-      setLoading(false);
-      return data;
-    } catch (err) {
-      handleError(err);
-    }
-  },[]);
+  const getSubCommunityFeed = useCallback(
+    async (subCommunityId: string, page = 1, limit = 10) => {
+      if (!token) return;
+      try {
+        setLoading(true);
+        const { data } = await api.get(
+          `/posts/subcommunity/${subCommunityId}/feed`,
+          {
+            params: { page, limit },
+          }
+        );
+        setSubCommunityFeed(data.posts);
+        setPagination({
+          page,
+          limit,
+          total: data.pagination.total,
+          totalPages: data.pagination.totalPages,
+          hasNext: data.pagination.hasNext,
+          hasPrev: data.pagination.hasPrev,
+        });
+        setLoading(false);
+        return data;
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [api, token]
+  );
 
-  const getUserPosts = useCallback(async (userId: string, page = 1, limit = 10) => {
-    try {
-      setLoading(true);
-      const { data } = await api.get(`/posts/user/${userId}`, {
-        params: { page, limit },
-      });
-      setUserPosts(data.posts);
-      setPagination({
-        page,
-        limit,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages,
-        hasNext: data.pagination.hasNext,
-        hasPrev: data.pagination.hasPrev,
-      });
-      setLoading(false);
-      return data;
-    } catch (err) {
-      handleError(err);
-    }
-  },[]);
+  const getUserPosts = useCallback(
+    async (userId: string, page = 1, limit = 10) => {
+      if (!token) return;
+      try {
+        setLoading(true);
+        const { data } = await api.get(`/posts/user/${userId}`, {
+          params: { page, limit },
+        });
+        setUserPosts(data.posts);
+        setPagination({
+          page,
+          limit,
+          total: data.pagination.total,
+          totalPages: data.pagination.totalPages,
+          hasNext: data.pagination.hasNext,
+          hasPrev: data.pagination.hasPrev,
+        });
+        setLoading(false);
+        return data;
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [api, token]
+  );
 
-  const searchPosts = useCallback(async (query: string, page = 1, limit = 10, subCommunityId?: string) => {
+  const searchPosts = async (
+    query: string,
+    page = 1,
+    limit = 10,
+    subCommunityId?: string
+  ) => {
     try {
       setLoading(true);
       const { data } = await api.get('/posts/search', {
@@ -278,53 +340,63 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       handleError(err);
     }
-  },[]);
+  };
 
-  const approvePost = useCallback(async (id: string) => {
-    if(!token) return;
-    try {
-      setLoading(true);
-      await api.patch(`/posts/${id}/approve`);
-      setPendingPosts(prev => prev.filter(post => post.id !== id));
-      setLoading(false);
-    } catch (err) {
-      handleError(err);
-    }
-  },[token]);
+  const approvePost = useCallback(
+    async (id: string) => {
+      if (!token) return;
+      try {
+        setLoading(true);
+        await api.patch(`/posts/${id}/approve`);
+        setPendingPosts((prev) => prev.filter((post) => post.id !== id));
+        setLoading(false);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [api, token]
+  );
 
-  const rejectPost = useCallback(async (id: string) => {
-    try {
-      setLoading(true);
-      await api.patch(`/posts/${id}/reject`);
-      setPendingPosts(prev => prev.filter(post => post.id !== id));
-      setLoading(false);
-    } catch (err) {
-      handleError(err);
-    }
-  },[]);
+  const rejectPost = useCallback(
+    async (id: string) => {
+      if (!token) return;
+      try {
+        setLoading(true);
+        await api.patch(`/posts/${id}/reject`);
+        setPendingPosts((prev) => prev.filter((post) => post.id !== id));
+        setLoading(false);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [api, token]
+  );
 
-  const getPendingPosts = useCallback(async (page = 1, limit = 10) => {
-    if(!token) return;
-    try {
-      setLoading(true);
-      const { data } = await api.get('/posts/pending', {
-        params: { page, limit },
-      });
-      setPendingPosts(data.posts);
-      setPagination({
-        page,
-        limit,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages,
-        hasNext: data.pagination.hasNext,
-        hasPrev: data.pagination.hasPrev,
-      });
-      setLoading(false);
-      return data;
-    } catch (err) {
-      handleError(err);
-    }
-  },[token]);
+  const getPendingPosts = useCallback(
+    async (page = 1, limit = 10) => {
+      if (!token) return;
+      try {
+        setLoading(true);
+        const { data } = await api.get('/posts/pending', {
+          params: { page, limit },
+        });
+        setPendingPosts(data.posts);
+        setPagination({
+          page,
+          limit,
+          total: data.pagination.total,
+          totalPages: data.pagination.totalPages,
+          hasNext: data.pagination.hasNext,
+          hasPrev: data.pagination.hasPrev,
+        });
+        setLoading(false);
+        return data;
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [api, token]
+  );
 
   return (
     <PostContext.Provider

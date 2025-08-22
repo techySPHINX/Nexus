@@ -1,0 +1,94 @@
+import axios from 'axios';
+import { UpdateProfileInput } from '../types/profileType';
+
+const api = axios.create({ baseURL: 'http://localhost:3000' });
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export async function fetchProfileDataService(userId: string) {
+  try {
+    const [profileRes, badgesRes] = await Promise.all([
+      api.get(`/profile/me`),
+      api.get(`/profile/${userId}/badges`),
+    ]);
+    return { profile: profileRes.data, badges: badgesRes.data };
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(err.response?.data?.message || 'Failed to fetch profile');
+    }
+    throw new Error('Failed to fetch profile');
+  }
+}
+
+export async function searchAllProfileDataService() {
+  try {
+    const [profileSearchRes] = await Promise.all([api.get(`/profile/search`)]);
+    return { AllSearchedProfile: profileSearchRes.data };
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to search profile'
+      );
+    }
+    throw new Error('Failed to search profile');
+  }
+}
+
+export async function searchedProfileDataService(userId: string) {
+  try {
+    const [profileSearchRes] = await Promise.all([
+      api.get(`/profile/${userId}`),
+    ]);
+    return { SearchedProfile: profileSearchRes.data };
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to search profile'
+      );
+    }
+    throw new Error('Failed to search profile');
+  }
+}
+
+export async function updateProfileService(
+  userId: string,
+  profileData: UpdateProfileInput
+) {
+  try {
+    await api.put(`/profile/${userId}`, profileData);
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to update profile'
+      );
+    }
+    throw new Error('Failed to update profile');
+  }
+}
+
+export async function endorseSkillService(profileId: string, skillId: string) {
+  try {
+    await api.post(`/profile/${profileId}/endorse`, { skillId });
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(err.response?.data?.message || 'Failed to endorse skill');
+    }
+    throw new Error('Failed to endorse skill');
+  }
+}
+
+export async function awardBadgeService(userId: string, badgeId: string) {
+  try {
+    await api.post(`/profile/${userId}/award-badge`, { badgeId });
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(err.response?.data?.message || 'Failed to award badge');
+    }
+    throw new Error('Failed to award badge');
+  }
+}
