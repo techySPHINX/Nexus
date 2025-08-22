@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 import axios from 'axios';
 
 interface User {
@@ -28,7 +34,12 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, role: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    role: string
+  ) => Promise<void>;
   logout: () => void;
   loading: boolean;
 }
@@ -59,19 +70,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Check for stored token on app load
     const storedToken = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    
+
     if (storedToken && storedUser) {
       try {
         setToken(storedToken);
         setUser(JSON.parse(storedUser));
-        axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+        axios.defaults.headers.common['Authorization'] =
+          `Bearer ${storedToken}`;
       } catch (error) {
         console.error('Error parsing stored user data:', error);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       }
     }
-    
+
     setLoading(false);
   }, []);
 
@@ -83,13 +95,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const { accessToken, user } = response.data;
-      
+
       setToken(accessToken);
       setUser(user);
-      
+
       localStorage.setItem('token', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
-      
+
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     } catch (error: any) {
       console.error('Login error:', error);
@@ -100,7 +112,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const register = async (email: string, password: string, name: string, role: string) => {
+  const register = async (
+    email: string,
+    password: string,
+    name: string,
+    role: string
+  ) => {
     try {
       const response = await axios.post<AuthResponse>('/auth/register', {
         email,
@@ -110,13 +127,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       });
 
       const { accessToken, user } = response.data;
-      
+
       setToken(accessToken);
       setUser(user);
-      
+
       localStorage.setItem('token', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
-      
+
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     } catch (error: any) {
       console.error('Register error:', error);
@@ -144,9 +161,5 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

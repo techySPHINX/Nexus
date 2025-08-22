@@ -23,17 +23,20 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
 interface CreatePostProps {
-  onSubmit: (content: string, visibility: 'public' | 'connections' | 'private') => void;
+  onSubmit: (
+    content: string,
+    visibility: 'public' | 'connections' | 'private'
+  ) => void;
   placeholder?: string;
 }
 
-const CreatePost: React.FC<CreatePostProps> = ({ 
-  onSubmit, 
-  placeholder = "What's on your mind?" 
+const CreatePost: React.FC<CreatePostProps> = ({
+  onSubmit,
+  placeholder = "What's on your mind?",
 }) => {
   const { user } = useAuth();
   const [content, setContent] = useState('');
-  const [visibility, setVisibility] = useState<'public' | 'connections' | 'private'>('public');
+  const [visibility] = useState<'public' | 'connections' | 'private'>('public');
   const [isExpanded, setIsExpanded] = useState(false);
 
   const handleSubmit = () => {
@@ -149,7 +152,14 @@ const CreatePost: React.FC<CreatePostProps> = ({
               animate={{ opacity: 1, height: 'auto' }}
               transition={{ duration: 0.2 }}
             >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mt: 2,
+                }}
+              >
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   <Tooltip title="Attach file">
                     <IconButton size="small" color="primary">

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box } from '@mui/material';
@@ -45,35 +44,135 @@ const Layout: React.FC = () => {
           pl: position === 'left' ? '280px' : 0,
           minHeight: '100vh',
           bgcolor: 'background.default',
-          position: 'relative'
+          position: 'relative',
         }}
       >
         {/* Main Content */}
-        <Box sx={{
-          pr: position === 'left' ? 0 : 0, // No right padding for notifications
-          transition: 'all 0.3s ease'
-        }}>
+        <Box
+          sx={{
+            pr: position === 'left' ? 0 : 0, // No right padding for notifications
+            transition: 'all 0.3s ease',
+          }}
+        >
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/connections" element={<ProtectedRoute><Connections /></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
-            <Route path="/files" element={<ProtectedRoute><Files /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><Notification /></ProtectedRoute>} />
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/connections"
+              element={
+                <ProtectedRoute>
+                  <Connections />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Messages />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/referrals"
+              element={
+                <ProtectedRoute>
+                  <Referrals />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/files"
+              element={
+                <ProtectedRoute>
+                  <Files />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/notifications"
+              element={
+                <ProtectedRoute>
+                  <Notification />
+                </ProtectedRoute>
+              }
+            />
             {/* Post-related routes */}
-            <Route path="/feed" element={<ProtectedRoute><FeedPage /></ProtectedRoute>} />
-            <Route path="/posts/:id" element={<ProtectedRoute><PostDetailPage /></ProtectedRoute>} />
-            <Route path="/users/:userId/posts" element={<ProtectedRoute><UserPostsPage /></ProtectedRoute>} />
-            <Route path="/subcommunities" element={<ProtectedRoute><SubCommunitiesPage /></ProtectedRoute>} />
-            <Route path="/subcommunities/:subCommunityId" element={<ProtectedRoute><SubCommunityPage /></ProtectedRoute>} />
-            <Route path="/search" element={<ProtectedRoute><SearchResultsPage /></ProtectedRoute>} />
+            <Route
+              path="/feed"
+              element={
+                <ProtectedRoute>
+                  <FeedPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/posts/:id"
+              element={
+                <ProtectedRoute>
+                  <PostDetailPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/users/:userId/posts"
+              element={
+                <ProtectedRoute>
+                  <UserPostsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subcommunities"
+              element={
+                <ProtectedRoute>
+                  <SubCommunitiesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subcommunities/:subCommunityId"
+              element={
+                <ProtectedRoute>
+                  <SubCommunityPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/search"
+              element={
+                <ProtectedRoute>
+                  <SearchResultsPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin-only routes */}
-            <Route path="/admin/moderation" element={<AdminRoute><AdminModerationPage /></AdminRoute>} />
+            <Route
+              path="/admin/moderation"
+              element={
+                <AdminRoute>
+                  <AdminModerationPage />
+                </AdminRoute>
+              }
+            />
           </Routes>
         </Box>
       </Box>

@@ -8,13 +8,9 @@ import {
   ListItemText,
   Typography,
   Tooltip,
-  useTheme
+  useTheme,
 } from '@mui/material';
-import {
-  ViewHeadline,
-  ViewSidebar,
-  Settings
-} from '@mui/icons-material';
+import { ViewHeadline, ViewSidebar, Settings } from '@mui/icons-material';
 import { useNavbar } from '../contexts/NavbarContext';
 
 const NavbarToggle: React.FC = () => {
@@ -52,7 +48,7 @@ const NavbarToggle: React.FC = () => {
         color: '#4caf50', // Dark green
         hoverBorderColor: '#66bb6a', // Lighter green
         hoverBgColor: 'rgba(76, 175, 80, 0.1)', // Green with opacity
-        hoverColor: '#66bb6a' // Lighter green
+        hoverColor: '#66bb6a', // Lighter green
       };
     } else {
       return {
@@ -60,7 +56,7 @@ const NavbarToggle: React.FC = () => {
         color: '#000000', // Dark black
         hoverBorderColor: '#333333', // Darker black
         hoverBgColor: 'rgba(0, 0, 0, 0.04)', // Black with opacity
-        hoverColor: '#333333' // Darker black
+        hoverColor: '#333333', // Darker black
       };
     }
   };
@@ -86,11 +82,14 @@ const NavbarToggle: React.FC = () => {
             '&:hover': {
               borderColor: colors.hoverBorderColor,
               bgcolor: colors.hoverBgColor,
-              color: colors.hoverColor
-            }
+              color: colors.hoverColor,
+            },
           }}
         >
-          <Typography variant="caption" sx={{ ml: 1, display: { xs: 'none', sm: 'block' } }}>
+          <Typography
+            variant="caption"
+            sx={{ ml: 1, display: { xs: 'none', sm: 'block' } }}
+          >
             {getPositionText()}
           </Typography>
         </Button>
@@ -113,8 +112,8 @@ const NavbarToggle: React.FC = () => {
             mt: 1,
             minWidth: 200,
             borderRadius: 2,
-            boxShadow: '0 8px 25px rgba(0,0,0,0.15)'
-          }
+            boxShadow: '0 8px 25px rgba(0,0,0,0.15)',
+          },
         }}
       >
         <MenuItem
@@ -122,18 +121,35 @@ const NavbarToggle: React.FC = () => {
           selected={position === 'top'}
           sx={{
             '&.Mui-selected': {
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(0, 0, 0, 0.04)',
+              bgcolor:
+                theme.palette.mode === 'dark'
+                  ? 'rgba(76, 175, 80, 0.1)'
+                  : 'rgba(0, 0, 0, 0.04)',
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(0, 0, 0, 0.04)'
-              }
-            }
+                bgcolor:
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(76, 175, 80, 0.1)'
+                    : 'rgba(0, 0, 0, 0.04)',
+              },
+            },
           }}
         >
           <ListItemIcon>
-            <ViewHeadline color={position === 'top' ? (theme.palette.mode === 'dark' ? 'primary' : 'inherit') : 'inherit'} />
+            <ViewHeadline
+              color={
+                position === 'top'
+                  ? theme.palette.mode === 'dark'
+                    ? 'primary'
+                    : 'inherit'
+                  : 'inherit'
+              }
+            />
           </ListItemIcon>
           <ListItemText>
-            <Typography variant="body2" fontWeight={position === 'top' ? 600 : 400}>
+            <Typography
+              variant="body2"
+              fontWeight={position === 'top' ? 600 : 400}
+            >
               Top Navbar
             </Typography>
             <Typography variant="caption" color="text.secondary">
@@ -147,18 +163,35 @@ const NavbarToggle: React.FC = () => {
           selected={position === 'left'}
           sx={{
             '&.Mui-selected': {
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(0, 0, 0, 0.04)',
+              bgcolor:
+                theme.palette.mode === 'dark'
+                  ? 'rgba(76, 175, 80, 0.1)'
+                  : 'rgba(0, 0, 0, 0.04)',
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(0, 0, 0, 0.04)'
-              }
-            }
+                bgcolor:
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(76, 175, 80, 0.1)'
+                    : 'rgba(0, 0, 0, 0.04)',
+              },
+            },
           }}
         >
           <ListItemIcon>
-            <ViewSidebar color={position === 'left' ? (theme.palette.mode === 'dark' ? 'primary' : 'inherit') : 'inherit'} />
+            <ViewSidebar
+              color={
+                position === 'left'
+                  ? theme.palette.mode === 'dark'
+                    ? 'primary'
+                    : 'inherit'
+                  : 'inherit'
+              }
+            />
           </ListItemIcon>
           <ListItemText>
-            <Typography variant="body2" fontWeight={position === 'left' ? 600 : 400}>
+            <Typography
+              variant="body2"
+              fontWeight={position === 'left' ? 600 : 400}
+            >
               Left Sidebar
             </Typography>
             <Typography variant="caption" color="text.secondary">

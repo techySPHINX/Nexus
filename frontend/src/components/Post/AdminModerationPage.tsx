@@ -1,34 +1,38 @@
 import React, { useEffect, useState } from 'react';
 import { usePosts } from '../../contexts/PostContext';
 import { Post } from '../../pages/Post';
-import { 
-  Box, 
-  Typography, 
-  Button, 
+import {
+  Box,
+  Typography,
+  Button,
   CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Snackbar,
-  Alert
+  Alert,
 } from '@mui/material';
 
 export const AdminModerationPage: React.FC = () => {
-  const { 
-    pendingPosts, 
-    getPendingPosts, 
-    pagination, 
+  const {
+    pendingPosts,
+    getPendingPosts,
+    pagination,
     loading,
     approvePost,
-    rejectPost
+    rejectPost,
   } = usePosts();
-  
+
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
-  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(
+    null
+  );
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
+    'success'
+  );
 
   useEffect(() => {
     getPendingPosts();
@@ -91,7 +95,7 @@ export const AdminModerationPage: React.FC = () => {
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
         Review and approve or reject pending posts
       </Typography>
-      
+
       {loading && pagination.page === 1 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
@@ -103,16 +107,16 @@ export const AdminModerationPage: React.FC = () => {
       ) : (
         <>
           {pendingPosts.map((post) => (
-            <Post 
-              key={post.id} 
-              post={post} 
-              isAdminView ={true}
+            <Post
+              key={post.id}
+              post={post}
+              isAdminView={true}
               showActions={true}
               onApprove={() => handleApprove(post.id)}
               onReject={() => handleReject(post.id)}
             />
           ))}
-          
+
           {pagination.hasNext && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Button
@@ -144,8 +148,8 @@ export const AdminModerationPage: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCancelAction}>Cancel</Button>
-          <Button 
-            onClick={handleConfirmAction} 
+          <Button
+            onClick={handleConfirmAction}
             color={actionType === 'approve' ? 'success' : 'error'}
             variant="contained"
           >
@@ -161,8 +165,8 @@ export const AdminModerationPage: React.FC = () => {
         onClose={handleCloseSnackbar}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={handleCloseSnackbar} 
+        <Alert
+          onClose={handleCloseSnackbar}
           severity={snackbarSeverity}
           sx={{ width: '100%' }}
         >

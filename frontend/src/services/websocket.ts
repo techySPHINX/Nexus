@@ -1,7 +1,17 @@
 import { io, Socket } from 'socket.io-client';
 
 export interface WebSocketMessage {
-  type: 'NEW_MESSAGE' | 'TYPING_START' | 'TYPING_STOP' | 'MESSAGE_READ' | 'USER_ONLINE' | 'USER_OFFLINE' | 'PING' | 'PONG' | 'MESSAGE_SENT' | 'MESSAGE_ERROR';
+  type:
+    | 'NEW_MESSAGE'
+    | 'TYPING_START'
+    | 'TYPING_STOP'
+    | 'MESSAGE_READ'
+    | 'USER_ONLINE'
+    | 'USER_OFFLINE'
+    | 'PING'
+    | 'PONG'
+    | 'MESSAGE_SENT'
+    | 'MESSAGE_ERROR';
   data: any;
   timestamp: string;
 }
@@ -21,8 +31,13 @@ export class WebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private heartbeatInterval: number | null = null;
-  private messageHandlers: Map<string, (message: WebSocketMessage) => void> = new Map();
-  private connectionStatus: 'disconnected' | 'connecting' | 'connected' | 'reconnecting' = 'disconnected';
+  private messageHandlers: Map<string, (message: WebSocketMessage) => void> =
+    new Map();
+  private connectionStatus:
+    | 'disconnected'
+    | 'connecting'
+    | 'connected'
+    | 'reconnecting' = 'disconnected';
   private url: string;
   private currentUserId: string | null = null;
   private currentToken: string | null = null;
@@ -44,8 +59,11 @@ export class WebSocketService {
       }
 
       this.connectionStatus = 'connecting';
-      console.log('Attempting to connect to WebSocket...', { userId, hasToken: !!token });
-      
+      console.log('Attempting to connect to WebSocket...', {
+        userId,
+        hasToken: !!token,
+      });
+
       try {
         // Connect to Socket.IO server
         this.socket = io(`${this.url}/ws`, {
@@ -57,7 +75,7 @@ export class WebSocketService {
           reconnectionDelay: this.reconnectDelay,
           timeout: 10000, // 10 second timeout
         });
-        
+
         this.socket.on('connect', () => {
           console.log('Socket.IO connected successfully');
           this.connectionStatus = 'connected';
@@ -70,7 +88,7 @@ export class WebSocketService {
           console.log('Socket.IO disconnected:', reason);
           this.connectionStatus = 'disconnected';
           this.stopHeartbeat();
-          
+
           if (reason === 'io server disconnect') {
             // Server disconnected, try to reconnect
             console.log('Server disconnected, attempting to reconnect...');
@@ -86,7 +104,6 @@ export class WebSocketService {
 
         // Set up message handlers
         this.setupMessageHandlers();
-
       } catch (error) {
         console.error('Error creating Socket.IO connection:', error);
         this.connectionStatus = 'disconnected';
@@ -109,9 +126,11 @@ export class WebSocketService {
 
   reconnect(): Promise<void> {
     if (!this.currentUserId || !this.currentToken) {
-      return Promise.reject(new Error('No credentials stored for reconnection'));
+      return Promise.reject(
+        new Error('No credentials stored for reconnection')
+      );
     }
-    
+
     console.log('Attempting to reconnect...');
     this.disconnect();
     return this.connect(this.currentUserId, this.currentToken);
@@ -126,16 +145,20 @@ export class WebSocketService {
       // Try to reconnect if we have credentials
       if (this.currentUserId && this.currentToken) {
         console.log('Attempting to reconnect before sending message...');
-        this.reconnect().then(() => {
-          this.send(type, data);
-        }).catch(error => {
-          console.error('Reconnection failed:', error);
-        });
+        this.reconnect()
+          .then(() => {
+            this.send(type, data);
+          })
+          .catch((error) => {
+            console.error('Reconnection failed:', error);
+          });
       }
     }
   }
 
-  sendChatMessage(message: Omit<ChatMessage, 'id' | 'timestamp' | 'createdAt'>): void {
+  sendChatMessage(
+    message: Omit<ChatMessage, 'id' | 'timestamp' | 'createdAt'>
+  ): void {
     this.send('NEW_MESSAGE', message);
   }
 
@@ -174,7 +197,7 @@ export class WebSocketService {
     // Handle all incoming messages
     this.socket.onAny((eventName: string, ...args: any[]) => {
       console.log('Socket.IO message received:', eventName, args);
-      
+
       // Find and call the appropriate handler
       const handler = this.messageHandlers.get(eventName);
       if (handler && args[0]) {

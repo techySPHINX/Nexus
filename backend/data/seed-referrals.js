@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -16,7 +16,7 @@ async function seedReferrals() {
     }
 
     // Find an alumni user
-    const alumni = users.find(user => user.role === 'ALUM');
+    const alumni = users.find((user) => user.role === 'ALUM');
     if (!alumni) {
       console.log('❌ No alumni users found. Creating one...');
       const newAlumni = await prisma.user.create({
@@ -24,8 +24,8 @@ async function seedReferrals() {
           email: 'alumni@test.com',
           password: 'hashedpassword', // In real app, this would be hashed
           name: 'Test Alumni',
-          role: 'ALUM'
-        }
+          role: 'ALUM',
+        },
       });
       console.log('✅ Created alumni user:', newAlumni.email);
     }
@@ -35,34 +35,42 @@ async function seedReferrals() {
       {
         company: 'TechCorp Inc.',
         jobTitle: 'Software Engineer',
-        description: 'We are looking for a talented software engineer to join our team. The ideal candidate should have experience with React, Node.js, and TypeScript.',
-        requirements: '3+ years of experience, React, Node.js, TypeScript, Git, Agile methodologies',
+        description:
+          'We are looking for a talented software engineer to join our team. The ideal candidate should have experience with React, Node.js, and TypeScript.',
+        requirements:
+          '3+ years of experience, React, Node.js, TypeScript, Git, Agile methodologies',
         location: 'San Francisco, CA',
-        alumniId: alumni?.id || users[0].id
+        alumniId: alumni?.id || users[0].id,
       },
       {
         company: 'DataFlow Solutions',
         jobTitle: 'Data Scientist',
-        description: 'Join our data science team to work on cutting-edge machine learning projects. You will be responsible for developing predictive models and analyzing large datasets.',
-        requirements: 'Masters in Data Science, Python, TensorFlow, SQL, Statistical Analysis',
+        description:
+          'Join our data science team to work on cutting-edge machine learning projects. You will be responsible for developing predictive models and analyzing large datasets.',
+        requirements:
+          'Masters in Data Science, Python, TensorFlow, SQL, Statistical Analysis',
         location: 'New York, NY',
-        alumniId: alumni?.id || users[0].id
+        alumniId: alumni?.id || users[0].id,
       },
       {
         company: 'StartupXYZ',
         jobTitle: 'Product Manager',
-        description: 'We are seeking a product manager to lead our product development efforts. You will work closely with engineering and design teams to deliver exceptional user experiences.',
-        requirements: '2+ years PM experience, User Research, Agile, Analytics tools',
+        description:
+          'We are seeking a product manager to lead our product development efforts. You will work closely with engineering and design teams to deliver exceptional user experiences.',
+        requirements:
+          '2+ years PM experience, User Research, Agile, Analytics tools',
         location: 'Remote',
-        alumniId: alumni?.id || users[0].id
-      }
+        alumniId: alumni?.id || users[0].id,
+      },
     ];
 
     for (const referralData of sampleReferrals) {
       const referral = await prisma.referral.create({
-        data: referralData
+        data: referralData,
       });
-      console.log(`✅ Created referral: ${referral.jobTitle} at ${referral.company}`);
+      console.log(
+        `✅ Created referral: ${referral.jobTitle} at ${referral.company}`,
+      );
     }
 
     console.log('🎉 Referrals seeded successfully!');

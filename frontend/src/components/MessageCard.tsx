@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  Box,
-  Typography,
-  Avatar,
-  Paper,
-  Chip,
-} from '@mui/material';
+import { Box, Typography, Avatar, Paper, Chip } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -26,18 +20,20 @@ interface MessageCardProps {
   showSenderName?: boolean;
 }
 
-const MessageCard: React.FC<MessageCardProps> = ({ 
-  message, 
-  isOwnMessage, 
-  showAvatar = true, 
-  showSenderName = true 
+const MessageCard: React.FC<MessageCardProps> = ({
+  message,
+  isOwnMessage,
+  showAvatar = true,
+  showSenderName = true,
 }) => {
-  const { user } = useAuth();
+  useAuth();
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+    const diffInMinutes = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60)
+    );
     const diffInHours = Math.floor(diffInMinutes / 60);
     const diffInDays = Math.floor(diffInHours / 24);
 
@@ -45,11 +41,11 @@ const MessageCard: React.FC<MessageCardProps> = ({
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInDays < 7) return `${diffInDays}d ago`;
-    
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
       day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
   };
 
@@ -82,11 +78,9 @@ const MessageCard: React.FC<MessageCardProps> = ({
             {message.senderName.charAt(0).toUpperCase()}
           </Avatar>
         )}
-        
+
         {/* Spacer for sent messages to align properly */}
-        {isOwnMessage && (
-          <Box sx={{ width: 29, ml: 1 }} />
-        )}
+        {isOwnMessage && <Box sx={{ width: 29, ml: 1 }} />}
 
         <Box sx={{ maxWidth: '70%' }}>
           {/* Sender name for received messages */}
@@ -111,31 +105,38 @@ const MessageCard: React.FC<MessageCardProps> = ({
               borderBottomRightRadius: isOwnMessage ? 0 : 2,
               borderBottomLeftRadius: isOwnMessage ? 2 : 0,
               position: 'relative',
-              '&::after': isOwnMessage ? {
-                content: '""',
-                position: 'absolute',
-                right: -8,
-                bottom: 0,
-                width: 0,
-                height: 0,
-                borderLeft: '8px solid',
-                borderLeftColor: 'primary.main',
-                borderBottom: '8px solid transparent',
-              } : {},
-              '&::before': !isOwnMessage ? {
-                content: '""',
-                position: 'absolute',
-                left: -8,
-                bottom: 0,
-                width: 0,
-                height: 0,
-                borderRight: '8px solid',
-                borderRightColor: 'white',
-                borderBottom: '8px solid transparent',
-              } : {},
+              '&::after': isOwnMessage
+                ? {
+                    content: '""',
+                    position: 'absolute',
+                    right: -8,
+                    bottom: 0,
+                    width: 0,
+                    height: 0,
+                    borderLeft: '8px solid',
+                    borderLeftColor: 'primary.main',
+                    borderBottom: '8px solid transparent',
+                  }
+                : {},
+              '&::before': !isOwnMessage
+                ? {
+                    content: '""',
+                    position: 'absolute',
+                    left: -8,
+                    bottom: 0,
+                    width: 0,
+                    height: 0,
+                    borderRight: '8px solid',
+                    borderRightColor: 'white',
+                    borderBottom: '8px solid transparent',
+                  }
+                : {},
             }}
           >
-            <Typography variant="body2" sx={{ wordBreak: 'break-word', lineHeight: 1.4 }}>
+            <Typography
+              variant="body2"
+              sx={{ wordBreak: 'break-word', lineHeight: 1.4 }}
+            >
               {message.content}
             </Typography>
           </Paper>
@@ -153,7 +154,7 @@ const MessageCard: React.FC<MessageCardProps> = ({
             <Typography
               variant="caption"
               color="text.secondary"
-              sx={{ 
+              sx={{
                 fontSize: '0.75rem',
                 ml: isOwnMessage ? 0 : 1,
                 mr: isOwnMessage ? 1 : 0,
@@ -161,15 +162,15 @@ const MessageCard: React.FC<MessageCardProps> = ({
             >
               {formatTime(message.timestamp || message.createdAt)}
             </Typography>
-            
+
             {isOwnMessage && (
               <Chip
                 label={message.isRead ? 'Read' : 'Delivered'}
                 size="small"
                 color={message.isRead ? 'success' : 'default'}
                 variant="outlined"
-                sx={{ 
-                  height: 16, 
+                sx={{
+                  height: 16,
                   fontSize: '0.625rem',
                   mr: 1,
                 }}

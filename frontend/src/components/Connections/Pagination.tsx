@@ -1,12 +1,19 @@
-import { Box, Typography, FormControl, Select, MenuItem, Button } from "@mui/material";
+import {
+  Box,
+  Typography,
+  FormControl,
+  Select,
+  MenuItem,
+  Button,
+} from '@mui/material';
 
-const PaginationControls = ({ 
-  currentPage, 
-  totalPages, 
+const PaginationControls = ({
+  currentPage,
+  totalPages,
   onPageChange,
   onLimitChange,
   totalItems,
-  limit
+  limit,
 }: {
   currentPage: number;
   totalPages: number;
@@ -20,7 +27,7 @@ const PaginationControls = ({
       Showing {(currentPage - 1) * limit + 1}-
       {Math.min(currentPage * limit, totalItems)} of {totalItems}
     </Typography>
-    
+
     <Box display="flex" alignItems="center" gap={2}>
       <FormControl size="small" sx={{ minWidth: 80 }}>
         <Select
@@ -33,7 +40,7 @@ const PaginationControls = ({
           <MenuItem value={100}>100</MenuItem>
         </Select>
       </FormControl>
-      
+
       <Button
         onClick={() => onPageChange(currentPage - 1)}
         disabled={currentPage === 1}
@@ -41,11 +48,11 @@ const PaginationControls = ({
       >
         Previous
       </Button>
-      
+
       <Typography variant="body1">
         Page {currentPage} of {totalPages}
       </Typography>
-      
+
       <Button
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage >= totalPages}

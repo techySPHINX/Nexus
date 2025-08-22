@@ -1,5 +1,14 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material/styles';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
+import {
+  ThemeProvider as MuiThemeProvider,
+  createTheme,
+} from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 
 type ThemeMode = 'light' | 'dark';
@@ -34,7 +43,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       setMode(savedTheme);
     } else {
       // Check system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const prefersDark = window.matchMedia(
+        '(prefers-color-scheme: dark)'
+      ).matches;
       setMode(prefersDark ? 'dark' : 'light');
     }
   }, []);
@@ -144,13 +155,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         styleOverrides: {
           root: {
             borderRadius: 16,
-            boxShadow: mode === 'light' 
-              ? '0 2px 8px rgba(76, 175, 80, 0.1)' 
-              : '0 2px 8px rgba(0, 0, 0, 0.3)',
+            boxShadow:
+              mode === 'light'
+                ? '0 2px 8px rgba(76, 175, 80, 0.1)'
+                : '0 2px 8px rgba(0, 0, 0, 0.3)',
             '&:hover': {
-              boxShadow: mode === 'light' 
-                ? '0 8px 24px rgba(76, 175, 80, 0.15)' 
-                : '0 8px 24px rgba(0, 0, 0, 0.4)',
+              boxShadow:
+                mode === 'light'
+                  ? '0 8px 24px rgba(76, 175, 80, 0.15)'
+                  : '0 8px 24px rgba(0, 0, 0, 0.4)',
             },
           },
         },
@@ -159,27 +172,30 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         styleOverrides: {
           root: {
             borderRadius: 12,
-            boxShadow: mode === 'light' 
-              ? '0 1px 4px rgba(76, 175, 80, 0.1)' 
-              : '0 1px 4px rgba(0, 0, 0, 0.3)',
+            boxShadow:
+              mode === 'light'
+                ? '0 1px 4px rgba(76, 175, 80, 0.1)'
+                : '0 1px 4px rgba(0, 0, 0, 0.3)',
           },
         },
       },
       MuiAppBar: {
         styleOverrides: {
           root: {
-            boxShadow: mode === 'light' 
-              ? '0 2px 10px rgba(76, 175, 80, 0.15)' 
-              : '0 2px 10px rgba(0, 0, 0, 0.3)',
+            boxShadow:
+              mode === 'light'
+                ? '0 2px 10px rgba(76, 175, 80, 0.15)'
+                : '0 2px 10px rgba(0, 0, 0, 0.3)',
           },
         },
       },
       MuiDrawer: {
         styleOverrides: {
           paper: {
-            boxShadow: mode === 'light' 
-              ? '2px 0 10px rgba(76, 175, 80, 0.1)' 
-              : '2px 0 10px rgba(0, 0, 0, 0.3)',
+            boxShadow:
+              mode === 'light'
+                ? '2px 0 10px rgba(76, 175, 80, 0.1)'
+                : '2px 0 10px rgba(0, 0, 0, 0.3)',
           },
         },
       },
@@ -209,7 +225,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   });
 
   return (
-    <ThemeContext.Provider value={{ mode, toggleTheme, isDark: mode === 'dark' }}>
+    <ThemeContext.Provider
+      value={{ mode, toggleTheme, isDark: mode === 'dark' }}
+    >
       <MuiThemeProvider theme={theme}>
         <CssBaseline />
         {children}

@@ -2,7 +2,11 @@ import { webSocketService } from './websocket';
 
 export interface Notification {
   id: string;
-  type: 'MESSAGE' | 'CONNECTION_REQUEST' | 'CONNECTION_ACCEPTED' | 'CONNECTION_REJECTED';
+  type:
+    | 'MESSAGE'
+    | 'CONNECTION_REQUEST'
+    | 'CONNECTION_ACCEPTED'
+    | 'CONNECTION_REJECTED';
   title: string;
   message: string;
   userId: string;
@@ -39,7 +43,7 @@ class NotificationService {
         relatedId: data.id,
         isRead: false,
         createdAt: new Date().toISOString(),
-        data: data
+        data: data,
       });
     });
 
@@ -54,7 +58,7 @@ class NotificationService {
         relatedId: data.id,
         isRead: false,
         createdAt: new Date().toISOString(),
-        data: data
+        data: data,
       });
     });
 
@@ -70,7 +74,7 @@ class NotificationService {
           relatedId: data.id,
           isRead: false,
           createdAt: new Date().toISOString(),
-          data: data
+          data: data,
         });
       } else if (data.status === 'REJECTED') {
         this.addNotification({
@@ -82,7 +86,7 @@ class NotificationService {
           relatedId: data.id,
           isRead: false,
           createdAt: new Date().toISOString(),
-          data: data
+          data: data,
         });
       }
     });
@@ -93,14 +97,17 @@ class NotificationService {
     if (!notification.isRead) {
       this.unreadCount++;
     }
-    
+
     // Emit to listeners
     this.emit('notification', notification);
-    this.emit('countUpdate', { unread: this.unreadCount, total: this.notifications.length });
-    
+    this.emit('countUpdate', {
+      unread: this.unreadCount,
+      total: this.notifications.length,
+    });
+
     // Show browser notification if supported
     this.showBrowserNotification(notification);
-    
+
     // Play notification sound
     this.playNotificationSound();
   }
@@ -110,7 +117,7 @@ class NotificationService {
       new Notification(notification.title, {
         body: notification.message,
         icon: '/logo192.png',
-        tag: notification.id
+        tag: notification.id,
       });
     }
   }
@@ -143,44 +150,55 @@ class NotificationService {
 
   // Get unread notifications
   getUnreadNotifications(): Notification[] {
-    return this.notifications.filter(n => !n.isRead);
+    return this.notifications.filter((n) => !n.isRead);
   }
 
   // Get notification counts
   getCounts(): NotificationCounts {
     return {
       unread: this.unreadCount,
-      total: this.notifications.length
+      total: this.notifications.length,
     };
   }
 
   // Mark notification as read
   markAsRead(notificationId: string) {
-    const notification = this.notifications.find(n => n.id === notificationId);
+    const notification = this.notifications.find(
+      (n) => n.id === notificationId
+    );
     if (notification && !notification.isRead) {
       notification.isRead = true;
       this.unreadCount--;
-      this.emit('countUpdate', { unread: this.unreadCount, total: this.notifications.length });
+      this.emit('countUpdate', {
+        unread: this.unreadCount,
+        total: this.notifications.length,
+      });
     }
   }
 
   // Mark all notifications as read
   markAllAsRead() {
-    this.notifications.forEach(n => n.isRead = true);
+    this.notifications.forEach((n) => (n.isRead = true));
     this.unreadCount = 0;
-    this.emit('countUpdate', { unread: this.unreadCount, total: this.notifications.length });
+    this.emit('countUpdate', {
+      unread: this.unreadCount,
+      total: this.notifications.length,
+    });
   }
 
   // Clear notification
   clearNotification(notificationId: string) {
-    const index = this.notifications.findIndex(n => n.id === notificationId);
+    const index = this.notifications.findIndex((n) => n.id === notificationId);
     if (index !== -1) {
       const notification = this.notifications[index];
       if (!notification.isRead) {
         this.unreadCount--;
       }
       this.notifications.splice(index, 1);
-      this.emit('countUpdate', { unread: this.unreadCount, total: this.notifications.length });
+      this.emit('countUpdate', {
+        unread: this.unreadCount,
+        total: this.notifications.length,
+      });
     }
   }
 
@@ -188,7 +206,10 @@ class NotificationService {
   clearAllNotifications() {
     this.notifications = [];
     this.unreadCount = 0;
-    this.emit('countUpdate', { unread: this.unreadCount, total: this.notifications.length });
+    this.emit('countUpdate', {
+      unread: this.unreadCount,
+      total: this.notifications.length,
+    });
   }
 
   // Event listener methods
@@ -212,7 +233,7 @@ class NotificationService {
   private emit(event: string, data: any) {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
-      callbacks.forEach(callback => {
+      callbacks.forEach((callback) => {
         try {
           callback(data);
         } catch (error) {
@@ -226,7 +247,7 @@ class NotificationService {
   async init() {
     // Request notification permission
     await this.requestPermission();
-    
+
     // Load existing notifications from localStorage (optional)
     this.loadFromStorage();
   }
@@ -246,10 +267,13 @@ class NotificationService {
 
   private saveToStorage() {
     try {
-      localStorage.setItem('notifications', JSON.stringify({
-        notifications: this.notifications,
-        unreadCount: this.unreadCount
-      }));
+      localStorage.setItem(
+        'notifications',
+        JSON.stringify({
+          notifications: this.notifications,
+          unreadCount: this.unreadCount,
+        })
+      );
     } catch (error) {
       console.error('Error saving notifications to storage:', error);
     }

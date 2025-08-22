@@ -20,7 +20,7 @@ import {
   IconButton,
   Alert,
   CircularProgress,
-  Stack
+  Stack,
 } from '@mui/material';
 import {
   Add,
@@ -32,7 +32,7 @@ import {
   Edit,
   Delete,
   Visibility,
-  Send
+  Send,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -96,7 +96,9 @@ const Referrals: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
-  const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null);
+  const [selectedReferral, setSelectedReferral] = useState<Referral | null>(
+    null
+  );
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -106,13 +108,13 @@ const Referrals: React.FC = () => {
     jobTitle: '',
     description: '',
     requirements: '',
-    location: ''
+    location: '',
   });
 
   const [applicationForm, setApplicationForm] = useState<CreateApplicationDto>({
     referralId: '',
     resumeUrl: '',
-    coverLetter: ''
+    coverLetter: '',
   });
 
   // Fetch referrals and applications
@@ -120,22 +122,22 @@ const Referrals: React.FC = () => {
     console.log('👤 Current user:', user);
     console.log('🔑 User role:', user?.role);
     console.log('🆔 User ID:', user?.id);
-    
+
     if (!user) {
       console.log('❌ No user found, cannot fetch referrals');
       setError('User not authenticated');
       return;
     }
-    
+
     if (!user.role) {
       console.log('❌ User has no role, cannot fetch referrals');
       setError('User role not found');
       return;
     }
-    
+
     console.log('✅ User authenticated, fetching referrals...');
     fetchReferrals();
-    
+
     if (user.role === 'STUDENT') {
       console.log('🎓 Student user, fetching applications...');
       fetchApplications();
@@ -149,22 +151,29 @@ const Referrals: React.FC = () => {
       console.log('🔄 Fetching referrals...');
       console.log('🔑 Auth token:', localStorage.getItem('token'));
       console.log('👤 Current user in fetch:', user);
-      
+
       const response = await apiService.referrals.getAll();
       console.log('📊 Referrals response:', response);
-      
+
       setReferrals(response.data || []);
-      console.log('✅ Referrals loaded successfully:', response.data?.length || 0);
+      console.log(
+        '✅ Referrals loaded successfully:',
+        response.data?.length || 0
+      );
     } catch (err: any) {
       console.error('❌ Error fetching referrals:', err);
       if (err.response) {
         console.error('Response data:', err.response.data);
         console.error('Response status:', err.response.status);
         console.error('Response headers:', err.response.headers);
-        setError(`Failed to load referrals: ${err.response.data?.message || err.response.statusText || 'Unknown error'}`);
+        setError(
+          `Failed to load referrals: ${err.response.data?.message || err.response.statusText || 'Unknown error'}`
+        );
       } else if (err.request) {
         console.error('Request error:', err.request);
-        setError('Failed to load referrals: Network error - no response received');
+        setError(
+          'Failed to load referrals: Network error - no response received'
+        );
       } else {
         console.error('Error message:', err.message);
         setError(`Failed to load referrals: ${err.message}`);
@@ -192,7 +201,7 @@ const Referrals: React.FC = () => {
         jobTitle: '',
         description: '',
         requirements: '',
-        location: ''
+        location: '',
       });
       fetchReferrals();
     } catch (err) {
@@ -208,7 +217,7 @@ const Referrals: React.FC = () => {
       setApplicationForm({
         referralId: '',
         resumeUrl: '',
-        coverLetter: ''
+        coverLetter: '',
       });
       fetchApplications();
     } catch (err) {
@@ -243,18 +252,25 @@ const Referrals: React.FC = () => {
     }
   };
 
-  const filteredReferrals = referrals.filter(referral => {
-    const matchesStatus = filterStatus === 'ALL' || referral.status === filterStatus;
-    const matchesSearch = referral.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         referral.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         referral.location.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredReferrals = referrals.filter((referral) => {
+    const matchesStatus =
+      filterStatus === 'ALL' || referral.status === filterStatus;
+    const matchesSearch =
+      referral.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      referral.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      referral.location.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress size={60} />
         </Box>
       </Container>
@@ -281,7 +297,14 @@ const Referrals: React.FC = () => {
       )}
 
       {/* Actions Bar */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box
+        sx={{
+          mb: 3,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
         <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
           <TextField
             placeholder="Search referrals..."
@@ -335,12 +358,23 @@ const Referrals: React.FC = () => {
             <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
               <Card sx={{ height: '100%', borderRadius: 3 }}>
                 <CardContent>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      mb: 2,
+                    }}
+                  >
                     <Box>
                       <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
                         {referral.jobTitle}
                       </Typography>
-                      <Typography variant="subtitle1" color="primary" sx={{ fontWeight: 500 }}>
+                      <Typography
+                        variant="subtitle1"
+                        color="primary"
+                        sx={{ fontWeight: 500 }}
+                      >
                         {referral.company}
                       </Typography>
                     </Box>
@@ -353,7 +387,9 @@ const Referrals: React.FC = () => {
 
                   <Stack spacing={1} sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LocationOn sx={{ fontSize: 16, color: 'text.secondary' }} />
+                      <LocationOn
+                        sx={{ fontSize: 16, color: 'text.secondary' }}
+                      />
                       <Typography variant="body2" color="text.secondary">
                         {referral.location}
                       </Typography>
@@ -366,18 +402,26 @@ const Referrals: React.FC = () => {
                     </Box>
                   </Stack>
 
-                  <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
-                    {referral.description.length > 100 
-                      ? `${referral.description.substring(0, 100)}...` 
-                      : referral.description
-                    }
+                  <Typography
+                    variant="body2"
+                    sx={{ mb: 2, color: 'text.secondary' }}
+                  >
+                    {referral.description.length > 100
+                      ? `${referral.description.substring(0, 100)}...`
+                      : referral.description}
                   </Typography>
 
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <Typography variant="caption" color="text.secondary">
                       {new Date(referral.createdAt).toLocaleDateString()}
                     </Typography>
-                    
+
                     <Box sx={{ display: 'flex', gap: 1 }}>
                       {user?.role === 'STUDENT' && (
                         <Button
@@ -386,7 +430,10 @@ const Referrals: React.FC = () => {
                           startIcon={<Send />}
                           onClick={() => {
                             setSelectedReferral(referral);
-                            setApplicationForm({ ...applicationForm, referralId: referral.id });
+                            setApplicationForm({
+                              ...applicationForm,
+                              referralId: referral.id,
+                            });
                             setApplyDialogOpen(true);
                           }}
                           sx={{ borderRadius: 2, textTransform: 'none' }}
@@ -394,14 +441,14 @@ const Referrals: React.FC = () => {
                           Apply
                         </Button>
                       )}
-                      
+
                       {user?.id === referral.alumniId && (
                         <>
                           <IconButton size="small" color="primary">
                             <Edit />
                           </IconButton>
-                          <IconButton 
-                            size="small" 
+                          <IconButton
+                            size="small"
                             color="error"
                             onClick={() => handleDeleteReferral(referral.id)}
                           >
@@ -422,15 +469,16 @@ const Referrals: React.FC = () => {
         <Box sx={{ textAlign: 'center', py: 6 }}>
           <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-            {user?.role === 'ALUM' ? 'No referrals posted yet' : 'No referrals available'}
+            {user?.role === 'ALUM'
+              ? 'No referrals posted yet'
+              : 'No referrals available'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {user?.role === 'ALUM' 
+            {user?.role === 'ALUM'
               ? 'Be the first to post a job referral and help students find opportunities!'
-              : searchQuery || filterStatus !== 'ALL' 
+              : searchQuery || filterStatus !== 'ALL'
                 ? 'Try adjusting your search or filters'
-                : 'Check back later for new job opportunities'
-            }
+                : 'Check back later for new job opportunities'}
           </Typography>
           {user?.role === 'ALUM' && (
             <Button
@@ -446,7 +494,12 @@ const Referrals: React.FC = () => {
       )}
 
       {/* Create Referral Dialog */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Post New Job Referral</DialogTitle>
         <DialogContent>
           <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -455,7 +508,9 @@ const Referrals: React.FC = () => {
                 fullWidth
                 label="Company"
                 value={createForm.company}
-                onChange={(e) => setCreateForm({ ...createForm, company: e.target.value })}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, company: e.target.value })
+                }
                 required
               />
             </Grid>
@@ -464,7 +519,9 @@ const Referrals: React.FC = () => {
                 fullWidth
                 label="Job Title"
                 value={createForm.jobTitle}
-                onChange={(e) => setCreateForm({ ...createForm, jobTitle: e.target.value })}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, jobTitle: e.target.value })
+                }
                 required
               />
             </Grid>
@@ -473,7 +530,9 @@ const Referrals: React.FC = () => {
                 fullWidth
                 label="Location"
                 value={createForm.location}
-                onChange={(e) => setCreateForm({ ...createForm, location: e.target.value })}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, location: e.target.value })
+                }
                 required
               />
             </Grid>
@@ -482,7 +541,9 @@ const Referrals: React.FC = () => {
                 fullWidth
                 label="Description"
                 value={createForm.description}
-                onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, description: e.target.value })
+                }
                 multiline
                 rows={3}
                 required
@@ -493,7 +554,9 @@ const Referrals: React.FC = () => {
                 fullWidth
                 label="Requirements"
                 value={createForm.requirements}
-                onChange={(e) => setCreateForm({ ...createForm, requirements: e.target.value })}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, requirements: e.target.value })
+                }
                 multiline
                 rows={3}
                 required
@@ -510,7 +573,12 @@ const Referrals: React.FC = () => {
       </Dialog>
 
       {/* Apply Dialog */}
-      <Dialog open={applyDialogOpen} onClose={() => setApplyDialogOpen(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={applyDialogOpen}
+        onClose={() => setApplyDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
         <DialogTitle>Apply for Position</DialogTitle>
         <DialogContent>
           {selectedReferral && (
@@ -523,14 +591,19 @@ const Referrals: React.FC = () => {
               </Typography>
             </Box>
           )}
-          
+
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Resume URL"
                 value={applicationForm.resumeUrl}
-                onChange={(e) => setApplicationForm({ ...applicationForm, resumeUrl: e.target.value })}
+                onChange={(e) =>
+                  setApplicationForm({
+                    ...applicationForm,
+                    resumeUrl: e.target.value,
+                  })
+                }
                 placeholder="https://example.com/resume.pdf"
                 required
                 helperText="Provide a link to your resume"
@@ -541,7 +614,12 @@ const Referrals: React.FC = () => {
                 fullWidth
                 label="Cover Letter (Optional)"
                 value={applicationForm.coverLetter}
-                onChange={(e) => setApplicationForm({ ...applicationForm, coverLetter: e.target.value })}
+                onChange={(e) =>
+                  setApplicationForm({
+                    ...applicationForm,
+                    coverLetter: e.target.value,
+                  })
+                }
                 multiline
                 rows={4}
                 placeholder="Write a brief cover letter explaining why you're interested in this position..."
@@ -568,13 +646,21 @@ const Referrals: React.FC = () => {
               <Grid item xs={12} md={6} key={application.id}>
                 <Card sx={{ borderRadius: 3 }}>
                   <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        mb: 2,
+                      }}
+                    >
                       <Box>
                         <Typography variant="h6" sx={{ fontWeight: 600 }}>
                           Application #{application.id.slice(-8)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Submitted {new Date(application.createdAt).toLocaleDateString()}
+                          Submitted{' '}
+                          {new Date(application.createdAt).toLocaleDateString()}
                         </Typography>
                       </Box>
                       <Chip
@@ -583,20 +669,29 @@ const Referrals: React.FC = () => {
                         size="small"
                       />
                     </Box>
-                    
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        mb: 1,
+                      }}
+                    >
                       <School sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2">
                         {application.student.name} ({application.student.role})
                       </Typography>
                     </Box>
-                    
+
                     <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
                       <Button
                         size="small"
                         variant="outlined"
                         startIcon={<Visibility />}
-                        onClick={() => window.open(application.resumeUrl, '_blank')}
+                        onClick={() =>
+                          window.open(application.resumeUrl, '_blank')
+                        }
                       >
                         View Resume
                       </Button>
