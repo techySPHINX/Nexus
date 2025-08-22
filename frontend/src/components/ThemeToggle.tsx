@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  IconButton,
-  Tooltip,
-} from '@mui/material';
+import { IconButton, Tooltip } from '@mui/material';
 import {
   LightMode as LightModeIcon,
   DarkMode as DarkModeIcon,

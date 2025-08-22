@@ -17,7 +17,7 @@ export const SearchResultsPage: React.FC = () => {
   const queryParams = new URLSearchParams(location.search);
   const initialQuery = queryParams.get('q') || '';
   const subCommunityId = queryParams.get('subCommunityId') || undefined;
-  
+
   const [searchQuery, setSearchQuery] = useState(initialQuery);
   const { searchResults, searchPosts, pagination, loading } = usePosts();
 
@@ -48,7 +48,9 @@ export const SearchResultsPage: React.FC = () => {
           onChange={(e) => setSearchQuery(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
           InputProps={{
-            startAdornment: <SearchIcon sx={{ mr: 1, color: 'action.active' }} />,
+            startAdornment: (
+              <SearchIcon sx={{ mr: 1, color: 'action.active' }} />
+            ),
           }}
           sx={{ mr: 2 }}
         />
@@ -60,15 +62,15 @@ export const SearchResultsPage: React.FC = () => {
           Search
         </Button>
       </Box>
-      
+
       {subCommunityId && (
         <Chip
           label={`Filtered by sub-community: ${subCommunityId}`}
           sx={{ mb: 2 }}
-          onDelete={() => window.location.href = `/search?q=${searchQuery}`}
+          onDelete={() => (window.location.href = `/search?q=${searchQuery}`)}
         />
       )}
-      
+
       {loading && pagination.page === 1 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
@@ -82,11 +84,11 @@ export const SearchResultsPage: React.FC = () => {
           <Typography variant="h6" sx={{ mb: 2 }}>
             Search Results for "{searchQuery}"
           </Typography>
-          
+
           {searchResults.map((post) => (
             <Post key={post.id} post={post} />
           ))}
-          
+
           {pagination.hasNext && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Button

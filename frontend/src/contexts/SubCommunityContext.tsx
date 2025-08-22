@@ -14,21 +14,28 @@ interface SubCommunityContextType {
   subCommunities: SubCommunity[];
   loading: boolean;
   error: string | null;
-  createSubCommunity: (data: { name: string; description: string }) => Promise<void>;
+  createSubCommunity: (data: {
+    name: string;
+    description: string;
+  }) => Promise<void>;
   getSubCommunity: (id: string) => Promise<SubCommunity | null>;
   clearError: () => void;
 }
 
-const SubCommunityContext = createContext<SubCommunityContextType | undefined>(undefined);
+const SubCommunityContext = createContext<SubCommunityContextType | undefined>(
+  undefined
+);
 
-export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [subCommunities, setSubCommunities] = useState<SubCommunity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
 
   const axiosInstance = axios.create({
-    baseURL: "http://localhost:3000",
+    baseURL: 'http://localhost:3000',
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -36,14 +43,24 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const clearError = () => setError(null);
 
-  const createSubCommunity = async (data: { name: string; description: string }) => {
+  const createSubCommunity = async (data: {
+    name: string;
+    description: string;
+  }) => {
     try {
       setLoading(true);
-      const { data: newSubCommunity } = await axiosInstance.post('/subcommunities', data);
-      setSubCommunities(prev => [...prev, newSubCommunity]);
+      const { data: newSubCommunity } = await axiosInstance.post(
+        '/subcommunities',
+        data
+      );
+      setSubCommunities((prev) => [...prev, newSubCommunity]);
       setLoading(false);
     } catch (err: any) {
-      setError(err.response?.data?.message || err.message || 'Failed to create sub-community');
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to create sub-community'
+      );
       setLoading(false);
       throw err;
     }
@@ -55,8 +72,12 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const { data } = await axiosInstance.get(`/subcommunities/${id}`);
       setLoading(false);
       return data;
-    } catch (err :any) {
-      setError(err.response?.data?.message || err.message || 'Failed to fetch sub-community');
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to fetch sub-community'
+      );
       setLoading(false);
       return null;
     }
@@ -70,7 +91,11 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setSubCommunities(data);
         setLoading(false);
       } catch (err: any) {
-        setError(err.response?.data?.message || err.message || 'Failed to fetch sub-communities');
+        setError(
+          err.response?.data?.message ||
+            err.message ||
+            'Failed to fetch sub-communities'
+        );
         setLoading(false);
       }
     };
@@ -97,7 +122,9 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({ 
 export const useSubCommunities = () => {
   const context = useContext(SubCommunityContext);
   if (context === undefined) {
-    throw new Error('useSubCommunities must be used within a SubCommunityProvider');
+    throw new Error(
+      'useSubCommunities must be used within a SubCommunityProvider'
+    );
   }
   return context;
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Typography,
@@ -19,11 +19,7 @@ import { useSubCommunities } from '../../contexts/SubCommunityContext';
 import { Link } from 'react-router-dom';
 
 export const SubCommunitiesPage: React.FC = () => {
-  const {
-    subCommunities,
-    loading,
-    createSubCommunity,
-  } = useSubCommunities();
+  const { subCommunities, loading, createSubCommunity } = useSubCommunities();
   const [openDialog, setOpenDialog] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -51,7 +47,7 @@ export const SubCommunitiesPage: React.FC = () => {
           Create New
         </Button>
       </Box>
-      
+
       {loading ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
@@ -78,7 +74,7 @@ export const SubCommunitiesPage: React.FC = () => {
           ))}
         </List>
       )}
-      
+
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle>Create New Sub-Community</DialogTitle>
         <DialogContent>

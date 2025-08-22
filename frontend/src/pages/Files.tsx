@@ -20,7 +20,7 @@ import {
   CircularProgress,
   Chip,
   Paper,
-  Stack
+  Stack,
 } from '@mui/material';
 import {
   CloudUpload,
@@ -37,7 +37,7 @@ import {
   Add,
   Storage,
   Person,
-  CheckCircle
+  CheckCircle,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -73,13 +73,17 @@ const Files: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadForm, setUploadForm] = useState<UploadForm>({
     description: '',
-    tags: ''
+    tags: '',
   });
   const [uploading, setUploading] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [selectedFileForShare, setSelectedFileForShare] = useState<FileItem | null>(null);
+  const [selectedFileForShare, setSelectedFileForShare] =
+    useState<FileItem | null>(null);
   const [shareEmail, setShareEmail] = useState('');
-  const [googleTokens, setGoogleTokens] = useState<{ access_token: string; refresh_token?: string } | null>(null);
+  const [googleTokens, setGoogleTokens] = useState<{
+    access_token: string;
+    refresh_token?: string;
+  } | null>(null);
   const [isGoogleConnected, setIsGoogleConnected] = useState(false);
   const [connectingGoogle, setConnectingGoogle] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -105,11 +109,11 @@ const Files: React.FC = () => {
   const connectGoogleDrive = async () => {
     try {
       setConnectingGoogle(true);
-      
+
       // Get Google OAuth URL from backend
       const response = await apiService.files.getGoogleAuthUrl();
       const authUrl = response.data.authUrl;
-      
+
       // Open Google OAuth popup
       const popup = window.open(
         authUrl,
@@ -130,18 +134,20 @@ const Files: React.FC = () => {
         if (event.data.type === 'GOOGLE_OAUTH_SUCCESS' && event.data.code) {
           try {
             // Exchange code for tokens
-            const tokenResponse = await apiService.files.handleGoogleCallback(event.data.code);
+            const tokenResponse = await apiService.files.handleGoogleCallback(
+              event.data.code
+            );
             const tokens = tokenResponse.data;
-            
+
             // Store tokens
             setGoogleTokens(tokens);
             setIsGoogleConnected(true);
             localStorage.setItem('googleDriveTokens', JSON.stringify(tokens));
-            
+
             // Close popup and refresh files
             popup?.close();
             fetchFiles(tokens);
-            
+
             console.log('✅ Google Drive connected successfully!');
           } catch (error) {
             console.error('❌ Error connecting Google Drive:', error);
@@ -149,7 +155,6 @@ const Files: React.FC = () => {
           }
         }
       });
-
     } catch (error) {
       console.error('Error getting Google auth URL:', error);
       setError('Failed to connect to Google Drive');
@@ -168,12 +173,14 @@ const Files: React.FC = () => {
     if (!googleTokens?.refresh_token) return;
 
     try {
-      const response = await apiService.files.refreshGoogleToken(googleTokens.refresh_token);
+      const response = await apiService.files.refreshGoogleToken(
+        googleTokens.refresh_token
+      );
       const newTokens = response.data;
-      
+
       setGoogleTokens(newTokens);
       localStorage.setItem('googleDriveTokens', JSON.stringify(newTokens));
-      
+
       console.log('✅ Google token refreshed successfully!');
     } catch (error) {
       console.error('❌ Error refreshing Google token:', error);
@@ -182,17 +189,23 @@ const Files: React.FC = () => {
     }
   };
 
-  const fetchFiles = async (tokens?: { access_token: string; refresh_token?: string }) => {
+  const fetchFiles = async (tokens?: {
+    access_token: string;
+    refresh_token?: string;
+  }) => {
     try {
       setLoading(true);
-              let response;
-        if (tokens?.access_token) {
-          // Use Google Drive API with tokens
-          response = await apiService.files.getAll(tokens.access_token, tokens.refresh_token);
-        } else {
-          // Fallback to local files (if any)
-          response = await apiService.files.getAll();
-        }
+      let response;
+      if (tokens?.access_token) {
+        // Use Google Drive API with tokens
+        response = await apiService.files.getAll(
+          tokens.access_token,
+          tokens.refresh_token
+        );
+      } else {
+        // Fallback to local files (if any)
+        response = await apiService.files.getAll();
+      }
       setFiles(response.data || []);
     } catch (err) {
       console.error('Error fetching files:', err);
@@ -231,14 +244,16 @@ const Files: React.FC = () => {
 
       const response = await apiService.files.upload(formData);
       console.log('✅ File uploaded to Google Drive:', response);
-      
+
       setUploadDialogOpen(false);
       setSelectedFile(null);
       setUploadForm({ description: '', tags: '' });
       fetchFiles();
     } catch (err: any) {
       console.error('❌ Error uploading file:', err);
-      setError(`Failed to upload file: ${err.response?.data?.message || err.message}`);
+      setError(
+        `Failed to upload file: ${err.response?.data?.message || err.message}`
+      );
     } finally {
       setUploading(false);
     }
@@ -269,7 +284,8 @@ const Files: React.FC = () => {
     if (mimeType.startsWith('video/')) return <VideoFile />;
     if (mimeType.startsWith('audio/')) return <AudioFile />;
     if (mimeType === 'application/pdf') return <PictureAsPdf />;
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return <Archive />;
+    if (mimeType.includes('zip') || mimeType.includes('rar'))
+      return <Archive />;
     if (mimeType.startsWith('text/')) return <Description />;
     return <InsertDriveFile />;
   };
@@ -299,7 +315,11 @@ const Files: React.FC = () => {
     }
 
     try {
-      const response = await apiService.files.getDownloadUrl(file.id, googleTokens.access_token, googleTokens.refresh_token);
+      const response = await apiService.files.getDownloadUrl(
+        file.id,
+        googleTokens.access_token,
+        googleTokens.refresh_token
+      );
       window.open(response.data.downloadUrl, '_blank');
     } catch (err) {
       console.error('Error getting download URL:', err);
@@ -314,18 +334,30 @@ const Files: React.FC = () => {
     }
 
     try {
-      await apiService.files.share(file.id, userEmail, googleTokens.access_token, googleTokens.refresh_token);
+      await apiService.files.share(
+        file.id,
+        userEmail,
+        googleTokens.access_token,
+        googleTokens.refresh_token
+      );
       // Show success message
     } catch (err: any) {
       console.error('Error sharing file:', err);
-      setError(`Failed to share file: ${err.response?.data?.message || err.message}`);
+      setError(
+        `Failed to share file: ${err.response?.data?.message || err.message}`
+      );
     }
   };
 
   if (loading) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress size={60} />
         </Box>
       </Container>
@@ -345,13 +377,23 @@ const Files: React.FC = () => {
       </Box>
 
       {/* Google Drive Connection Status */}
-      <Paper sx={{ p: 3, mb: 3, borderRadius: 3, bgcolor: isGoogleConnected ? 'success.light' : 'warning.light' }}>
+      <Paper
+        sx={{
+          p: 3,
+          mb: 3,
+          borderRadius: 3,
+          bgcolor: isGoogleConnected ? 'success.light' : 'warning.light',
+        }}
+      >
         <Stack direction="row" alignItems="center" spacing={2}>
           {isGoogleConnected ? (
             <>
               <CheckCircle color="success" />
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.dark' }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ fontWeight: 600, color: 'success.dark' }}
+                >
                   Google Drive Connected
                 </Typography>
                 <Typography variant="body2" color="success.dark">
@@ -372,7 +414,10 @@ const Files: React.FC = () => {
             <>
               <CloudUpload color="warning" />
               <Box>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'warning.dark' }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ fontWeight: 600, color: 'warning.dark' }}
+                >
                   Connect Google Drive
                 </Typography>
                 <Typography variant="body2" color="warning.dark">
@@ -385,7 +430,13 @@ const Files: React.FC = () => {
                 size="small"
                 onClick={connectGoogleDrive}
                 disabled={connectingGoogle}
-                startIcon={connectingGoogle ? <CircularProgress size={16} /> : <CloudUpload />}
+                startIcon={
+                  connectingGoogle ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <CloudUpload />
+                  )
+                }
                 sx={{ ml: 'auto' }}
               >
                 {connectingGoogle ? 'Connecting...' : 'Connect Google Drive'}
@@ -444,10 +495,12 @@ const Files: React.FC = () => {
         <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
           Your Files ({files.length})
         </Typography>
-        
+
         {files.length === 0 ? (
           <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 3 }}>
-            <CloudUpload sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+            <CloudUpload
+              sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }}
+            />
             <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
               No files uploaded yet
             </Typography>
@@ -474,13 +527,14 @@ const Files: React.FC = () => {
               >
                 <Paper sx={{ mb: 2, borderRadius: 2 }}>
                   <ListItem>
-                    <ListItemIcon>
-                      {getFileIcon(file.mimeType)}
-                    </ListItemIcon>
+                    <ListItemIcon>{getFileIcon(file.mimeType)}</ListItemIcon>
                     <ListItemText
                       primary={
                         <Box>
-                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          <Typography
+                            variant="subtitle1"
+                            sx={{ fontWeight: 600 }}
+                          >
                             {file.originalName}
                           </Typography>
                           <Stack direction="row" spacing={1} sx={{ mt: 0.5 }}>
@@ -494,54 +548,59 @@ const Files: React.FC = () => {
                               size="small"
                               variant="outlined"
                             />
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {new Date(file.createdAt).toLocaleDateString()}
                             </Typography>
                           </Stack>
                         </Box>
                       }
                     />
-                                         <ListItemSecondaryAction>
-                       <Stack direction="row" spacing={1}>
-                         <IconButton
-                           size="small"
-                           color="primary"
-                           onClick={() => handleDownload(file)}
-                           title="Download"
-                         >
-                           <Download />
-                         </IconButton>
-                         <IconButton
-                           size="small"
-                           color="primary"
-                           onClick={() => window.open(file.webViewLink || file.path, '_blank')}
-                           title="View in Google Drive"
-                         >
-                           <Visibility />
-                         </IconButton>
-                         <IconButton
-                           size="small"
-                           color="info"
-                           onClick={() => {
-                             setSelectedFileForShare(file);
-                             setShareDialogOpen(true);
-                           }}
-                           title="Share"
-                         >
-                           <Person />
-                         </IconButton>
-                         {user?.id === file.userId && (
-                           <IconButton
-                             size="small"
-                             color="error"
-                             onClick={() => handleDeleteFile(file.id)}
-                             title="Delete"
-                           >
-                             <Delete />
-                         </IconButton>
-                         )}
-                       </Stack>
-                     </ListItemSecondaryAction>
+                    <ListItemSecondaryAction>
+                      <Stack direction="row" spacing={1}>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() => handleDownload(file)}
+                          title="Download"
+                        >
+                          <Download />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="primary"
+                          onClick={() =>
+                            window.open(file.webViewLink || file.path, '_blank')
+                          }
+                          title="View in Google Drive"
+                        >
+                          <Visibility />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="info"
+                          onClick={() => {
+                            setSelectedFileForShare(file);
+                            setShareDialogOpen(true);
+                          }}
+                          title="Share"
+                        >
+                          <Person />
+                        </IconButton>
+                        {user?.id === file.userId && (
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleDeleteFile(file.id)}
+                            title="Delete"
+                          >
+                            <Delete />
+                          </IconButton>
+                        )}
+                      </Stack>
+                    </ListItemSecondaryAction>
                   </ListItem>
                 </Paper>
               </motion.div>
@@ -551,7 +610,12 @@ const Files: React.FC = () => {
       </Box>
 
       {/* Upload Dialog */}
-      <Dialog open={uploadDialogOpen} onClose={() => setUploadDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={uploadDialogOpen}
+        onClose={() => setUploadDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Upload File</DialogTitle>
         <DialogContent>
           {selectedFile && (
@@ -563,20 +627,23 @@ const Files: React.FC = () => {
                     {selectedFile.name}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {formatFileSize(selectedFile.size)} • {getFileType(selectedFile.type)}
+                    {formatFileSize(selectedFile.size)} •{' '}
+                    {getFileType(selectedFile.type)}
                   </Typography>
                 </Box>
               </Box>
             </Box>
           )}
-          
+
           <Grid container spacing={2}>
             <Grid item xs={12}>
               <TextField
                 fullWidth
                 label="Description (Optional)"
                 value={uploadForm.description}
-                onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
+                onChange={(e) =>
+                  setUploadForm({ ...uploadForm, description: e.target.value })
+                }
                 placeholder="Describe what this file contains..."
                 multiline
                 rows={2}
@@ -587,7 +654,9 @@ const Files: React.FC = () => {
                 fullWidth
                 label="Tags (Optional)"
                 value={uploadForm.tags}
-                onChange={(e) => setUploadForm({ ...uploadForm, tags: e.target.value })}
+                onChange={(e) =>
+                  setUploadForm({ ...uploadForm, tags: e.target.value })
+                }
                 placeholder="Enter tags separated by commas..."
                 helperText="Example: resume, portfolio, project"
               />
@@ -596,11 +665,13 @@ const Files: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setUploadDialogOpen(false)}>Cancel</Button>
-          <Button 
-            onClick={handleUpload} 
+          <Button
+            onClick={handleUpload}
             variant="contained"
             disabled={uploading}
-            startIcon={uploading ? <CircularProgress size={16} /> : <CloudUpload />}
+            startIcon={
+              uploading ? <CircularProgress size={16} /> : <CloudUpload />
+            }
           >
             {uploading ? 'Uploading...' : 'Upload'}
           </Button>
@@ -608,7 +679,12 @@ const Files: React.FC = () => {
       </Dialog>
 
       {/* Share Dialog */}
-      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Share File</DialogTitle>
         <DialogContent>
           {selectedFileForShare && (
@@ -621,7 +697,7 @@ const Files: React.FC = () => {
               </Typography>
             </Box>
           )}
-          
+
           <TextField
             fullWidth
             label="User Email"
@@ -633,7 +709,7 @@ const Files: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShareDialogOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={() => {
               if (selectedFileForShare && shareEmail) {
                 handleShareFile(selectedFileForShare, shareEmail);
@@ -641,7 +717,7 @@ const Files: React.FC = () => {
                 setShareEmail('');
                 setSelectedFileForShare(null);
               }
-            }} 
+            }}
             variant="contained"
             disabled={!shareEmail}
           >

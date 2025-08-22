@@ -43,16 +43,22 @@ const Register: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  const handleChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement> | { target: { value: unknown } }) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
-  };
+  const handleChange =
+    (field: string) =>
+    (
+      event:
+        | React.ChangeEvent<HTMLInputElement>
+        | { target: { value: unknown } }
+    ) => {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: event.target.value,
+      }));
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,10 +84,17 @@ const Register: React.FC = () => {
     setLoading(true);
 
     try {
-      await register(formData.email, formData.password, formData.name, formData.role);
+      await register(
+        formData.email,
+        formData.password,
+        formData.name,
+        formData.role
+      );
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      setError(
+        err.response?.data?.message || 'Registration failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -165,13 +178,18 @@ const Register: React.FC = () => {
                   <School sx={{ color: 'white', fontSize: 30 }} />
                 </Box>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+                <Typography
+                  variant="h4"
+                  component="h1"
+                  gutterBottom
+                  sx={{ fontWeight: 700 }}
+                >
                   Join Nexus
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
@@ -313,10 +331,16 @@ const Register: React.FC = () => {
                   endAdornment: (
                     <InputAdornment position="end">
                       <IconButton
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
                         edge="end"
                       >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        {showConfirmPassword ? (
+                          <VisibilityOff />
+                        ) : (
+                          <Visibility />
+                        )}
                       </IconButton>
                     </InputAdornment>
                   ),
@@ -383,4 +407,4 @@ const Register: React.FC = () => {
   );
 };
 
-export default Register; 
+export default Register;

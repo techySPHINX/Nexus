@@ -16,7 +16,7 @@ import {
   ListItemText,
   Divider,
   useTheme,
-  Stack
+  Stack,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -28,7 +28,7 @@ import {
   Person,
   Logout,
   Login,
-  PersonAdd
+  PersonAdd,
 } from '@mui/icons-material';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -81,7 +81,7 @@ const Navbar: React.FC = () => {
       sx={{
         zIndex: theme.zIndex.drawer + 1,
         bgcolor: 'primary.main',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
+        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
       }}
     >
       <Toolbar sx={{ justifyContent: 'space-between' }}>
@@ -96,7 +96,7 @@ const Navbar: React.FC = () => {
               color: 'white',
               textDecoration: 'none',
               mr: 4,
-              '&:hover': { opacity: 0.8 }
+              '&:hover': { opacity: 0.8 },
             }}
           >
             Nexus
@@ -114,12 +114,14 @@ const Navbar: React.FC = () => {
                     color: 'white',
                     textTransform: 'none',
                     fontWeight: isActive(item.path) ? 600 : 400,
-                    bgcolor: isActive(item.path) ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    bgcolor: isActive(item.path)
+                      ? 'rgba(255,255,255,0.1)'
+                      : 'transparent',
                     borderRadius: 2,
                     px: 2,
                     '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.2)'
-                    }
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                    },
                   }}
                 >
                   {item.text}
@@ -137,11 +139,10 @@ const Navbar: React.FC = () => {
               <ThemeToggle />
               <NavbarToggle />
 
-              <IconButton
-                onClick={handleUserMenuOpen}
-                sx={{ color: 'white' }}
-              >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.light' }}>
+              <IconButton onClick={handleUserMenuOpen} sx={{ color: 'white' }}>
+                <Avatar
+                  sx={{ width: 32, height: 32, bgcolor: 'primary.light' }}
+                >
                   {user.name?.charAt(0) || 'U'}
                 </Avatar>
               </IconButton>
@@ -159,23 +160,35 @@ const Navbar: React.FC = () => {
                   sx: {
                     mt: 1,
                     minWidth: 200,
-                    borderRadius: 2
-                  }
+                    borderRadius: 2,
+                  },
                 }}
               >
-                <MenuItem component={Link} to="/profile" onClick={handleUserMenuClose}>
+                <MenuItem
+                  component={Link}
+                  to="/profile"
+                  onClick={handleUserMenuClose}
+                >
                   <ListItemIcon>
                     <Person />
                   </ListItemIcon>
                   Profile
                 </MenuItem>
-                <MenuItem component={Link} to="/notifications" onClick={handleUserMenuClose}>
+                <MenuItem
+                  component={Link}
+                  to="/notifications"
+                  onClick={handleUserMenuClose}
+                >
                   <ListItemIcon>
                     <Person />
                   </ListItemIcon>
                   Notification
                 </MenuItem>
-                <MenuItem component={Link} to="/feed" onClick={handleUserMenuClose}>
+                <MenuItem
+                  component={Link}
+                  to="/feed"
+                  onClick={handleUserMenuClose}
+                >
                   <ListItemIcon>
                     <Person />
                   </ListItemIcon>
@@ -204,8 +217,8 @@ const Navbar: React.FC = () => {
                   textTransform: 'none',
                   '&:hover': {
                     borderColor: 'white',
-                    bgcolor: 'rgba(255,255,255,0.1)'
-                  }
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                  },
                 }}
               >
                 Login
@@ -220,8 +233,8 @@ const Navbar: React.FC = () => {
                   color: 'primary.main',
                   textTransform: 'none',
                   '&:hover': {
-                    bgcolor: 'grey.100'
-                  }
+                    bgcolor: 'grey.100',
+                  },
                 }}
               >
                 Register
@@ -258,7 +271,7 @@ const Navbar: React.FC = () => {
           top: 0,
           bgcolor: 'primary.main',
           boxShadow: '2px 0 10px rgba(0,0,0,0.1)',
-          zIndex: theme.zIndex.drawer + 1
+          zIndex: theme.zIndex.drawer + 1,
         }}
       >
         <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
@@ -272,7 +285,7 @@ const Navbar: React.FC = () => {
               textDecoration: 'none',
               display: 'block',
               textAlign: 'center',
-              '&:hover': { opacity: 0.8 }
+              '&:hover': { opacity: 0.8 },
             }}
           >
             Nexus
@@ -291,11 +304,13 @@ const Navbar: React.FC = () => {
                   sx={{
                     mb: 1,
                     borderRadius: 2,
-                    bgcolor: isActive(item.path) ? 'rgba(255,255,255,0.1)' : 'transparent',
+                    bgcolor: isActive(item.path)
+                      ? 'rgba(255,255,255,0.1)'
+                      : 'transparent',
                     color: 'white',
                     '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.2)'
-                    }
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                    },
                   }}
                 >
                   <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
@@ -304,14 +319,16 @@ const Navbar: React.FC = () => {
                   <ListItemText
                     primary={item.text}
                     primaryTypographyProps={{
-                      fontWeight: isActive(item.path) ? 600 : 400
+                      fontWeight: isActive(item.path) ? 600 : 400,
                     }}
                   />
                 </ListItem>
               ))}
             </List>
 
-            <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2, my: 2 }} />
+            <Divider
+              sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2, my: 2 }}
+            />
 
             <Box sx={{ p: 2 }}>
               <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
@@ -337,8 +354,8 @@ const Navbar: React.FC = () => {
                   textTransform: 'none',
                   '&:hover': {
                     borderColor: 'white',
-                    bgcolor: 'rgba(255,255,255,0.1)'
-                  }
+                    bgcolor: 'rgba(255,255,255,0.1)',
+                  },
                 }}
               >
                 Login
@@ -354,8 +371,8 @@ const Navbar: React.FC = () => {
                   color: 'primary.main',
                   textTransform: 'none',
                   '&:hover': {
-                    bgcolor: 'grey.100'
-                  }
+                    bgcolor: 'grey.100',
+                  },
                 }}
               >
                 Register
@@ -376,8 +393,8 @@ const Navbar: React.FC = () => {
                 bgcolor: 'rgba(255,255,255,0.1)',
                 cursor: 'pointer',
                 '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.2)'
-                }
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                },
               }}
               onClick={handleUserMenuOpen}
             >
@@ -385,10 +402,16 @@ const Navbar: React.FC = () => {
                 {user.name?.charAt(0) || 'U'}
               </Avatar>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: 'white', fontWeight: 600 }}
+                >
                   {user.name || 'User'}
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'rgba(255,255,255,0.7)' }}
+                >
                   {user.role || 'Member'}
                 </Typography>
               </Box>
@@ -406,8 +429,8 @@ const Navbar: React.FC = () => {
               mt: 1,
               minWidth: 200,
               borderRadius: 2,
-              ml: 2
-            }
+              ml: 2,
+            },
           }}
           anchorOrigin={{
             vertical: 'bottom',
@@ -418,13 +441,21 @@ const Navbar: React.FC = () => {
             horizontal: 'right',
           }}
         >
-          <MenuItem component={Link} to="/profile" onClick={handleUserMenuClose}>
+          <MenuItem
+            component={Link}
+            to="/profile"
+            onClick={handleUserMenuClose}
+          >
             <ListItemIcon>
               <Person />
             </ListItemIcon>
             Profile
           </MenuItem>
-          <MenuItem component={Link} to="/notifications" onClick={handleUserMenuClose}>
+          <MenuItem
+            component={Link}
+            to="/notifications"
+            onClick={handleUserMenuClose}
+          >
             <ListItemIcon>
               <Person />
             </ListItemIcon>
@@ -459,12 +490,15 @@ const Navbar: React.FC = () => {
           '& .MuiDrawer-paper': {
             width: 280,
             bgcolor: 'primary.main',
-            color: 'white'
+            color: 'white',
           },
         }}
       >
         <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, textAlign: 'center' }}>
+          <Typography
+            variant="h5"
+            sx={{ fontWeight: 700, textAlign: 'center' }}
+          >
             Nexus
           </Typography>
         </Box>
@@ -480,11 +514,13 @@ const Navbar: React.FC = () => {
               sx={{
                 mb: 1,
                 borderRadius: 2,
-                bgcolor: isActive(item.path) ? 'rgba(255,255,255,0.1)' : 'transparent',
+                bgcolor: isActive(item.path)
+                  ? 'rgba(255,255,255,0.1)'
+                  : 'transparent',
                 color: 'white',
                 '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.2)'
-                }
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                },
               }}
             >
               <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
@@ -508,8 +544,8 @@ const Navbar: React.FC = () => {
                 bgcolor: 'rgba(255,255,255,0.1)',
                 cursor: 'pointer',
                 '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.2)'
-                }
+                  bgcolor: 'rgba(255,255,255,0.2)',
+                },
               }}
               onClick={() => {
                 handleUserMenuOpen({ currentTarget: document.body } as any);
@@ -520,10 +556,16 @@ const Navbar: React.FC = () => {
                 {user.name?.charAt(0) || 'U'}
               </Avatar>
               <Box sx={{ flex: 1 }}>
-                <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: 'white', fontWeight: 600 }}
+                >
                   {user.name || 'User'}
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: 'rgba(255,255,255,0.7)' }}
+                >
                   {user.role || 'Member'}
                 </Typography>
               </Box>
@@ -542,4 +584,4 @@ const Navbar: React.FC = () => {
   return <TopNavbar />;
 };
 
-export default Navbar; 
+export default Navbar;

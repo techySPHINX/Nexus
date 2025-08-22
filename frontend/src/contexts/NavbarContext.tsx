@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 
 type NavbarPosition = 'top' | 'left';
 
@@ -27,8 +33,13 @@ export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Load navbar position from localStorage
-    const savedPosition = localStorage.getItem('navbarPosition') as NavbarPosition;
-    if (savedPosition && (savedPosition === 'top' || savedPosition === 'left')) {
+    const savedPosition = localStorage.getItem(
+      'navbarPosition'
+    ) as NavbarPosition;
+    if (
+      savedPosition &&
+      (savedPosition === 'top' || savedPosition === 'left')
+    ) {
       setPosition(savedPosition);
     }
   }, []);
@@ -45,11 +56,13 @@ export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
   };
 
   return (
-    <NavbarContext.Provider value={{
-      position,
-      togglePosition,
-      setPosition: handleSetPosition
-    }}>
+    <NavbarContext.Provider
+      value={{
+        position,
+        togglePosition,
+        setPosition: handleSetPosition,
+      }}
+    >
       {children}
     </NavbarContext.Provider>
   );

@@ -30,14 +30,14 @@ interface CreatePostFormProps {
   subCommunityId?: string;
   onSuccess?: () => void;
   onError?: (error: any) => void; // 👈 add this
-  profile?: Pick<Profile, "id" | "avatarUrl">; // 👈 only id + avatarUrl
+  profile?: Pick<Profile, 'id' | 'avatarUrl'>; // 👈 only id + avatarUrl
 }
 
 export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   subCommunityId,
   onSuccess,
   onError,
-  profile
+  profile,
 }) => {
   const { user } = useAuth();
   const { createPost } = usePosts();
@@ -47,7 +47,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
+    'success'
+  );
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -62,7 +64,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
         // ✅ Success notification
-        showSnackbar("Image added successfully!", "success");
+        showSnackbar('Image added successfully!', 'success');
       };
       reader.readAsDataURL(file);
     }
@@ -89,8 +91,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       setContent('');
       setImage(null);
       setImagePreview(null);
-      if (onSuccess)
-        onSuccess();
+      if (onSuccess) onSuccess();
     } catch (error) {
       console.error('Error creating post:', error);
       if (onError) onError(error); // 👈 call error handler
@@ -103,7 +104,10 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     <>
       <Box sx={{ mb: 3, p: 2, border: '1px solid #eee', borderRadius: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar src={profile?.avatarUrl ?? undefined} sx={{ bgcolor: 'primary.light' }}>
+          <Avatar
+            src={profile?.avatarUrl ?? undefined}
+            sx={{ bgcolor: 'primary.light' }}
+          >
             {user?.name?.charAt(0) || 'U'}
           </Avatar>
           <Typography variant="subtitle1" sx={{ ml: 2 }}>
@@ -127,11 +131,20 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             <img
               src={imagePreview}
               alt="Preview"
-              style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '8px' }}
+              style={{
+                maxWidth: '100%',
+                maxHeight: '300px',
+                borderRadius: '8px',
+              }}
             />
             <IconButton
               onClick={handleRemoveImage}
-              sx={{ position: 'absolute', top: 8, right: 8, bgcolor: 'rgba(0,0,0,0.5)' }}
+              sx={{
+                position: 'absolute',
+                top: 8,
+                right: 8,
+                bgcolor: 'rgba(0,0,0,0.5)',
+              }}
             >
               <Close sx={{ color: 'white' }} />
             </IconButton>
@@ -149,7 +162,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             onChange={handleImageChange}
           />
           <label htmlFor="post-image-upload">
-            <span style={{color:"green",fontSize:"large"}}>+</span>
+            <span style={{ color: 'green', fontSize: 'large' }}>+</span>
             <Button
               component="span"
               startIcon={<Image />}

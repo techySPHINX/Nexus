@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { usePosts } from '../../contexts/PostContext';
+// import { usePosts } from '../../contexts/PostContext';
 import {
   Box,
   TextField,
@@ -19,7 +19,7 @@ interface CommentSectionProps {
   postId: string;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
+export const CommentSection: React.FC<CommentSectionProps> = ({}) => {
   const { user } = useAuth();
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState<any[]>([]); // Replace with your comment type
@@ -39,7 +39,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
           },
         },
       };
-      setComments(prev => [newComment, ...prev]);
+      setComments((prev) => [newComment, ...prev]);
       setComment('');
     } catch (error) {
       console.error('Error submitting comment:', error);
@@ -65,13 +65,16 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
       >
         Post Comment
       </Button>
-      
+
       <List sx={{ mt: 2 }}>
         {comments.map((comment) => (
           <React.Fragment key={comment.id}>
             <ListItem alignItems="flex-start">
               <ListItemAvatar>
-                <Avatar src={comment.user.profile?.avatarUrl} alt={comment.user.name} />
+                <Avatar
+                  src={comment.user.profile?.avatarUrl}
+                  alt={comment.user.name}
+                />
               </ListItemAvatar>
               <ListItemText
                 primary={comment.user.name}
@@ -85,7 +88,9 @@ export const CommentSection: React.FC<CommentSectionProps> = ({ postId }) => {
                       {comment.content}
                     </Typography>
                     <br />
-                    {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(comment.createdAt), {
+                      addSuffix: true,
+                    })}
                   </>
                 }
               />

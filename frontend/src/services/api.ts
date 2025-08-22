@@ -54,20 +54,30 @@ export const apiService = {
   users: {
     getAll: () => api.get('/users'),
     getById: (id: string) => api.get(`/users/${id}`),
-    update: (id: string, data: any) => api.patch(`/users/${id}`, data),
+    update: (id: string, data: unknown) => api.patch(`/users/${id}`, data),
     delete: (id: string) => api.delete(`/users/${id}`),
   },
 
   // Profile endpoints
   profile: {
     get: (userId: string) => api.get(`/profile/${userId}`),
-    update: (userId: string, data: any) => api.put(`/profile/${userId}`, data),
+    update: (userId: string, data: unknown) =>
+      api.put(`/profile/${userId}`, data),
   },
 
   // Connection endpoints
   connections: {
-    getAll: ({ page, limit, role, search }: { page: number; limit: number; role?: 'STUDENT' | 'ALUM' | 'ADMIN'; search?: string }) =>
-      api.get('/connection', { params: { page, limit, role, search } }),
+    getAll: ({
+      page,
+      limit,
+      role,
+      search,
+    }: {
+      page: number;
+      limit: number;
+      role?: 'STUDENT' | 'ALUM' | 'ADMIN';
+      search?: string;
+    }) => api.get('/connection', { params: { page, limit, role, search } }),
     getStats: () => api.get('/connection/stats'),
     getPendingReceived: ({ page, limit }: { page: number; limit: number }) =>
       api.get('/connection/pending/received', { params: { page, limit } }),
@@ -76,11 +86,14 @@ export const apiService = {
     getStatus: (userId: string) => api.get(`/connection/status/${userId}`),
     getSuggestions: ({ limit }: { limit: number }) =>
       api.get('/connection/suggestions', { params: { limit } }),
-    send: (recipientId: string) => api.post('/connection/send', { recipientId }),
+    send: (recipientId: string) =>
+      api.post('/connection/send', { recipientId }),
     updateStatus: (connectionId: string, status: string) =>
       api.patch('/connection/status', { connectionId, status }),
-    cancel: (connectionId: string) => api.delete(`/connection/cancel/${connectionId}`),
-    remove: (connectionId: string) => api.delete(`/connection/remove/${connectionId}`),
+    cancel: (connectionId: string) =>
+      api.delete(`/connection/cancel/${connectionId}`),
+    remove: (connectionId: string) =>
+      api.delete(`/connection/remove/${connectionId}`),
   },
 
   // Message endpoints
@@ -94,15 +107,16 @@ export const apiService = {
 
   // Referral endpoints
   referrals: {
-    create: (data: any) => api.post('/referral', data),
+    create: (data: unknown) => api.post('/referral', data),
     getAll: () => api.get('/referral'),
     getById: (id: string) => api.get(`/referral/${id}`),
-    update: (id: string, data: any) => api.put(`/referral/${id}`, data),
+    update: (id: string, data: unknown) => api.put(`/referral/${id}`, data),
     delete: (id: string) => api.delete(`/referral/${id}`),
-    apply: (data: any) => api.post('/referral/apply', data),
-    getApplications: (referralId: string) => api.get(`/referral/applications/${referralId}`),
+    apply: (data: unknown) => api.post('/referral/apply', data),
+    getApplications: (referralId: string) =>
+      api.get(`/referral/applications/${referralId}`),
     getAllApplications: () => api.get('/referral/applications'),
-    updateApplicationStatus: (id: string, status: string) => 
+    updateApplicationStatus: (id: string, status: string) =>
       api.put(`/referral/applications/${id}/status`, { status }),
     getMyApplications: () => api.get('/referral/applications/my'),
   },
@@ -110,27 +124,47 @@ export const apiService = {
   // Files endpoints
   files: {
     upload: (formData: FormData) => api.post('/files/upload', formData),
-    getAll: (accessToken?: string, refreshToken?: string) => 
-      api.get(`/files${accessToken ? `?access_token=${accessToken}${refreshToken ? `&refresh_token=${refreshToken}` : ''}` : ''}`),
+    getAll: (accessToken?: string, refreshToken?: string) =>
+      api.get(
+        `/files${accessToken ? `?access_token=${accessToken}${refreshToken ? `&refresh_token=${refreshToken}` : ''}` : ''}`
+      ),
     getById: (id: string) => api.get(`/files/${id}`),
-    delete: (id: string, body?: any) => api.delete(`/files/${id}`, { data: body }),
+    delete: (id: string, body?: unknown) =>
+      api.delete(`/files/${id}`, { data: body }),
     download: (id: string) => api.get(`/files/${id}/download`),
-    getDownloadUrl: (id: string, accessToken: string, refreshToken?: string) => 
-      api.get(`/files/${id}/download?access_token=${accessToken}${refreshToken ? `&refresh_token=${refreshToken}` : ''}`),
-    share: (id: string, userEmail: string, accessToken: string, refreshToken?: string) => 
-      api.post(`/files/${id}/share`, { userEmail, access_token: accessToken, refresh_token: refreshToken }),
+    getDownloadUrl: (id: string, accessToken: string, refreshToken?: string) =>
+      api.get(
+        `/files/${id}/download?access_token=${accessToken}${refreshToken ? `&refresh_token=${refreshToken}` : ''}`
+      ),
+    share: (
+      id: string,
+      userEmail: string,
+      accessToken: string,
+      refreshToken?: string
+    ) =>
+      api.post(`/files/${id}/share`, {
+        userEmail,
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }),
     getGoogleAuthUrl: () => api.get('/files/auth/google'),
-    handleGoogleCallback: (code: string) => api.post('/files/auth/google/callback', { code }),
-    refreshGoogleToken: (refreshToken: string) => api.post('/files/auth/google/refresh', { refresh_token: refreshToken }),
-    validateGoogleTokens: (tokens: { access_token: string; refresh_token?: string }) => api.post('/files/auth/google/validate', tokens),
+    handleGoogleCallback: (code: string) =>
+      api.post('/files/auth/google/callback', { code }),
+    refreshGoogleToken: (refreshToken: string) =>
+      api.post('/files/auth/google/refresh', { refresh_token: refreshToken }),
+    validateGoogleTokens: (tokens: {
+      access_token: string;
+      refresh_token?: string;
+    }) => api.post('/files/auth/google/validate', tokens),
   },
 
   // Post endpoints
   posts: {
-    create: (userId: string, data: any) => api.post(`/posts/${userId}`, data),
+    create: (userId: string, data: unknown) =>
+      api.post(`/posts/${userId}`, data),
     getAll: () => api.get('/posts'),
     getByUser: (userId: string) => api.get(`/posts/user/${userId}`),
-    update: (id: string, userId: string, data: any) =>
+    update: (id: string, userId: string, data: unknown) =>
       api.patch(`/posts/${id}/user/${userId}`, data),
     delete: (id: string, userId: string) =>
       api.delete(`/posts/${id}/user/${userId}`),
@@ -147,7 +181,7 @@ export const apiService = {
 
   // Notification endpoints
   notifications: {
-    create: (data: any) => api.post('/notifications', data),
+    create: (data: unknown) => api.post('/notifications', data),
     getAll: () => api.get('/notifications'),
     getUnreadCount: () => api.get('/notifications/count/unread'),
     getStats: () => api.get('/notifications/stats'),
@@ -161,11 +195,21 @@ export const apiService = {
 };
 
 // Error handling utility
-export const handleApiError = (error: any): string => {
-  if (error.response?.data?.message) {
-    return error.response.data.message;
+export const handleApiError = (error: AxiosError | Error | unknown): string => {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'response' in error &&
+    (error.response as any)?.data?.message
+  ) {
+    return (error.response as any).data.message;
   }
-  if (error.message) {
+  if (
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof error.message === 'string'
+  ) {
     return error.message;
   }
   return 'An unexpected error occurred';

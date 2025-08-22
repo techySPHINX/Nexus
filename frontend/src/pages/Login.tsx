@@ -30,7 +30,7 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -43,7 +43,9 @@ const Login: React.FC = () => {
       await login(email, password);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+      setError(
+        err.response?.data?.message || 'Login failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -101,13 +103,18 @@ const Login: React.FC = () => {
                   <School sx={{ color: 'white', fontSize: 30 }} />
                 </Box>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                <Typography variant="h4" component="h1" gutterBottom sx={{ fontWeight: 700 }}>
+                <Typography
+                  variant="h4"
+                  component="h1"
+                  gutterBottom
+                  sx={{ fontWeight: 700 }}
+                >
                   Welcome Back
                 </Typography>
                 <Typography variant="body1" color="text.secondary">
@@ -239,4 +246,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login; 
+export default Login;
