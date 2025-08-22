@@ -19,8 +19,8 @@ import {
 import { Notifications as NotificationsIcon, Check as CheckIcon } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import dayjs from 'dayjs';
 import useSound from 'use-sound';
+import { formatDistanceToNow } from 'date-fns';
 
 const NotificationIndicator = () => {
     const {
@@ -90,7 +90,7 @@ const NotificationIndicator = () => {
     useEffect(() => {
         const interval = setInterval(() => {
             fetchNotifications();
-        }, 5000); // Poll every 40 seconds
+        }, 10000); // Poll every 40 seconds
 
         return () => clearInterval(interval);
     }, [fetchNotifications]);
@@ -181,7 +181,7 @@ const NotificationIndicator = () => {
                                     >
                                         <ListItemText
                                             primary={notification.message}
-                                            secondary={dayjs(notification.createdAt).fromNow()}
+                                            secondary={formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
                                             primaryTypographyProps={{
                                                 fontWeight: 'bold',
                                                 noWrap: false,

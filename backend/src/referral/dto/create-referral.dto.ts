@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsUrl, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
 
 /**
  * Data transfer object for creating a new job referral.

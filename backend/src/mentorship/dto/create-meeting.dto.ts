@@ -1,5 +1,9 @@
-
-import { IsNotEmpty, IsString, IsDateString, IsOptional } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsDateString,
+  IsOptional,
+} from 'class-validator';
 
 export class CreateMeetingDto {
   @IsNotEmpty()

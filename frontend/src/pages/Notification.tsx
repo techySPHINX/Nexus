@@ -38,7 +38,6 @@ import {
 } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
-import relativeTime from 'dayjs/plugin/relativeTime';
 
 
 enum NotificationType {

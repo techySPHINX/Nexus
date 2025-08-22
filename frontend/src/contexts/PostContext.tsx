@@ -100,7 +100,12 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const clearError = () => setError(null);
 
+<<<<<<< HEAD
   const createPost = async (content: string, image?: File, subCommunityId?: string, type = 'UPDATE') => {
+=======
+  const createPost = useCallback(async (content: string, image?: File, subCommunityId?: string, type = 'UPDATE') => {
+    if(!token) return;
+>>>>>>> origin
     try {
       setLoading(true);
       const formData = new FormData();
@@ -121,7 +126,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err) {
       handleError(err);
     }
+<<<<<<< HEAD
   };
+=======
+  },[token]);
+>>>>>>> origin
 
   const updatePost = useCallback(async (id: string, content: string, image?: File, subCommunityId?: string) => {
     try {

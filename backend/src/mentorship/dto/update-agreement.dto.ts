@@ -1,4 +1,3 @@
-
 import { IsString, IsOptional, IsEnum } from 'class-validator';
 import { AgreementStatus } from '@prisma/client';
 

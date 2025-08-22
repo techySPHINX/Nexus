@@ -1,4 +1,3 @@
-
 import { IsString, IsDateString, IsOptional, IsEnum } from 'class-validator';
 import { GoalStatus } from '@prisma/client';
 
