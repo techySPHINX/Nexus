@@ -29,7 +29,7 @@ export interface Profile {
 interface CreatePostFormProps {
   subCommunityId?: string;
   onSuccess?: () => void;
-  onError?: (error: any) => void; // 👈 add this
+  onError?: (error: unknown) => void; // 👈 add this
   profile?: Pick<Profile, 'id' | 'avatarUrl'>; // 👈 only id + avatarUrl
 }
 
@@ -111,7 +111,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
             {user?.name?.charAt(0) || 'U'}
           </Avatar>
           <Typography variant="subtitle1" sx={{ ml: 2 }}>
-            What's on your mind?
+            What&apos;s on your mind?
           </Typography>
         </Box>
 

@@ -79,7 +79,6 @@ export const SubCommunitiesPage: React.FC = () => {
         <DialogTitle>Create New Sub-Community</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus
             margin="dense"
             label="Name"
             fullWidth

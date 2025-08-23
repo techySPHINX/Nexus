@@ -23,7 +23,7 @@ export const UserPostsPage: React.FC = () => {
   return (
     <Box sx={{ maxWidth: '800px', margin: '0 auto', p: 2 }}>
       <Typography variant="h4" gutterBottom>
-        User's Posts
+        User&apos;s Posts
       </Typography>
 
       {loading && pagination.page === 1 ? (
@@ -32,7 +32,7 @@ export const UserPostsPage: React.FC = () => {
         </Box>
       ) : userPosts.length === 0 ? (
         <Typography variant="body1" sx={{ mt: 2 }}>
-          This user hasn't posted anything yet.
+          This user hasn&apos;t posted anything yet.
         </Typography>
       ) : (
         <>

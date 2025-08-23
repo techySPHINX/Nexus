@@ -100,7 +100,7 @@ const Dashboard: React.FC = () => {
     connections,
     pendingReceived,
     suggestions,
-    stats: connectionStats,
+    // stats: connectionStats,
   } = useConnections();
 
   // Fetch dashboard data
@@ -194,7 +194,22 @@ const Dashboard: React.FC = () => {
     }
   }, [user, connections, pendingReceived, suggestions]);
 
-  const calculateProfileCompletion = (user: any): number => {
+  interface UserProfile {
+    bio?: string;
+    location?: string;
+    skills?: string[];
+  }
+
+  interface DashboardUser {
+    name?: string;
+    email?: string;
+    role?: string;
+    profile?: UserProfile;
+  }
+
+  const calculateProfileCompletion = (
+    user: DashboardUser | null | undefined
+  ): number => {
     if (!user) return 0;
 
     let completed = 0;
@@ -210,9 +225,12 @@ const Dashboard: React.FC = () => {
   };
 
   const generateRecentActivities = (
-    connections: any[],
-    pendingRequests: any[],
-    conversations: any[]
+    connections: { id: string; user: { id: string; name: string } }[],
+    pendingRequests: {
+      id: string;
+      requester?: { id: string; name?: string };
+    }[],
+    conversations: { id: string; participant?: { id: string; name?: string } }[]
   ): RecentActivity[] => {
     const activities: RecentActivity[] = [];
 
@@ -372,7 +390,7 @@ const Dashboard: React.FC = () => {
           Welcome back, {user?.name?.split(' ')[0] || 'User'}!
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 1 }}>
-          Here's what's happening in your network today
+          Here&apos;s what&apos;s happening in your network today
         </Typography>
       </Box>
 

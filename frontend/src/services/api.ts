@@ -200,9 +200,9 @@ export const handleApiError = (error: AxiosError | Error | unknown): string => {
     error &&
     typeof error === 'object' &&
     'response' in error &&
-    (error.response as any)?.data?.message
+    (error.response as AxiosResponse)?.data?.message
   ) {
-    return (error.response as any).data.message;
+    return (error.response as AxiosResponse).data.message;
   }
   if (
     error &&

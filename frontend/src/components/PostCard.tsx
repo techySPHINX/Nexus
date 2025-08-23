@@ -89,6 +89,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment }) => {
     return date.toLocaleDateString();
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   function setAnchorEl(_currentTarget: EventTarget & HTMLButtonElement): void {
     throw new Error('Function not implemented.');
   }

@@ -207,7 +207,7 @@ const Connections: React.FC = () => {
         // Refresh data
         fetchAll(hookFilters);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error canceling connection:', error);
       setError(handleApiError(error) || 'Failed to cancel connection request');
     } finally {
@@ -225,7 +225,7 @@ const Connections: React.FC = () => {
         // Refresh data
         fetchAll(hookFilters);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error removing connection:', error);
       setError(handleApiError(error) || 'Failed to remove connection');
     } finally {
@@ -247,7 +247,7 @@ const Connections: React.FC = () => {
 
       // Navigate to Messages page to show the new conversation
       window.location.href = '/messages';
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending message:', error);
       setError(handleApiError(error) || 'Failed to send message');
     } finally {
@@ -526,7 +526,6 @@ const Connections: React.FC = () => {
                 Send a message to {selectedUser?.name}
               </DialogContentText>
               <TextField
-                autoFocus
                 margin="dense"
                 label="Message"
                 fullWidth

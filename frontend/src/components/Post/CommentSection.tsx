@@ -19,10 +19,23 @@ interface CommentSectionProps {
   postId: string;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({}) => {
+export const CommentSection: React.FC<CommentSectionProps> = () => {
   const { user } = useAuth();
   const [comment, setComment] = useState('');
-  const [comments, setComments] = useState<any[]>([]); // Replace with your comment type
+  interface Comment {
+    id: string;
+    content: string;
+    createdAt: string;
+    user: {
+      id: string | undefined;
+      name: string | undefined;
+      profile: {
+        avatarUrl?: string;
+      };
+    };
+  }
+
+  const [comments, setComments] = useState<Comment[]>([]);
 
   const handleCommentSubmit = async () => {
     try {

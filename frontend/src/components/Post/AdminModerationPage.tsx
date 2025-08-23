@@ -68,7 +68,7 @@ export const AdminModerationPage: React.FC = () => {
       setSnackbarOpen(true);
       // Refresh the list after action
       getPendingPosts(1); // Reset to first page
-    } catch (error) {
+    } catch {
       setSnackbarMessage('Failed to process post. Please try again.');
       setSnackbarSeverity('error');
       setSnackbarOpen(true);

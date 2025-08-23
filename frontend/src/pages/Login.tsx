@@ -23,6 +23,7 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import ThemeToggle from '../components/ThemeToggle';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -42,10 +43,8 @@ const Login: React.FC = () => {
     try {
       await login(email, password);
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || 'Login failed. Please try again.'
-      );
+    } catch (err: unknown) {
+      setError(getErrorMessage(err) || 'Failed to log in');
     } finally {
       setLoading(false);
     }
@@ -222,7 +221,7 @@ const Login: React.FC = () => {
               style={{ textAlign: 'center' }}
             >
               <Typography variant="body2" color="text.secondary">
-                Don't have an account?{' '}
+                Don&apos;t have an account?{' '}
                 <Link
                   component={RouterLink}
                   to="/register"

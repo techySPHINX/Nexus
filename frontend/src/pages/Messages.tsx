@@ -35,6 +35,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, handleApiError } from '../services/api';
 import { webSocketService, WebSocketMessage } from '../services/websocket';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 interface Message {
   id: string;
@@ -152,24 +153,27 @@ const Messages: React.FC = () => {
       // Set up message handlers
       webSocketService.on('NEW_MESSAGE', (message: WebSocketMessage) => {
         console.log('Received NEW_MESSAGE:', message);
-        if (message.data.senderId === selectedConversation.otherUser.id) {
-          handleNewMessage(message.data);
+        const data = message.data as Message;
+        if (data.senderId === selectedConversation.otherUser.id) {
+          handleNewMessage(data);
         }
       });
 
       webSocketService.on('TYPING_START', (message: WebSocketMessage) => {
         console.log('Received TYPING_START:', message);
-        if (message.data.receiverId === user.id) {
-          setTypingUsers((prev) => new Set(prev).add(message.data.senderId));
+        const data = message.data as { receiverId: string; senderId: string };
+        if (data.receiverId === user.id) {
+          setTypingUsers((prev) => new Set(prev).add(data.senderId));
         }
       });
 
       webSocketService.on('TYPING_STOP', (message: WebSocketMessage) => {
         console.log('Received TYPING_STOP:', message);
-        if (message.data.receiverId === user.id) {
+        const data = message.data as { receiverId: string; senderId: string };
+        if (data.receiverId === user.id) {
           setTypingUsers((prev) => {
             const newSet = new Set(prev);
-            newSet.delete(message.data.senderId);
+            newSet.delete(data.senderId);
             return newSet;
           });
         }
@@ -192,10 +196,10 @@ const Messages: React.FC = () => {
       });
 
       console.log('WebSocket message handlers set up successfully');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('WebSocket connection failed:', error);
       setIsRealTimeEnabled(false);
-      setError(`WebSocket connection failed: ${error.message}`);
+      setError(`WebSocket connection failed: ${getErrorMessage(error)}`);
     }
   }, [selectedConversation, user, token]);
 
@@ -245,7 +249,8 @@ const Messages: React.FC = () => {
     try {
       // Create a simple notification sound
       const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+        (window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext!)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -263,8 +268,9 @@ const Messages: React.FC = () => {
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
-    } catch (error) {
+    } catch (error: unknown) {
       console.log('Audio notification not supported');
+      setError(getErrorMessage(error));
     }
   };
 
@@ -273,7 +279,7 @@ const Messages: React.FC = () => {
       setLoading(true);
       const response = await apiService.messages.getAllConversations();
       setConversations(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching conversations:', error);
       setError(handleApiError(error) || 'Failed to load conversations');
     } finally {
@@ -296,7 +302,7 @@ const Messages: React.FC = () => {
       if (sortedMessages.length > 0) {
         lastMessageIdRef.current = sortedMessages[sortedMessages.length - 1].id;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching messages:', error);
       setError(handleApiError(error) || 'Failed to load messages');
     }
@@ -349,7 +355,7 @@ const Messages: React.FC = () => {
 
       // Clear success message after 2 seconds
       setTimeout(() => setSuccess(null), 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending message:', error);
       setError(handleApiError(error) || 'Failed to send message');
     }

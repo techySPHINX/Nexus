@@ -160,6 +160,7 @@ const Referrals: React.FC = () => {
         '✅ Referrals loaded successfully:',
         response.data?.length || 0
       );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error('❌ Error fetching referrals:', err);
       if (err.response) {
@@ -238,7 +239,16 @@ const Referrals: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (
+    status: string
+  ):
+    | 'default'
+    | 'primary'
+    | 'secondary'
+    | 'error'
+    | 'info'
+    | 'success'
+    | 'warning' => {
     switch (status) {
       case 'APPROVED':
       case 'ACCEPTED':
@@ -380,7 +390,7 @@ const Referrals: React.FC = () => {
                     </Box>
                     <Chip
                       label={referral.status}
-                      color={getStatusColor(referral.status) as any}
+                      color={getStatusColor(referral.status)}
                       size="small"
                     />
                   </Box>
@@ -665,7 +675,16 @@ const Referrals: React.FC = () => {
                       </Box>
                       <Chip
                         label={application.status}
-                        color={getStatusColor(application.status) as any}
+                        color={
+                          getStatusColor(application.status) as
+                            | 'default'
+                            | 'primary'
+                            | 'secondary'
+                            | 'error'
+                            | 'info'
+                            | 'success'
+                            | 'warning'
+                        }
                         size="small"
                       />
                     </Box>

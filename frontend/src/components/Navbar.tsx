@@ -548,7 +548,9 @@ const Navbar: React.FC = () => {
                 },
               }}
               onClick={() => {
-                handleUserMenuOpen({ currentTarget: document.body } as any);
+                handleUserMenuOpen({
+                  currentTarget: document.body,
+                } as React.MouseEvent<HTMLElement>);
                 handleDrawerToggle();
               }}
             >
