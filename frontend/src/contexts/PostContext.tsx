@@ -91,9 +91,6 @@ const PostContext = createContext<PostContextType | undefined>(undefined);
 export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
   const [feed, setFeed] = useState<Post[]>([]);
@@ -113,10 +110,8 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   const { token } = useAuth();
-  const { token } = useAuth();
 
   const api = axios.create({
-    baseURL: 'http://localhost:3000',
     baseURL: 'http://localhost:3000',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -156,11 +151,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
       if (subCommunityId) formData.append('subCommunityId', subCommunityId);
       if (image) formData.append('image', image);
 
-        const { data } = await api.post('/posts', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+      const { data } = await api.post('/posts', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       setPosts((prev) => [data, ...prev]);
       setLoading(false);
@@ -183,11 +178,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
       if (subCommunityId) formData.append('subCommunityId', subCommunityId);
       if (image) formData.append('image', image);
 
-        const { data } = await api.patch(`/posts/${id}`, formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+      const { data } = await api.patch(`/posts/${id}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
 
       setPosts((prev) => prev.map((post) => (post.id === id ? data : post)));
       setFeed((prev) => prev.map((post) => (post.id === id ? data : post)));
@@ -447,4 +442,3 @@ export const usePosts = () => {
   }
   return context;
 };
-

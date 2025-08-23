@@ -82,8 +82,15 @@ const NotificationIndicator = () => {
       await markAllAsRead();
       showSnackbar('All notifications marked as read', 'success');
       fetchNotifications(); // Refresh the notifications
-    } catch {
+    } catch (err: unknown) {
       showSnackbar('Failed to mark all as read', 'error');
+      if (axios.isAxiosError(err)) {
+        console.error(err.response?.data?.message || 'Axios error');
+      } else if (err instanceof Error) {
+        console.error(err.message);
+      } else {
+        console.error('Unknown error');
+      }
     }
   };
 
@@ -101,13 +108,33 @@ const NotificationIndicator = () => {
     setPrevUnreadCount(unreadCount);
   }, [unreadCount, prevUnreadCount, playSound]);
 
-  // Polling effect
+  //Polling effect , 30 sec when user is active , stop when inactive
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 10000); // Poll every 40 seconds
+    let interval: ReturnType<typeof setInterval> | null = null;
 
-    return () => clearInterval(interval);
+    const startPolling = () => {
+      if (!interval) {
+        interval = setInterval(fetchNotifications, 60000);
+      }
+    };
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    window.addEventListener('focus', startPolling);
+    window.addEventListener('blur', stopPolling);
+
+    startPolling(); // start immediately when mounted
+
+    return () => {
+      stopPolling();
+      window.removeEventListener('focus', startPolling);
+      window.removeEventListener('blur', stopPolling);
+    };
   }, [fetchNotifications]);
 
   return (

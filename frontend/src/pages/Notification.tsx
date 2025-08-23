@@ -21,10 +21,14 @@ import {
   Pagination,
   Tabs,
   Tab,
+  Dialog,
+  DialogTitle,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
-  Info as InfoIcon,
   Check as CheckIcon,
   MoreVert as MoreVertIcon,
   Refresh as RefreshIcon,
@@ -35,54 +39,59 @@ import {
   Settings as SystemIcon,
   Event as EventIcon,
   Markunread as UnreadIcon,
+  PersonAdd as PersonAddIcon,
+  PeopleAlt as PeopleAltIcon,
+  Favorite as FavoriteIcon,
+  ChatBubble as ChatBubbleIcon,
+  Mail as MailIcon,
+  Settings as SettingsIcon,
+  EventAvailable as EventAvailableIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
+import { NotificationType, NotificationCategory } from '@/types/notification';
 import { formatDistanceToNow } from 'date-fns';
-
-enum NotificationType {
-  CONNECTION_REQUEST = 'CONNECTION_REQUEST',
-  CONNECTION_ACCEPTED = 'CONNECTION_ACCEPTED',
-  POST_LIKE = 'POST_LIKE',
-  POST_COMMENT = 'POST_COMMENT',
-  MESSAGE = 'MESSAGE',
-  SYSTEM = 'SYSTEM',
-  EVENT = 'EVENT',
-}
 
 const Notification: React.FC = () => {
   const {
     notifications,
+    pagination,
     markAsRead,
     markAsUnread,
     markAllAsRead,
+    unreadCountsByCategory,
     deleteNotification,
+    deleteReadNotifications,
     unreadCount,
     fetchNotifications,
     loading,
     error,
   } = useNotification();
 
-  const [page, setPage] = useState(1);
-  const [itemsPerPage] = useState(10);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [selectedNotification, setSelectedNotification] = useState<
     string | null
   >(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    mode: 'single' | 'all' | null;
+    notificationId?: string;
+  }>({ open: false, mode: null });
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [currentTab, setCurrentTab] = useState<NotificationType | 'ALL'>('ALL');
+  const [currentTab, setCurrentTab] = useState<NotificationCategory | 'ALL'>(
+    'ALL'
+  );
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Calculate unread counts for each tab
-  const getUnreadCountForTab = (tab: NotificationType | 'ALL') => {
-    return notifications.filter((notification) => {
-      const matchesTab =
-        tab === 'ALL' ||
-        (tab === 'CONNECTION_REQUEST'
-          ? notification.type === 'CONNECTION_REQUEST' ||
-            notification.type === 'CONNECTION_ACCEPTED'
-          : notification.type === tab);
-      return matchesTab && !notification.read;
-    }).length;
+  // Map for category to types (same as in context for consistency)
+  const categoryToTypes: Record<string, string[]> = {
+    CONNECTION: ['CONNECTION_REQUEST', 'CONNECTION_ACCEPTED'],
+    POST: ['POST_LIKE', 'POST_COMMENT'],
+    MESSAGE: ['MESSAGE'],
+    SYSTEM: ['SYSTEM'],
+    EVENT: ['EVENT'],
+    ALL: [],
   };
 
   const openMenu = (event: React.MouseEvent<HTMLElement>, id: string) => {
@@ -96,7 +105,7 @@ const Notification: React.FC = () => {
   };
 
   const handleRefresh = async () => {
-    await fetchNotifications();
+    await fetchNotifications(currentPage, pagination.limit, currentTab);
     setSnackbarMessage('Notifications refreshed');
     setSnackbarOpen(true);
   };
@@ -108,19 +117,25 @@ const Notification: React.FC = () => {
   };
 
   const handleMarkTabAsRead = async () => {
-    const notificationsToMark = filteredNotifications
-      .filter((n) => !n.read)
-      .map((n) => n.id);
+    let notificationsToMark: string[] = [];
 
-    // implement batch mark as read in your context
-    // JoyBoy-00
-    //future implementation could be like this:
-    // await markAsReadBatch(notificationsToMark);
-    // if (notificationsToMark.length === 0) {
-    //     setSnackbarMessage('No unread notifications to mark as read');
-    //     setSnackbarOpen(true);
-    //     return;
-    // }
+    if (currentTab === 'ALL') {
+      notificationsToMark = notifications
+        .filter((n) => !n.read)
+        .map((n) => n.id);
+    } else {
+      const typesForTab = categoryToTypes[currentTab] || [];
+      notificationsToMark = notifications
+        .filter((n) => !n.read && typesForTab.includes(n.type))
+        .map((n) => n.id);
+    }
+
+    if (notificationsToMark.length === 0) {
+      setSnackbarMessage('No unread notifications to mark as read');
+      setSnackbarOpen(true);
+      return;
+    }
+
     for (const id of notificationsToMark) {
       await markAsRead(id);
     }
@@ -146,81 +161,123 @@ const Notification: React.FC = () => {
   };
 
   const handleDeleteNotification = async (id: string): Promise<void> => {
-    await deleteNotification(id);
     closeMenu();
-    await fetchNotifications();
-    setSnackbarMessage('Notification deleted');
-    setSnackbarOpen(true);
+    setConfirmDialog({ open: true, mode: 'single', notificationId: id });
+  };
+
+  const handleDeleteAllClick = () => {
+    closeMenu();
+    setConfirmDialog({ open: true, mode: 'all' });
+  };
+
+  const handleConfirmForDelete = async () => {
+    try {
+      if (confirmDialog.mode === 'single' && confirmDialog.notificationId) {
+        await deleteNotification(confirmDialog.notificationId);
+        setSnackbarMessage('Notification deleted');
+      } else if (confirmDialog.mode === 'all') {
+        await deleteReadNotifications();
+        setSnackbarMessage('All read notifications deleted');
+      }
+      setSnackbarOpen(true);
+    } catch {
+      setSnackbarMessage('Failed to delete notifications');
+      setSnackbarOpen(true);
+    } finally {
+      setConfirmDialog({ open: false, mode: null });
+    }
+  };
+
+  const handleCancel = () => {
+    setConfirmDialog({ open: false, mode: null });
+  };
+
+  const handleTabChange = (
+    _event: React.SyntheticEvent,
+    newValue: NotificationCategory | 'ALL'
+  ) => {
+    setCurrentTab(newValue);
+    setCurrentPage(1);
+    fetchNotifications(1, pagination.limit, newValue);
   };
 
   const handlePageChange = (
     _event: React.ChangeEvent<unknown>,
     value: number
   ) => {
-    setPage(value);
-  };
-
-  // Reset to first page when changing tabs
-  const handleTabChange = (
-    _event: React.SyntheticEvent,
-    newValue: NotificationType | 'ALL'
-  ) => {
-    setCurrentTab(newValue);
-    setPage(1);
-  };
-
-  const getUnreadCount = (types: NotificationType[]) => {
-    return notifications.filter((n) => types.includes(n.type) && !n.read)
-      .length;
+    setCurrentPage(value);
+    fetchNotifications(value, pagination.limit, currentTab);
   };
 
   const getNotificationIcon = (type: NotificationType) => {
     switch (type) {
       case NotificationType.CONNECTION_REQUEST:
+        return <PersonAddIcon sx={{ color: '#1976d2' }} />;
       case NotificationType.CONNECTION_ACCEPTED:
-        return <ConnectionIcon color="primary" />;
+        return <PeopleAltIcon sx={{ color: '#2e7d32' }} />;
       case NotificationType.POST_LIKE:
+        return <FavoriteIcon sx={{ color: '#d32f2f' }} />;
       case NotificationType.POST_COMMENT:
-        return <PostIcon color="secondary" />;
+        return <ChatBubbleIcon sx={{ color: '#0288d1' }} />;
       case NotificationType.MESSAGE:
-        return <MessageIcon color="info" />;
+        return <MailIcon sx={{ color: '#7b1fa2' }} />;
       case NotificationType.SYSTEM:
-        return <SystemIcon color="warning" />;
+        return <SettingsIcon sx={{ color: '#f9a825' }} />;
       case NotificationType.EVENT:
-        return <EventIcon color="success" />;
+        return <EventAvailableIcon sx={{ color: '#388e3c' }} />;
       default:
-        return <InfoIcon color="info" />;
+        return <InfoIcon sx={{ color: '#757575' }} />;
     }
   };
 
-  const filteredNotifications = notifications.filter((notification) => {
-    if (currentTab === 'ALL') return true;
-    if (currentTab === NotificationType.CONNECTION_REQUEST) {
-      return (
-        notification.type === NotificationType.CONNECTION_REQUEST ||
-        notification.type === NotificationType.CONNECTION_ACCEPTED
-      );
-    }
-    if (currentTab === NotificationType.POST_LIKE) {
-      return (
-        notification.type === NotificationType.POST_LIKE ||
-        notification.type === NotificationType.POST_COMMENT
-      );
-    }
-    return notification.type === currentTab;
-  });
+  // Filter notifications for the current tab display
+  const filteredNotifications =
+    currentTab === 'ALL'
+      ? notifications
+      : notifications.filter((n) =>
+          categoryToTypes[currentTab]?.includes(n.type)
+        );
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredNotifications.length / itemsPerPage);
-  const paginatedNotifications = filteredNotifications.slice(
-    (page - 1) * itemsPerPage,
-    page * itemsPerPage
-  );
-
-  // Refetch when user changes
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    fetchNotifications(currentPage, pagination.limit, currentTab);
+  }, [currentTab, currentPage, fetchNotifications, pagination.limit]);
+
+  const tabConfig: {
+    category: NotificationCategory | 'ALL';
+    label: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      category: 'ALL',
+      label: 'All',
+      icon: <NotificationsIcon sx={{ mr: 1 }} />,
+    },
+    {
+      category: NotificationCategory.CONNECTION,
+      label: 'Connections',
+      icon: <ConnectionIcon sx={{ mr: 1 }} />,
+    },
+    {
+      category: NotificationCategory.POST,
+      label: 'Posts',
+      icon: <PostIcon sx={{ mr: 1 }} />,
+    },
+    {
+      category: NotificationCategory.MESSAGE,
+      label: 'Messages',
+      icon: <MessageIcon sx={{ mr: 1 }} />,
+    },
+    {
+      category: NotificationCategory.SYSTEM,
+      label: 'System',
+      icon: <SystemIcon sx={{ mr: 1 }} />,
+    },
+    {
+      category: NotificationCategory.EVENT,
+      label: 'Events',
+      icon: <EventIcon sx={{ mr: 1 }} />,
+    },
+  ];
 
   return (
     <Box sx={{ maxWidth: 1000, mx: 'auto', p: 3 }}>
@@ -271,132 +328,50 @@ const Notification: React.FC = () => {
           variant="scrollable"
           scrollButtons="auto"
         >
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <NotificationsIcon sx={{ mr: 1 }} />
-                All
-                {unreadCount > 0 && (
-                  <Chip
-                    label={unreadCount}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-            }
-            value="ALL"
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <ConnectionIcon sx={{ mr: 1 }} />
-                Connections
-                {getUnreadCount([
-                  NotificationType.CONNECTION_REQUEST,
-                  NotificationType.CONNECTION_ACCEPTED,
-                ]) > 0 && (
-                  <Chip
-                    label={getUnreadCount([
-                      NotificationType.CONNECTION_REQUEST,
-                      NotificationType.CONNECTION_ACCEPTED,
-                    ])}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-            }
-            value={NotificationType.CONNECTION_REQUEST}
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <PostIcon sx={{ mr: 1 }} />
-                Posts
-                {getUnreadCount([
-                  NotificationType.POST_LIKE,
-                  NotificationType.POST_COMMENT,
-                ]) > 0 && (
-                  <Chip
-                    label={getUnreadCount([
-                      NotificationType.POST_LIKE,
-                      NotificationType.POST_COMMENT,
-                    ])}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-            }
-            value={NotificationType.POST_LIKE}
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <MessageIcon sx={{ mr: 1 }} />
-                Messages
-                {getUnreadCountForTab(NotificationType.MESSAGE) > 0 && (
-                  <Chip
-                    label={getUnreadCountForTab(NotificationType.MESSAGE)}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-            }
-            value={NotificationType.MESSAGE}
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <SystemIcon sx={{ mr: 1 }} />
-                System
-                {getUnreadCountForTab(NotificationType.SYSTEM) > 0 && (
-                  <Chip
-                    label={getUnreadCountForTab(NotificationType.SYSTEM)}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-            }
-            value={NotificationType.SYSTEM}
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <EventIcon sx={{ mr: 1 }} />
-                Events
-                {getUnreadCountForTab(NotificationType.EVENT) > 0 && (
-                  <Chip
-                    label={getUnreadCountForTab(NotificationType.EVENT)}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-            }
-            value={NotificationType.EVENT}
-          />
+          {tabConfig.map(({ category, label, icon }) => (
+            <Tab
+              key={category}
+              value={category}
+              label={
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  {icon}
+                  <span style={{ marginLeft: 8 }}>{label}</span>
+                  {unreadCountsByCategory[category] > 0 && (
+                    <Chip
+                      label={unreadCountsByCategory[category]}
+                      size="small"
+                      color="primary"
+                      sx={{ ml: 1 }}
+                    />
+                  )}
+                </Box>
+              }
+            />
+          ))}
         </Tabs>
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 2 }}>
           <Button
             variant="outlined"
             startIcon={<CheckIcon />}
             onClick={handleMarkTabAsRead}
             size="small"
-            disabled={getUnreadCountForTab(currentTab) === 0 || loading}
+            disabled={unreadCountsByCategory[currentTab] === 0 || loading}
           >
             Mark this tab as read
           </Button>
+          {currentTab === 'ALL' && (
+            <Button
+              variant="outlined"
+              startIcon={<DeleteIcon />}
+              color="error"
+              size="small"
+              onClick={handleDeleteAllClick}
+              disabled={!notifications.some((n) => n.read)}
+            >
+              Delete All Read Notifications
+            </Button>
+          )}
         </Box>
 
         <Divider sx={{ mb: 3 }} />
@@ -428,7 +403,7 @@ const Notification: React.FC = () => {
         {!loading && filteredNotifications.length > 0 && (
           <>
             <List sx={{ width: '100%' }}>
-              {paginatedNotifications.map((notification) => (
+              {filteredNotifications.map((notification) => (
                 <React.Fragment key={notification.id}>
                   <ListItem
                     alignItems="flex-start"
@@ -461,26 +436,22 @@ const Notification: React.FC = () => {
                     </ListItemAvatar>
                     <ListItemText
                       primary={
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        <Typography
+                          component="span"
+                          variant="body1"
+                          color="text.primary"
+                          sx={{
+                            fontWeight: notification.read ? 'normal' : 'bold',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '60ch',
+                          }}
                         >
-                          <Typography
-                            component="span"
-                            variant="body1"
-                            color="text.primary"
-                            sx={{
-                              fontWeight: notification.read ? 'normal' : 'bold',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              maxWidth: '60ch',
-                            }}
-                          >
-                            {notification.message.length > 100
-                              ? `${notification.message.substring(0, 100)}...`
-                              : notification.message}
-                          </Typography>
-                        </Box>
+                          {notification.message.length > 100
+                            ? `${notification.message.substring(0, 100)}...`
+                            : notification.message}
+                        </Typography>
                       }
                       secondary={
                         <Typography
@@ -490,17 +461,12 @@ const Notification: React.FC = () => {
                         >
                           {formatDistanceToNow(
                             new Date(notification.createdAt),
-                            { addSuffix: true }
+                            {
+                              addSuffix: true,
+                            }
                           )}
                         </Typography>
                       }
-                      sx={{
-                        '& .MuiListItemText-primary': {
-                          display: 'flex',
-                          alignItems: 'center',
-                        },
-                        '& .MuiListItemText-secondary': { mt: 0.5 },
-                      }}
                     />
                   </ListItem>
                   <Divider variant="inset" component="li" />
@@ -508,11 +474,11 @@ const Notification: React.FC = () => {
               ))}
             </List>
 
-            {totalPages > 1 && (
+            {pagination?.totalPages > 1 && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                 <Pagination
-                  count={totalPages}
-                  page={page}
+                  count={pagination.totalPages}
+                  page={pagination.page}
                   onChange={handlePageChange}
                   color="primary"
                 />
@@ -522,7 +488,6 @@ const Notification: React.FC = () => {
         )}
       </Paper>
 
-      {/* Notification menu */}
       <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
         <MenuItem
           onClick={() =>
@@ -549,7 +514,27 @@ const Notification: React.FC = () => {
         </MenuItem>
       </Menu>
 
-      {/* Snackbar for feedback - positioned on the right */}
+      <Dialog open={confirmDialog.open} onClose={handleCancel}>
+        <DialogTitle>
+          {confirmDialog.mode === 'single'
+            ? 'Delete Notification?'
+            : 'Delete All Read Notifications?'}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {confirmDialog.mode === 'single'
+              ? 'Are you sure you want to delete this notification? This action cannot be undone.'
+              : 'Are you sure you want to delete all read notifications? This action cannot be undone.'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancel}>Cancel</Button>
+          <Button color="error" onClick={handleConfirmForDelete}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}

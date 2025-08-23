@@ -1,0 +1,34 @@
+export enum NotificationCategory {
+  CONNECTION = 'CONNECTION',
+  POST = 'POST',
+  MESSAGE = 'MESSAGE',
+  SYSTEM = 'SYSTEM',
+  EVENT = 'EVENT',
+}
+
+export enum NotificationType {
+  CONNECTION_REQUEST = 'CONNECTION_REQUEST',
+  CONNECTION_ACCEPTED = 'CONNECTION_ACCEPTED',
+  POST_LIKE = 'POST_LIKE',
+  POST_COMMENT = 'POST_COMMENT',
+  MESSAGE = 'MESSAGE',
+  SYSTEM = 'SYSTEM',
+  EVENT = 'EVENT',
+}
+
+export const categoryToTypes: Record<string, string[]> = {
+  CONNECTION: ['CONNECTION_REQUEST', 'CONNECTION_ACCEPTED'],
+  POST: ['POST_LIKE', 'POST_COMMENT'],
+  MESSAGE: ['MESSAGE'],
+  SYSTEM: ['SYSTEM'],
+  EVENT: ['EVENT'],
+  ALL: [],
+};
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  message: string;
+  createdAt: Date;
+  read: boolean;
+}
