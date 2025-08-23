@@ -93,6 +93,7 @@ export class NotificationController {
       MESSAGE: number;
       SYSTEM: number;
       EVENT: number;
+      REFERRAL: number;
     };
   }> {
     return this.notificationService.getNotificationStats(req.user.userId);

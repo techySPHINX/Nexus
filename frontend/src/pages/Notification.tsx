@@ -47,6 +47,8 @@ import {
   Settings as SettingsIcon,
   EventAvailable as EventAvailableIcon,
   Info as InfoIcon,
+  Handshake as ReferralIcon,
+  Handshake as HandshakeIcon,
 } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
 import { NotificationType, NotificationCategory } from '@/types/notification';
@@ -91,6 +93,11 @@ const Notification: React.FC = () => {
     MESSAGE: ['MESSAGE'],
     SYSTEM: ['SYSTEM'],
     EVENT: ['EVENT'],
+    REFERRAL: [
+      'REFERRAL_APPLICATION',
+      'REFERRAL_STATUS_UPDATE',
+      'REFERRAL_APPLICATION_STATUS_UPDATE',
+    ],
     ALL: [],
   };
 
@@ -225,6 +232,12 @@ const Notification: React.FC = () => {
         return <SettingsIcon sx={{ color: '#f9a825' }} />;
       case NotificationType.EVENT:
         return <EventAvailableIcon sx={{ color: '#388e3c' }} />;
+      case NotificationType.REFERRAL_APPLICATION:
+        return <HandshakeIcon sx={{ color: '#1976d2' }} />;
+      case NotificationType.REFERRAL_STATUS_UPDATE:
+        return <HandshakeIcon sx={{ color: '#2e7d32' }} />;
+      case NotificationType.REFERRAL_APPLICATION_STATUS_UPDATE:
+        return <HandshakeIcon sx={{ color: '#9c27b0' }} />;
       default:
         return <InfoIcon sx={{ color: '#757575' }} />;
     }
@@ -276,6 +289,11 @@ const Notification: React.FC = () => {
       category: NotificationCategory.EVENT,
       label: 'Events',
       icon: <EventIcon sx={{ mr: 1 }} />,
+    },
+    {
+      category: NotificationCategory.REFERRAL,
+      label: 'Referrals',
+      icon: <ReferralIcon sx={{ mr: 1 }} />,
     },
   ];
 

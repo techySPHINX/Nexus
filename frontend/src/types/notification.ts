@@ -4,6 +4,7 @@ export enum NotificationCategory {
   MESSAGE = 'MESSAGE',
   SYSTEM = 'SYSTEM',
   EVENT = 'EVENT',
+  REFERRAL = 'REFERRAL',
 }
 
 export enum NotificationType {
@@ -14,6 +15,9 @@ export enum NotificationType {
   MESSAGE = 'MESSAGE',
   SYSTEM = 'SYSTEM',
   EVENT = 'EVENT',
+  REFERRAL_APPLICATION = 'REFERRAL_APPLICATION',
+  REFERRAL_STATUS_UPDATE = 'REFERRAL_STATUS_UPDATE',
+  REFERRAL_APPLICATION_STATUS_UPDATE = 'REFERRAL_APPLICATION_STATUS_UPDATE',
 }
 
 export const categoryToTypes: Record<string, string[]> = {
@@ -22,6 +26,11 @@ export const categoryToTypes: Record<string, string[]> = {
   MESSAGE: ['MESSAGE'],
   SYSTEM: ['SYSTEM'],
   EVENT: ['EVENT'],
+  REFERRAL: [
+    'REFERRAL_APPLICATION',
+    'REFERRAL_STATUS_UPDATE',
+    'REFERRAL_APPLICATION_STATUS_UPDATE',
+  ],
   ALL: [],
 };
 

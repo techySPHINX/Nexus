@@ -56,6 +56,11 @@ const categoryToTypes: Record<string, NotificationType[]> = {
   MESSAGE: [NotificationType.MESSAGE],
   SYSTEM: [NotificationType.SYSTEM],
   EVENT: [NotificationType.EVENT],
+  REFERRAL: [
+    NotificationType.REFERRAL_APPLICATION,
+    NotificationType.REFERRAL_STATUS_UPDATE,
+    NotificationType.REFERRAL_APPLICATION_STATUS_UPDATE,
+  ],
 };
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -88,6 +93,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     MESSAGE: 0,
     SYSTEM: 0,
     EVENT: 0,
+    REFERRAL: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,6 +113,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         MESSAGE: stats.byCategory.MESSAGE,
         SYSTEM: stats.byCategory.SYSTEM,
         EVENT: stats.byCategory.EVENT,
+        REFERRAL: stats.byCategory.REFERRAL,
       };
 
       setUnreadCountsByCategory(counts);
@@ -124,6 +131,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           MESSAGE: 0,
           SYSTEM: 0,
           EVENT: 0,
+          REFERRAL: 0,
         };
 
         // Fetch counts for each category individually as fallback
@@ -317,6 +325,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         MESSAGE: 0,
         SYSTEM: 0,
         EVENT: 0,
+        REFERRAL: 0,
       });
     } catch (err) {
       console.error('Failed to mark all notifications as read:', err);

@@ -95,6 +95,7 @@ export const fetchNotificationStatsService = async (): Promise<{
     MESSAGE: number;
     SYSTEM: number;
     EVENT: number;
+    REFERRAL: number;
   };
 }> => {
   const response = await api.get('/notifications/stats');

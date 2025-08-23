@@ -494,6 +494,9 @@ export class NotificationService {
       MESSAGE: 'MESSAGE',
       SYSTEM: 'SYSTEM',
       EVENT: 'EVENT',
+      REFERRAL_APPLICATION: 'REFERRAL',
+      REFERRAL_STATUS_UPDATE: 'REFERRAL',
+      REFERRAL_APPLICATION_STATUS_UPDATE: 'REFERRAL',
     };
 
     // Calculate unread counts by category
@@ -535,6 +538,7 @@ export class NotificationService {
         MESSAGE: unreadByCategory.MESSAGE || 0,
         SYSTEM: unreadByCategory.SYSTEM || 0,
         EVENT: unreadByCategory.EVENT || 0,
+        REFERRAL: unreadByCategory.REFERRAL || 0,
       },
     };
   }
