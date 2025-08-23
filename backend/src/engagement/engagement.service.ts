@@ -4,6 +4,7 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { VoteTargetType, VoteType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
 /**
@@ -14,70 +15,143 @@ export class EngagementService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Allows a user to like a specific post.
-   * Prevents a user from liking the same post multiple times.
-   * @param userId - The ID of the user liking the post.
-   * @param postId - The ID of the post to be liked.
-   * @returns A promise that resolves to the created like record.
+   * Allows a user to vote on a specific post.
+   * If a vote already exists, it updates the vote or removes it if the same vote type is provided.
+   * @param userId - The ID of the user voting.
+   * @param postId - The ID of the post to vote on.
+   * @param voteType - The type of vote (UPVOTE or DOWNVOTE).
+   * @returns A promise that resolves to the created or updated vote record.
    * @throws {NotFoundException} If the post is not found.
-   * @throws {BadRequestException} If the post has already been liked by the user.
    */
-  async likePost(userId: string, postId: string) {
+  async voteOnPost(userId: string, postId: string, voteType: VoteType) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
       throw new NotFoundException('Post not found');
     }
 
-    const existingLike = await this.prisma.like.findUnique({
-      where: { userId_postId: { userId, postId } },
+    const existingVote = await this.prisma.vote.findUnique({
+      where: {
+        userId_postId_commentId: { userId, postId, commentId: null },
+      },
     });
 
-    if (existingLike) {
-      throw new BadRequestException('Post already liked');
+    if (existingVote) {
+      if (existingVote.type === voteType) {
+        // If the same vote type is provided, remove the vote (unvote)
+        return this.prisma.vote.delete({
+          where: { id: existingVote.id },
+        });
+      } else {
+        // If a different vote type is provided, update the existing vote
+        return this.prisma.vote.update({
+          where: { id: existingVote.id },
+          data: { type: voteType },
+        });
+      }
+    } else {
+      // No existing vote, create a new one
+      return this.prisma.vote.create({
+        data: {
+          userId,
+          postId,
+          type: voteType,
+          targetType: VoteTargetType.POST,
+        },
+      });
     }
-
-    return this.prisma.like.create({
-      data: { userId, postId },
-    });
   }
 
   /**
-   * Allows a user to unlike a specific post.
-   * @param userId - The ID of the user unliking the post.
-   * @param postId - The ID of the post to be unliked.
-   * @returns A promise that resolves to the deleted like record.
-   * @throws {NotFoundException} If the post is not found.
-   * @throws {BadRequestException} If the post has not been liked by the user.
+   * Allows a user to vote on a specific comment.
+   * If a vote already exists, it updates the vote or removes it if the same vote type is provided.
+   * @param userId - The ID of the user voting.
+   * @param commentId - The ID of the comment to vote on.
+   * @param voteType - The type of vote (UPVOTE or DOWNVOTE).
+   * @returns A promise that resolves to the created or updated vote record.
+   * @throws {NotFoundException} If the comment is not found.
    */
-  async unlikePost(userId: string, postId: string) {
-    const post = await this.prisma.post.findUnique({ where: { id: postId } });
-    if (!post) {
-      throw new NotFoundException('Post not found');
+  async voteOnComment(userId: string, commentId: string, voteType: VoteType) {
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: commentId },
+    });
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
     }
 
-    const existingLike = await this.prisma.like.findUnique({
-      where: { userId_postId: { userId, postId } },
+    const existingVote = await this.prisma.vote.findUnique({
+      where: {
+        userId_postId_commentId: { userId, commentId, postId: null },
+      },
     });
 
-    if (!existingLike) {
-      throw new BadRequestException('Post not liked yet');
+    if (existingVote) {
+      if (existingVote.type === voteType) {
+        // If the same vote type is provided, remove the vote (unvote)
+        return this.prisma.vote.delete({
+          where: { id: existingVote.id },
+        });
+      } else {
+        // If a different vote type is provided, update the existing vote
+        return this.prisma.vote.update({
+          where: { id: existingVote.id },
+          data: { type: voteType },
+        });
+      }
+    } else {
+      // No existing vote, create a new one
+      return this.prisma.vote.create({
+        data: {
+          userId,
+          commentId,
+          type: voteType,
+          targetType: VoteTargetType.COMMENT,
+        },
+      });
+    }
+  }
+
+  /**
+   * Allows a user to remove their vote from a specific post or comment.
+   * @param userId - The ID of the user removing the vote.
+   * @param voteId - The ID of the vote to remove.
+   * @returns A promise that resolves to the deleted vote record.
+   * @throws {NotFoundException} If the vote is not found.
+   * @throws {ForbiddenException} If the user is not the author of the vote.
+   */
+  async removeVote(userId: string, voteId: string) {
+    const existingVote = await this.prisma.vote.findUnique({
+      where: { id: voteId },
+    });
+
+    if (!existingVote) {
+      throw new NotFoundException('Vote not found');
     }
 
-    return this.prisma.like.delete({
-      where: { userId_postId: { userId, postId } },
+    if (existingVote.userId !== userId) {
+      throw new ForbiddenException('You can only remove your own votes');
+    }
+
+    return this.prisma.vote.delete({
+      where: { id: voteId },
     });
   }
 
   /**
-   * Allows a user to add a comment to a specific post.
+   * Allows a user to add a comment to a specific post, optionally as a reply to another comment.
    * @param userId - The ID of the user making the comment.
    * @param postId - The ID of the post to comment on.
    * @param content - The content of the comment.
+   * @param parentId - Optional. The ID of the parent comment if this is a reply.
    * @returns A promise that resolves to the created comment record.
-   * @throws {NotFoundException} If the post is not found.
-   * @throws {BadRequestException} If the comment content is empty or too long.
+   * @throws {NotFoundException} If the post or parent comment is not found.
+   * @throws {BadRequestException} If the comment content is empty or too long, or if parentId is invalid.
    */
-  async commentOnPost(userId: string, postId: string, content: string) {
+  async commentOnPost(
+    userId: string,
+    postId: string,
+    content: string,
+    parentId?: string,
+  ) {
     const post = await this.prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
       throw new NotFoundException('Post not found');
@@ -93,17 +167,32 @@ export class EngagementService {
       );
     }
 
+    if (parentId) {
+      const parentComment = await this.prisma.comment.findUnique({
+        where: { id: parentId },
+      });
+      if (!parentComment) {
+        throw new NotFoundException('Parent comment not found');
+      }
+      if (parentComment.postId !== postId) {
+        throw new BadRequestException(
+          'Parent comment does not belong to the same post',
+        );
+      }
+    }
+
     return this.prisma.comment.create({
       data: {
         userId,
         postId,
         content: content.trim(),
+        parentId,
       },
     });
   }
 
   /**
-   * Retrieves all comments for a specific post with pagination.
+   * Retrieves all top-level comments for a specific post with pagination, and their nested replies.
    * @param postId - The ID of the post to retrieve comments for.
    * @param page - The page number for pagination.
    * @param limit - The number of comments per page.
@@ -125,7 +214,7 @@ export class EngagementService {
 
     const [comments, total] = await Promise.all([
       this.prisma.comment.findMany({
-        where: { postId },
+        where: { postId, parentId: null },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -133,15 +222,55 @@ export class EngagementService {
           user: {
             select: {
               id: true,
-              name: true,
+              email: true,
               profile: {
                 select: { avatarUrl: true },
               },
             },
           },
+          replies: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  email: true,
+                  profile: {
+                    select: { avatarUrl: true },
+                  },
+                },
+              },
+              // Include nested replies up to a certain depth (e.g., 3 levels)
+              replies: {
+                include: {
+                  user: {
+                    select: {
+                      id: true,
+                      email: true,
+                      profile: {
+                        select: { avatarUrl: true },
+                      },
+                    },
+                  },
+                  replies: {
+                    include: {
+                      user: {
+                        select: {
+                          id: true,
+                          email: true,
+                          profile: {
+                            select: { avatarUrl: true },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
         },
       }),
-      this.prisma.comment.count({ where: { postId } }),
+      this.prisma.comment.count({ where: { postId, parentId: null } }),
     ]);
 
     return {
@@ -230,19 +359,19 @@ export class EngagementService {
    */
   async getRecommendedFeed() {
     return this.prisma.post.findMany({
-      orderBy: [{ createdAt: 'desc' }, { Like: { _count: 'desc' } }],
+      orderBy: [{ createdAt: 'desc' }, { Vote: { _count: 'desc' } }],
       include: {
         author: {
           select: {
             id: true,
-            name: true,
+            email: true,
             profile: {
               select: { bio: true, avatarUrl: true },
             },
           },
         },
         _count: {
-          select: { Like: true, Comment: true },
+          select: { Vote: true, Comment: true },
         },
       },
     });
