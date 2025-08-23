@@ -8,7 +8,13 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSubCommunityDto } from './dto/create-sub-community.dto';
 import { UpdateSubCommunityDto } from './dto/update-sub-community.dto';
 import { ApproveJoinRequestDto } from './dto/approve-join-request.dto';
-import { Role } from '@prisma/client'; // Assuming Role enum is available from Prisma client
+import {
+  Role,
+  SubCommunityStatus,
+  SubCommunityRole,
+  ReportStatus,
+  ReportedContentType,
+} from '@prisma/client';
 
 @Injectable()
 export class SubCommunityService {
@@ -76,7 +82,9 @@ export class SubCommunityService {
       where: { id },
       include: {
         owner: { select: { id: true, name: true } },
-        members: { include: { user: { select: { id: true, name: true } } } },
+        members: {
+          include: { user: { select: { id: true, name: true } } },
+        },
         posts: { orderBy: { createdAt: 'desc' } },
       },
     });
@@ -101,8 +109,12 @@ export class SubCommunityService {
     // Only owner or admin can update
     const isOwner = subCommunity.ownerId === userId;
     const isAdmin =
-      (await this.prisma.user.findUnique({ where: { id: userId } }))?.role ===
-      Role.ADMIN;
+      (
+        await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { role: true },
+        })
+      )?.role === Role.ADMIN;
 
     if (!isOwner && !isAdmin) {
       throw new ForbiddenException(
@@ -127,8 +139,12 @@ export class SubCommunityService {
     // Only owner or admin can delete
     const isOwner = subCommunity.ownerId === userId;
     const isAdmin =
-      (await this.prisma.user.findUnique({ where: { id: userId } }))?.role ===
-      Role.ADMIN;
+      (
+        await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { role: true },
+        })
+      )?.role === Role.ADMIN;
 
     if (!isOwner && !isAdmin) {
       throw new ForbiddenException(
@@ -147,6 +163,107 @@ export class SubCommunityService {
     });
 
     return this.prisma.subCommunity.delete({ where: { id } });
+  }
+
+  async banSubCommunity(id: string) {
+    const subCommunity = await this.prisma.subCommunity.findUnique({
+      where: { id },
+    });
+
+    if (!subCommunity) {
+      throw new NotFoundException(`Sub-community with ID ${id} not found.`);
+    }
+
+    return this.prisma.subCommunity.update({
+      where: { id },
+      data: { status: SubCommunityStatus.BANNED },
+    });
+  }
+
+  async getReports(subCommunityId: string, requesterId: string) {
+    const member = await this.prisma.subCommunityMember.findFirst({
+      where: {
+        userId: requesterId,
+        subCommunityId: subCommunityId,
+        role: { in: [SubCommunityRole.OWNER, SubCommunityRole.MODERATOR] },
+      },
+    });
+
+    if (!member) {
+      throw new ForbiddenException(
+        'You do not have permission to view reports for this sub-community.',
+      );
+    }
+
+    return this.prisma.contentReport.findMany({
+      where: {
+        subCommunityId: subCommunityId,
+        status: ReportStatus.PENDING,
+      },
+      include: {
+        reporter: { select: { id: true, name: true } },
+        post: { select: { id: true, content: true } },
+        comment: { select: { id: true, content: true } },
+      },
+    });
+  }
+
+  async handleReport(
+    subCommunityId: string,
+    reportId: string,
+    status: ReportStatus,
+    handlerId: string,
+  ) {
+    const member = await this.prisma.subCommunityMember.findFirst({
+      where: {
+        userId: handlerId,
+        subCommunityId: subCommunityId,
+        role: { in: [SubCommunityRole.OWNER, SubCommunityRole.MODERATOR] },
+      },
+    });
+
+    if (!member) {
+      throw new ForbiddenException(
+        'You do not have permission to handle reports for this sub-community.',
+      );
+    }
+
+    const report = await this.prisma.contentReport.findUnique({
+      where: { id: reportId },
+    });
+
+    if (!report || report.subCommunityId !== subCommunityId) {
+      throw new NotFoundException('Report not found in this sub-community.');
+    }
+
+    if (report.status !== ReportStatus.PENDING) {
+      throw new BadRequestException('This report has already been handled.');
+    }
+
+    if (status === ReportStatus.ADDRESSED) {
+      return this.prisma.$transaction(async (prisma) => {
+        if (report.type === ReportedContentType.POST && report.postId) {
+          await prisma.post.delete({ where: { id: report.postId } });
+        } else if (
+          report.type === ReportedContentType.COMMENT &&
+          report.commentId
+        ) {
+          await prisma.comment.delete({ where: { id: report.commentId } });
+        }
+
+        return prisma.contentReport.update({
+          where: { id: reportId },
+          data: { status: ReportStatus.ADDRESSED, handlerId },
+        });
+      });
+    } else if (status === ReportStatus.DISMISSED) {
+      return this.prisma.contentReport.update({
+        where: { id: reportId },
+        data: { status: ReportStatus.DISMISSED, handlerId },
+      });
+    } else {
+      throw new BadRequestException('Invalid status provided.');
+    }
   }
 
   // --- SubCommunity Membership and Join Request Flow ---
@@ -203,13 +320,15 @@ export class SubCommunityService {
     }
 
     // Only the owner/lead of the sub-community can view pending join requests
-    const isOwner = subCommunity.ownerId === userId;
     const member = await this.prisma.subCommunityMember.findFirst({
-      where: { userId: userId, subCommunityId: subCommunityId, role: 'ADMIN' },
+      where: {
+        userId: userId,
+        subCommunityId: subCommunityId,
+        role: { in: ['OWNER', 'MODERATOR'] },
+      },
     });
-    const isAdmin = member && member.role === 'ADMIN';
 
-    if (!isOwner && !isAdmin) {
+    if (!member) {
       throw new ForbiddenException(
         'You do not have permission to view join requests for this sub-community.',
       );
@@ -251,18 +370,15 @@ export class SubCommunityService {
 
     // Only the owner/lead or admin of the sub-community can approve/reject join requests
     const subCommunity = joinRequest.subCommunity;
-    const isOwner = subCommunity.ownerId === userId;
     const member = await this.prisma.subCommunityMember.findFirst({
       where: {
         userId: userId,
         subCommunityId: subCommunity.id,
-        role: { in: ['OWNER', 'ADMIN'] },
+        role: { in: ['OWNER', 'MODERATOR'] },
       },
     });
-    const isAdminOfSubCommunity =
-      member && (member.role === 'OWNER' || member.role === 'ADMIN');
 
-    if (!isOwner && !isAdminOfSubCommunity) {
+    if (!member) {
       throw new ForbiddenException(
         'You do not have permission to approve/reject join requests for this sub-community.',
       );
@@ -306,6 +422,48 @@ export class SubCommunityService {
     }
   }
 
+  async updateMemberRole(
+    subCommunityId: string,
+    memberId: string,
+    role: SubCommunityRole,
+    requesterId: string,
+  ) {
+    const subCommunity = await this.prisma.subCommunity.findUnique({
+      where: { id: subCommunityId },
+    });
+
+    if (!subCommunity) {
+      throw new NotFoundException('Sub-community not found.');
+    }
+
+    if (subCommunity.ownerId !== requesterId) {
+      throw new ForbiddenException(
+        'Only the sub-community owner can change member roles.',
+      );
+    }
+
+    if (role === SubCommunityRole.OWNER) {
+      throw new BadRequestException('Cannot assign OWNER role.');
+    }
+
+    const memberToUpdate = await this.prisma.subCommunityMember.findFirst({
+      where: { userId: memberId, subCommunityId: subCommunityId },
+    });
+
+    if (!memberToUpdate) {
+      throw new NotFoundException('Member not found in this sub-community.');
+    }
+
+    if (memberToUpdate.userId === requesterId) {
+      throw new BadRequestException('Owner cannot change their own role.');
+    }
+
+    return this.prisma.subCommunityMember.update({
+      where: { id: memberToUpdate.id },
+      data: { role },
+    });
+  }
+
   async leaveSubCommunity(subCommunityId: string, userId: string) {
     const member = await this.prisma.subCommunityMember.findFirst({
       where: { userId: userId, subCommunityId: subCommunityId },
@@ -347,7 +505,7 @@ export class SubCommunityService {
     if (
       !requestingUserMember ||
       (requestingUserMember.role !== 'OWNER' &&
-        requestingUserMember.role !== 'ADMIN')
+        requestingUserMember.role !== 'MODERATOR')
     ) {
       throw new ForbiddenException(
         'You do not have permission to remove members from this sub-community.',
@@ -362,18 +520,20 @@ export class SubCommunityService {
       throw new NotFoundException('Member not found in this sub-community.');
     }
 
-    if (memberToRemove.role === 'OWNER') {
+    if (memberToRemove.role === SubCommunityRole.OWNER) {
       throw new BadRequestException(
         'Cannot remove the owner of the sub-community.',
       );
     }
 
-    // Admins cannot remove other admins or owners
+    // Moderators cannot remove other moderators or owners
     if (
-      requestingUserMember.role === 'ADMIN' &&
-      memberToRemove.role === 'ADMIN'
+      requestingUserMember.role === SubCommunityRole.MODERATOR &&
+      memberToRemove.role === SubCommunityRole.MODERATOR
     ) {
-      throw new ForbiddenException('Admins cannot remove other admins.');
+      throw new ForbiddenException(
+        'Moderators cannot remove other moderators.',
+      );
     }
 
     return this.prisma.subCommunityMember.delete({
