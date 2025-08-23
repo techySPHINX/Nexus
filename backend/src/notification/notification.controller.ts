@@ -82,11 +82,18 @@ export class NotificationController {
    */
   @Get('stats')
   getStats(@Req() req): Promise<{
-    total: any;
-    unread: any;
-    read: any;
-    recent24h: any;
-    byType: any;
+    total: number;
+    unread: number;
+    read: number;
+    recent24h: number;
+    byCategory: {
+      ALL: number;
+      CONNECTION: number;
+      POST: number;
+      MESSAGE: number;
+      SYSTEM: number;
+      EVENT: number;
+    };
   }> {
     return this.notificationService.getNotificationStats(req.user.userId);
   }

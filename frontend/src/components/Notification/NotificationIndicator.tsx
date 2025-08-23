@@ -22,7 +22,7 @@ import {
 } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import useSound from 'use-sound';
+// import useSound from 'use-sound';
 import { formatDistanceToNow } from 'date-fns';
 import axios from 'axios';
 
@@ -39,8 +39,9 @@ const NotificationIndicator = () => {
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
-  const [playSound] = useSound('/notification.wav');
-  const [prevUnreadCount, setPrevUnreadCount] = useState(unreadCount);
+  // for notification sound
+  // const [playSound] = useSound('/notification.wav');
+  // const [prevUnreadCount, setPrevUnreadCount] = useState(unreadCount);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
@@ -101,21 +102,25 @@ const NotificationIndicator = () => {
   };
 
   // Sound effect for new notifications
-  useEffect(() => {
-    if (unreadCount > prevUnreadCount) {
-      playSound();
-    }
-    setPrevUnreadCount(unreadCount);
-  }, [unreadCount, prevUnreadCount, playSound]);
+  // useEffect(() => {
+  //   if (unreadCount > prevUnreadCount) {
+  //     playSound();
+  //   }
+  //   setPrevUnreadCount(unreadCount);
+  // }, [unreadCount, prevUnreadCount, playSound]);
 
-  //Polling effect , 30 sec when user is active , stop when inactive
+  // Polling effect: 30 sec when user is active/visible, 90 sec when inactive/hidden
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
 
-    const startPolling = () => {
-      if (!interval) {
-        interval = setInterval(fetchNotifications, 60000);
+    const startPolling = (isVisible: boolean = true) => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
       }
+
+      const pollInterval = isVisible ? 30000 : 90000; // 30s vs 90s
+      interval = setInterval(fetchNotifications, pollInterval);
     };
 
     const stopPolling = () => {
@@ -125,15 +130,37 @@ const NotificationIndicator = () => {
       }
     };
 
-    window.addEventListener('focus', startPolling);
-    window.addEventListener('blur', stopPolling);
+    // Handle visibility change (tab switching, minimize, etc.)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        startPolling(true); // 30s when visible
+      } else {
+        startPolling(false); // 90s when hidden
+      }
+    };
 
-    startPolling(); // start immediately when mounted
+    // Handle window focus/blur (browser switching, etc.)
+    const handleFocus = () => {
+      startPolling(true); // 30s when focused
+    };
+
+    const handleBlur = () => {
+      startPolling(false); // 90s when blurred
+    };
+
+    // Set up event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    // Start with current visibility state
+    startPolling(document.visibilityState === 'visible');
 
     return () => {
       stopPolling();
-      window.removeEventListener('focus', startPolling);
-      window.removeEventListener('blur', stopPolling);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
     };
   }, [fetchNotifications]);
 

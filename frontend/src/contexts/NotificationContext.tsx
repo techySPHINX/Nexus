@@ -6,6 +6,7 @@ import {
   allReadNotificationService,
   deleteNotificationService,
   deleteReadNotificationService,
+  fetchNotificationStatsService,
 } from '@/services/notificationService';
 import { Notification, NotificationType } from '@/types/notification';
 import React, { createContext, useContext, useState, useCallback } from 'react';
@@ -91,42 +92,59 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to fetch unread counts for all categories
-  // Function to fetch unread counts for all categories
-  // Function to fetch unread counts for all categories (SIMPLIFIED)
+  // Update the fetchAllUnreadCounts function
   const fetchAllUnreadCounts = useCallback(async () => {
     if (!user) return;
 
     try {
-      // Fetch ALL notifications to get accurate counts
-      const response = await fetchNotificationsService(1, 1000); // Fetch a large number
+      // Use the stats endpoint to get accurate unread counts by category
+      const stats = await fetchNotificationStatsService();
 
       const counts: Record<string, number> = {
-        ALL: response.unreadCount, // Use the backend's count for ALL
-        CONNECTION: response.notification.filter(
-          (n) =>
-            !n.read &&
-            categoryToTypes.CONNECTION.includes(n.type as NotificationType)
-        ).length,
-        POST: response.notification.filter(
-          (n) =>
-            !n.read && categoryToTypes.POST.includes(n.type as NotificationType)
-        ).length,
-        MESSAGE: response.notification.filter(
-          (n) => !n.read && n.type === NotificationType.MESSAGE
-        ).length,
-        SYSTEM: response.notification.filter(
-          (n) => !n.read && n.type === NotificationType.SYSTEM
-        ).length,
-        EVENT: response.notification.filter(
-          (n) => !n.read && n.type === NotificationType.EVENT
-        ).length,
+        ALL: stats.byCategory.ALL,
+        CONNECTION: stats.byCategory.CONNECTION,
+        POST: stats.byCategory.POST,
+        MESSAGE: stats.byCategory.MESSAGE,
+        SYSTEM: stats.byCategory.SYSTEM,
+        EVENT: stats.byCategory.EVENT,
       };
 
       setUnreadCountsByCategory(counts);
-      setUnreadCount(counts.ALL);
+      setUnreadCount(stats.unread);
     } catch (err) {
-      console.error('Failed to fetch unread counts:', err);
+      console.error('Failed to fetch notification stats:', err);
+
+      // Fallback to individual API calls if stats endpoint fails
+      try {
+        const allResponse = await fetchNotificationsService(1, 1);
+        const counts: Record<string, number> = {
+          ALL: allResponse.unreadCount,
+          CONNECTION: 0,
+          POST: 0,
+          MESSAGE: 0,
+          SYSTEM: 0,
+          EVENT: 0,
+        };
+
+        // Fetch counts for each category individually as fallback
+        const categoryPromises = Object.entries(categoryToTypes).map(
+          async ([category, types]) => {
+            const results = await Promise.all(
+              types.map((type) => fetchNotificationsService(1, 1, type))
+            );
+            counts[category] = results.reduce(
+              (sum, result) => sum + result.unreadCount,
+              0
+            );
+          }
+        );
+
+        await Promise.all(categoryPromises);
+        setUnreadCountsByCategory(counts);
+        setUnreadCount(counts.ALL);
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+      }
     }
   }, [user]);
 
@@ -211,7 +229,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       // Update unread counts
       setUnreadCount((prev) => prev + 1);
       const category =
-        Object.entries(categoryToTypes).find(([_, types]) =>
+        Object.entries(categoryToTypes).find(([, types]) =>
           types.includes(notification.type as NotificationType)
         )?.[0] || 'ALL';
 
@@ -240,7 +258,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
 
         const category =
-          Object.entries(categoryToTypes).find(([_, types]) =>
+          Object.entries(categoryToTypes).find(([, types]) =>
             types.includes(notification.type as NotificationType)
           )?.[0] || 'ALL';
 
@@ -270,7 +288,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         setUnreadCount((prev) => prev + 1);
 
         const category =
-          Object.entries(categoryToTypes).find(([_, types]) =>
+          Object.entries(categoryToTypes).find(([, types]) =>
             types.includes(notification.type as NotificationType)
           )?.[0] || 'ALL';
 
@@ -316,7 +334,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
 
         const category =
-          Object.entries(categoryToTypes).find(([_, types]) =>
+          Object.entries(categoryToTypes).find(([, types]) =>
             types.includes(notificationToDelete.type as NotificationType)
           )?.[0] || 'ALL';
 

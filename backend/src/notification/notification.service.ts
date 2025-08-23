@@ -478,41 +478,64 @@ export class NotificationService {
       throw new NotFoundException('User not found');
     }
 
-    const [totalCount, unreadCount, readCount, typeStats, recentCount] =
-      await Promise.all([
+    // Get unread counts by type
+    const unreadTypeStats = await this.prisma.notification.groupBy({
+      by: ['type'],
+      where: { userId, read: false },
+      _count: { type: true },
+    });
+
+    // Map types to categories
+    const typeToCategory = {
+      CONNECTION_REQUEST: 'CONNECTION',
+      CONNECTION_ACCEPTED: 'CONNECTION',
+      POST_LIKE: 'POST',
+      POST_COMMENT: 'POST',
+      MESSAGE: 'MESSAGE',
+      SYSTEM: 'SYSTEM',
+      EVENT: 'EVENT',
+    };
+
+    // Calculate unread counts by category
+    const unreadByCategory = unreadTypeStats.reduce(
+      (acc, stat) => {
+        const category = typeToCategory[stat.type] || 'OTHER';
+        acc[category] = (acc[category] || 0) + stat._count.type;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
+
+    // Get total counts
+    const [totalCount, unreadCount, readCount, recentCount] = await Promise.all(
+      [
         this.prisma.notification.count({ where: { userId } }),
         this.prisma.notification.count({ where: { userId, read: false } }),
         this.prisma.notification.count({ where: { userId, read: true } }),
-        this.prisma.notification.groupBy({
-          by: ['type'],
-          where: { userId },
-          _count: { type: true },
-        }),
         this.prisma.notification.count({
           where: {
             userId,
             createdAt: {
-              gte: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+              gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
             },
           },
         }),
-      ]);
+      ],
+    );
 
     return {
       total: totalCount,
       unread: unreadCount,
       read: readCount,
       recent24h: recentCount,
-      byType: typeStats.reduce(
-        (
-          acc: { [x: string]: any },
-          stat: { type: any; _count: { type: any } },
-        ) => {
-          acc[stat.type || 'UNKNOWN'] = stat._count.type;
-          return acc;
-        },
-        {} as Record<string, number>,
-      ),
+      byCategory: {
+        ALL: unreadCount,
+        CONNECTION: unreadByCategory.CONNECTION || 0,
+        POST: unreadByCategory.POST || 0,
+        MESSAGE: unreadByCategory.MESSAGE || 0,
+        SYSTEM: unreadByCategory.SYSTEM || 0,
+        EVENT: unreadByCategory.EVENT || 0,
+      },
     };
   }
 }

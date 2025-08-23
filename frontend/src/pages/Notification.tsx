@@ -303,22 +303,62 @@ const Notification: React.FC = () => {
             )}
           </Typography>
 
-          <Box>
-            <IconButton onClick={handleRefresh} disabled={loading}>
-              <RefreshIcon />
-            </IconButton>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1, // Adds consistent spacing between all items
+              flexWrap: 'wrap', // Allows wrapping on smaller screens
+            }}
+          >
             {unreadCount > 0 && (
               <Button
                 variant="outlined"
                 startIcon={<CheckIcon />}
                 onClick={handleMarkAllAsRead}
                 size="small"
-                sx={{ ml: 1 }}
                 disabled={loading}
+                sx={{
+                  minWidth: 'auto', // Prevents button from being too wide
+                  whiteSpace: 'nowrap',
+                }}
               >
                 Mark all as read
               </Button>
             )}
+
+            {notifications.some((n) => n.read) && (
+              <Button
+                variant="outlined"
+                startIcon={<DeleteIcon />}
+                color="error"
+                size="small"
+                onClick={handleDeleteAllClick}
+                disabled={loading}
+                sx={{
+                  minWidth: 'auto',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Delete Read
+              </Button>
+            )}
+
+            <IconButton
+              onClick={handleRefresh}
+              disabled={loading}
+              size="small"
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 1,
+                '&:hover': {
+                  backgroundColor: 'action.hover',
+                },
+              }}
+            >
+              <RefreshIcon fontSize="small" />
+            </IconButton>
           </Box>
         </Box>
 
@@ -360,18 +400,6 @@ const Notification: React.FC = () => {
           >
             Mark this tab as read
           </Button>
-          {currentTab === 'ALL' && (
-            <Button
-              variant="outlined"
-              startIcon={<DeleteIcon />}
-              color="error"
-              size="small"
-              onClick={handleDeleteAllClick}
-              disabled={!notifications.some((n) => n.read)}
-            >
-              Delete All Read Notifications
-            </Button>
-          )}
         </Box>
 
         <Divider sx={{ mb: 3 }} />

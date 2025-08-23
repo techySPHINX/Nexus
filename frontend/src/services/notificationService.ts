@@ -83,6 +83,24 @@ export async function unreadNotificationService(id: string) {
   }
 }
 
+export const fetchNotificationStatsService = async (): Promise<{
+  total: number;
+  unread: number;
+  read: number;
+  recent24h: number;
+  byCategory: {
+    ALL: number;
+    CONNECTION: number;
+    POST: number;
+    MESSAGE: number;
+    SYSTEM: number;
+    EVENT: number;
+  };
+}> => {
+  const response = await api.get('/notifications/stats');
+  return response.data;
+};
+
 export async function allReadNotificationService() {
   try {
     await api.patch('/notifications/read/all');
