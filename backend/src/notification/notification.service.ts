@@ -5,6 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { VoteType } from '@prisma/client';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 
 /**
@@ -13,7 +14,8 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 export enum NotificationType {
   CONNECTION_REQUEST = 'CONNECTION_REQUEST',
   CONNECTION_ACCEPTED = 'CONNECTION_ACCEPTED',
-  POST_LIKE = 'POST_LIKE',
+  POST_VOTE = 'POST_VOTE',
+  COMMENT_VOTE = 'COMMENT_VOTE',
   POST_COMMENT = 'POST_COMMENT',
   MESSAGE = 'MESSAGE',
   SYSTEM = 'SYSTEM',
@@ -391,26 +393,64 @@ export class NotificationService {
   }
 
   /**
-   * Creates a post like notification.
-   * @param postAuthorId - The ID of the author of the liked post.
-   * @param likerName - The name of the user who liked the post.
-   * @param postContent - The content of the liked post (for truncation).
+   * Creates a post vote notification.
+   * @param postAuthorId - The ID of the author of the voted post.
+   * @param voterName - The name of the user who voted on the post.
+   * @param postContent - The content of the voted post (for truncation).
+   * @param voteType - The type of vote (UPVOTE or DOWNVOTE).
    * @returns A promise that resolves to the created notification.
    */
-  async createPostLikeNotification(
+  async createPostVoteNotification(
     postAuthorId: string,
-    likerName: string,
+    voterName: string,
     postContent: string,
+    voteType: VoteType,
   ) {
     const truncatedContent =
       postContent.length > 50
         ? postContent.substring(0, 50) + '...'
         : postContent;
 
+    const message =
+      voteType === VoteType.UPVOTE
+        ? `${voterName} upvoted your post: "${truncatedContent}"`
+        : `${voterName} downvoted your post: "${truncatedContent}"`;
+
     return this.create({
       userId: postAuthorId,
-      message: `${likerName} liked your post: "${truncatedContent}"`,
-      type: NotificationType.POST_LIKE,
+      message,
+      type: NotificationType.POST_VOTE,
+    });
+  }
+
+  /**
+   * Creates a comment vote notification.
+   * @param commentAuthorId - The ID of the author of the voted comment.
+   * @param voterName - The name of the user who voted on the comment.
+   * @param commentContent - The content of the voted comment (for truncation).
+   * @param voteType - The type of vote (UPVOTE or DOWNVOTE).
+   * @returns A promise that resolves to the created notification.
+   */
+  async createCommentVoteNotification(
+    commentAuthorId: string,
+    voterName: string,
+    commentContent: string,
+    voteType: VoteType,
+  ) {
+    const truncatedContent =
+      commentContent.length > 50
+        ? commentContent.substring(0, 50) + '...'
+        : commentContent;
+
+    const message =
+      voteType === VoteType.UPVOTE
+        ? `${voterName} upvoted your comment: "${truncatedContent}"`
+        : `${voterName} downvoted your comment: "${truncatedContent}"`;
+
+    return this.create({
+      userId: commentAuthorId,
+      message,
+      type: NotificationType.COMMENT_VOTE,
     });
   }
 

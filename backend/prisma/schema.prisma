@@ -11,10 +11,12 @@ model User {
   id                                    String                        @id @default(uuid())
   email                                 String                        @unique @db.VarChar(255)
   password                              String                        @db.VarChar(255)
-  name                                  String                        @db.VarChar(100)
+  name                                  String?
   role                                  Role                          @default(STUDENT)
-  createdAt                             DateTime                      @default(now())
-  updatedAt                             DateTime                      @updatedAt
+  description         String?
+  iconUrl             String?
+  bannerUrl           String?
+  createdAt           DateTime              @default(now())
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
@@ -28,7 +30,7 @@ model User {
   feedbackGiven                         Feedback[]                    @relation("FeedbackGiven")
   feedbackReceived                      Feedback[]                    @relation("FeedbackReceived")
   files                                 File[]                        @relation("UserFiles")
-  Like                                  Like[]
+  Vote                                  Vote[]
   mentorSettings                        MentorSettings?
   mentorshipsAsMentee                   Mentorship[]                  @relation("Mentee")
   mentorshipsAsMentor                   Mentorship[]                  @relation("Mentor")
@@ -50,6 +52,8 @@ model User {
   referralApplications                  ReferralApplication[]
   postedReferrals                       Referral[]                    @relation("PostedReferrals")
   userPoints                            UserPoints?
+  reportsMade                           ContentReport[]               @relation("ReportsMade")
+  reportsHandled                        ContentReport[]               @relation("ReportsHandled")
 
   @@map("users")
 }
@@ -249,42 +253,54 @@ model Notification {
 }
 
 model Post {
-  id             String        @id @default(uuid())
+  id             String          @id @default(uuid())
   authorId       String
   content        String
-  imageUrl       String?       @db.VarChar(512)
+  flairId        String?
+  flair          Flair?          @relation(fields: [flairId], references: [id])
+  imageUrl       String?         @db.VarChar(512)
   type           String?
-  createdAt      DateTime      @default(now())
-  status         PostStatus    @default(PENDING)
+  createdAt      DateTime        @default(now())
+  status         PostStatus      @default(PENDING)
   subCommunityId String?
-  updatedAt      DateTime      @default(now()) @updatedAt
+  updatedAt      DateTime        @default(now()) @updatedAt
   Comment        Comment[]
-  Like           Like[]
-  author         User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  subCommunity   SubCommunity? @relation(fields: [subCommunityId], references: [id])
+  Vote           Vote[]
+  author         User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  subCommunity   SubCommunity?   @relation(fields: [subCommunityId], references: [id])
+  reports        ContentReport[]
 
   @@map("post")
 }
 
-model Like {
-  id     String @id @default(uuid())
-  userId String
-  postId String
-  post   Post   @relation(fields: [postId], references: [id])
-  user   User   @relation(fields: [userId], references: [id])
+model Vote {
+  id          String        @id @default(uuid())
+  userId      String
+  postId      String?
+  commentId   String?
+  type        VoteType
+  targetType  VoteTargetType
+  post        Post?         @relation(fields: [postId], references: [id])
+  comment     Comment?      @relation(fields: [commentId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
 
-  @@unique([userId, postId])
-  @@map("like")
+  @@unique([userId, postId, commentId])
+  @@map("votes")
 }
 
 model Comment {
-  id        String   @id @default(uuid())
+  id        String          @id @default(uuid())
   content   String
   userId    String
   postId    String
-  createdAt DateTime @default(now())
-  post      Post     @relation(fields: [postId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  parentId  String?
+  createdAt DateTime        @default(now())
+  post      Post            @relation(fields: [postId], references: [id])
+  user      User            @relation(fields: [userId], references: [id])
+  parent    Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   Comment[]       @relation("CommentReplies")
+  votes     Vote[]
+  reports   ContentReport[]
 
   @@map("comment")
 }
@@ -402,7 +418,10 @@ model SubCommunity {
   updatedAt                     DateTime                     @updatedAt
   name                          String                       @unique
   description                   String
+  iconUrl                       String?
+  bannerUrl                     String?
   isPrivate                     Boolean                      @default(false)
+  status                        SubCommunityStatus           @default(ACTIVE)
   ownerId                       String
   subCommunityCreationRequestId String?                      @unique
   joinRequests                  JoinRequest[]
@@ -410,6 +429,8 @@ model SubCommunity {
   creationRequest               SubCommunityCreationRequest? @relation(fields: [subCommunityCreationRequestId], references: [id])
   members                       SubCommunityMember[]
   posts                         Post[]
+  reports                       ContentReport[]
+  flairs                        Flair[]
 }
 
 model SubCommunityMember {
@@ -439,18 +460,19 @@ model JoinRequest {
 }
 
 model SubCommunityCreationRequest {
-  id           String        @id @default(cuid())
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  name         String
-  description  String
-  rules        String
-  status       RequestStatus @default(PENDING)
-  requesterId  String
-  adminId      String?
-  subCommunity SubCommunity?
-  admin        User?         @relation("AdminSubCommunityCreationRequests", fields: [adminId], references: [id])
-  requester    User          @relation("RequesterSubCommunityCreationRequests", fields: [requesterId], references: [id])
+  id            String        @id @default(cuid())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  name          String
+  description   String
+  rules         String
+  documentUrls  String[]
+  status        RequestStatus @default(PENDING)
+  requesterId   String
+  adminId       String?
+  subCommunity  SubCommunity?
+  admin         User?         @relation("AdminSubCommunityCreationRequests", fields: [adminId], references: [id])
+  requester     User          @relation("RequesterSubCommunityCreationRequests", fields: [requesterId], references: [id])
 }
 
 model UserPoints {
@@ -537,6 +559,28 @@ model MentorshipAgreement {
   @@map("mentorship_agreements")
 }
 
+model ContentReport {
+  id             String              @id @default(cuid())
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  reporterId     String
+  reporter       User                @relation("ReportsMade", fields: [reporterId], references: [id])
+  subCommunityId String
+  subCommunity   SubCommunity        @relation(fields: [subCommunityId], references: [id])
+  type           ReportedContentType
+  reason         String
+  postId         String?
+  post           Post?               @relation(fields: [postId], references: [id])
+  commentId      String?
+  comment        Comment?            @relation(fields: [commentId], references: [id])
+  status         ReportStatus        @default(PENDING)
+  handlerId      String?
+  handler        User?               @relation("ReportsHandled", fields: [handlerId], references: [id])
+
+  @@index([subCommunityId, status])
+}
+
+
 enum ProjectRole {
   OWNER
   MEMBER
@@ -597,9 +641,14 @@ enum PostStatus {
   REJECTED
 }
 
+enum SubCommunityStatus {
+  ACTIVE
+  BANNED
+}
+
 enum SubCommunityRole {
   OWNER
-  ADMIN
+  MODERATOR
   MEMBER
 }
 
@@ -636,4 +685,35 @@ enum AgreementStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+enum ReportedContentType {
+  POST
+  COMMENT
+}
+
+enum ReportStatus {
+  PENDING
+  ADDRESSED
+  DISMISSED
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}
+
+enum VoteTargetType {
+  POST
+  COMMENT
+}
+
+model Flair {
+  id            String       @id @default(uuid())
+  name          String
+  subCommunityId String
+  subCommunity  SubCommunity @relation(fields: [subCommunityId], references: [id])
+  posts         Post[]
+
+  @@unique([name, subCommunityId])
 }
