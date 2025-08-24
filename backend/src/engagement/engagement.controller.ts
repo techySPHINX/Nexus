@@ -14,7 +14,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { Role, VoteType } from '@prisma/client';
 
 /**
  * Controller for handling user engagement with posts, including likes and comments.
@@ -26,40 +26,60 @@ export class EngagementController {
   constructor(private readonly service: EngagementService) {}
 
   /**
-   * Likes a specific post.
-   * @param postId - The ID of the post to like.
-   * @param userId - The ID of the user liking the post.
-   * @returns A promise that resolves to the created like record.
+   * Allows a user to vote on a specific post.
+   * @param postId - The ID of the post to vote on.
+   * @param userId - The ID of the user voting.
+   * @param voteType - The type of vote (UPVOTE or DOWNVOTE).
+   * @returns A promise that resolves to the created or updated vote record.
    */
-  @Post(':postId/like')
+  @Post(':postId/vote')
   @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
-  likePost(
+  voteOnPost(
     @Param('postId') postId: string,
     @GetCurrentUser('sub') userId: string,
+    @Body('voteType') voteType: VoteType,
   ) {
-    return this.service.likePost(userId, postId);
+    return this.service.voteOnPost(userId, postId, voteType);
   }
 
   /**
-   * Unlikes a specific post.
-   * @param postId - The ID of the post to unlike.
-   * @param userId - The ID of the user unliking the post.
+   * Allows a user to vote on a specific comment.
+   * @param commentId - The ID of the comment to vote on.
+   * @param userId - The ID of the user voting.
+   * @param voteType - The type of vote (UPVOTE or DOWNVOTE).
+   * @returns A promise that resolves to the created or updated vote record.
+   */
+  @Post(':commentId/vote-comment')
+  @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
+  voteOnComment(
+    @Param('commentId') commentId: string,
+    @GetCurrentUser('sub') userId: string,
+    @Body('voteType') voteType: VoteType,
+  ) {
+    return this.service.voteOnComment(userId, commentId, voteType);
+  }
+
+  /**
+   * Allows a user to remove their vote from a specific post or comment.
+   * @param voteId - The ID of the vote to remove.
+   * @param userId - The ID of the user removing the vote.
    * @returns A promise that resolves to a success message.
    */
-  @Delete(':postId/unlike')
+  @Delete(':voteId/remove-vote')
   @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
-  unlikePost(
-    @Param('postId') postId: string,
+  removeVote(
+    @Param('voteId') voteId: string,
     @GetCurrentUser('sub') userId: string,
   ) {
-    return this.service.unlikePost(userId, postId);
+    return this.service.removeVote(userId, voteId);
   }
 
   /**
-   * Adds a comment to a specific post.
+   * Adds a comment to a specific post, optionally as a reply to another comment.
    * @param postId - The ID of the post to comment on.
    * @param userId - The ID of the user making the comment.
    * @param content - The content of the comment.
+   * @param parentId - Optional. The ID of the parent comment if this is a reply.
    * @returns A promise that resolves to the created comment record.
    */
   @Post(':postId/comment')
@@ -68,8 +88,9 @@ export class EngagementController {
     @Param('postId') postId: string,
     @GetCurrentUser('sub') userId: string,
     @Body('content') content: string,
+    @Body('parentId') parentId?: string,
   ) {
-    return this.service.commentOnPost(userId, postId, content);
+    return this.service.commentOnPost(userId, postId, content, parentId);
   }
 
   /**

@@ -44,55 +44,55 @@ import PendingReceivedTab from '@/components/Connections/PendingReceivedTab';
 import PendingSentTab from '@/components/Connections/PendingSentTab';
 import SuggestionTab from '@/components/Connections/SuggestionTab';
 
-interface Connection {
-  id: string;
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'BLOCKED';
-  createdAt: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    role: 'STUDENT' | 'ALUM' | 'ADMIN';
-    profile?: {
-      bio?: string;
-      location?: string;
-      interests?: string;
-      avatarUrl?: string;
-      skills: string[];
-    };
-  };
-}
+// interface Connection {
+//   id: string;
+//   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'BLOCKED';
+//   createdAt: string;
+//   user: {
+//     id: string;
+//     name: string;
+//     email: string;
+//     role: 'STUDENT' | 'ALUM' | 'ADMIN';
+//     profile?: {
+//       bio?: string;
+//       location?: string;
+//       interests?: string;
+//       avatarUrl?: string;
+//       skills: string[];
+//     };
+//   };
+// }
 
-interface PendingRequest {
-  id: string;
-  createdAt: string;
-  requester?: {
-    id: string;
-    name: string;
-    email: string;
-    role: 'STUDENT' | 'ALUM' | 'ADMIN';
-    profile?: {
-      bio?: string;
-      location?: string;
-      interests?: string;
-      avatarUrl?: string;
-      skills: string[];
-    };
-  };
-  recipient?: {
-    id: string;
-    name: string;
-    email: string;
-    role: 'STUDENT' | 'ALUM' | 'ADMIN';
-    profile?: {
-      bio?: string;
-      location?: string;
-      interests?: string;
-      avatarUrl?: string;
-      skills: string[];
-    };
-  };
-}
+// interface PendingRequest {
+//   id: string;
+//   createdAt: string;
+//   requester?: {
+//     id: string;
+//     name: string;
+//     email: string;
+//     role: 'STUDENT' | 'ALUM' | 'ADMIN';
+//     profile?: {
+//       bio?: string;
+//       location?: string;
+//       interests?: string;
+//       avatarUrl?: string;
+//       skills: string[];
+//     };
+//   };
+//   recipient?: {
+//     id: string;
+//     name: string;
+//     email: string;
+//     role: 'STUDENT' | 'ALUM' | 'ADMIN';
+//     profile?: {
+//       bio?: string;
+//       location?: string;
+//       interests?: string;
+//       avatarUrl?: string;
+//       skills: string[];
+//     };
+//   };
+// }
 
 interface ConnectionSuggestion {
   user: {
@@ -143,16 +143,19 @@ interface ConnectionSuggestion {
 //   value: number;
 // }
 
-
 const Connections: React.FC = () => {
   const { token } = useAuth();
   const [tabValue, setTabValue] = useState(0);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
-  const [connectionToBlock, setConnectionToBlock] = useState<string | null>(null);
+  const [connectionToBlock, setConnectionToBlock] = useState<string | null>(
+    null
+  );
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState<ConnectionSuggestion['user'] | null>(null);
+  const [selectedUser, setSelectedUser] = useState<
+    ConnectionSuggestion['user'] | null
+  >(null);
   const [messageDialog, setMessageDialog] = useState(false);
   const [messageContent, setMessageContent] = useState('');
   const [messageLoading, setMessageLoading] = useState(false);
@@ -184,7 +187,7 @@ const Connections: React.FC = () => {
     respondToRequest,
     cancelConnection,
     removeConnection,
-    setError
+    setError,
   } = useConnections();
 
   useEffect(() => {
@@ -257,16 +260,16 @@ const Connections: React.FC = () => {
     fetchAll(hookFilters);
   };
 
-  const handlePageChange = (newPage: number) => {
-    setFilters(prev => ({ ...prev, page: newPage }));
-  };
+  // const handlePageChange = (newPage: number) => {
+  //   setFilters((prev) => ({ ...prev, page: newPage }));
+  // };
 
-  const handleLimitChange = (newLimit: number) => {
-    setFilters(prev => ({ ...prev, limit: newLimit, page: 1 }));
-  };
+  // const handleLimitChange = (newLimit: number) => {
+  //   setFilters((prev) => ({ ...prev, limit: newLimit, page: 1 }));
+  // };
 
   const handleRoleFilter = (role: '' | 'STUDENT' | 'ALUM' | 'ADMIN') => {
-    setFilters(prev => ({ ...prev, role, page: 1 }));
+    setFilters((prev) => ({ ...prev, role, page: 1 }));
   };
 
   const getRoleColor = (role: string) => {
@@ -282,10 +285,20 @@ const Connections: React.FC = () => {
     }
   };
 
-  if (loading && connections.length === 0 && pendingReceived.length === 0 && pendingSent.length === 0) {
+  if (
+    loading &&
+    connections.length === 0 &&
+    pendingReceived.length === 0 &&
+    pendingSent.length === 0
+  ) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <Box
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          minHeight="400px"
+        >
           <CircularProgress />
         </Box>
       </Container>
@@ -293,13 +306,32 @@ const Connections: React.FC = () => {
   }
 
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback} onReset={() => setError(null)}>
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onReset={() => setError(null)}
+    >
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45 }}
+        >
           {/* Header */}
-          <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap" mb={3} gap={2}>
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+            flexWrap="wrap"
+            mb={3}
+            gap={2}
+          >
             <Box>
-              <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }} gutterBottom>
+              <Typography
+                variant="h4"
+                component="h1"
+                sx={{ fontWeight: 700 }}
+                gutterBottom
+              >
                 Connections
               </Typography>
               <Typography variant="subtitle1" color="text.secondary">
@@ -310,10 +342,26 @@ const Connections: React.FC = () => {
             {/* Stats Cards */}
             {stats && (
               <Stack direction="row" spacing={1} alignItems="center">
-                <StatsCard icon={<PeopleIcon color="info" />} value={stats.total} label="Total" />
-                <StatsCard icon={<TrendingUpIcon color="warning" />} value={stats.pendingReceived} label="Pending" />
-                <StatsCard icon={<SchoolIcon color="primary" />} value={stats.byRole.students} label="Students" />
-                <StatsCard icon={<WorkIcon color="secondary" />} value={stats.byRole.alumni} label="Alumni" />
+                <StatsCard
+                  icon={<PeopleIcon color="info" />}
+                  value={stats.total}
+                  label="Total"
+                />
+                <StatsCard
+                  icon={<TrendingUpIcon color="warning" />}
+                  value={stats.pendingReceived}
+                  label="Pending"
+                />
+                <StatsCard
+                  icon={<SchoolIcon color="primary" />}
+                  value={stats.byRole.students}
+                  label="Students"
+                />
+                <StatsCard
+                  icon={<WorkIcon color="secondary" />}
+                  value={stats.byRole.alumni}
+                  label="Alumni"
+                />
               </Stack>
             )}
           </Box>
@@ -322,7 +370,16 @@ const Connections: React.FC = () => {
 
           {/* Search + Filters */}
           <Box component="form" onSubmit={handleSearch} sx={{ mb: 3 }}>
-            <Paper sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 1.25, borderRadius: 3 }} elevation={1}>
+            <Paper
+              sx={{
+                display: 'flex',
+                gap: 2,
+                alignItems: 'center',
+                p: 1.25,
+                borderRadius: 3,
+              }}
+              elevation={1}
+            >
               <TextField
                 size="small"
                 variant="outlined"
@@ -345,7 +402,11 @@ const Connections: React.FC = () => {
                   <Select
                     value={filters.role || ''}
                     label="Role"
-                    onChange={(e) => handleRoleFilter(e.target.value as '' | 'STUDENT' | 'ALUM' | 'ADMIN')}
+                    onChange={(e) =>
+                      handleRoleFilter(
+                        e.target.value as '' | 'STUDENT' | 'ALUM' | 'ADMIN'
+                      )
+                    }
                   >
                     <MenuItem value="">All</MenuItem>
                     <MenuItem value="STUDENT">Student</MenuItem>
@@ -355,15 +416,17 @@ const Connections: React.FC = () => {
                 </FormControl>
               )}
 
-              <Button type="submit" variant="contained" sx={{ whiteSpace: 'nowrap' }}>
+              <Button
+                type="submit"
+                variant="contained"
+                sx={{ whiteSpace: 'nowrap' }}
+              >
                 Search
               </Button>
             </Paper>
           </Box>
 
           <Paper sx={{ mb: 4 }}>
-
-
             {/* Tabs */}
             <Box sx={{ mb: 2 }}>
               <Tabs
@@ -380,16 +443,22 @@ const Connections: React.FC = () => {
               </Tabs>
             </Box>
 
-
-
             {/* Alerts */}
             {error && (
-              <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+              <Alert
+                severity="error"
+                sx={{ mb: 2 }}
+                onClose={() => setError(null)}
+              >
                 {error}
               </Alert>
             )}
             {success && (
-              <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess(null)}>
+              <Alert
+                severity="success"
+                sx={{ mb: 2 }}
+                onClose={() => setSuccess(null)}
+              >
                 {success}
               </Alert>
             )}
@@ -445,7 +514,12 @@ const Connections: React.FC = () => {
           </Paper>
 
           {/* Message Dialog */}
-          <Dialog open={messageDialog} onClose={() => setMessageDialog(false)} maxWidth="sm" fullWidth>
+          <Dialog
+            open={messageDialog}
+            onClose={() => setMessageDialog(false)}
+            maxWidth="sm"
+            fullWidth
+          >
             <DialogTitle>Send Message</DialogTitle>
             <DialogContent>
               <DialogContentText sx={{ mb: 2 }}>
@@ -465,18 +539,26 @@ const Connections: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setMessageDialog(false)}>Cancel</Button>
-              <Button onClick={sendMessage} variant="contained" disabled={!messageContent.trim() || messageLoading}>
+              <Button
+                onClick={sendMessage}
+                variant="contained"
+                disabled={!messageContent.trim() || messageLoading}
+              >
                 {messageLoading ? 'Sending...' : 'Send'}
               </Button>
             </DialogActions>
           </Dialog>
 
           {/* Block/Remove Dialog */}
-          <Dialog open={blockDialogOpen} onClose={() => setBlockDialogOpen(false)}>
+          <Dialog
+            open={blockDialogOpen}
+            onClose={() => setBlockDialogOpen(false)}
+          >
             <DialogTitle>Remove Connection</DialogTitle>
             <DialogContent>
               <DialogContentText>
-                Are you sure you want to remove this connection? This action cannot be undone.
+                Are you sure you want to remove this connection? This action
+                cannot be undone.
               </DialogContentText>
             </DialogContent>
             <DialogActions>
@@ -502,4 +584,4 @@ const Connections: React.FC = () => {
   );
 };
 
-export default Connections; 
+export default Connections;

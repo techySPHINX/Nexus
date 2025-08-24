@@ -25,7 +25,7 @@ export const UserPostsPage: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         User's Posts
       </Typography>
-      
+
       {loading && pagination.page === 1 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
@@ -39,7 +39,7 @@ export const UserPostsPage: React.FC = () => {
           {userPosts.map((post) => (
             <Post key={post.id} post={post} />
           ))}
-          
+
           {pagination.hasNext && (
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Button

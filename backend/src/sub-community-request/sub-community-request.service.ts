@@ -7,16 +7,21 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSubCommunityRequestDto } from './dto/create-sub-community-request.dto';
 import { RequestStatus } from '@prisma/client';
 import { SubCommunityService } from '../sub-community/sub-community.service';
+import { FilesService } from '../files/files.service';
 
 @Injectable()
 export class SubCommunityRequestService {
   constructor(
     private prisma: PrismaService,
     private subCommunityService: SubCommunityService,
+    private filesService: FilesService,
   ) {}
 
-  async createRequest(dto: CreateSubCommunityRequestDto, requesterId: string) {
-    // Check if a sub-community with the same name already exists (even if pending request)
+  async createRequest(
+    dto: CreateSubCommunityRequestDto,
+    requesterId: string,
+    documents?: Express.Multer.File[],
+  ) {
     const existingSubCommunity = await this.prisma.subCommunity.findUnique({
       where: { name: dto.name },
     });
@@ -42,9 +47,24 @@ export class SubCommunityRequestService {
       );
     }
 
+    const documentUrls = [];
+    if (documents && documents.length > 0) {
+      const userTokens = null;
+
+      for (const doc of documents) {
+        const uploadedFile = await this.filesService.saveFile(
+          doc,
+          requesterId,
+          userTokens,
+        );
+        documentUrls.push(uploadedFile.webViewLink);
+      }
+    }
+
     return this.prisma.subCommunityCreationRequest.create({
       data: {
         ...dto,
+        documentUrls,
         requester: {
           connect: { id: requesterId },
         },
@@ -57,8 +77,8 @@ export class SubCommunityRequestService {
     return this.prisma.subCommunityCreationRequest.findMany({
       where: status ? { status } : {},
       include: {
-        requester: { select: { id: true, name: true, email: true } },
-        admin: { select: { id: true, name: true, email: true } },
+        requester: { select: { id: true, email: true } },
+        admin: { select: { id: true, email: true } },
       },
       orderBy: { createdAt: 'desc' },
     });

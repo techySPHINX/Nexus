@@ -1,4 +1,11 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateSubCommunityRequestDto {
   @IsString()
@@ -13,4 +20,10 @@ export class CreateSubCommunityRequestDto {
   @IsString()
   @IsNotEmpty()
   rules: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsUrl({}, { each: true })
+  @IsOptional()
+  documentUrls?: string[];
 }

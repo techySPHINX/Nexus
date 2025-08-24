@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PostStatus } from '@prisma/client';
+import { PostStatus, VoteType, VoteTargetType } from '@prisma/client';
 
 /**
  * Service for managing posts, including creation, retrieval, updates, and moderation.
@@ -88,7 +88,7 @@ export class PostService {
         },
         _count: {
           select: {
-            Like: true,
+            Vote: true,
             Comment: true,
           },
         },
@@ -181,7 +181,7 @@ export class PostService {
         },
         _count: {
           select: {
-            Like: true,
+            Vote: true,
             Comment: true,
           },
         },
@@ -220,7 +220,7 @@ export class PostService {
         }
 
         // Engagement Score
-        score += (post._count.Like + post._count.Comment) * 0.1;
+        score += (post._count.Vote + post._count.Comment) * 0.1;
 
         return { ...post, score };
       })
@@ -289,7 +289,7 @@ export class PostService {
           },
           _count: {
             select: {
-              Like: true,
+              Vote: true,
               Comment: true,
             },
           },
@@ -337,10 +337,10 @@ export class PostService {
             },
           },
         },
-        Like: userId
+        Vote: userId
           ? {
-              where: { userId },
-              select: { id: true },
+              where: { userId, targetType: VoteTargetType.POST },
+              select: { id: true, type: true },
             }
           : false,
         Comment: {
@@ -360,7 +360,7 @@ export class PostService {
         },
         _count: {
           select: {
-            Like: true,
+            Vote: true,
             Comment: true,
           },
         },
@@ -373,7 +373,7 @@ export class PostService {
 
     return {
       ...post,
-      isLiked: userId ? post.Like.length > 0 : false,
+      userVote: userId ? (post as any).Vote?.[0] || null : null,
     };
   }
 
@@ -419,7 +419,7 @@ export class PostService {
           },
           _count: {
             select: {
-              Like: true,
+              Vote: true,
               Comment: true,
             },
           },
@@ -524,7 +524,7 @@ export class PostService {
         },
         _count: {
           select: {
-            Like: true,
+            Vote: true,
             Comment: true,
           },
         },
@@ -561,9 +561,9 @@ export class PostService {
   }
 
   /**
-   * Retrieves engagement statistics (likes and comments) for a specific post.
+   * Retrieves engagement statistics (upvotes, downvotes, and comments) for a specific post.
    * @param id - The ID of the post to retrieve stats for.
-   * @returns A promise that resolves to an object containing like and comment counts.
+   * @returns A promise that resolves to an object containing upvote, downvote, and comment counts.
    * @throws {NotFoundException} If the post is not found.
    */
   async getPostStats(id: string) {
@@ -572,7 +572,9 @@ export class PostService {
       select: {
         _count: {
           select: {
-            Like: true,
+            Vote: {
+              where: { type: VoteType.UPVOTE },
+            },
             Comment: true,
           },
         },
@@ -583,8 +585,16 @@ export class PostService {
       throw new NotFoundException('Post not found');
     }
 
+    const downvotes = await this.prisma.vote.count({
+      where: {
+        postId: id,
+        type: VoteType.DOWNVOTE,
+      },
+    });
+
     return {
-      likes: stats._count.Like,
+      upvotes: stats._count.Vote,
+      downvotes: downvotes,
       comments: stats._count.Comment,
     };
   }
@@ -647,7 +657,7 @@ export class PostService {
           },
           _count: {
             select: {
-              Like: true,
+              Vote: true,
               Comment: true,
             },
           },

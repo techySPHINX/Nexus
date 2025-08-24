@@ -7,6 +7,8 @@ import {
   Param,
   Delete,
   UseGuards,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { SubCommunityService } from './sub-community.service';
 import { UpdateSubCommunityDto } from './dto/update-sub-community.dto';
@@ -17,6 +19,8 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { Role } from '@prisma/client';
 import { CreateSubCommunityDto } from './dto/create-sub-community.dto';
+import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
+import { UpdateReportDto } from '../report/dto/update-report.dto';
 
 @Controller('sub-community')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -48,6 +52,39 @@ export class SubCommunityController {
   @Delete(':id')
   async remove(@Param('id') id: string, @GetCurrentUser('id') userId: string) {
     return this.subCommunityService.removeSubCommunity(id, userId);
+  }
+
+  // --- Admin Endpoints ---
+  @Patch(':id/ban')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async ban(@Param('id') id: string) {
+    return this.subCommunityService.banSubCommunity(id);
+  }
+
+  // --- Moderation Endpoints ---
+  @Get(':subCommunityId/reports')
+  async getReports(
+    @Param('subCommunityId') subCommunityId: string,
+    @GetCurrentUser('id') requesterId: string,
+  ) {
+    return this.subCommunityService.getReports(subCommunityId, requesterId);
+  }
+
+  @Patch(':subCommunityId/reports/:reportId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async handleReport(
+    @Param('subCommunityId') subCommunityId: string,
+    @Param('reportId') reportId: string,
+    @Body() dto: UpdateReportDto,
+    @GetCurrentUser('id') handlerId: string,
+  ) {
+    return this.subCommunityService.handleReport(
+      subCommunityId,
+      reportId,
+      dto.status,
+      handlerId,
+    );
   }
 
   // --- SubCommunity Membership Endpoints ---
@@ -86,6 +123,21 @@ export class SubCommunityController {
       subCommunityId,
       userId,
       dto,
+    );
+  }
+
+  @Patch(':subCommunityId/members/:memberId/role')
+  async updateMemberRole(
+    @Param('subCommunityId') subCommunityId: string,
+    @Param('memberId') memberId: string,
+    @Body() dto: UpdateMemberRoleDto,
+    @GetCurrentUser('id') requesterId: string,
+  ) {
+    return this.subCommunityService.updateMemberRole(
+      subCommunityId,
+      memberId,
+      dto.role,
+      requesterId,
     );
   }
 
