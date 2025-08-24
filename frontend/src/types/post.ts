@@ -1,3 +1,5 @@
+import { Vote } from './engagement';
+
 export interface Post {
   id: string;
   authorId: string;
@@ -8,6 +10,7 @@ export interface Post {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: Date;
   updatedAt: Date;
+  Vote?: Vote[];
   author: {
     id: string;
     name: string;

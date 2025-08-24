@@ -29,6 +29,8 @@ import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { PostProvider } from './contexts/PostContext';
 import { SubCommunityProvider } from './contexts/SubCommunityContext';
+import { EngagementProvider } from './contexts/engagementContext';
+import { EngagementService } from './services/engagementService';
 
 // Layout component that handles navbar positioning
 const Layout: React.FC = () => {
@@ -83,6 +85,14 @@ const Layout: React.FC = () => {
             />
             <Route
               path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile/:userId"
               element={
                 <ProtectedRoute>
                   <Profile />
@@ -171,6 +181,8 @@ const Layout: React.FC = () => {
   );
 };
 
+const engagementService = new EngagementService();
+
 function App() {
   return (
     <ThemeProvider>
@@ -180,9 +192,11 @@ function App() {
             <ProfileProvider>
               <SubCommunityProvider>
                 <PostProvider>
-                  <Router>
-                    <Layout />
-                  </Router>
+                  <EngagementProvider engagementService={engagementService}>
+                    <Router>
+                      <Layout />
+                    </Router>
+                  </EngagementProvider>
                 </PostProvider>
               </SubCommunityProvider>
             </ProfileProvider>

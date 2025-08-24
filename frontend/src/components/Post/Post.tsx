@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePosts } from '../../contexts/PostContext';
+import { useEngagement } from '../../contexts/engagementContext';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Card,
@@ -20,12 +21,14 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   MoreVert,
   Favorite,
   FavoriteBorder,
-  Comment,
+  Comment as CommentIcon,
   Share,
   Edit,
   Delete,
@@ -33,10 +36,10 @@ import {
   Close,
 } from '@mui/icons-material';
 import { PostImage } from './PostImage';
-import { CommentSection } from './CommentSection';
 import { SubCommunityBadge } from './SubCommunityBadge';
-import { Link } from 'react-router-dom';
-import { Post as PostType } from '../../types/post'; // Import your Post type
+import { Link, useNavigate } from 'react-router-dom';
+import { Post as PostType } from '@/types/post';
+import { VoteType } from '@/types/engagement';
 
 interface PostProps {
   post: PostType;
@@ -55,25 +58,38 @@ export const Post: React.FC<PostProps> = ({
   showActions = true,
   isAdminView = false,
 }) => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const {
     approvePost,
     rejectPost,
     deletePost: deletePostContext,
     updatePost: updatePostContext,
   } = usePosts();
+  const { voteOnPost, loading: engagementLoading } = useEngagement();
+  const navigate = useNavigate();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(post?.content || '');
-  const [showComments, setShowComments] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post?._count?.Vote || 0); // Change to Vote
+  const [isLiked, setIsLiked] = useState(
+    post.Vote?.some(
+      (vote) => vote.userId === user?.id && vote.type === 'UPVOTE'
+    ) || false
+  );
+
+  const [likeCount, setLikeCount] = useState(
+    post.Vote?.length || post?._count?.Vote || 0
+  );
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | undefined>(
     post?.imageUrl
   );
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success' as 'success' | 'error',
+  });
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -100,8 +116,18 @@ export const Post: React.FC<PostProps> = ({
       await updatePostContext(post.id, editedContent, imageFile || undefined);
       setIsEditing(false);
       if (onUpdate) onUpdate();
+      setSnackbar({
+        open: true,
+        message: 'Post updated successfully',
+        severity: 'success',
+      });
     } catch (error) {
       console.error('Error updating post:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to update post',
+        severity: 'error',
+      });
     }
   };
 
@@ -109,16 +135,49 @@ export const Post: React.FC<PostProps> = ({
     try {
       await deletePostContext(post.id);
       if (onDelete) onDelete();
+      setSnackbar({
+        open: true,
+        message: 'Post deleted successfully',
+        severity: 'success',
+      });
     } catch (error) {
       console.error('Error deleting post:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete post',
+        severity: 'error',
+      });
     } finally {
       setConfirmOpen(false);
     }
   };
 
   const handleLike = async () => {
-    setIsLiked(!isLiked);
-    setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const newIsLiked = !isLiked;
+      setIsLiked(newIsLiked);
+      setLikeCount(newIsLiked ? likeCount + 1 : likeCount - 1);
+
+      await voteOnPost(
+        post.id,
+        newIsLiked ? VoteType.UPVOTE : VoteType.DOWNVOTE
+      );
+    } catch (error) {
+      console.error('Error voting on post:', error);
+      // Revert UI state on error
+      setIsLiked(!isLiked);
+      setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
+      setSnackbar({
+        open: true,
+        message: 'Failed to process vote',
+        severity: 'error',
+      });
+    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,8 +196,18 @@ export const Post: React.FC<PostProps> = ({
     try {
       await approvePost(post.id);
       if (onDelete) onDelete();
+      setSnackbar({
+        open: true,
+        message: 'Post approved successfully',
+        severity: 'success',
+      });
     } catch (error) {
       console.error('Error approving post:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to approve post',
+        severity: 'error',
+      });
     }
   };
 
@@ -146,9 +215,23 @@ export const Post: React.FC<PostProps> = ({
     try {
       await rejectPost(post.id);
       if (onDelete) onDelete();
+      setSnackbar({
+        open: true,
+        message: 'Post rejected successfully',
+        severity: 'success',
+      });
     } catch (error) {
       console.error('Error rejecting post:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to reject post',
+        severity: 'error',
+      });
     }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   const isAuthor = user?.id === post.author.id;
@@ -166,7 +249,10 @@ export const Post: React.FC<PostProps> = ({
     <Card sx={{ mb: 3 }}>
       <CardHeader
         avatar={
-          <Link to={'/profile'} style={{ textDecoration: 'none' }}>
+          <Link
+            to={`/profile/${post.author.id}`}
+            style={{ textDecoration: 'none' }}
+          >
             <Avatar
               src={post.author.profile?.avatarUrl}
               sx={{ bgcolor: 'primary.light', cursor: 'pointer' }}
@@ -198,32 +284,27 @@ export const Post: React.FC<PostProps> = ({
                   </>
                 )}
                 {isAdminView && isAdmin && (
-                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      size="small"
-                      startIcon={<Check />}
-                      onClick={handleApprove}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="error"
-                      size="small"
-                      startIcon={<Close />}
-                      onClick={handleReject}
-                    >
-                      Reject
-                    </Button>
-                  </Box>
+                  <>
+                    <MenuItem onClick={handleApprove}>
+                      <Check sx={{ mr: 1 }} /> Approve
+                    </MenuItem>
+                    <MenuItem onClick={handleReject}>
+                      <Close sx={{ mr: 1 }} /> Reject
+                    </MenuItem>
+                  </>
                 )}
               </Menu>
             </>
           )
         }
-        title={post.author.name}
+        title={
+          <Link
+            to={`/profile/${post.author.id}`}
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            {post.author.name}
+          </Link>
+        }
         subheader={
           <>
             Posted{' '}
@@ -289,10 +370,28 @@ export const Post: React.FC<PostProps> = ({
           </>
         ) : (
           <>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              {post.content}
-            </Typography>
-            {post.imageUrl && <PostImage imageUrl={post.imageUrl} />}
+            <Link
+              to={`/posts/${post.id}`}
+              style={{ textDecoration: 'none', color: 'inherit' }}
+            >
+              <Typography
+                variant="body1"
+                sx={{
+                  mb: 2,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    color: 'green',
+                  },
+                }}
+              >
+                {post.content}
+              </Typography>
+            </Link>
+            {post.imageUrl && (
+              <Link to={`/posts/${post.id}`} style={{ textDecoration: 'none' }}>
+                <PostImage imageUrl={post.imageUrl} />
+              </Link>
+            )}
             {isAdminView && post.status && (
               <Chip
                 label={post.status}
@@ -313,21 +412,21 @@ export const Post: React.FC<PostProps> = ({
 
       {showActions && !isEditing && (
         <CardActions>
-          <IconButton onClick={handleLike}>
+          <IconButton
+            onClick={handleLike}
+            disabled={engagementLoading || !token}
+          >
             {isLiked ? <Favorite color="error" /> : <FavoriteBorder />}
           </IconButton>
           <Typography variant="body2">{likeCount}</Typography>
-          <IconButton onClick={() => setShowComments(!showComments)}>
-            <Comment />
-          </IconButton>
+          <CommentIcon />
           <Typography variant="body2">{post?._count?.Comment || 0}</Typography>
+
           <IconButton>
             <Share />
           </IconButton>
         </CardActions>
       )}
-
-      {showComments && <CommentSection postId={post.id} />}
 
       <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>
@@ -341,6 +440,16 @@ export const Post: React.FC<PostProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Card>
   );
 };

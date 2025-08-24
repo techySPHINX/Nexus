@@ -146,6 +146,7 @@ export async function getPostByUserIdService(
 export async function getPostByIdService(postId: string) {
   try {
     const { data } = await api.get(`/posts/${postId}`);
+    console.log('getPostByIdService data:', data);
     return data;
   } catch (err) {
     if (axios.isAxiosError(err)) {
@@ -154,6 +155,44 @@ export async function getPostByIdService(postId: string) {
     throw new Error('Failed to fetch post');
   }
 }
+
+// src/services/PostService.ts
+export const getPostStatsService = async (
+  postId: string
+): Promise<{
+  upvotes: number;
+  downvotes: number;
+  comments: number;
+}> => {
+  try {
+    const response = await api.get(`/posts/${postId}/stats`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching post stats:', error);
+    throw error;
+  }
+};
+
+// services/PostService.ts
+export const getPostCommentsService = async (postId: string) => {
+  try {
+    const response = await api.get(`/posts/${postId}/comments`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching post comments:', error);
+    throw error;
+  }
+};
+
+export const createCommentService = async (postId: string, content: string) => {
+  try {
+    const response = await api.post(`/posts/${postId}/comments`, { content });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating post comment:', error);
+    throw error;
+  }
+};
 
 export async function updatePostService(
   postId: string,

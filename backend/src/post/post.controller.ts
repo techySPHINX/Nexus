@@ -206,6 +206,19 @@ export class PostController {
     });
   }
 
+  @Get(':id/stats')
+  @ApiOperation({ summary: 'Get post engagement statistics' })
+  @ApiParam({ name: 'id', description: 'Post ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Post statistics retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Post not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  getPostStats(@Param('id') id: string) {
+    return this.postService.getPostStats(id);
+  }
+
   /**
    * Approves a pending post. Only accessible by ADMINs.
    * @param id - The ID of the post to approve.

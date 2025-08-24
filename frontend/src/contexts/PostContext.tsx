@@ -13,6 +13,9 @@ import {
   rejectPostService,
   deletePostService,
   searchPostsService,
+  getPostStatsService,
+  getPostCommentsService,
+  createCommentService,
 } from '../services/PostService';
 import { getErrorMessage } from '@/utils/errorHandler';
 
@@ -48,6 +51,13 @@ interface PostContextType {
   ) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
   getPost: (id: string) => Promise<void>;
+  getPostStats: (postId: string) => Promise<{
+    upvotes: number;
+    downvotes: number;
+    comments: number;
+  }>;
+  getPostComments: (postId: string) => Promise<void>;
+  createComment: (postId: string, content: string) => Promise<void>;
   getFeed: (page?: number, limit?: number) => Promise<void>;
   getSubCommunityFeed: (
     subCommunityId: string,
@@ -321,10 +331,12 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
   const getPost = useCallback(
     async (id: string) => {
       try {
+        if (!user) return;
         setLoading(true);
         clearError();
-        const { data } = await getPostByIdService(id);
+        const data = await getPostByIdService(id);
         setCurrentPost(data);
+        console.log('data', data);
         setLoading(false);
         return data;
       } catch (err) {
@@ -334,8 +346,49 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error(errorMessage);
       }
     },
+    [user, clearError]
+  );
+
+  const getPostStats = useCallback(
+    async (postId: string) => {
+      try {
+        setLoading(true);
+        clearError();
+        const stats = await getPostStatsService(postId);
+        setLoading(false);
+        return stats;
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
     [clearError]
   );
+
+  // Add these to your PostContext
+  const getPostComments = useCallback(async (postId: string) => {
+    try {
+      const response = await getPostCommentsService(postId);
+      return response.comments || response.data || response;
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, []);
+
+  const createComment = useCallback(async (postId: string, content: string) => {
+    try {
+      const response = await createCommentService(postId, content);
+      return response.comment || response.data || response;
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, []);
 
   const updatePost = useCallback(
     async (
@@ -503,6 +556,9 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         updatePost,
         deletePost,
         getPost,
+        getPostStats,
+        getPostComments,
+        createComment,
         getFeed,
         getSubCommunityFeed,
         getUserPosts,
