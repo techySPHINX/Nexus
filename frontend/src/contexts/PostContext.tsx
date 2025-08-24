@@ -110,9 +110,6 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
 
-  const api = axios.create({
-    baseURL: 'http://localhost:3000',
-    baseURL: 'http://localhost:3000',
     headers: {
       Authorization: `Bearer ${token}`,
     },
