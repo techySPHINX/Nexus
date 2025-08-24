@@ -109,10 +109,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
     hasPrev: false,
   });
 
-  const { token } = useAuth();
 
-  const api = axios.create({
-    baseURL: 'http://localhost:3000',
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -211,6 +208,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
       setSubCommunityFeed((prev) => prev.filter((post) => post.id !== id));
       setUserPosts((prev) => prev.filter((post) => post.id !== id));
       setSearchResults((prev) => prev.filter((post) => post.id !== id));
+      
+      
+      
+      
+      
       if (currentPost?.id === id) setCurrentPost(null);
       setLoading(false);
     } catch (err) {
@@ -437,3 +439,4 @@ export const usePosts = () => {
   }
   return context;
 };
+
