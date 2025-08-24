@@ -38,8 +38,6 @@ export const FeedPage: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Your Feed
         </Typography>
-        {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
-
           <>
             <Button
               variant="contained"
