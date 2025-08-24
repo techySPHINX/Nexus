@@ -1,52 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Box,
-  Typography,
-  List,
-  ListItem,
-  ListItemAvatar,
-  Avatar,
-  ListItemText,
-  Badge,
-  Chip,
-  Button,
-  Divider,
-  Paper,
-  IconButton,
-  Menu,
-  MenuItem,
-  CircularProgress,
-  Snackbar,
-  Alert,
-  Pagination,
-  Tabs,
-  Tab,
+    Box,
+    Typography,
+    List,
+    ListItem,
+    ListItemAvatar,
+    Avatar,
+    ListItemText,
+    Badge,
+    Chip,
+    Button,
+    Divider,
+    Paper,
+    IconButton,
+    Menu,
+    MenuItem,
+    CircularProgress,
+    Snackbar,
+    Alert,
+    Pagination,
+    Tabs,
+    Tab,
 } from '@mui/material';
 import {
-  Notifications as NotificationsIcon,
-  Info as InfoIcon,
-  Check as CheckIcon,
-  MoreVert as MoreVertIcon,
-  Refresh as RefreshIcon,
-  Delete as DeleteIcon,
-  Mail as MessageIcon,
-  People as ConnectionIcon,
-  Article as PostIcon,
-  Settings as SystemIcon,
-  Event as EventIcon,
-  Markunread as UnreadIcon,
+    Notifications as NotificationsIcon,
+    Info as InfoIcon,
+    Check as CheckIcon,
+    MoreVert as MoreVertIcon,
+    Refresh as RefreshIcon,
+    Delete as DeleteIcon,
+    Mail as MessageIcon,
+    People as ConnectionIcon,
+    Article as PostIcon,
+    Settings as SystemIcon,
+    Event as EventIcon,
+    Markunread as UnreadIcon,
 } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
 import { formatDistanceToNow } from 'date-fns';
 
+
 enum NotificationType {
-  CONNECTION_REQUEST = 'CONNECTION_REQUEST',
-  CONNECTION_ACCEPTED = 'CONNECTION_ACCEPTED',
-  POST_LIKE = 'POST_LIKE',
-  POST_COMMENT = 'POST_COMMENT',
-  MESSAGE = 'MESSAGE',
-  SYSTEM = 'SYSTEM',
-  EVENT = 'EVENT',
+    CONNECTION_REQUEST = 'CONNECTION_REQUEST',
+    CONNECTION_ACCEPTED = 'CONNECTION_ACCEPTED',
+    POST_LIKE = 'POST_LIKE',
+    POST_COMMENT = 'POST_COMMENT',
+    MESSAGE = 'MESSAGE',
+    SYSTEM = 'SYSTEM',
+    EVENT = 'EVENT',
 }
 
 const Notification: React.FC = () => {
@@ -330,242 +331,143 @@ const Notification: React.FC = () => {
                     sx={{ ml: 1 }}
                   />
                 )}
-              </Box>
-            }
-            value={NotificationType.POST_LIKE}
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <MessageIcon sx={{ mr: 1 }} />
-                Messages
-                {getUnreadCountForTab(NotificationType.MESSAGE) > 0 && (
-                  <Chip
-                    label={getUnreadCountForTab(NotificationType.MESSAGE)}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
+
+                {error && (
+                    <Alert severity="error" sx={{ mb: 3 }}>
+                        {error}
+                    </Alert>
                 )}
-              </Box>
-            }
-            value={NotificationType.MESSAGE}
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <SystemIcon sx={{ mr: 1 }} />
-                System
-                {getUnreadCountForTab(NotificationType.SYSTEM) > 0 && (
-                  <Chip
-                    label={getUnreadCountForTab(NotificationType.SYSTEM)}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-            }
-            value={NotificationType.SYSTEM}
-          />
-          <Tab
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <EventIcon sx={{ mr: 1 }} />
-                Events
-                {getUnreadCountForTab(NotificationType.EVENT) > 0 && (
-                  <Chip
-                    label={getUnreadCountForTab(NotificationType.EVENT)}
-                    size="small"
-                    color="primary"
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </Box>
-            }
-            value={NotificationType.EVENT}
-          />
-        </Tabs>
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-          <Button
-            variant="outlined"
-            startIcon={<CheckIcon />}
-            onClick={handleMarkTabAsRead}
-            size="small"
-            disabled={getUnreadCountForTab(currentTab) === 0 || loading}
-          >
-            Mark this tab as read
-          </Button>
-        </Box>
-
-        <Divider sx={{ mb: 3 }} />
-
-        {loading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
-
-        {error && (
-          <Alert severity="error" sx={{ mb: 3 }}>
-            {error}
-          </Alert>
-        )}
-
-        {!loading && filteredNotifications.length === 0 && (
-          <Box sx={{ textAlign: 'center', p: 4 }}>
-            <Typography variant="body1" color="text.secondary">
-              No{' '}
-              {currentTab === 'ALL'
-                ? ''
-                : currentTab.toLowerCase().replace('_', ' ')}{' '}
-              notifications
-            </Typography>
-          </Box>
-        )}
-
-        {!loading && filteredNotifications.length > 0 && (
-          <>
-            <List sx={{ width: '100%' }}>
-              {paginatedNotifications.map((notification) => (
-                <React.Fragment key={notification.id}>
-                  <ListItem
-                    alignItems="flex-start"
-                    sx={{
-                      backgroundColor: notification.read
-                        ? 'inherit'
-                        : 'action.hover',
-                      borderRadius: 1,
-                      mb: 1,
-                    }}
-                    secondaryAction={
-                      <IconButton
-                        edge="end"
-                        onClick={(e) => openMenu(e, notification.id)}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
-                    }
-                  >
-                    <ListItemAvatar>
-                      <Badge
-                        color="primary"
-                        variant="dot"
-                        invisible={notification.read}
-                      >
-                        <Avatar sx={{ bgcolor: 'background.paper' }}>
-                          {getNotificationIcon(notification.type)}
-                        </Avatar>
-                      </Badge>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Box
-                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                        >
-                          <Typography
-                            component="span"
-                            variant="body1"
-                            color="text.primary"
-                            sx={{
-                              fontWeight: notification.read ? 'normal' : 'bold',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              maxWidth: '60ch',
-                            }}
-                          >
-                            {notification.message.length > 100
-                              ? `${notification.message.substring(0, 100)}...`
-                              : notification.message}
-                          </Typography>
-                        </Box>
-                      }
-                      secondary={
-                        <Typography
-                          component="span"
-                          variant="body2"
-                          color="text.secondary"
-                        >
-                          {formatDistanceToNow(
-                            new Date(notification.createdAt),
-                            { addSuffix: true }
-                          )}
+                {!loading && filteredNotifications.length === 0 && (
+                    <Box sx={{ textAlign: 'center', p: 4 }}>
+                        <Typography variant="body1" color="text.secondary">
+                            No {currentTab === 'ALL' ? '' : currentTab.toLowerCase().replace('_', ' ')} notifications
                         </Typography>
-                      }
-                      sx={{
-                        '& .MuiListItemText-primary': {
-                          display: 'flex',
-                          alignItems: 'center',
-                        },
-                        '& .MuiListItemText-secondary': { mt: 0.5 },
-                      }}
-                    />
-                  </ListItem>
-                  <Divider variant="inset" component="li" />
-                </React.Fragment>
-              ))}
-            </List>
+                    </Box>
+                )}
 
-            {totalPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                <Pagination
-                  count={totalPages}
-                  page={page}
-                  onChange={handlePageChange}
-                  color="primary"
-                />
-              </Box>
-            )}
-          </>
-        )}
-      </Paper>
+                {!loading && filteredNotifications.length > 0 && (
+                    <>
+                        <List sx={{ width: '100%' }}>
+                            {paginatedNotifications.map((notification) => (
+                                <React.Fragment key={notification.id}>
+                                    <ListItem
+                                        alignItems="flex-start"
+                                        sx={{
+                                            backgroundColor: notification.read ? 'inherit' : 'action.hover',
+                                            borderRadius: 1,
+                                            mb: 1,
+                                        }}
+                                        secondaryAction={
+                                            <IconButton
+                                                edge="end"
+                                                onClick={(e) => openMenu(e, notification.id)}
+                                            >
+                                                <MoreVertIcon />
+                                            </IconButton>
+                                        }
+                                    >
+                                        <ListItemAvatar>
+                                            <Badge
+                                                color="primary"
+                                                variant="dot"
+                                                invisible={notification.read}
+                                            >
+                                                <Avatar sx={{ bgcolor: 'background.paper' }}>
+                                                    {getNotificationIcon(notification.type)}
+                                                </Avatar>
+                                            </Badge>
+                                        </ListItemAvatar>
+                                        <ListItemText
+                                            primary={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Typography
+                                                        component="span"
+                                                        variant="body1"
+                                                        color="text.primary"
+                                                        sx={{
+                                                            fontWeight: notification.read ? 'normal' : 'bold',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                            whiteSpace: 'nowrap',
+                                                            maxWidth: '60ch'
+                                                        }}
+                                                    >
+                                                        {notification.message.length > 100
+                                                            ? `${notification.message.substring(0, 100)}...`
+                                                            : notification.message}
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            secondary={
+                                                <Typography
+                                                    component="span"
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                >
+                                                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                                                </Typography>
+                                            }
+                                            sx={{
+                                                '& .MuiListItemText-primary': { display: 'flex', alignItems: 'center' },
+                                                '& .MuiListItemText-secondary': { mt: 0.5 }
+                                            }}
+                                        />
+                                    </ListItem>
+                                    <Divider variant="inset" component="li" />
+                                </React.Fragment>
+                            ))}
+                        </List>
 
-      {/* Notification menu */}
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={closeMenu}>
-        <MenuItem
-          onClick={() =>
-            selectedNotification && handleMarkAsRead(selectedNotification)
-          }
-        >
-          <CheckIcon sx={{ mr: 1 }} /> Mark as read
-        </MenuItem>
-        <MenuItem
-          onClick={() =>
-            selectedNotification && handleMarkAsUnread(selectedNotification)
-          }
-        >
-          <UnreadIcon sx={{ mr: 1 }} /> Mark as unread
-        </MenuItem>
-        <Divider />
-        <MenuItem
-          onClick={() =>
-            selectedNotification &&
-            handleDeleteNotification(selectedNotification)
-          }
-        >
-          <DeleteIcon sx={{ mr: 1 }} /> Delete
-        </MenuItem>
-      </Menu>
+                        {totalPages > 1 && (
+                            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                                <Pagination
+                                    count={totalPages}
+                                    page={page}
+                                    onChange={handlePageChange}
+                                    color="primary"
+                                />
+                            </Box>
+                        )}
+                    </>
+                )}
+            </Paper>
 
-      {/* Snackbar for feedback - positioned on the right */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity="success"
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
+            {/* Notification menu */}
+            <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={closeMenu}
+            >
+                <MenuItem onClick={() => selectedNotification && handleMarkAsRead(selectedNotification)}>
+                    <CheckIcon sx={{ mr: 1 }} /> Mark as read
+                </MenuItem>
+                <MenuItem onClick={() => selectedNotification && handleMarkAsUnread(selectedNotification)}>
+                    <UnreadIcon sx={{ mr: 1 }} /> Mark as unread
+                </MenuItem>
+                <Divider />
+                <MenuItem onClick={() => selectedNotification && handleDeleteNotification(selectedNotification)}>
+                    <DeleteIcon sx={{ mr: 1 }} /> Delete
+                </MenuItem>
+            </Menu>
+
+            {/* Snackbar for feedback - positioned on the right */}
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={3000}
+                onClose={() => setSnackbarOpen(false)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert
+                    onClose={() => setSnackbarOpen(false)}
+                    severity="success"
+                    sx={{ width: '100%' }}
+                >
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
+        </Box >
+    );
 };
 
 export default Notification;

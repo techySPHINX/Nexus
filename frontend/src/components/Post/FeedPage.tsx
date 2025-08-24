@@ -3,17 +3,7 @@ import { usePosts } from '../../contexts/PostContext';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Post } from '../../pages/Post';
-import {
-  Box,
-  Typography,
-  Button,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Snackbar,
-  Alert,
-} from '@mui/material';
+import { Box, Typography, Button, CircularProgress, Dialog, DialogTitle, DialogContent, Snackbar, Alert } from '@mui/material';
 import { CreatePostForm } from '../Post/CreatePostForm';
 
 export const FeedPage: React.FC = () => {
@@ -23,12 +13,10 @@ export const FeedPage: React.FC = () => {
   const [openForm, setOpenForm] = React.useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
-  );
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    console.log('Snackbar called with:', message, severity);
+    console.log("Snackbar called with:", message, severity);
     setSnackbarMessage(message);
     setSnackbarSeverity(severity);
     setSnackbarOpen(true);
@@ -38,6 +26,7 @@ export const FeedPage: React.FC = () => {
     getFeed();
     refreshProfile();
   }, [getFeed, refreshProfile]);
+
 
   const handleLoadMore = () => {
     getFeed(pagination.page + 1);
@@ -50,6 +39,7 @@ export const FeedPage: React.FC = () => {
           Your Feed
         </Typography>
         {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
+
           <>
             <Button
               variant="contained"
@@ -94,8 +84,7 @@ export const FeedPage: React.FC = () => {
           </Box>
         ) : feed.length === 0 ? (
           <Typography variant="body1" sx={{ mt: 2 }}>
-            No posts to show. Follow more people or communities to see posts in
-            your feed.
+            No posts to show. Follow more people or communities to see posts in your feed.
           </Typography>
         ) : (
           <>

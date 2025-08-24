@@ -1,25 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Badge,
-  IconButton,
-  Tooltip,
-  Popover,
-  List,
-  ListItem,
-  ListItemText,
-  Typography,
-  Box,
-  Button,
-  Divider,
-  Chip,
-  Snackbar,
-  Alert,
-  CircularProgress,
+    Badge,
+    IconButton,
+    Tooltip,
+    Popover,
+    List,
+    ListItem,
+    ListItemText,
+    Typography,
+    Box,
+    Button,
+    Divider,
+    Chip,
+    Snackbar,
+    Alert,
+    CircularProgress
 } from '@mui/material';
-import {
-  Notifications as NotificationsIcon,
-  Check as CheckIcon,
-} from '@mui/icons-material';
+import { Notifications as NotificationsIcon, Check as CheckIcon } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import useSound from 'use-sound';
