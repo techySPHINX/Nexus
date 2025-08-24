@@ -109,8 +109,6 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
     hasPrev: false,
   });
 
-  const { token } = useAuth();
-  const { token } = useAuth();
 
   const api = axios.create({
     baseURL: 'http://localhost:3000',
