@@ -321,6 +321,26 @@ const Connections: React.FC = () => {
     );
   }
 
+  // Map connections to ensure profile.skills is Skill[]
+  const mappedConnections = connections.map((conn) => ({
+    ...conn,
+    user: {
+      ...conn.user,
+      profile: conn.user.profile
+        ? {
+            ...conn.user.profile,
+            skills: Array.isArray(conn.user.profile.skills)
+              ? conn.user.profile.skills.map((item, idx) =>
+                  typeof item === 'string'
+                    ? { id: String(idx), name: item }
+                    : item
+                )
+              : [],
+          }
+        : undefined,
+    },
+  }));
+
   return (
     <ErrorBoundary
       FallbackComponent={ErrorFallback}
@@ -484,8 +504,28 @@ const Connections: React.FC = () => {
               {/* Connections Tab */}
               {loading && <LoadingIndicator />}
               <ConnectionTab
-                connections={connections}
-                setSelectedUser={setSelectedUser}
+                connections={mappedConnections}
+                setSelectedUser={(user) =>
+                  setSelectedUser(
+                    user
+                      ? {
+                          ...user,
+                          profile: user.profile
+                            ? {
+                                ...user.profile,
+                                skills: Array.isArray(user.profile.skills)
+                                  ? user.profile.skills.map((item, idx) =>
+                                      typeof item === 'string'
+                                        ? { id: String(idx), name: item }
+                                        : item
+                                    )
+                                  : [],
+                              }
+                            : undefined,
+                        }
+                      : null
+                  )
+                }
                 setMessageDialog={setMessageDialog}
                 setConnectionToBlock={setConnectionToBlock}
                 setBlockDialogOpen={setBlockDialogOpen}
@@ -521,7 +561,27 @@ const Connections: React.FC = () => {
               <SuggestionTab
                 suggestions={suggestions}
                 sendRequest={sendRequest}
-                setSelectedUser={setSelectedUser}
+                setSelectedUser={(user) =>
+                  setSelectedUser(
+                    user
+                      ? {
+                          ...user,
+                          profile: user.profile
+                            ? {
+                                ...user.profile,
+                                skills: Array.isArray(user.profile.skills)
+                                  ? user.profile.skills.map((item, idx) =>
+                                      typeof item === 'string'
+                                        ? { id: String(idx), name: item }
+                                        : item
+                                    )
+                                  : [],
+                              }
+                            : undefined,
+                        }
+                      : null
+                  )
+                }
                 setMessageDialog={setMessageDialog}
                 getRoleColor={getRoleColor}
                 actionLoading={actionLoading}
