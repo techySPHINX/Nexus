@@ -6,6 +6,7 @@ import React, {
   ReactNode,
 } from 'react';
 import axios from 'axios';
+import { jwtDecode } from 'jwt-decode';
 
 interface User {
   id: string;
@@ -14,6 +15,15 @@ interface User {
   role: 'STUDENT' | 'ALUM' | 'ADMIN';
   profileCompleted: boolean;
   profile?: Profile;
+}
+
+interface DecodedToken {
+  sub: string;
+  name: string;
+  email: string;
+  role: 'STUDENT' | 'ALUM' | 'ADMIN'; // adjust if you have more roles
+  profileCompleted: boolean;
+  profile?: Profile; // make this stricter if you know its shape
 }
 
 export interface Profile {
@@ -66,21 +76,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Configure axios defaults
   axios.defaults.baseURL = 'http://localhost:3000';
 
+  // Check for stored token on app load || app refresh
   useEffect(() => {
-    // Check for stored token on app load
     const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
 
-    if (storedToken && storedUser) {
+    if (storedToken) {
       try {
+        const decoded: DecodedToken = jwtDecode(storedToken);
+
+        const user: User = {
+          id: decoded.sub, // ✅ direct mapping
+          name: decoded.name,
+          email: decoded.email,
+          role: decoded.role,
+          profileCompleted: decoded.profileCompleted,
+          profile: decoded.profile,
+        };
+
         setToken(storedToken);
-        setUser(JSON.parse(storedUser));
+        setUser(user);
         axios.defaults.headers.common['Authorization'] =
           `Bearer ${storedToken}`;
       } catch (error) {
         console.error('Error parsing stored user data:', error);
         localStorage.removeItem('token');
-        localStorage.removeItem('user');
       }
     }
 
@@ -94,21 +113,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         password,
       });
 
-      const { accessToken, user } = response.data;
+      const { accessToken } = response.data;
+      const decoded: DecodedToken = jwtDecode(accessToken);
+
+      const user: User = {
+        id: decoded.sub, // ✅ direct mapping
+        name: decoded.name,
+        email: decoded.email,
+        role: decoded.role,
+        profileCompleted: decoded.profileCompleted,
+        profile: decoded.profile,
+      };
 
       setToken(accessToken);
       setUser(user);
 
       localStorage.setItem('token', accessToken);
-      localStorage.setItem('user', JSON.stringify(user));
 
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+      let message = 'Login failed. Please try again.';
+      if (
+        axios.isAxiosError(error) &&
+        error.response &&
+        error.response.data &&
+        typeof error.response.data.message === 'string'
+      ) {
+        message = error.response.data.message;
       }
-      throw new Error('Login failed. Please try again.');
+      throw new Error(message);
     }
   };
 
@@ -126,21 +160,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         role,
       });
 
-      const { accessToken, user } = response.data;
+      const { accessToken } = response.data;
+      const decoded: DecodedToken = jwtDecode(accessToken);
+
+      const user: User = {
+        id: decoded.sub, // ✅ direct mapping
+        name: decoded.name,
+        email: decoded.email,
+        role: decoded.role,
+        profileCompleted: decoded.profileCompleted,
+        profile: decoded.profile,
+      };
 
       setToken(accessToken);
       setUser(user);
 
       localStorage.setItem('token', accessToken);
-      localStorage.setItem('user', JSON.stringify(user));
-
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Register error:', error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
+      let message = 'Registration failed. Please try again.';
+      if (
+        axios.isAxiosError(error) &&
+        error.response &&
+        error.response.data &&
+        typeof error.response.data.message === 'string'
+      ) {
+        message = error.response.data.message;
       }
-      throw new Error('Registration failed. Please try again.');
+      throw new Error(message);
     }
   };
 
@@ -148,7 +196,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
-    localStorage.removeItem('user');
     delete axios.defaults.headers.common['Authorization'];
   };
 

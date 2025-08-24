@@ -49,6 +49,7 @@ export class PostController {
 
   /**
    * Creates a new post for the current authenticated user.
+   * Post can be created only by Alumini user
    * An optional image can be uploaded with the post.
    * @param userId - The ID of the current user (extracted from JWT).
    * @param dto - The data for creating the post.
@@ -56,6 +57,7 @@ export class PostController {
    * @returns A promise that resolves to the created post.
    */
   @Post()
+  @Roles(Role.ALUM , Role.ADMIN)
   @ApiOperation({ summary: 'Create a post for the current user' })
   @ApiBody({ type: CreatePostDto })
   @ApiResponse({ status: 201, description: 'Post created successfully.' })

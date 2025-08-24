@@ -388,10 +388,16 @@ export class ReferralService {
         referral: {
           select: {
             id: true,
-            company: true,
             jobTitle: true,
+            company: true,
             location: true,
             status: true,
+            postedBy: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
           },
         },
         student: {

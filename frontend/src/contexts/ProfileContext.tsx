@@ -2,81 +2,26 @@ import React, {
   createContext,
   useContext,
   useState,
-  useEffect,
   useCallback,
   useMemo,
 } from 'react';
-import axios from 'axios';
-// import { useAuth } from '../contexts/AuthContext';
-
-// Export enums and types that will be used in other files
-export enum Role {
-  STUDENT = 'STUDENT',
-  ALUM = 'ALUM',
-  ADMIN = 'ADMIN',
-}
-
-export enum ConnectionStatus {
-  PENDING = 'PENDING',
-  ACCEPTED = 'ACCEPTED',
-  REJECTED = 'REJECTED',
-  BLOCKED = 'BLOCKED',
-}
-
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  token?: string;
-  role: Role;
-  createdAt: string;
-}
-
-export interface Skill {
-  id: string;
-  name: string;
-  endorsements: Endorsement[];
-}
-
-export interface Endorsement {
-  id: string;
-  endorser: User;
-  createdAt: string;
-}
-
-export interface ProfileBadge {
-  badge: {
-    id: string;
-    name: string;
-    icon: string;
-    assignedAt?: string;
-  };
-}
-
-export interface Connection {
-  id: string;
-  status: ConnectionStatus;
-  createdAt: string;
-  recipient: User;
-  requester: User;
-}
-
-export interface Profile {
-  id: string;
-  bio?: string | null;
-  location?: string | null;
-  interests?: string | null;
-  avatarUrl?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  skills: Skill[];
-  endorsements: Endorsement[];
-  user: User;
-}
+import {
+  fetchProfileDataService,
+  endorseSkillService,
+  awardBadgeService,
+  updateProfileService,
+  searchAllProfileDataService,
+  searchedProfileDataService,
+} from '../services/profileService';
+import {
+  Profile,
+  ProfileBadge,
+  UpdateProfileInput,
+} from '../types/profileType';
+import { useAuth } from './AuthContext';
 
 // Context
 interface ProfileContextType {
-  user: User | null;
   profile: Profile | null;
   badges: ProfileBadge[];
   //   connections: Connection[];
@@ -84,16 +29,16 @@ interface ProfileContextType {
   error: string;
   fetchProfileData: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  allSearchedProfile: () => Promise<void>;
+  searchedProfile: (userId: string) => Promise<void>;
   endorseSkill: (skillId: string) => Promise<void>;
   awardBadge: (userId: string, badgeId: string) => Promise<void>;
   //   handleConnection: (userId: string, action: 'accept' | 'reject') => Promise<void>;
+  updateProfile: (profileData: UpdateProfileInput) => Promise<void>;
   setError: (error: string) => void;
-  login: (userData: User) => void;
-  logout: () => void;
 }
 
 const ProfileContext = createContext<ProfileContextType>({
-  user: null,
   profile: null,
   badges: [],
   //   connections: [],
@@ -101,131 +46,175 @@ const ProfileContext = createContext<ProfileContextType>({
   error: '',
   fetchProfileData: async () => {},
   refreshProfile: async () => {},
+  allSearchedProfile: async () => {},
+  searchedProfile: async () => {},
   endorseSkill: async () => {},
   awardBadge: async () => {},
-  //   handleConnection: async () => {},
+  updateProfile: async () => {},
   setError: () => {},
-  login: () => {},
-  logout: () => {},
 });
 
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [badges, setBadges] = useState<ProfileBadge[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const api = useMemo(() => {
-    const instance = axios.create({
-      baseURL: 'http://localhost:3000',
-    });
-    instance.interceptors.request.use((config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
-    return instance;
-  }, []);
-
   const fetchProfileData = useCallback(async () => {
     if (!user?.id) return;
-
     setLoading(true);
     try {
-      const [profileRes, badgesRes] = await Promise.all([
-        api.get(`/profile/me`),
-        api.get(`/profile/${user.id}/badges`),
-      ]);
-      setProfile(profileRes.data);
-      setBadges(badgesRes.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch profile');
+      const { profile, badges } = await fetchProfileDataService(user.id);
+      setProfile(profile);
+      setBadges(badges);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to fetch profile');
+      } else {
+        setError('An unexpected error occurred.');
+        console.error('Unexpected error:', err);
+      }
     } finally {
       setLoading(false);
     }
-  }, [user?.id, api]);
+  }, [user]);
 
   const refreshProfile = useCallback(async () => {
     await fetchProfileData();
   }, [fetchProfileData]);
 
+  const allSearchedProfile = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const { AllSearchedProfile } = await searchAllProfileDataService();
+      setProfile(AllSearchedProfile);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to search profiles');
+      } else {
+        setError('An unexpected error occurred.');
+        console.error('Unexpected error:', err);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const searchedProfile = useCallback(
+    async (userId: string) => {
+      if (!user?.id) return;
+      setLoading(true);
+      try {
+        const { SearchedProfile } = await searchedProfileDataService(userId);
+        setProfile(SearchedProfile);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to search profile');
+        } else {
+          setError('An unexpected error occurred.');
+          console.error('Unexpected error:', err);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
+
+  const updateProfile = useCallback(
+    async (profileData: UpdateProfileInput) => {
+      if (!user || !profile) {
+        setError('Authentication required');
+        return;
+      }
+      setLoading(true);
+      try {
+        await updateProfileService(user.id, profileData);
+        await refreshProfile();
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to update profile');
+        } else {
+          setError('Failed to update profile');
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, profile, refreshProfile]
+  );
+
   const endorseSkill = useCallback(
     async (skillId: string) => {
       if (!profile) return;
       try {
-        await api.post(`/profile/${profile.id}/endorse`, { skillId });
+        await endorseSkillService(profile.id, skillId);
         await refreshProfile();
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to endorse skill');
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to endorse skill');
+        } else {
+          setError('An unexpected error occurred.');
+          console.error('Unexpected error:', err);
+        }
+      } finally {
+        setLoading(false);
       }
     },
-    [profile, api, refreshProfile]
+    [profile, refreshProfile]
   );
 
   const awardBadge = useCallback(
     async (userId: string, badgeId: string) => {
       try {
-        await api.post(`/profile/${userId}/award-badge`, { badgeId });
+        await awardBadgeService(userId, badgeId);
         await refreshProfile();
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to award badge');
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to award badge');
+        } else {
+          setError('An unexpected error occurred.');
+          console.error('Unexpected error:', err);
+        }
+      } finally {
+        setLoading(false);
       }
     },
-    [api, refreshProfile]
+    [refreshProfile]
   );
-
-  const login = useCallback((userData: User) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', userData.token || '');
-  }, []);
-
-  const logout = useCallback(() => {
-    setUser(null);
-    setProfile(null);
-    setBadges([]);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-  }, []);
-
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
 
   // Memoize the entire context value
   const contextValue = useMemo(
     () => ({
-      user,
       profile,
       badges,
       loading,
       error,
       fetchProfileData,
       refreshProfile,
+      allSearchedProfile,
+      searchedProfile,
       endorseSkill,
       awardBadge,
+      updateProfile,
       setError,
-      login,
-      logout,
     }),
     [
-      user,
       profile,
       badges,
       loading,
       error,
       fetchProfileData,
       refreshProfile,
+      allSearchedProfile,
+      searchedProfile,
       endorseSkill,
       awardBadge,
+      updateProfile,
     ]
   );
 
