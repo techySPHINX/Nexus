@@ -94,6 +94,11 @@ import SuggestionTab from '@/components/Connections/SuggestionTab';
 //   };
 // }
 
+interface Skill {
+  id: string;
+  name: string;
+}
+
 interface ConnectionSuggestion {
   user: {
     id: string;
@@ -105,7 +110,7 @@ interface ConnectionSuggestion {
       location?: string;
       interests?: string;
       avatarUrl?: string;
-      skills: string[];
+      skills: Skill[];
     };
   };
   matchScore: number;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { usePosts } from '../contexts/PostContext';
-import { Post } from '../components/Post/Post';
+import { usePosts } from '../../contexts/PostContext';
+import { Post } from '../../components/Post/Post';
 import {
   Box,
   Typography,

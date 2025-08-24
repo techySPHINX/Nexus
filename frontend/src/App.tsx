@@ -21,13 +21,12 @@ import './App.css';
 import Notification from './pages/Notification';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ProfileProvider } from './contexts/ProfileContext';
-import { FeedPage } from './pages/FeedPage';
-import { PostDetailPage } from './components/Post/PostDetailPage';
-import { UserPostsPage } from './components/Post/UserPostsPage';
-import { SubCommunitiesPage } from './components/Post/SubCommunitiesPage';
-import { SubCommunityPage } from './pages/SubCommunityPage';
-import { SearchResultsPage } from './components/Post/SearchResultsPage';
-import { AdminModerationPage } from './pages/AdminModerationPage';
+import { FeedPage } from './pages/Posts/FeedPage';
+import { PostDetailPage } from './pages/Posts/PostDetailPage';
+import { UserPostsPage } from './pages/Posts/UserPostsPage';
+import { SubCommunityPage } from './pages/Posts/SubCommunityPage';
+import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
+import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { PostProvider } from './contexts/PostContext';
 import { SubCommunityProvider } from './contexts/SubCommunityContext';
 
@@ -136,14 +135,6 @@ const Layout: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <UserPostsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/subcommunities"
-              element={
-                <ProtectedRoute>
-                  <SubCommunitiesPage />
                 </ProtectedRoute>
               }
             />

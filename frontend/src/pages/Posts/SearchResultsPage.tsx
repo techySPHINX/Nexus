@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
-import { Post } from '../../pages/Post';
+import { Post } from '../../components/Post/Post';
 import {
   Box,
   Typography,

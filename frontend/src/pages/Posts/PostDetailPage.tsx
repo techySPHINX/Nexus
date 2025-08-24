@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
-import { Post } from '../../pages/Post';
+import { Post } from '../../components/Post/Post';
 import { Box, CircularProgress, Typography, Button } from '@mui/material';
 import { Link } from 'react-router-dom';
 

@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { usePosts } from '../contexts/PostContext';
-import { useProfile } from '../contexts/ProfileContext';
-import { useAuth } from '../contexts/AuthContext';
-import { Post } from '../components/Post/Post';
+import { usePosts } from '../../contexts/PostContext';
+import { useProfile } from '../../contexts/ProfileContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { Post } from '../../components/Post/Post';
 import {
   Box,
   Typography,
@@ -14,7 +14,7 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import { CreatePostForm } from '../components/Post/CreatePostForm';
+import { CreatePostForm } from '../../components/Post/CreatePostForm';
 import { getErrorMessage } from '@/utils/errorHandler';
 
 export const FeedPage: React.FC = () => {

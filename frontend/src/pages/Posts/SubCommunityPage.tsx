@@ -1,42 +1,46 @@
 import React, { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
-import { Post } from '../../pages/Post';
+import { Post } from '../../components/Post/Post';
 import { Box, Typography, Button, CircularProgress } from '@mui/material';
+import { CreatePostForm } from '../../components/Post/CreatePostForm';
 
-export const UserPostsPage: React.FC = () => {
-  const { userId } = useParams<{ userId: string }>();
-  const { userPosts, getUserPosts, pagination, loading } = usePosts();
+export const SubCommunityPage: React.FC = () => {
+  const { subCommunityId } = useParams<{ subCommunityId: string }>();
+  const { subCommunityFeed, getSubCommunityFeed, pagination, loading } =
+    usePosts();
 
   useEffect(() => {
-    if (userId) {
-      getUserPosts(userId);
+    if (subCommunityId) {
+      getSubCommunityFeed(subCommunityId);
     }
-  }, [userId, getUserPosts]);
+  }, [subCommunityId, getSubCommunityFeed]);
 
   const handleLoadMore = () => {
-    if (userId) {
-      getUserPosts(userId, pagination.page + 1);
+    if (subCommunityId) {
+      getSubCommunityFeed(subCommunityId, pagination.page + 1);
     }
   };
 
   return (
     <Box sx={{ maxWidth: '800px', margin: '0 auto', p: 2 }}>
       <Typography variant="h4" gutterBottom>
-        User&apos;s Posts
+        Sub-Community Feed
       </Typography>
+
+      <CreatePostForm subCommunityId={subCommunityId} />
 
       {loading && pagination.page === 1 ? (
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
           <CircularProgress />
         </Box>
-      ) : userPosts.length === 0 ? (
+      ) : subCommunityFeed.length === 0 ? (
         <Typography variant="body1" sx={{ mt: 2 }}>
-          This user hasn&apos;t posted anything yet.
+          No posts in this sub-community yet. Be the first to post!
         </Typography>
       ) : (
         <>
-          {userPosts.map((post) => (
+          {subCommunityFeed.map((post) => (
             <Post key={post.id} post={post} />
           ))}
 
