@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Container,
   Paper,
@@ -14,22 +14,19 @@ import {
   Grid,
   CircularProgress,
   Tooltip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
+  // Dialog,
+  // DialogTitle,
+  // DialogContent,
+  // DialogActions,
+  // Select,
+  // MenuItem,
+  // FormControl,
+  // InputLabel,
   Badge,
 } from '@mui/material';
 import { motion } from 'framer-motion';
-import {
-  useProfile,
-  Role,
-  ProfileBadge, // Import the renamed interface
-} from '../contexts/ProfileContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useProfile } from '../contexts/ProfileContext';
 import {
   LocationOn,
   Info,
@@ -44,18 +41,19 @@ import {
   Business,
 } from '@mui/icons-material';
 import axios from 'axios';
+import { Role } from '@/types/profileType';
 
 const Profile: React.FC = () => {
   const {
-    user,
     profile,
     badges,
-    loading: profileLoading,
+    loading,
     error,
     refreshProfile,
     endorseSkill,
-    awardBadge,
+    // awardBadge,
     setError,
+    updateProfile,
   } = useProfile();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -67,24 +65,14 @@ const Profile: React.FC = () => {
   });
   const [skillsInput, setSkillsInput] = useState('');
   const [success, setSuccess] = useState('');
-  const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
-  const [selectedBadge, setSelectedBadge] = useState('');
-  const [availableBadges, setAvailableBadges] = useState<ProfileBadge[]>([]);
-  const [apiError, setApiError] = useState<string | null>(null);
+  // const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
+  // const [selectedBadge, setSelectedBadge] = useState('');
+  // const [availableBadges, setAvailableBadges] = useState<ProfileBadge[]>([]);
+  const [profileLoading, setProfileLoading] = useState(true);
 
-  const api = useMemo(() => {
-    const instance = axios.create({
-      baseURL: 'http://localhost:3000',
-    });
-    instance.interceptors.request.use((config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    });
-    return instance;
-  }, []);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const { user } = useAuth();
+
   // Initialize local profile
   useEffect(() => {
     if (profile) {
@@ -99,43 +87,49 @@ const Profile: React.FC = () => {
   }, [profile]);
 
   // Fetch available badges for admin
-  useEffect(() => {
-    // if (user?.role === 'ADMIN') {
-    if (!user?.id) return;
+  // useEffect(() => {
+  //   if (user?.role === 'ADMIN') {
+  //     if (!user?.id) return;
 
-    const controller = new AbortController();
+  //     const controller = new AbortController();
 
-    const fetchBadges = async () => {
-      try {
-        const res = await api.get(`profile/${user.id}/badges`, {
-          signal: controller.signal,
-        });
-        setAvailableBadges(res.data);
-      } catch (err) {
-        if (!axios.isCancel(err)) {
-          console.error('Failed to fetch badges', err);
-        }
-      }
-    };
+  //     const fetchBadges = async () => {
+  //       try {
+  //         const res = await api.get(`profile/${user.id}/badges`, {
+  //           signal: controller.signal,
+  //         });
+  //         setAvailableBadges(res.data);
+  //       } catch (error: unknown) {
+  //         if (axios.isCancel(error)) {
+  //           console.error('Failed to fetch badges');
+  //         }
+  //       }
+  //     };
 
-    fetchBadges();
+  //     fetchBadges();
 
-    return () => controller.abort();
-    // }
-  }, [user?.role, api, user?.id]);
+  //     return () => controller.abort();
+  //   }
+  // }, [user?.role, user?.id]);
 
   // Fetch profile data when user changes
+
   useEffect(() => {
+    console.log('Fetching profile data... with user Id', user?.id);
     if (!user?.id) return;
 
     let isMounted = true;
+    setProfileLoading(true);
 
     const loadProfile = async () => {
       try {
+        console.log('Loading profile...');
         await refreshProfile();
         if (isMounted) console.log('Profile loaded');
-      } catch (err) {
+      } catch {
         if (isMounted) setApiError('Failed to load profile');
+      } finally {
+        setProfileLoading(false);
       }
     };
 
@@ -184,10 +178,10 @@ const Profile: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // if (!user || !profile || !token) { // Check for token existence
-    //   setError('Authentication required');
-    //   return;
-    // }
+    if (!user || !profile) {
+      setError('Authentication required');
+      return;
+    }
 
     const skillsArray = skillsInput
       .split(',')
@@ -195,15 +189,21 @@ const Profile: React.FC = () => {
       .filter(Boolean);
 
     try {
-      await api.put(`/profile/${user?.id}`, {
+      await updateProfile({
         ...localProfile,
         skills: skillsArray,
       });
-      await refreshProfile();
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update profile');
+    } catch (err) {
+      if (err && typeof err === 'object' && 'message' in err) {
+        setError(
+          (err as { message?: string }).message || 'Failed to update profile'
+        );
+      } else {
+        setError('Failed to update profile');
+      }
+      console.error('Unexpected error:', err);
     }
   };
 
@@ -211,20 +211,30 @@ const Profile: React.FC = () => {
     try {
       await endorseSkill(skillId);
       setSuccess('Skill endorsed successfully!');
-    } catch (err) {
-      setError('Failed to endorse skill');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'Failed to endorse skill');
+      } else {
+        setError('An unexpected error occurred');
+        console.error('Unexpected error:', err);
+      }
     }
   };
 
-  const handleAwardBadge = async () => {
-    try {
-      await awardBadge(profile?.user?.id || '', selectedBadge);
-      setSuccess('Badge awarded successfully!');
-      setBadgeDialogOpen(false);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to award badge');
-    }
-  };
+  // Can't be done now as no available badge
+  // const handleAwardBadge = async () => {
+  //   try {
+  //     await awardBadge(profile?.user?.id || '', selectedBadge);
+  //     setSuccess('Badge awarded successfully!');
+  //     setBadgeDialogOpen(false);
+  //   } catch (error: unknown) {
+  //     if (axios.isAxiosError(error)) {
+  //       setError(error.response?.data?.message || 'Failed to award badge');
+  //     } else {
+  //       setError('An unexpected error occurred');
+  //     }
+  //   }
+  // };
 
   // const handleConnectionAction = async (userId: string, action: 'accept' | 'reject') => {
   //   try {
@@ -264,7 +274,7 @@ const Profile: React.FC = () => {
     </Box>
   );
 
-  if (profileLoading) {
+  if (loading || profileLoading) {
     return (
       <Container maxWidth="md">
         <Box
@@ -281,41 +291,6 @@ const Profile: React.FC = () => {
       </Container>
     );
   }
-
-  // // In Profile.tsx's useEffect
-  // useEffect(() => {
-  //   let isMounted = true;
-  //   console.log('Fetching profile data...');
-  //   const fetchData = async () => {  // <-- Proper async wrapper
-  //     try {
-  //       console.log('Fetching profile data...2');
-  //       await refreshProfile();
-  //       console.log('Profile data fetched successfully');
-  //       console.log('Profile state:', profile);
-  //       console.log('Badges state:', badges);
-  //       if (isMounted) console.log('Fetch complete');
-  //     } catch (err) {
-  //       if (isMounted) setApiError('Fetch failed');
-  //     }
-  //   };
-
-  //   if (user?.id) {
-  //     console.log('User ID found, fetching profile...');
-  //     (async () => {
-  //     await fetchData();
-  //     console.log('3rd useEffect fetch profile called'); // now runs after it's done
-  //   })();
-  //   }
-
-  //   return () => {
-  //     isMounted = false;  // <-- Cleanup
-  //   };
-  // }, [user?.id]);  // <-- Correct dependencies
-
-  // useEffect(() => {
-  //   if (!user?.id || !token) return;
-  //   console.log('Current profile state:', profile); // Add this logging
-  // }, [profile,user?.id, token]);
 
   if (error || apiError) {
     return (
@@ -470,8 +445,9 @@ const Profile: React.FC = () => {
                   </Button>
                 </Box> */}
 
+                {/* Can't be done now as no available badge */}
                 {/* Admin Actions */}
-                {user?.role === Role.ADMIN && (
+                {/* {user?.role === Role.ADMIN && (
                   <Box>
                     <Button
                       variant="outlined"
@@ -483,7 +459,7 @@ const Profile: React.FC = () => {
                       Award Badge
                     </Button>
                   </Box>
-                )}
+                )} */}
               </Box>
 
               {/* Right Column - Profile Content */}
@@ -584,7 +560,11 @@ const Profile: React.FC = () => {
                           variant="subtitle1"
                           sx={{ display: 'flex', alignItems: 'center', mb: 1 }}
                         >
-                          <Work sx={{ mr: 1 }} /> Skills
+                          <Work
+                            color={getRoleColor(profile.user.role)}
+                            sx={{ mr: 1 }}
+                          />{' '}
+                          Skills
                         </Typography>
                         {profile.skills.length > 0 ? (
                           <Box
@@ -763,10 +743,10 @@ const Profile: React.FC = () => {
                           type="submit"
                           variant="contained"
                           size="large"
-                          disabled={profileLoading}
+                          disabled={loading}
                           sx={{ flex: 1 }}
                         >
-                          {profileLoading ? (
+                          {loading ? (
                             <CircularProgress size={24} />
                           ) : (
                             'Save Changes'
@@ -790,42 +770,48 @@ const Profile: React.FC = () => {
         </motion.div>
       </Box>
 
+      {/* Can't be done now as no available badge */}
       {/* Badge Award Dialog */}
-      <Dialog open={badgeDialogOpen} onClose={() => setBadgeDialogOpen(false)}>
-        <DialogTitle>Award Badge</DialogTitle>
-        <DialogContent>
-          <FormControl fullWidth margin="normal">
-            <InputLabel>Select Badge</InputLabel>
-            <Select
-              value={selectedBadge}
-              onChange={(e) => setSelectedBadge(e.target.value as string)}
-              label="Select Badge"
+      {/* {user?.role == Role.ADMIN && (
+        <Dialog
+          open={badgeDialogOpen}
+          onClose={() => setBadgeDialogOpen(false)}
+        >
+          <DialogTitle>Award Badge</DialogTitle>
+          <DialogContent>
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Select Badge</InputLabel>
+              <Select
+                value={selectedBadge}
+                onChange={(e) => setSelectedBadge(e.target.value as string)}
+                label="Select Badge"
+              >
+                {availableBadges.map((badge) => (
+                  <MenuItem key={badge.badge.id} value={badge.badge.id}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Avatar
+                        src={badge.badge.icon}
+                        sx={{ width: 24, height: 24 }}
+                      />
+                      {badge.badge.name}
+                    </Box>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setBadgeDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleAwardBadge}
+              disabled={!selectedBadge}
+              variant="contained"
             >
-              {availableBadges.map((badge) => (
-                <MenuItem key={badge.badge.id} value={badge.badge.id}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Avatar
-                      src={badge.badge.icon}
-                      sx={{ width: 24, height: 24 }}
-                    />
-                    {badge.badge.name}
-                  </Box>
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setBadgeDialogOpen(false)}>Cancel</Button>
-          <Button
-            onClick={handleAwardBadge}
-            disabled={!selectedBadge}
-            variant="contained"
-          >
-            Award
-          </Button>
-        </DialogActions>
-      </Dialog>
+              Award
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )} */}
     </Container>
   );
 };
