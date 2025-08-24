@@ -208,11 +208,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
       setSubCommunityFeed((prev) => prev.filter((post) => post.id !== id));
       setUserPosts((prev) => prev.filter((post) => post.id !== id));
       setSearchResults((prev) => prev.filter((post) => post.id !== id));
-      setPosts((prev) => prev.filter((post) => post.id !== id));
-      setFeed((prev) => prev.filter((post) => post.id !== id));
-      setSubCommunityFeed((prev) => prev.filter((post) => post.id !== id));
-      setUserPosts((prev) => prev.filter((post) => post.id !== id));
-      setSearchResults((prev) => prev.filter((post) => post.id !== id));
+      
+      
+      
+      
+      
       if (currentPost?.id === id) setCurrentPost(null);
       setLoading(false);
     } catch (err) {
