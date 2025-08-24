@@ -91,9 +91,6 @@ const PostContext = createContext<PostContextType | undefined>(undefined);
 export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
   const [feed, setFeed] = useState<Post[]>([]);
