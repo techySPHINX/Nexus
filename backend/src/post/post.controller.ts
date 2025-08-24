@@ -57,7 +57,7 @@ export class PostController {
    * @returns A promise that resolves to the created post.
    */
   @Post()
-  @Roles(Role.ALUM , Role.ADMIN)
+  @Roles(Role.ALUM, Role.ADMIN)
   @ApiOperation({ summary: 'Create a post for the current user' })
   @ApiBody({ type: CreatePostDto })
   @ApiResponse({ status: 201, description: 'Post created successfully.' })
@@ -183,6 +183,7 @@ export class PostController {
    * @returns A promise that resolves to the updated post.
    */
   @Patch(':id')
+  @Roles(Role.ALUM, Role.ADMIN)
   @ApiOperation({ summary: 'Update a post by id (only by author)' })
   @ApiParam({ name: 'id', type: String })
   @ApiBody({ type: UpdatePostDto })
@@ -242,6 +243,7 @@ export class PostController {
    * @returns A promise that resolves when the post has been deleted.
    */
   @Delete(':id')
+  @Roles(Role.ALUM, Role.ADMIN)
   @ApiOperation({ summary: 'Delete a post by id (only by author)' })
   @ApiParam({ name: 'id', type: String })
   @ApiResponse({ status: 200, description: 'Post deleted successfully.' })

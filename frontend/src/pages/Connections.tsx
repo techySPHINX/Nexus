@@ -194,7 +194,7 @@ const Connections: React.FC = () => {
     if (token) {
       fetchAll(hookFilters);
     }
-  }, [token, filters.page, filters.limit, filters.role, searchTerm, fetchAll]);
+  }, [token, filters.page, filters.limit, filters.role, searchTerm]);
 
   // Wrapper functions that use the hook functions with loading states
   const handleCancelConnection = async (connectionId: string) => {
