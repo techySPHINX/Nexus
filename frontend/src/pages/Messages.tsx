@@ -91,42 +91,41 @@ const Messages: React.FC = () => {
     };
   }, [token]);
 
-  useEffect(() => {
-    if (selectedConversation) {
-      console.log(
-        'Conversation selected, fetching messages and starting real-time updates...',
-        {
-          conversation: selectedConversation,
-          user: user?.id,
-          hasToken: !!token,
+  const handleNewMessage = useCallback(
+    (newMessage: Message) => {
+      // Only add if it's not already in the messages array
+      setMessages((prev) => {
+        const exists = prev.some((msg) => msg.id === newMessage.id);
+        if (!exists) {
+          // Play notification sound for new messages (if not from current user)
+          if (newMessage.senderId !== user?.id) {
+            playNotificationSound();
+            setNewMessageCount((prev) => prev + 1);
+          }
+
+          return [...prev, newMessage].sort(
+            (a, b) =>
+              new Date(a.timestamp || a.createdAt).getTime() -
+              new Date(b.timestamp || b.createdAt).getTime()
+          );
         }
+        return prev;
+      });
+
+      // Update conversation list
+      setConversations((prev) =>
+        prev.map((conv) =>
+          conv.id === selectedConversation?.id
+            ? { ...conv, lastMessage: newMessage }
+            : conv
+        )
       );
 
-      fetchMessages(selectedConversation.otherUser.id);
-
-      // Only start real-time updates if we have all required data
-      if (user && token) {
-        startRealTimeUpdates();
-      } else {
-        console.log(
-          'Cannot start real-time updates yet - missing user or token'
-        );
-      }
-
-      setNewMessageCount(0); // Reset new message count when switching conversations
-    } else {
-      console.log('No conversation selected, stopping real-time updates');
-      stopRealTimeUpdates();
-    }
-  }, [selectedConversation, user, token]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+      // Update last message ID reference
+      lastMessageIdRef.current = newMessage.id;
+    },
+    [selectedConversation, user]
+  );
 
   const startRealTimeUpdates = useCallback(async () => {
     if (!selectedConversation || !user || !token) {
@@ -201,7 +200,7 @@ const Messages: React.FC = () => {
       setIsRealTimeEnabled(false);
       setError(`WebSocket connection failed: ${getErrorMessage(error)}`);
     }
-  }, [selectedConversation, user, token]);
+  }, [selectedConversation, user, token, handleNewMessage]);
 
   const stopRealTimeUpdates = useCallback(() => {
     webSocketService.disconnect();
@@ -209,41 +208,48 @@ const Messages: React.FC = () => {
     setTypingUsers(new Set());
   }, []);
 
-  const handleNewMessage = useCallback(
-    (newMessage: Message) => {
-      // Only add if it's not already in the messages array
-      setMessages((prev) => {
-        const exists = prev.some((msg) => msg.id === newMessage.id);
-        if (!exists) {
-          // Play notification sound for new messages (if not from current user)
-          if (newMessage.senderId !== user?.id) {
-            playNotificationSound();
-            setNewMessageCount((prev) => prev + 1);
-          }
-
-          return [...prev, newMessage].sort(
-            (a, b) =>
-              new Date(a.timestamp || a.createdAt).getTime() -
-              new Date(b.timestamp || b.createdAt).getTime()
-          );
+  useEffect(() => {
+    if (selectedConversation) {
+      console.log(
+        'Conversation selected, fetching messages and starting real-time updates...',
+        {
+          conversation: selectedConversation,
+          user: user?.id,
+          hasToken: !!token,
         }
-        return prev;
-      });
-
-      // Update conversation list
-      setConversations((prev) =>
-        prev.map((conv) =>
-          conv.id === selectedConversation?.id
-            ? { ...conv, lastMessage: newMessage }
-            : conv
-        )
       );
 
-      // Update last message ID reference
-      lastMessageIdRef.current = newMessage.id;
-    },
-    [selectedConversation, user]
-  );
+      fetchMessages(selectedConversation.otherUser.id);
+
+      // Only start real-time updates if we have all required data
+      if (user && token) {
+        startRealTimeUpdates();
+      } else {
+        console.log(
+          'Cannot start real-time updates yet - missing user or token'
+        );
+      }
+
+      setNewMessageCount(0); // Reset new message count when switching conversations
+    } else {
+      console.log('No conversation selected, stopping real-time updates');
+      stopRealTimeUpdates();
+    }
+  }, [
+    selectedConversation,
+    user,
+    token,
+    startRealTimeUpdates,
+    stopRealTimeUpdates,
+  ]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const playNotificationSound = () => {
     try {

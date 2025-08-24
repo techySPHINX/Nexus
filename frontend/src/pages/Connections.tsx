@@ -166,12 +166,15 @@ const Connections: React.FC = () => {
   });
 
   // Convert filters to the format expected by the hook
-  const hookFilters = {
-    page: filters.page,
-    limit: filters.limit,
-    role: filters.role || undefined,
-    search: searchTerm || undefined,
-  };
+  const hookFilters = React.useMemo(
+    () => ({
+      page: filters.page,
+      limit: filters.limit,
+      role: filters.role || undefined,
+      search: searchTerm || undefined,
+    }),
+    [filters.page, filters.limit, filters.role, searchTerm]
+  );
 
   // Use the custom hook for all connection logic
   const {
@@ -194,7 +197,15 @@ const Connections: React.FC = () => {
     if (token) {
       fetchAll(hookFilters);
     }
-  }, [token, filters.page, filters.limit, filters.role, searchTerm]);
+  }, [
+    token,
+    filters.page,
+    filters.limit,
+    filters.role,
+    searchTerm,
+    fetchAll,
+    hookFilters,
+  ]);
 
   // Wrapper functions that use the hook functions with loading states
   const handleCancelConnection = async (connectionId: string) => {

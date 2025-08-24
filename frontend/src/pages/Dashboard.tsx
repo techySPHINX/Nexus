@@ -103,6 +103,24 @@ const Dashboard: React.FC = () => {
     // stats: connectionStats,
   } = useConnections();
 
+  const calculateProfileCompletion = React.useCallback(
+    (user: DashboardUser | null | undefined): number => {
+      if (!user) return 0;
+
+      let completed = 0;
+      const total = 4; // Basic profile fields
+
+      if (user.name) completed++;
+      if (user.email) completed++;
+      if (user.role) completed++;
+      if (user.profile?.bio || user.profile?.location || user.profile?.skills)
+        completed++;
+
+      return Math.round((completed / total) * 100);
+    },
+    []
+  );
+
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -192,7 +210,14 @@ const Dashboard: React.FC = () => {
     if (user) {
       fetchDashboardData();
     }
-  }, [user, connections, pendingReceived, suggestions]);
+  }, [
+    user,
+    connections,
+    pendingReceived,
+    suggestions,
+    upcomingEvents.length,
+    calculateProfileCompletion,
+  ]);
 
   interface UserProfile {
     bio?: string;
@@ -206,23 +231,6 @@ const Dashboard: React.FC = () => {
     role?: string;
     profile?: UserProfile;
   }
-
-  const calculateProfileCompletion = (
-    user: DashboardUser | null | undefined
-  ): number => {
-    if (!user) return 0;
-
-    let completed = 0;
-    const total = 4; // Basic profile fields
-
-    if (user.name) completed++;
-    if (user.email) completed++;
-    if (user.role) completed++;
-    if (user.profile?.bio || user.profile?.location || user.profile?.skills)
-      completed++;
-
-    return Math.round((completed / total) * 100);
-  };
 
   const generateRecentActivities = (
     connections: { id: string; user: { id: string; name: string } }[],

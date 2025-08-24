@@ -37,6 +37,15 @@ export const AdminModerationPage: React.FC = () => {
     'success'
   );
 
+  const showSnackbar = useCallback(
+    (message: string, severity: 'success' | 'error') => {
+      setSnackbarMessage(message);
+      setSnackbarSeverity(severity);
+      setSnackbarOpen(true);
+    },
+    []
+  );
+
   useEffect(() => {
     getPendingPosts();
   }, [getPendingPosts]);
@@ -46,16 +55,7 @@ export const AdminModerationPage: React.FC = () => {
       showSnackbar(error, 'error');
       clearError();
     }
-  }, [error, clearError]);
-
-  const showSnackbar = useCallback(
-    (message: string, severity: 'success' | 'error') => {
-      setSnackbarMessage(message);
-      setSnackbarSeverity(severity);
-      setSnackbarOpen(true);
-    },
-    []
-  );
+  }, [error, clearError, showSnackbar]);
 
   const handleLoadMore = () => {
     getPendingPosts(pagination.page + 1);

@@ -117,34 +117,7 @@ const Referrals: React.FC = () => {
     coverLetter: '',
   });
 
-  // Fetch referrals and applications
-  useEffect(() => {
-    console.log('👤 Current user:', user);
-    console.log('🔑 User role:', user?.role);
-    console.log('🆔 User ID:', user?.id);
-
-    if (!user) {
-      console.log('❌ No user found, cannot fetch referrals');
-      setError('User not authenticated');
-      return;
-    }
-
-    if (!user.role) {
-      console.log('❌ User has no role, cannot fetch referrals');
-      setError('User role not found');
-      return;
-    }
-
-    console.log('✅ User authenticated, fetching referrals...');
-    fetchReferrals();
-
-    if (user.role === 'STUDENT') {
-      console.log('🎓 Student user, fetching applications...');
-      fetchApplications();
-    }
-  }, [user]);
-
-  const fetchReferrals = async () => {
+  const fetchReferrals = React.useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -182,7 +155,34 @@ const Referrals: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  // Fetch referrals and applications
+  useEffect(() => {
+    console.log('👤 Current user:', user);
+    console.log('🔑 User role:', user?.role);
+    console.log('🆔 User ID:', user?.id);
+
+    if (!user) {
+      console.log('❌ No user found, cannot fetch referrals');
+      setError('User not authenticated');
+      return;
+    }
+
+    if (!user.role) {
+      console.log('❌ User has no role, cannot fetch referrals');
+      setError('User role not found');
+      return;
+    }
+
+    console.log('✅ User authenticated, fetching referrals...');
+    fetchReferrals();
+
+    if (user.role === 'STUDENT') {
+      console.log('🎓 Student user, fetching applications...');
+      fetchApplications();
+    }
+  }, [fetchReferrals, user]);
 
   const fetchApplications = async () => {
     try {
