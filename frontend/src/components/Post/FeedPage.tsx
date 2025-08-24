@@ -25,7 +25,8 @@ export const FeedPage: React.FC = () => {
   useEffect(() => {
     getFeed();
     refreshProfile();
-  }, [getFeed, user]);
+  }, [getFeed, refreshProfile]);
+
 
   const handleLoadMore = () => {
     getFeed(pagination.page + 1);
@@ -37,7 +38,6 @@ export const FeedPage: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Your Feed
         </Typography>
-        {(user?.role === 'ALUM' || user?.role ==='ADMIN')  && (
           <>
             <Button
               variant="contained"
@@ -48,15 +48,27 @@ export const FeedPage: React.FC = () => {
             </Button>
             <Dialog open={openForm} onClose={() => setOpenForm(false)}>
               <DialogTitle>Create a New Post</DialogTitle>
-              <DialogContent sx={{ minWidth: '600px', maxWidth: '800px', minHeight: '60vh', maxHeight: '80vh', overflowY: 'auto' }}>
-                <CreatePostForm profile={profile ?? undefined}
+              <DialogContent
+                sx={{
+                  minWidth: '600px',
+                  maxWidth: '800px',
+                  minHeight: '60vh',
+                  maxHeight: '80vh',
+                  overflowY: 'auto',
+                }}
+              >
+                <CreatePostForm
+                  profile={profile ?? undefined}
                   onSuccess={() => {
                     setOpenForm(false);
                     showSnackbar('Post created successfully!', 'success');
                     getFeed(1);
                   }}
                   onError={() => {
-                    showSnackbar('Failed to create post. Please try again.', 'error');
+                    showSnackbar(
+                      'Failed to create post. Please try again.',
+                      'error'
+                    );
                   }}
                 />
               </DialogContent>
