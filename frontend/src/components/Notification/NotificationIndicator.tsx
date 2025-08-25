@@ -1,25 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Badge,
-    IconButton,
-    Tooltip,
-    Popover,
-    List,
-    ListItem,
-    ListItemText,
-    Typography,
-    Box,
-    Button,
-    Divider,
-    Chip,
-    Snackbar,
-    Alert,
-    CircularProgress
+  Badge,
+  IconButton,
+  Tooltip,
+  Popover,
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
+  Box,
+  Button,
+  Divider,
+  Chip,
+  Snackbar,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
-import { Notifications as NotificationsIcon, Check as CheckIcon } from '@mui/icons-material';
+import {
+  Notifications as NotificationsIcon,
+  Check as CheckIcon,
+} from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
 import { useNavigate } from 'react-router-dom';
-import useSound from 'use-sound';
+// import useSound from 'use-sound';
 import { formatDistanceToNow } from 'date-fns';
 import axios from 'axios';
 
@@ -36,8 +39,9 @@ const NotificationIndicator = () => {
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const navigate = useNavigate();
-  const [playSound] = useSound('/notification.wav');
-  const [prevUnreadCount, setPrevUnreadCount] = useState(unreadCount);
+  // for notification sound
+  // const [playSound] = useSound('/notification.wav');
+  // const [prevUnreadCount, setPrevUnreadCount] = useState(unreadCount);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
@@ -79,8 +83,15 @@ const NotificationIndicator = () => {
       await markAllAsRead();
       showSnackbar('All notifications marked as read', 'success');
       fetchNotifications(); // Refresh the notifications
-    } catch {
+    } catch (err: unknown) {
       showSnackbar('Failed to mark all as read', 'error');
+      if (axios.isAxiosError(err)) {
+        console.error(err.response?.data?.message || 'Axios error');
+      } else if (err instanceof Error) {
+        console.error(err.message);
+      } else {
+        console.error('Unknown error');
+      }
     }
   };
 
@@ -91,20 +102,66 @@ const NotificationIndicator = () => {
   };
 
   // Sound effect for new notifications
-  useEffect(() => {
-    if (unreadCount > prevUnreadCount) {
-      playSound();
-    }
-    setPrevUnreadCount(unreadCount);
-  }, [unreadCount, prevUnreadCount, playSound]);
+  // useEffect(() => {
+  //   if (unreadCount > prevUnreadCount) {
+  //     playSound();
+  //   }
+  //   setPrevUnreadCount(unreadCount);
+  // }, [unreadCount, prevUnreadCount, playSound]);
 
-  // Polling effect
+  // Polling effect: 30 sec when user is active/visible, 90 sec when inactive/hidden
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchNotifications();
-    }, 10000); // Poll every 40 seconds
+    let interval: ReturnType<typeof setInterval> | null = null;
 
-    return () => clearInterval(interval);
+    const startPolling = (isVisible: boolean = true) => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+
+      const pollInterval = isVisible ? 30000 : 90000; // 30s vs 90s
+      interval = setInterval(fetchNotifications, pollInterval);
+    };
+
+    const stopPolling = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    // Handle visibility change (tab switching, minimize, etc.)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        startPolling(true); // 30s when visible
+      } else {
+        startPolling(false); // 90s when hidden
+      }
+    };
+
+    // Handle window focus/blur (browser switching, etc.)
+    const handleFocus = () => {
+      startPolling(true); // 30s when focused
+    };
+
+    const handleBlur = () => {
+      startPolling(false); // 90s when blurred
+    };
+
+    // Set up event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    // Start with current visibility state
+    startPolling(document.visibilityState === 'visible');
+
+    return () => {
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
   }, [fetchNotifications]);
 
   return (

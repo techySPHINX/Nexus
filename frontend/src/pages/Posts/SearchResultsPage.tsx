@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
-import { Post } from '../../pages/Post';
+import { Post } from '../../components/Post/Post';
 import {
   Box,
   Typography,
@@ -77,12 +77,12 @@ export const SearchResultsPage: React.FC = () => {
         </Box>
       ) : searchResults.length === 0 ? (
         <Typography variant="body1" sx={{ mt: 2 }}>
-          No results found for "{searchQuery}"
+          No results found for &quot;{searchQuery}&quot;
         </Typography>
       ) : (
         <>
           <Typography variant="h6" sx={{ mb: 2 }}>
-            Search Results for "{searchQuery}"
+            Search Results for &quot;{searchQuery}&quot;
           </Typography>
 
           {searchResults.map((post) => (

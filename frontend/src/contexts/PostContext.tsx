@@ -1,35 +1,23 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import type { AxiosError } from 'axios';
-
-interface Post {
-  id: string;
-  content: string;
-  imageUrl?: string;
-  type: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  createdAt: string;
-  updatedAt: string;
-  author: {
-    id: string;
-    name: string;
-    profile: {
-      bio?: string;
-      avatarUrl?: string;
-    };
-  };
-  _count: {
-    Like: number;
-    Comment: number;
-  };
-  subCommunityId?: string;
-  subCommunity?: {
-    id: string;
-    name: string;
-    description: string;
-  };
-}
+import { Post } from '../types/post';
+import {
+  createPostService,
+  getFeedService,
+  getSubCommunityFeedService,
+  getPendingPostsService,
+  getPostByUserIdService,
+  getPostByIdService,
+  updatePostService,
+  approvePostService,
+  rejectPostService,
+  deletePostService,
+  searchPostsService,
+  getPostStatsService,
+  getPostCommentsService,
+  createCommentService,
+} from '../services/PostService';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 interface PostContextType {
   posts: Post[];
@@ -63,6 +51,13 @@ interface PostContextType {
   ) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
   getPost: (id: string) => Promise<void>;
+  getPostStats: (postId: string) => Promise<{
+    upvotes: number;
+    downvotes: number;
+    comments: number;
+  }>;
+  getPostComments: (postId: string) => Promise<void>;
+  createComment: (postId: string, content: string) => Promise<void>;
   getFeed: (page?: number, limit?: number) => Promise<void>;
   getSubCommunityFeed: (
     subCommunityId: string,
@@ -91,6 +86,7 @@ const PostContext = createContext<PostContextType | undefined>(undefined);
 export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
   const [feed, setFeed] = useState<Post[]>([]);
@@ -109,280 +105,209 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
     hasPrev: false,
   });
 
+  const clearError = useCallback(() => setError(null), []);
 
-    headers: {
-      Authorization: `Bearer ${token}`,
+  const createPost = useCallback(
+    async (
+      content: string,
+      image?: File,
+      subCommunityId?: string,
+      type?: string
+    ) => {
+      try {
+        if (user?.role !== 'ADMIN' && user?.role !== 'ALUM') {
+          throw new Error(
+            'Unauthorized: Only admins and alumni can perform this action'
+          );
+        }
+        setLoading(true);
+        clearError();
+        const response = await createPostService(
+          content,
+          image,
+          subCommunityId,
+          type
+        );
+
+        // The created post might be in response.data or directly in response
+        const createdPost = response.data || response;
+
+        // Ensure the post has the proper structure
+        const normalizedPost = {
+          ...createdPost,
+          _count: createdPost._count || { Vote: 0, Comment: 0 },
+          author: createdPost.author || {
+            id: user?.id || 'unknown',
+            name: user?.name || 'Unknown User',
+            profile: {
+              avatarUrl: null,
+              bio: null,
+            },
+          },
+        };
+
+        setPosts((prev) => [normalizedPost, ...prev]);
+        setFeed((prev) => [normalizedPost, ...prev]);
+        setLoading(false);
+        return normalizedPost;
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
     },
-  });
-
-  const handleError = (err: AxiosError | Error) => {
-    if (
-      'response' in err &&
-      err.response &&
-      (err as AxiosError).response?.data
-    ) {
-      const errorData = (err as AxiosError).response?.data as
-        | { message?: string }
-        | undefined;
-      setError(errorData?.message || err.message || 'Something went wrong');
-    } else {
-      setError(err.message || 'Something went wrong');
-    }
-    setLoading(false);
-    throw err;
-  };
-
-  const clearError = () => setError(null);
-
-  const createPost = async (
-    content: string,
-    image?: File,
-    subCommunityId?: string,
-    type = 'UPDATE'
-  ) => {
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('content', content);
-      formData.append('type', type);
-      if (subCommunityId) formData.append('subCommunityId', subCommunityId);
-      if (image) formData.append('image', image);
-
-      const { data } = await api.post('/posts', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      setPosts((prev) => [data, ...prev]);
-      setLoading(false);
-      return data;
-    } catch (err) {
-      handleError(err);
-    }
-  };
-
-  const updatePost = async (
-    id: string,
-    content: string,
-    image?: File,
-    subCommunityId?: string
-  ) => {
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('content', content);
-      if (subCommunityId) formData.append('subCommunityId', subCommunityId);
-      if (image) formData.append('image', image);
-
-      const { data } = await api.patch(`/posts/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      setPosts((prev) => prev.map((post) => (post.id === id ? data : post)));
-      setFeed((prev) => prev.map((post) => (post.id === id ? data : post)));
-      setSubCommunityFeed((prev) =>
-        prev.map((post) => (post.id === id ? data : post))
-      );
-      setUserPosts((prev) =>
-        prev.map((post) => (post.id === id ? data : post))
-      );
-      setSearchResults((prev) =>
-        prev.map((post) => (post.id === id ? data : post))
-      );
-      if (currentPost?.id === id) setCurrentPost(data);
-      setLoading(false);
-      return data;
-    } catch (err) {
-      handleError(err);
-    }
-  };
-  const deletePost = async (id: string) => {
-    try {
-      setLoading(true);
-      await api.delete(`/posts/${id}`);
-      setPosts((prev) => prev.filter((post) => post.id !== id));
-      setFeed((prev) => prev.filter((post) => post.id !== id));
-      setSubCommunityFeed((prev) => prev.filter((post) => post.id !== id));
-      setUserPosts((prev) => prev.filter((post) => post.id !== id));
-      setSearchResults((prev) => prev.filter((post) => post.id !== id));
-      
-      
-      
-      
-      
-      if (currentPost?.id === id) setCurrentPost(null);
-      setLoading(false);
-    } catch (err) {
-      handleError(err);
-    }
-  };
-
-  const getPost = async (id: string) => {
-    try {
-      setLoading(true);
-      const { data } = await api.get(`/posts/${id}`);
-      setCurrentPost(data);
-      setLoading(false);
-      return data;
-    } catch (err) {
-      handleError(err);
-    }
-  };
+    [user, clearError]
+  );
 
   const getFeed = useCallback(
     async (page = 1, limit = 10) => {
-      if (!token) {
-        console.error('No token available');
-        return;
-      }
+      if (!user) return;
       try {
         setLoading(true);
-        const { data } = await api.get('/posts/feed', {
-          params: { page, limit },
-        });
-        console.log('Feed data:', data);
-        setFeed(data.posts);
-        setPagination({
+        clearError();
+        const response = await getFeedService(page, limit);
+
+        // Use the correct structure from your API response
+        const posts = response.posts || []; // response has posts array directly
+        const paginationData = response.pagination || {
           page,
           limit,
-          total: data.pagination.total,
-          totalPages: data.pagination.totalPages,
-          hasNext: data.pagination.hasNext,
-          hasPrev: data.pagination.hasPrev,
+          total: posts.length,
+          totalPages: Math.ceil(posts.length / limit),
+          hasNext: false,
+          hasPrev: false,
+        };
+
+        if (page === 1) {
+          setFeed(posts);
+        } else {
+          setFeed((prev) => [...prev, ...posts]);
+        }
+        setPagination({
+          page: paginationData.page,
+          limit: paginationData.limit,
+          total: paginationData.total,
+          totalPages: paginationData.totalPages,
+          hasNext: paginationData.hasNext,
+          hasPrev: paginationData.hasPrev,
         });
         setLoading(false);
-        return data;
+        return response;
       } catch (err) {
-        handleError(err);
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
       }
     },
-    [api, token]
+    [user, clearError]
   );
 
   const getSubCommunityFeed = useCallback(
     async (subCommunityId: string, page = 1, limit = 10) => {
-      if (!token) return;
+      if (!user) return;
       try {
         setLoading(true);
-        const { data } = await api.get(
-          `/posts/subcommunity/${subCommunityId}/feed`,
-          {
-            params: { page, limit },
-          }
+        clearError();
+        const response = await getSubCommunityFeedService(
+          subCommunityId,
+          page,
+          limit
         );
-        setSubCommunityFeed(data.posts);
-        setPagination({
+
+        const posts = response.posts || [];
+        const paginationData = response.pagination || {
           page,
           limit,
-          total: data.pagination.total,
-          totalPages: data.pagination.totalPages,
-          hasNext: data.pagination.hasNext,
-          hasPrev: data.pagination.hasPrev,
-        });
-        setLoading(false);
-        return data;
-      } catch (err) {
-        handleError(err);
-      }
-    },
-    [api, token]
-  );
+          total: posts.length,
+          totalPages: Math.ceil(posts.length / limit),
+          hasNext: false,
+          hasPrev: false,
+        };
 
-  const getUserPosts = useCallback(
-    async (userId: string, page = 1, limit = 10) => {
-      if (!token) return;
-      try {
-        setLoading(true);
-        const { data } = await api.get(`/posts/user/${userId}`, {
-          params: { page, limit },
-        });
-        setUserPosts(data.posts);
+        if (page === 1) {
+          setSubCommunityFeed(posts);
+        } else {
+          setSubCommunityFeed((prev) => [...prev, ...posts]);
+        }
         setPagination({
-          page,
-          limit,
-          total: data.pagination.total,
-          totalPages: data.pagination.totalPages,
-          hasNext: data.pagination.hasNext,
-          hasPrev: data.pagination.hasPrev,
+          page: paginationData.page,
+          limit: paginationData.limit,
+          total: paginationData.total,
+          totalPages: paginationData.totalPages,
+          hasNext: paginationData.hasNext,
+          hasPrev: paginationData.hasPrev,
         });
         setLoading(false);
-        return data;
+        return response;
       } catch (err) {
-        handleError(err);
-      }
-    },
-    [api, token]
-  );
-
-  const searchPosts = async (
-    query: string,
-    page = 1,
-    limit = 10,
-    subCommunityId?: string
-  ) => {
-    try {
-      setLoading(true);
-      const { data } = await api.get('/posts/search', {
-        params: { query, page, limit, subCommunityId },
-      });
-      setSearchResults(data.posts);
-      setPagination({
-        page,
-        limit,
-        total: data.pagination.total,
-        totalPages: data.pagination.totalPages,
-        hasNext: data.pagination.hasNext,
-        hasPrev: data.pagination.hasPrev,
-      });
-      setLoading(false);
-      return data;
-    } catch (err) {
-      handleError(err);
-    }
-  };
-
-  const approvePost = useCallback(
-    async (id: string) => {
-      if (!token) return;
-      try {
-        setLoading(true);
-        await api.patch(`/posts/${id}/approve`);
-        setPendingPosts((prev) => prev.filter((post) => post.id !== id));
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
         setLoading(false);
-      } catch (err) {
-        handleError(err);
+        throw new Error(errorMessage);
       }
     },
-    [api, token]
-  );
-
-  const rejectPost = useCallback(
-    async (id: string) => {
-      if (!token) return;
-      try {
-        setLoading(true);
-        await api.patch(`/posts/${id}/reject`);
-        setPendingPosts((prev) => prev.filter((post) => post.id !== id));
-        setLoading(false);
-      } catch (err) {
-        handleError(err);
-      }
-    },
-    [api, token]
+    [user, clearError]
   );
 
   const getPendingPosts = useCallback(
     async (page = 1, limit = 10) => {
-      if (!token) return;
+      if (user?.role !== 'ADMIN') {
+        throw new Error('Unauthorized: Only admins can view pending posts');
+      }
       try {
         setLoading(true);
-        const { data } = await api.get('/posts/pending', {
-          params: { page, limit },
+        clearError();
+        const response = await getPendingPostsService(page, limit);
+
+        const posts = response.posts || [];
+        const paginationData = response.pagination || {
+          page,
+          limit,
+          total: posts.length,
+          totalPages: Math.ceil(posts.length / limit),
+          hasNext: false,
+          hasPrev: false,
+        };
+
+        if (page === 1) {
+          setPendingPosts(posts);
+        } else {
+          setPendingPosts((prev) => [...prev, ...posts]);
+        }
+        setPagination({
+          page: paginationData.page,
+          limit: paginationData.limit,
+          total: paginationData.total,
+          totalPages: paginationData.totalPages,
+          hasNext: paginationData.hasNext,
+          hasPrev: paginationData.hasPrev,
         });
-        setPendingPosts(data.posts);
+        setLoading(false);
+        return response;
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [user, clearError]
+  );
+
+  const getUserPosts = useCallback(
+    async (userId: string, page = 1, limit = 10) => {
+      if (!user) return;
+      try {
+        setLoading(true);
+        clearError();
+        const { data } = await getPostByUserIdService(userId, page, limit);
+        if (page === 1) {
+          setUserPosts(data.posts);
+        } else {
+          setUserPosts((prev) => [...prev, ...data.posts]);
+        }
         setPagination({
           page,
           limit,
@@ -394,10 +319,224 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
         return data;
       } catch (err) {
-        handleError(err);
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
       }
     },
-    [api, token]
+    [user, clearError]
+  );
+
+  const getPost = useCallback(
+    async (id: string) => {
+      try {
+        if (!user) return;
+        setLoading(true);
+        clearError();
+        const data = await getPostByIdService(id);
+        setCurrentPost(data);
+        console.log('data', data);
+        setLoading(false);
+        return data;
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [user, clearError]
+  );
+
+  const getPostStats = useCallback(
+    async (postId: string) => {
+      try {
+        setLoading(true);
+        clearError();
+        const stats = await getPostStatsService(postId);
+        setLoading(false);
+        return stats;
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [clearError]
+  );
+
+  // Add these to your PostContext
+  const getPostComments = useCallback(async (postId: string) => {
+    try {
+      const response = await getPostCommentsService(postId);
+      return response.comments || response.data || response;
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, []);
+
+  const createComment = useCallback(async (postId: string, content: string) => {
+    try {
+      const response = await createCommentService(postId, content);
+      return response.comment || response.data || response;
+    } catch (err) {
+      const errorMessage = getErrorMessage(err);
+      setError(errorMessage);
+      throw new Error(errorMessage);
+    }
+  }, []);
+
+  const updatePost = useCallback(
+    async (
+      id: string,
+      content: string,
+      image?: File,
+      type?: string,
+      subCommunityId?: string
+    ) => {
+      try {
+        setLoading(true);
+        clearError();
+        const { data } = await updatePostService(
+          id,
+          content,
+          image,
+          type,
+          subCommunityId
+        );
+
+        setPosts((prev) => prev.map((post) => (post.id === id ? data : post)));
+        setFeed((prev) => prev.map((post) => (post.id === id ? data : post)));
+        setSubCommunityFeed((prev) =>
+          prev.map((post) => (post.id === id ? data : post))
+        );
+        setUserPosts((prev) =>
+          prev.map((post) => (post.id === id ? data : post))
+        );
+        setSearchResults((prev) =>
+          prev.map((post) => (post.id === id ? data : post))
+        );
+        if (currentPost?.id === id) setCurrentPost(data);
+        setLoading(false);
+        return data;
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [currentPost, clearError]
+  );
+
+  const approvePost = useCallback(
+    async (id: string) => {
+      if (user?.role !== 'ADMIN') {
+        throw new Error('Unauthorized: Only admins can approve posts');
+      }
+      try {
+        setLoading(true);
+        clearError();
+        await approvePostService(id);
+        setPendingPosts((prev) => prev.filter((post) => post.id !== id));
+        setLoading(false);
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [user, clearError]
+  );
+
+  const rejectPost = useCallback(
+    async (id: string) => {
+      if (user?.role !== 'ADMIN') {
+        throw new Error('Unauthorized: Only admins can reject posts');
+      }
+      try {
+        setLoading(true);
+        clearError();
+        await rejectPostService(id);
+        setPendingPosts((prev) => prev.filter((post) => post.id !== id));
+        setLoading(false);
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [user, clearError]
+  );
+
+  const deletePost = useCallback(
+    async (id: string) => {
+      if (user?.role !== 'ADMIN' && user?.role !== 'ALUM') {
+        throw new Error(
+          'Unauthorized: Only admins and alumni can delete posts'
+        );
+      }
+      try {
+        setLoading(true);
+        clearError();
+        await deletePostService(id);
+        setPosts((prev) => prev.filter((post) => post.id !== id));
+        setFeed((prev) => prev.filter((post) => post.id !== id));
+        setSubCommunityFeed((prev) => prev.filter((post) => post.id !== id));
+        setUserPosts((prev) => prev.filter((post) => post.id !== id));
+        setSearchResults((prev) => prev.filter((post) => post.id !== id));
+        if (currentPost?.id === id) setCurrentPost(null);
+        setLoading(false);
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [user, currentPost, clearError]
+  );
+
+  const searchPosts = useCallback(
+    async (query: string, page = 1, limit = 10, subCommunityId?: string) => {
+      try {
+        setLoading(true);
+        clearError();
+        const { data } = await searchPostsService(
+          query,
+          page,
+          limit,
+          subCommunityId
+        );
+        if (page === 1) {
+          setSearchResults(data.posts);
+        } else {
+          setSearchResults((prev) => [...prev, ...data.posts]);
+        }
+        setPagination({
+          page,
+          limit,
+          total: data.pagination.total,
+          totalPages: data.pagination.totalPages,
+          hasNext: data.pagination.hasNext,
+          hasPrev: data.pagination.hasPrev,
+        });
+        setLoading(false);
+        return data;
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [clearError]
   );
 
   return (
@@ -417,6 +556,9 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         updatePost,
         deletePost,
         getPost,
+        getPostStats,
+        getPostComments,
+        createComment,
         getFeed,
         getSubCommunityFeed,
         getUserPosts,
@@ -439,4 +581,3 @@ export const usePosts = () => {
   }
   return context;
 };
-

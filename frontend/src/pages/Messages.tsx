@@ -35,6 +35,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, handleApiError } from '../services/api';
 import { webSocketService, WebSocketMessage } from '../services/websocket';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 interface Message {
   id: string;
@@ -90,121 +91,6 @@ const Messages: React.FC = () => {
     };
   }, [token]);
 
-  useEffect(() => {
-    if (selectedConversation) {
-      console.log(
-        'Conversation selected, fetching messages and starting real-time updates...',
-        {
-          conversation: selectedConversation,
-          user: user?.id,
-          hasToken: !!token,
-        }
-      );
-
-      fetchMessages(selectedConversation.otherUser.id);
-
-      // Only start real-time updates if we have all required data
-      if (user && token) {
-        startRealTimeUpdates();
-      } else {
-        console.log(
-          'Cannot start real-time updates yet - missing user or token'
-        );
-      }
-
-      setNewMessageCount(0); // Reset new message count when switching conversations
-    } else {
-      console.log('No conversation selected, stopping real-time updates');
-      stopRealTimeUpdates();
-    }
-  }, [selectedConversation, user, token]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const startRealTimeUpdates = useCallback(async () => {
-    if (!selectedConversation || !user || !token) {
-      console.log(
-        'Cannot start real-time updates: missing conversation, user, or token'
-      );
-      return;
-    }
-
-    try {
-      console.log('Starting WebSocket connection...', {
-        userId: user.id,
-        hasToken: !!token,
-      });
-
-      // Connect to WebSocket
-      await webSocketService.connect(user.id, token);
-      setIsRealTimeEnabled(true);
-
-      console.log(
-        'WebSocket connected successfully, setting up message handlers...'
-      );
-
-      // Set up message handlers
-      webSocketService.on('NEW_MESSAGE', (message: WebSocketMessage) => {
-        console.log('Received NEW_MESSAGE:', message);
-        if (message.data.senderId === selectedConversation.otherUser.id) {
-          handleNewMessage(message.data);
-        }
-      });
-
-      webSocketService.on('TYPING_START', (message: WebSocketMessage) => {
-        console.log('Received TYPING_START:', message);
-        if (message.data.receiverId === user.id) {
-          setTypingUsers((prev) => new Set(prev).add(message.data.senderId));
-        }
-      });
-
-      webSocketService.on('TYPING_STOP', (message: WebSocketMessage) => {
-        console.log('Received TYPING_STOP:', message);
-        if (message.data.receiverId === user.id) {
-          setTypingUsers((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(message.data.senderId);
-            return newSet;
-          });
-        }
-      });
-
-      webSocketService.on('USER_ONLINE', (message: WebSocketMessage) => {
-        console.log('User online:', message.data);
-      });
-
-      webSocketService.on('USER_OFFLINE', (message: WebSocketMessage) => {
-        console.log('User offline:', message.data);
-      });
-
-      webSocketService.on('MESSAGE_SENT', (message: WebSocketMessage) => {
-        console.log('Message sent confirmation:', message.data);
-      });
-
-      webSocketService.on('MESSAGE_ERROR', (message: WebSocketMessage) => {
-        console.error('Message error:', message.data);
-      });
-
-      console.log('WebSocket message handlers set up successfully');
-    } catch (error: any) {
-      console.error('WebSocket connection failed:', error);
-      setIsRealTimeEnabled(false);
-      setError(`WebSocket connection failed: ${error.message}`);
-    }
-  }, [selectedConversation, user, token]);
-
-  const stopRealTimeUpdates = useCallback(() => {
-    webSocketService.disconnect();
-    setIsRealTimeEnabled(false);
-    setTypingUsers(new Set());
-  }, []);
-
   const handleNewMessage = useCallback(
     (newMessage: Message) => {
       // Only add if it's not already in the messages array
@@ -241,11 +127,136 @@ const Messages: React.FC = () => {
     [selectedConversation, user]
   );
 
+  const startRealTimeUpdates = useCallback(async () => {
+    if (!selectedConversation || !user || !token) {
+      console.log(
+        'Cannot start real-time updates: missing conversation, user, or token'
+      );
+      return;
+    }
+
+    try {
+      console.log('Starting WebSocket connection...', {
+        userId: user.id,
+        hasToken: !!token,
+      });
+
+      // Connect to WebSocket
+      await webSocketService.connect(user.id, token);
+      setIsRealTimeEnabled(true);
+
+      console.log(
+        'WebSocket connected successfully, setting up message handlers...'
+      );
+
+      // Set up message handlers
+      webSocketService.on('NEW_MESSAGE', (message: WebSocketMessage) => {
+        console.log('Received NEW_MESSAGE:', message);
+        const data = message.data as Message;
+        if (data.senderId === selectedConversation.otherUser.id) {
+          handleNewMessage(data);
+        }
+      });
+
+      webSocketService.on('TYPING_START', (message: WebSocketMessage) => {
+        console.log('Received TYPING_START:', message);
+        const data = message.data as { receiverId: string; senderId: string };
+        if (data.receiverId === user.id) {
+          setTypingUsers((prev) => new Set(prev).add(data.senderId));
+        }
+      });
+
+      webSocketService.on('TYPING_STOP', (message: WebSocketMessage) => {
+        console.log('Received TYPING_STOP:', message);
+        const data = message.data as { receiverId: string; senderId: string };
+        if (data.receiverId === user.id) {
+          setTypingUsers((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(data.senderId);
+            return newSet;
+          });
+        }
+      });
+
+      webSocketService.on('USER_ONLINE', (message: WebSocketMessage) => {
+        console.log('User online:', message.data);
+      });
+
+      webSocketService.on('USER_OFFLINE', (message: WebSocketMessage) => {
+        console.log('User offline:', message.data);
+      });
+
+      webSocketService.on('MESSAGE_SENT', (message: WebSocketMessage) => {
+        console.log('Message sent confirmation:', message.data);
+      });
+
+      webSocketService.on('MESSAGE_ERROR', (message: WebSocketMessage) => {
+        console.error('Message error:', message.data);
+      });
+
+      console.log('WebSocket message handlers set up successfully');
+    } catch (error: unknown) {
+      console.error('WebSocket connection failed:', error);
+      setIsRealTimeEnabled(false);
+      setError(`WebSocket connection failed: ${getErrorMessage(error)}`);
+    }
+  }, [selectedConversation, user, token, handleNewMessage]);
+
+  const stopRealTimeUpdates = useCallback(() => {
+    webSocketService.disconnect();
+    setIsRealTimeEnabled(false);
+    setTypingUsers(new Set());
+  }, []);
+
+  useEffect(() => {
+    if (selectedConversation) {
+      console.log(
+        'Conversation selected, fetching messages and starting real-time updates...',
+        {
+          conversation: selectedConversation,
+          user: user?.id,
+          hasToken: !!token,
+        }
+      );
+
+      fetchMessages(selectedConversation.otherUser.id);
+
+      // Only start real-time updates if we have all required data
+      if (user && token) {
+        startRealTimeUpdates();
+      } else {
+        console.log(
+          'Cannot start real-time updates yet - missing user or token'
+        );
+      }
+
+      setNewMessageCount(0); // Reset new message count when switching conversations
+    } else {
+      console.log('No conversation selected, stopping real-time updates');
+      stopRealTimeUpdates();
+    }
+  }, [
+    selectedConversation,
+    user,
+    token,
+    startRealTimeUpdates,
+    stopRealTimeUpdates,
+  ]);
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const playNotificationSound = () => {
     try {
       // Create a simple notification sound
       const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+        (window as Window & { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext!)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -263,8 +274,9 @@ const Messages: React.FC = () => {
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
-    } catch (error) {
+    } catch (error: unknown) {
       console.log('Audio notification not supported');
+      setError(getErrorMessage(error));
     }
   };
 
@@ -273,7 +285,7 @@ const Messages: React.FC = () => {
       setLoading(true);
       const response = await apiService.messages.getAllConversations();
       setConversations(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching conversations:', error);
       setError(handleApiError(error) || 'Failed to load conversations');
     } finally {
@@ -296,7 +308,7 @@ const Messages: React.FC = () => {
       if (sortedMessages.length > 0) {
         lastMessageIdRef.current = sortedMessages[sortedMessages.length - 1].id;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching messages:', error);
       setError(handleApiError(error) || 'Failed to load messages');
     }
@@ -349,7 +361,7 @@ const Messages: React.FC = () => {
 
       // Clear success message after 2 seconds
       setTimeout(() => setSuccess(null), 2000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending message:', error);
       setError(handleApiError(error) || 'Failed to send message');
     }

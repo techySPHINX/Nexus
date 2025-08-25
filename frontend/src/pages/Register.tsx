@@ -30,6 +30,7 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import ThemeToggle from '../components/ThemeToggle';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 const Register: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -91,10 +92,8 @@ const Register: React.FC = () => {
         formData.role
       );
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message || 'Registration failed. Please try again.'
-      );
+    } catch (err: unknown) {
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }

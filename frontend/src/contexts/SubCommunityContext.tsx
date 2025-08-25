@@ -55,12 +55,14 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       setSubCommunities((prev) => [...prev, newSubCommunity]);
       setLoading(false);
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          'Failed to create sub-community'
-      );
+    } catch (err: unknown) {
+      let message = 'Failed to create sub-community';
+      if (axios.isAxiosError(err)) {
+        message = err.response?.data?.message || err.message || message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
       setLoading(false);
       throw err;
     }
@@ -72,12 +74,14 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       const { data } = await axiosInstance.get(`/subcommunities/${id}`);
       setLoading(false);
       return data;
-    } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch sub-community'
-      );
+    } catch (err: unknown) {
+      let message = 'Failed to fetch sub-community';
+      if (axios.isAxiosError(err)) {
+        message = err.response?.data?.message || err.message || message;
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setError(message);
       setLoading(false);
       return null;
     }
@@ -90,18 +94,20 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         const { data } = await axiosInstance.get('/subcommunities');
         setSubCommunities(data);
         setLoading(false);
-      } catch (err: any) {
-        setError(
-          err.response?.data?.message ||
-            err.message ||
-            'Failed to fetch sub-communities'
-        );
+      } catch (err: unknown) {
+        let message = 'Failed to fetch sub-communities';
+        if (axios.isAxiosError(err)) {
+          message = err.response?.data?.message || err.message || message;
+        } else if (err instanceof Error) {
+          message = err.message;
+        }
+        setError(message);
         setLoading(false);
       }
     };
 
     fetchSubCommunities();
-  }, [token]);
+  }, [token, axiosInstance]);
 
   return (
     <SubCommunityContext.Provider

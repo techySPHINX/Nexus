@@ -117,6 +117,46 @@ const Referrals: React.FC = () => {
     coverLetter: '',
   });
 
+  const fetchReferrals = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      console.log('🔄 Fetching referrals...');
+      console.log('🔑 Auth token:', localStorage.getItem('token'));
+      console.log('👤 Current user in fetch:', user);
+
+      const response = await apiService.referrals.getAll();
+      console.log('📊 Referrals response:', response);
+
+      setReferrals(response.data || []);
+      console.log(
+        '✅ Referrals loaded successfully:',
+        response.data?.length || 0
+      );
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      console.error('❌ Error fetching referrals:', err);
+      if (err.response) {
+        console.error('Response data:', err.response.data);
+        console.error('Response status:', err.response.status);
+        console.error('Response headers:', err.response.headers);
+        setError(
+          `Failed to load referrals: ${err.response.data?.message || err.response.statusText || 'Unknown error'}`
+        );
+      } else if (err.request) {
+        console.error('Request error:', err.request);
+        setError(
+          'Failed to load referrals: Network error - no response received'
+        );
+      } else {
+        console.error('Error message:', err.message);
+        setError(`Failed to load referrals: ${err.message}`);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   // Fetch referrals and applications
   useEffect(() => {
     console.log('👤 Current user:', user);
@@ -142,46 +182,7 @@ const Referrals: React.FC = () => {
       console.log('🎓 Student user, fetching applications...');
       fetchApplications();
     }
-  }, [user]);
-
-  const fetchReferrals = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      console.log('🔄 Fetching referrals...');
-      console.log('🔑 Auth token:', localStorage.getItem('token'));
-      console.log('👤 Current user in fetch:', user);
-
-      const response = await apiService.referrals.getAll();
-      console.log('📊 Referrals response:', response);
-
-      setReferrals(response.data || []);
-      console.log(
-        '✅ Referrals loaded successfully:',
-        response.data?.length || 0
-      );
-    } catch (err: any) {
-      console.error('❌ Error fetching referrals:', err);
-      if (err.response) {
-        console.error('Response data:', err.response.data);
-        console.error('Response status:', err.response.status);
-        console.error('Response headers:', err.response.headers);
-        setError(
-          `Failed to load referrals: ${err.response.data?.message || err.response.statusText || 'Unknown error'}`
-        );
-      } else if (err.request) {
-        console.error('Request error:', err.request);
-        setError(
-          'Failed to load referrals: Network error - no response received'
-        );
-      } else {
-        console.error('Error message:', err.message);
-        setError(`Failed to load referrals: ${err.message}`);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchReferrals, user]);
 
   const fetchApplications = async () => {
     try {
@@ -238,7 +239,16 @@ const Referrals: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (
+    status: string
+  ):
+    | 'default'
+    | 'primary'
+    | 'secondary'
+    | 'error'
+    | 'info'
+    | 'success'
+    | 'warning' => {
     switch (status) {
       case 'APPROVED':
       case 'ACCEPTED':
@@ -380,7 +390,7 @@ const Referrals: React.FC = () => {
                     </Box>
                     <Chip
                       label={referral.status}
-                      color={getStatusColor(referral.status) as any}
+                      color={getStatusColor(referral.status)}
                       size="small"
                     />
                   </Box>
@@ -665,7 +675,16 @@ const Referrals: React.FC = () => {
                       </Box>
                       <Chip
                         label={application.status}
-                        color={getStatusColor(application.status) as any}
+                        color={
+                          getStatusColor(application.status) as
+                            | 'default'
+                            | 'primary'
+                            | 'secondary'
+                            | 'error'
+                            | 'info'
+                            | 'success'
+                            | 'warning'
+                        }
                         size="small"
                       />
                     </Box>
