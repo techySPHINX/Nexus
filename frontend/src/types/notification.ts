@@ -20,16 +20,16 @@ export enum NotificationType {
   REFERRAL_APPLICATION_STATUS_UPDATE = 'REFERRAL_APPLICATION_STATUS_UPDATE',
 }
 
-export const categoryToTypes: Record<string, string[]> = {
-  CONNECTION: ['CONNECTION_REQUEST', 'CONNECTION_ACCEPTED'],
-  POST: ['POST_LIKE', 'POST_COMMENT'],
-  MESSAGE: ['MESSAGE'],
-  SYSTEM: ['SYSTEM'],
-  EVENT: ['EVENT'],
+export const categoryToTypes: Record<string, NotificationType[]> = {
+  CONNECTION: [NotificationType.CONNECTION_REQUEST, NotificationType.CONNECTION_ACCEPTED],
+  POST: [NotificationType.POST_LIKE, NotificationType.POST_COMMENT],
+  MESSAGE: [NotificationType.MESSAGE],
+  SYSTEM: [NotificationType.SYSTEM],
+  EVENT: [NotificationType.EVENT],
   REFERRAL: [
-    'REFERRAL_APPLICATION',
-    'REFERRAL_STATUS_UPDATE',
-    'REFERRAL_APPLICATION_STATUS_UPDATE',
+    NotificationType.REFERRAL_APPLICATION,
+    NotificationType.REFERRAL_STATUS_UPDATE,
+    NotificationType.REFERRAL_APPLICATION_STATUS_UPDATE,
   ],
   ALL: [],
 };
