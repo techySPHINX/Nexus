@@ -94,6 +94,11 @@ import SuggestionTab from '@/components/Connections/SuggestionTab';
 //   };
 // }
 
+interface Skill {
+  id: string;
+  name: string;
+}
+
 interface ConnectionSuggestion {
   user: {
     id: string;
@@ -105,7 +110,7 @@ interface ConnectionSuggestion {
       location?: string;
       interests?: string;
       avatarUrl?: string;
-      skills: string[];
+      skills: Skill[];
     };
   };
   matchScore: number;
@@ -166,12 +171,15 @@ const Connections: React.FC = () => {
   });
 
   // Convert filters to the format expected by the hook
-  const hookFilters = {
-    page: filters.page,
-    limit: filters.limit,
-    role: filters.role || undefined,
-    search: searchTerm || undefined,
-  };
+  const hookFilters = React.useMemo(
+    () => ({
+      page: filters.page,
+      limit: filters.limit,
+      role: filters.role || undefined,
+      search: searchTerm || undefined,
+    }),
+    [filters.page, filters.limit, filters.role, searchTerm]
+  );
 
   // Use the custom hook for all connection logic
   const {
@@ -194,7 +202,15 @@ const Connections: React.FC = () => {
     if (token) {
       fetchAll(hookFilters);
     }
-  }, [token, filters.page, filters.limit, filters.role, searchTerm, fetchAll]);
+  }, [
+    token,
+    filters.page,
+    filters.limit,
+    filters.role,
+    searchTerm,
+    fetchAll,
+    hookFilters,
+  ]);
 
   // Wrapper functions that use the hook functions with loading states
   const handleCancelConnection = async (connectionId: string) => {
@@ -207,7 +223,7 @@ const Connections: React.FC = () => {
         // Refresh data
         fetchAll(hookFilters);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error canceling connection:', error);
       setError(handleApiError(error) || 'Failed to cancel connection request');
     } finally {
@@ -225,7 +241,7 @@ const Connections: React.FC = () => {
         // Refresh data
         fetchAll(hookFilters);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error removing connection:', error);
       setError(handleApiError(error) || 'Failed to remove connection');
     } finally {
@@ -247,7 +263,7 @@ const Connections: React.FC = () => {
 
       // Navigate to Messages page to show the new conversation
       window.location.href = '/messages';
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending message:', error);
       setError(handleApiError(error) || 'Failed to send message');
     } finally {
@@ -304,6 +320,26 @@ const Connections: React.FC = () => {
       </Container>
     );
   }
+
+  // Map connections to ensure profile.skills is Skill[]
+  const mappedConnections = connections.map((conn) => ({
+    ...conn,
+    user: {
+      ...conn.user,
+      profile: conn.user.profile
+        ? {
+            ...conn.user.profile,
+            skills: Array.isArray(conn.user.profile.skills)
+              ? conn.user.profile.skills.map((item, idx) =>
+                  typeof item === 'string'
+                    ? { id: String(idx), name: item }
+                    : item
+                )
+              : [],
+          }
+        : undefined,
+    },
+  }));
 
   return (
     <ErrorBoundary
@@ -468,8 +504,28 @@ const Connections: React.FC = () => {
               {/* Connections Tab */}
               {loading && <LoadingIndicator />}
               <ConnectionTab
-                connections={connections}
-                setSelectedUser={setSelectedUser}
+                connections={mappedConnections}
+                setSelectedUser={(user) =>
+                  setSelectedUser(
+                    user
+                      ? {
+                          ...user,
+                          profile: user.profile
+                            ? {
+                                ...user.profile,
+                                skills: Array.isArray(user.profile.skills)
+                                  ? user.profile.skills.map((item, idx) =>
+                                      typeof item === 'string'
+                                        ? { id: String(idx), name: item }
+                                        : item
+                                    )
+                                  : [],
+                              }
+                            : undefined,
+                        }
+                      : null
+                  )
+                }
                 setMessageDialog={setMessageDialog}
                 setConnectionToBlock={setConnectionToBlock}
                 setBlockDialogOpen={setBlockDialogOpen}
@@ -505,7 +561,27 @@ const Connections: React.FC = () => {
               <SuggestionTab
                 suggestions={suggestions}
                 sendRequest={sendRequest}
-                setSelectedUser={setSelectedUser}
+                setSelectedUser={(user) =>
+                  setSelectedUser(
+                    user
+                      ? {
+                          ...user,
+                          profile: user.profile
+                            ? {
+                                ...user.profile,
+                                skills: Array.isArray(user.profile.skills)
+                                  ? user.profile.skills.map((item, idx) =>
+                                      typeof item === 'string'
+                                        ? { id: String(idx), name: item }
+                                        : item
+                                    )
+                                  : [],
+                              }
+                            : undefined,
+                        }
+                      : null
+                  )
+                }
                 setMessageDialog={setMessageDialog}
                 getRoleColor={getRoleColor}
                 actionLoading={actionLoading}
@@ -526,7 +602,6 @@ const Connections: React.FC = () => {
                 Send a message to {selectedUser?.name}
               </DialogContentText>
               <TextField
-                autoFocus
                 margin="dense"
                 label="Message"
                 fullWidth

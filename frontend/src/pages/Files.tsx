@@ -42,6 +42,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { apiService } from '../services/api';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 interface FileItem {
   id: string;
@@ -169,25 +170,25 @@ const Files: React.FC = () => {
     fetchFiles(); // Refresh without tokens
   };
 
-  const refreshGoogleToken = async () => {
-    if (!googleTokens?.refresh_token) return;
+  // const refreshGoogleToken = async () => {
+  //   if (!googleTokens?.refresh_token) return;
 
-    try {
-      const response = await apiService.files.refreshGoogleToken(
-        googleTokens.refresh_token
-      );
-      const newTokens = response.data;
+  //   try {
+  //     const response = await apiService.files.refreshGoogleToken(
+  //       googleTokens.refresh_token
+  //     );
+  //     const newTokens = response.data;
 
-      setGoogleTokens(newTokens);
-      localStorage.setItem('googleDriveTokens', JSON.stringify(newTokens));
+  //     setGoogleTokens(newTokens);
+  //     localStorage.setItem('googleDriveTokens', JSON.stringify(newTokens));
 
-      console.log('✅ Google token refreshed successfully!');
-    } catch (error) {
-      console.error('❌ Error refreshing Google token:', error);
-      // Token refresh failed, disconnect
-      disconnectGoogleDrive();
-    }
-  };
+  //     console.log('✅ Google token refreshed successfully!');
+  //   } catch (error) {
+  //     console.error('❌ Error refreshing Google token:', error);
+  //     // Token refresh failed, disconnect
+  //     disconnectGoogleDrive();
+  //   }
+  // };
 
   const fetchFiles = async (tokens?: {
     access_token: string;
@@ -249,11 +250,9 @@ const Files: React.FC = () => {
       setSelectedFile(null);
       setUploadForm({ description: '', tags: '' });
       fetchFiles();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('❌ Error uploading file:', err);
-      setError(
-        `Failed to upload file: ${err.response?.data?.message || err.message}`
-      );
+      setError(`Failed to upload file: ${getErrorMessage(err)}`);
     } finally {
       setUploading(false);
     }
@@ -341,11 +340,9 @@ const Files: React.FC = () => {
         googleTokens.refresh_token
       );
       // Show success message
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error sharing file:', err);
-      setError(
-        `Failed to share file: ${err.response?.data?.message || err.message}`
-      );
+      setError(`Failed to share file: ${getErrorMessage(err)}`);
     }
   };
 

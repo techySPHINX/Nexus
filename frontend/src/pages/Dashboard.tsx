@@ -100,8 +100,26 @@ const Dashboard: React.FC = () => {
     connections,
     pendingReceived,
     suggestions,
-    stats: connectionStats,
+    // stats: connectionStats,
   } = useConnections();
+
+  const calculateProfileCompletion = React.useCallback(
+    (user: DashboardUser | null | undefined): number => {
+      if (!user) return 0;
+
+      let completed = 0;
+      const total = 4; // Basic profile fields
+
+      if (user.name) completed++;
+      if (user.email) completed++;
+      if (user.role) completed++;
+      if (user.profile?.bio || user.profile?.location || user.profile?.skills)
+        completed++;
+
+      return Math.round((completed / total) * 100);
+    },
+    []
+  );
 
   // Fetch dashboard data
   useEffect(() => {
@@ -192,27 +210,35 @@ const Dashboard: React.FC = () => {
     if (user) {
       fetchDashboardData();
     }
-  }, [user, connections, pendingReceived, suggestions]);
+  }, [
+    user,
+    connections,
+    pendingReceived,
+    suggestions,
+    upcomingEvents.length,
+    calculateProfileCompletion,
+  ]);
 
-  const calculateProfileCompletion = (user: any): number => {
-    if (!user) return 0;
+  interface UserProfile {
+    bio?: string;
+    location?: string;
+    skills?: string[];
+  }
 
-    let completed = 0;
-    const total = 4; // Basic profile fields
-
-    if (user.name) completed++;
-    if (user.email) completed++;
-    if (user.role) completed++;
-    if (user.profile?.bio || user.profile?.location || user.profile?.skills)
-      completed++;
-
-    return Math.round((completed / total) * 100);
-  };
+  interface DashboardUser {
+    name?: string;
+    email?: string;
+    role?: string;
+    profile?: UserProfile;
+  }
 
   const generateRecentActivities = (
-    connections: any[],
-    pendingRequests: any[],
-    conversations: any[]
+    connections: { id: string; user: { id: string; name: string } }[],
+    pendingRequests: {
+      id: string;
+      requester?: { id: string; name?: string };
+    }[],
+    conversations: { id: string; participant?: { id: string; name?: string } }[]
   ): RecentActivity[] => {
     const activities: RecentActivity[] = [];
 
@@ -372,7 +398,7 @@ const Dashboard: React.FC = () => {
           Welcome back, {user?.name?.split(' ')[0] || 'User'}!
         </Typography>
         <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 1 }}>
-          Here's what's happening in your network today
+          Here&apos;s what&apos;s happening in your network today
         </Typography>
       </Box>
 

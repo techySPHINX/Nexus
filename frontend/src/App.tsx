@@ -21,15 +21,16 @@ import './App.css';
 import Notification from './pages/Notification';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ProfileProvider } from './contexts/ProfileContext';
-import { FeedPage } from './components/Post/FeedPage';
-import { PostDetailPage } from './components/Post/PostDetailPage';
-import { UserPostsPage } from './components/Post/UserPostsPage';
-import { SubCommunitiesPage } from './components/Post/SubCommunitiesPage';
-import { SubCommunityPage } from './components/Post/SubCommunityPage';
-import { SearchResultsPage } from './components/Post/SearchResultsPage';
-import { AdminModerationPage } from './components/Post/AdminModerationPage';
+import { FeedPage } from './pages/Posts/FeedPage';
+import { PostDetailPage } from './pages/Posts/PostDetailPage';
+import { UserPostsPage } from './pages/Posts/UserPostsPage';
+import { SubCommunityPage } from './pages/Posts/SubCommunityPage';
+import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
+import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { PostProvider } from './contexts/PostContext';
 import { SubCommunityProvider } from './contexts/SubCommunityContext';
+import { EngagementProvider } from './contexts/engagementContext';
+import { EngagementService } from './services/engagementService';
 
 // Layout component that handles navbar positioning
 const Layout: React.FC = () => {
@@ -91,6 +92,14 @@ const Layout: React.FC = () => {
               }
             />
             <Route
+              path="/profile/:userId"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/referrals"
               element={
                 <ProtectedRoute>
@@ -140,14 +149,6 @@ const Layout: React.FC = () => {
               }
             />
             <Route
-              path="/subcommunities"
-              element={
-                <ProtectedRoute>
-                  <SubCommunitiesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
               path="/subcommunities/:subCommunityId"
               element={
                 <ProtectedRoute>
@@ -180,6 +181,8 @@ const Layout: React.FC = () => {
   );
 };
 
+const engagementService = new EngagementService();
+
 function App() {
   return (
     <ThemeProvider>
@@ -189,9 +192,11 @@ function App() {
             <ProfileProvider>
               <SubCommunityProvider>
                 <PostProvider>
-                  <Router>
-                    <Layout />
-                  </Router>
+                  <EngagementProvider engagementService={engagementService}>
+                    <Router>
+                      <Layout />
+                    </Router>
+                  </EngagementProvider>
                 </PostProvider>
               </SubCommunityProvider>
             </ProfileProvider>

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../../contexts/PostContext';
-import { Post } from '../../pages/Post';
+import { Post } from '../../components/Post/Post';
 import {
   Box,
   Typography,
@@ -13,6 +13,7 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 export const AdminModerationPage: React.FC = () => {
   const {
@@ -22,6 +23,8 @@ export const AdminModerationPage: React.FC = () => {
     loading,
     approvePost,
     rejectPost,
+    error,
+    clearError,
   } = usePosts();
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
@@ -34,9 +37,25 @@ export const AdminModerationPage: React.FC = () => {
     'success'
   );
 
+  const showSnackbar = useCallback(
+    (message: string, severity: 'success' | 'error') => {
+      setSnackbarMessage(message);
+      setSnackbarSeverity(severity);
+      setSnackbarOpen(true);
+    },
+    []
+  );
+
   useEffect(() => {
     getPendingPosts();
   }, [getPendingPosts]);
+
+  useEffect(() => {
+    if (error) {
+      showSnackbar(error, 'error');
+      clearError();
+    }
+  }, [error, clearError, showSnackbar]);
 
   const handleLoadMore = () => {
     getPendingPosts(pagination.page + 1);
@@ -68,8 +87,8 @@ export const AdminModerationPage: React.FC = () => {
       setSnackbarOpen(true);
       // Refresh the list after action
       getPendingPosts(1); // Reset to first page
-    } catch (error) {
-      setSnackbarMessage('Failed to process post. Please try again.');
+    } catch (err) {
+      setSnackbarMessage(getErrorMessage(err));
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
     } finally {
@@ -85,6 +104,14 @@ export const AdminModerationPage: React.FC = () => {
 
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
+  };
+
+  const handlePostUpdate = () => {
+    getPendingPosts(pagination.page); // Refresh current page
+  };
+
+  const handlePostDelete = () => {
+    getPendingPosts(pagination.page); // Refresh current page
   };
 
   return (
@@ -114,6 +141,8 @@ export const AdminModerationPage: React.FC = () => {
               showActions={true}
               onApprove={() => handleApprove(post.id)}
               onReject={() => handleReject(post.id)}
+              onUpdate={handlePostUpdate}
+              onDelete={handlePostDelete}
             />
           ))}
 

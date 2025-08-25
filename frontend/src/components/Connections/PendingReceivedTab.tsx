@@ -309,7 +309,6 @@ const PendingReceivedTab: React.FC<PendingReceivedTabProps> = ({
           <Button
             onClick={handleConfirmBlock}
             color="error"
-            autoFocus
             startIcon={<BlockIcon />}
           >
             Confirm Block

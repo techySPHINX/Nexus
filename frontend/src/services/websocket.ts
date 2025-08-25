@@ -12,7 +12,7 @@ export interface WebSocketMessage {
     | 'PONG'
     | 'MESSAGE_SENT'
     | 'MESSAGE_ERROR';
-  data: any;
+  data: unknown;
   timestamp: string;
 }
 
@@ -27,7 +27,7 @@ export interface ChatMessage {
 
 export class WebSocketService {
   private socket: Socket | null = null;
-  private reconnectAttempts = 0;
+  // private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private heartbeatInterval: number | null = null;
@@ -79,7 +79,7 @@ export class WebSocketService {
         this.socket.on('connect', () => {
           console.log('Socket.IO connected successfully');
           this.connectionStatus = 'connected';
-          this.reconnectAttempts = 0;
+          // this.reconnectAttempts = 0;
           this.startHeartbeat();
           resolve();
         });
@@ -136,7 +136,7 @@ export class WebSocketService {
     return this.connect(this.currentUserId, this.currentToken);
   }
 
-  send(type: WebSocketMessage['type'], data: any): void {
+  send(type: WebSocketMessage['type'], data: unknown): void {
     if (this.socket && this.socket.connected) {
       this.socket.emit(type, data);
       console.log('Socket.IO message sent:', { type, data });
@@ -195,7 +195,7 @@ export class WebSocketService {
     if (!this.socket) return;
 
     // Handle all incoming messages
-    this.socket.onAny((eventName: string, ...args: any[]) => {
+    this.socket.onAny((eventName: string, ...args: unknown[]) => {
       console.log('Socket.IO message received:', eventName, args);
 
       // Find and call the appropriate handler

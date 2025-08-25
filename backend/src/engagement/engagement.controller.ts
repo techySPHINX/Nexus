@@ -36,7 +36,7 @@ export class EngagementController {
   @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
   voteOnPost(
     @Param('postId') postId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body('voteType') voteType: VoteType,
   ) {
     return this.service.voteOnPost(userId, postId, voteType);
@@ -53,7 +53,7 @@ export class EngagementController {
   @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
   voteOnComment(
     @Param('commentId') commentId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body('voteType') voteType: VoteType,
   ) {
     return this.service.voteOnComment(userId, commentId, voteType);
@@ -69,7 +69,7 @@ export class EngagementController {
   @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
   removeVote(
     @Param('voteId') voteId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
   ) {
     return this.service.removeVote(userId, voteId);
   }
@@ -86,7 +86,7 @@ export class EngagementController {
   @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
   comment(
     @Param('postId') postId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body('content') content: string,
     @Body('parentId') parentId?: string,
   ) {
@@ -120,7 +120,7 @@ export class EngagementController {
   @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
   updateComment(
     @Param('commentId') commentId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body('content') content: string,
   ) {
     return this.service.updateComment(commentId, userId, content);
@@ -136,7 +136,7 @@ export class EngagementController {
   @Roles(Role.STUDENT, Role.ALUM, Role.ADMIN)
   deleteComment(
     @Param('commentId') commentId: string,
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
   ) {
     return this.service.deleteComment(commentId, userId);
   }

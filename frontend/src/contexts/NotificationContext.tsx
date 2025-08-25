@@ -1,38 +1,37 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-
-enum NotificationType {
-  CONNECTION_REQUEST = 'CONNECTION_REQUEST',
-  CONNECTION_ACCEPTED = 'CONNECTION_ACCEPTED',
-  POST_LIKE = 'POST_LIKE',
-  POST_COMMENT = 'POST_COMMENT',
-  MESSAGE = 'MESSAGE',
-  SYSTEM = 'SYSTEM',
-  EVENT = 'EVENT',
-}
-
-interface Notification {
-  id: string;
-  type: NotificationType;
-  message: string;
-  createdAt: Date;
-  read: boolean;
-}
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  token?: string;
-}
+import {
+  fetchNotificationsService,
+  addNotificationService,
+  readNotificationService,
+  unreadNotificationService,
+  allReadNotificationService,
+  deleteNotificationService,
+  deleteReadNotificationService,
+  fetchNotificationStatsService,
+} from '@/services/notificationService';
+import { Notification, NotificationType } from '@/types/notification';
+import React, { createContext, useContext, useState, useCallback } from 'react';
+import { useAuth } from './AuthContext';
 
 interface NotificationContextType {
-  user: User | null;
   notifications: Notification[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
   unreadCount: number;
+  unreadCountsByCategory: Record<string, number>;
   loading: boolean;
   error: string | null;
-  fetchNotifications: () => Promise<void>;
+  fetchNotifications: (
+    page?: number,
+    limit?: number,
+    category?: string
+  ) => Promise<void>;
+  setPage: (page: number, category?: string) => void;
   addNotification: (
     notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
   ) => Promise<void>;
@@ -40,52 +39,175 @@ interface NotificationContextType {
   markAsUnread: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
-  login: (userData: User) => void;
-  logout: () => void;
+  deleteReadNotifications: () => Promise<void>;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
   undefined
 );
 
+
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [pagination, setPagination] = useState<{
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  }>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrev: false,
+  });
   const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCountsByCategory, setUnreadCountsByCategory] = useState<
+    Record<string, number>
+  >({
+    ALL: 0,
+    CONNECTION: 0,
+    POST: 0,
+    MESSAGE: 0,
+    SYSTEM: 0,
+    EVENT: 0,
+    REFERRAL: 0,
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const api = axios.create({
-    baseURL: 'http://localhost:3000',
-  });
-
-  api.interceptors.request.use((config) => {
-    if (user?.token) {
-      config.headers.Authorization = `Bearer ${user.token}`;
-    }
-    return config;
-  });
-
-  const fetchNotifications = async () => {
+  // Update the fetchAllUnreadCounts function
+  const fetchAllUnreadCounts = useCallback(async () => {
     if (!user) return;
 
-    setLoading(true);
-    setError(null);
     try {
-      const [notificationsRes, unreadRes] = await Promise.all([
-        api.get('/notifications'),
-        api.get('/notifications/count/unread'),
-      ]);
+      // Use the stats endpoint to get accurate unread counts by category
+      const stats = await fetchNotificationStatsService();
 
-      setNotifications(notificationsRes.data.notifications);
-      setUnreadCount(unreadRes.data.unreadCount);
+      const counts: Record<string, number> = {
+        ALL: stats.byCategory.ALL,
+        CONNECTION: stats.byCategory.CONNECTION,
+        POST: stats.byCategory.POST,
+        MESSAGE: stats.byCategory.MESSAGE,
+        SYSTEM: stats.byCategory.SYSTEM,
+        EVENT: stats.byCategory.EVENT,
+        REFERRAL: stats.byCategory.REFERRAL,
+      };
+
+      setUnreadCountsByCategory(counts);
+      setUnreadCount(stats.unread);
     } catch (err) {
-      setError('Failed to fetch notifications');
-      console.error('Notification fetch error:', err);
-    } finally {
-      setLoading(false);
+      console.error('Failed to fetch notification stats:', err);
+
+      // Fallback to individual API calls if stats endpoint fails
+      try {
+        const allResponse = await fetchNotificationsService(1, 1);
+        const counts: Record<string, number> = {
+          ALL: allResponse.unreadCount,
+          CONNECTION: 0,
+          POST: 0,
+          MESSAGE: 0,
+          SYSTEM: 0,
+          EVENT: 0,
+          REFERRAL: 0,
+        };
+
+        // Fetch counts for each category individually as fallback
+        const categoryPromises = Object.entries(categoryToTypes).map(
+          async ([category, types]) => {
+            const results = await Promise.all(
+              types.map((type) => fetchNotificationsService(1, 1, type))
+            );
+            counts[category] = results.reduce(
+              (sum, result) => sum + result.unreadCount,
+              0
+            );
+          }
+        );
+
+        await Promise.all(categoryPromises);
+        setUnreadCountsByCategory(counts);
+        setUnreadCount(counts.ALL);
+      } catch (fallbackErr) {
+        console.error('Fallback also failed:', fallbackErr);
+      }
+    }
+  }, [user]);
+
+  const fetchNotifications = useCallback(
+    async (page = 1, limit = 10, category?: string) => {
+      if (!user) return;
+      setLoading(true);
+      setError(null);
+      try {
+        // If category is provided and it's not 'ALL', get the specific types
+        let types: NotificationType[] = [];
+
+        if (category && category !== 'ALL' && categoryToTypes[category]) {
+          types = categoryToTypes[category];
+        }
+
+        // If we have specific types for this category, fetch them individually and merge
+        if (types.length > 0) {
+          const results = await Promise.all(
+            types.map((type) => fetchNotificationsService(page, limit, type))
+          );
+
+          // Merge notifications from all types
+          const allNotifications = results.flatMap((r) => r.notification);
+
+          // Sort by createdAt desc
+          allNotifications.sort(
+            (a, b) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+
+          // Calculate proper pagination for merged results
+          const totalItems = results.reduce(
+            (sum, r) => sum + r.pagination.total,
+            0
+          );
+          const totalPages = Math.ceil(totalItems / limit);
+
+          const mergedPagination = {
+            page,
+            limit,
+            total: totalItems,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1,
+          };
+
+          setNotifications(allNotifications);
+          setPagination(mergedPagination);
+        } else {
+          // Fetch all notifications (category is ALL or unknown)
+          const response = await fetchNotificationsService(page, limit);
+          setNotifications(response.notification);
+          setPagination(response.pagination);
+        }
+
+        // Refresh all unread counts after fetching notifications
+        await fetchAllUnreadCounts();
+      } catch (err) {
+        setError('Failed to fetch notifications');
+        console.error('Notification fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, fetchAllUnreadCounts]
+  );
+
+  const setPage = (newPage: number, category?: string) => {
+    if (pagination && newPage > 0 && newPage <= pagination.totalPages) {
+      fetchNotifications(newPage, pagination.limit, category);
     }
   };
 
@@ -93,9 +215,21 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
   ) => {
     try {
-      const response = await api.post('/notifications', notification);
+      const response = await addNotificationService(notification);
       setNotifications((prev) => [response.data, ...prev]);
+
+      // Update unread counts
       setUnreadCount((prev) => prev + 1);
+      const category =
+        Object.entries(categoryToTypes).find(([, types]) =>
+          types.includes(notification.type as NotificationType)
+        )?.[0] || 'ALL';
+
+      setUnreadCountsByCategory((prev) => ({
+        ...prev,
+        [category]: (prev[category] || 0) + 1,
+        ALL: prev.ALL + 1,
+      }));
     } catch (err) {
       console.error('Failed to add notification:', err);
     }
@@ -103,11 +237,29 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const markAsRead = async (id: string) => {
     try {
-      await api.patch(`/notifications/${id}/read`);
+      const notification = notifications.find((n) => n.id === id);
+      if (!notification) return;
+
+      await readNotificationService(id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: true } : n))
       );
-      setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
+
+      // Update unread counts
+      if (!notification.read) {
+        setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
+
+        const category =
+          Object.entries(categoryToTypes).find(([, types]) =>
+            types.includes(notification.type as NotificationType)
+          )?.[0] || 'ALL';
+
+        setUnreadCountsByCategory((prev) => ({
+          ...prev,
+          [category]: Math.max(0, (prev[category] || 0) - 1),
+          ALL: Math.max(0, prev.ALL - 1),
+        }));
+      }
     } catch (err) {
       console.error('Failed to mark notification as read:', err);
     }
@@ -115,11 +267,29 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const markAsUnread = async (id: string) => {
     try {
-      await api.patch(`/notifications/${id}/unread`);
+      const notification = notifications.find((n) => n.id === id);
+      if (!notification) return;
+
+      await unreadNotificationService(id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: false } : n))
       );
-      setUnreadCount((prev) => prev + 1); // This ensures the count updates
+
+      // Update unread counts
+      if (notification.read) {
+        setUnreadCount((prev) => prev + 1);
+
+        const category =
+          Object.entries(categoryToTypes).find(([, types]) =>
+            types.includes(notification.type as NotificationType)
+          )?.[0] || 'ALL';
+
+        setUnreadCountsByCategory((prev) => ({
+          ...prev,
+          [category]: (prev[category] || 0) + 1,
+          ALL: prev.ALL + 1,
+        }));
+      }
     } catch (err) {
       console.error('Failed to mark notification as unread:', err);
     }
@@ -127,9 +297,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const markAllAsRead = async () => {
     try {
-      await api.patch('/notifications/read/all');
+      await allReadNotificationService();
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+
+      // Reset all unread counts
       setUnreadCount(0);
+      setUnreadCountsByCategory({
+        ALL: 0,
+        CONNECTION: 0,
+        POST: 0,
+        MESSAGE: 0,
+        SYSTEM: 0,
+        EVENT: 0,
+        REFERRAL: 0,
+      });
     } catch (err) {
       console.error('Failed to mark all notifications as read:', err);
     }
@@ -137,56 +318,59 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const deleteNotification = async (id: string): Promise<void> => {
     try {
-      const response = await api.delete(`/notifications/${id}`);
+      const notificationToDelete = notifications.find((n) => n.id === id);
+      await deleteNotificationService(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
 
-      // Optional: Add response validation if your API returns specific data
-      if (response.status !== 200) {
-        throw new Error('Failed to delete notification');
+      // Adjust unreadCount if the deleted notification was unread
+      if (notificationToDelete && !notificationToDelete.read) {
+        setUnreadCount((prev) => (prev > 0 ? prev - 1 : 0));
+
+        const category =
+          Object.entries(categoryToTypes).find(([, types]) =>
+            types.includes(notificationToDelete.type as NotificationType)
+          )?.[0] || 'ALL';
+
+        setUnreadCountsByCategory((prev) => ({
+          ...prev,
+          [category]: Math.max(0, (prev[category] || 0) - 1),
+          ALL: Math.max(0, prev.ALL - 1),
+        }));
       }
-
-      return response.data; // If your API returns any data
     } catch (err) {
       console.error('API Delete Error:', err);
-      throw err; // Re-throw to let the UI handler manage the error
+      throw err;
     }
   };
 
-  const login = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
-
-  const logout = () => {
-    setUser(null);
-    setNotifications([]);
-    setUnreadCount(0);
-    localStorage.removeItem('user');
-  };
-
-  // Load user from storage on initial render
-  useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+  const deleteReadNotifications = async (): Promise<void> => {
+    try {
+      await deleteReadNotificationService();
+      await fetchAllUnreadCounts(); // Refresh counts after deletion
+      await fetchNotifications(pagination.page, pagination.limit, 'ALL');
+    } catch (err) {
+      console.error('API Delete Error:', err);
+      throw err;
     }
-  }, []);
+  };
 
   return (
     <NotificationContext.Provider
       value={{
-        user,
         notifications,
+        pagination,
         unreadCount,
+        unreadCountsByCategory,
         loading,
         error,
         fetchNotifications,
+        setPage,
         addNotification,
         markAsRead,
         markAsUnread,
         markAllAsRead,
         deleteNotification,
-        login,
-        logout,
+        deleteReadNotifications,
       }}
     >
       {children}

@@ -29,33 +29,34 @@ export class EngagementService {
       throw new NotFoundException('Post not found');
     }
 
-    const existingVote = await this.prisma.vote.findUnique({
+    // Use findFirst to find existing vote for this post
+    const existingVote = await this.prisma.vote.findFirst({
       where: {
-        userId_postId_commentId: { userId, postId, commentId: null },
+        userId,
+        postId,
+        commentId: null,
       },
     });
 
     if (existingVote) {
       if (existingVote.type === voteType) {
-        // If the same vote type is provided, remove the vote (unvote)
         return this.prisma.vote.delete({
           where: { id: existingVote.id },
         });
       } else {
-        // If a different vote type is provided, update the existing vote
         return this.prisma.vote.update({
           where: { id: existingVote.id },
           data: { type: voteType },
         });
       }
     } else {
-      // No existing vote, create a new one
       return this.prisma.vote.create({
         data: {
           userId,
           postId,
           type: voteType,
           targetType: VoteTargetType.POST,
+          commentId: null,
         },
       });
     }
@@ -78,33 +79,34 @@ export class EngagementService {
       throw new NotFoundException('Comment not found');
     }
 
-    const existingVote = await this.prisma.vote.findUnique({
+    // Use findFirst to find existing vote for this comment
+    const existingVote = await this.prisma.vote.findFirst({
       where: {
-        userId_postId_commentId: { userId, commentId, postId: null },
+        userId,
+        commentId,
+        postId: null,
       },
     });
 
     if (existingVote) {
       if (existingVote.type === voteType) {
-        // If the same vote type is provided, remove the vote (unvote)
         return this.prisma.vote.delete({
           where: { id: existingVote.id },
         });
       } else {
-        // If a different vote type is provided, update the existing vote
         return this.prisma.vote.update({
           where: { id: existingVote.id },
           data: { type: voteType },
         });
       }
     } else {
-      // No existing vote, create a new one
       return this.prisma.vote.create({
         data: {
           userId,
           commentId,
           type: voteType,
           targetType: VoteTargetType.COMMENT,
+          postId: null,
         },
       });
     }

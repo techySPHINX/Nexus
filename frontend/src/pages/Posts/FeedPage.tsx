@@ -1,35 +1,91 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../../contexts/PostContext';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Post } from '../../pages/Post';
-import { Box, Typography, Button, CircularProgress, Dialog, DialogTitle, DialogContent, Snackbar, Alert } from '@mui/material';
-import { CreatePostForm } from '../Post/CreatePostForm';
+import { Post } from '../../components/Post/Post';
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Snackbar,
+  Alert,
+} from '@mui/material';
+import { CreatePostForm } from '../../components/Post/CreatePostForm';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 export const FeedPage: React.FC = () => {
-  const { feed, getFeed, pagination, loading } = usePosts();
+  const { feed, getFeed, pagination, loading, error, clearError } = usePosts();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
-  const [openForm, setOpenForm] = React.useState(false);
+  const [openForm, setOpenForm] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
+    'success'
+  );
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    console.log("Snackbar called with:", message, severity);
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
-  };
+  const showSnackbar = useCallback(
+    (message: string, severity: 'success' | 'error') => {
+      setSnackbarMessage(message);
+      setSnackbarSeverity(severity);
+      setSnackbarOpen(true);
+    },
+    []
+  );
 
   useEffect(() => {
     getFeed();
     refreshProfile();
   }, [getFeed, refreshProfile]);
 
+  useEffect(() => {
+    if (error) {
+      showSnackbar(error, 'error');
+      clearError();
+    }
+  }, [error, showSnackbar, clearError]);
 
   const handleLoadMore = () => {
     getFeed(pagination.page + 1);
+  };
+
+  const handleCreatePostSuccess = useCallback(() => {
+    setOpenForm(false);
+    showSnackbar('Post created successfully!', 'success');
+    getFeed(1);
+  }, [getFeed, showSnackbar]);
+
+  const handleCreatePostError = useCallback(
+    (error: unknown) => {
+      const errorMessage = getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    },
+    [showSnackbar]
+  );
+
+  // In FeedPage.tsx, replace the renderPosts function with:
+  const renderPosts = () => {
+    if (!feed || feed.length === 0) {
+      return (
+        <Typography variant="body1" sx={{ mt: 2 }}>
+          No posts to show. Follow more people or communities to see posts in
+          your feed.
+        </Typography>
+      );
+    }
+
+    return feed.map((post) => {
+      if (!post || !post.id) {
+        console.warn('Invalid post object:', post);
+        return null;
+      }
+
+      return <Post key={post.id} post={post} />;
+    });
   };
 
   return (
@@ -38,6 +94,7 @@ export const FeedPage: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           Your Feed
         </Typography>
+        {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
           <>
             <Button
               variant="contained"
@@ -46,30 +103,24 @@ export const FeedPage: React.FC = () => {
             >
               Create Post
             </Button>
-            <Dialog open={openForm} onClose={() => setOpenForm(false)}>
+            <Dialog
+              open={openForm}
+              onClose={() => setOpenForm(false)}
+              maxWidth="md"
+              fullWidth
+            >
               <DialogTitle>Create a New Post</DialogTitle>
               <DialogContent
                 sx={{
-                  minWidth: '600px',
-                  maxWidth: '800px',
-                  minHeight: '60vh',
-                  maxHeight: '80vh',
+                  minHeight: '400px',
                   overflowY: 'auto',
                 }}
               >
                 <CreatePostForm
                   profile={profile ?? undefined}
-                  onSuccess={() => {
-                    setOpenForm(false);
-                    showSnackbar('Post created successfully!', 'success');
-                    getFeed(1);
-                  }}
-                  onError={() => {
-                    showSnackbar(
-                      'Failed to create post. Please try again.',
-                      'error'
-                    );
-                  }}
+                  onSuccess={handleCreatePostSuccess}
+                  onError={handleCreatePostError}
+                  onCancel={() => setOpenForm(false)}
                 />
               </DialogContent>
             </Dialog>
@@ -80,15 +131,9 @@ export const FeedPage: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
             <CircularProgress />
           </Box>
-        ) : feed.length === 0 ? (
-          <Typography variant="body1" sx={{ mt: 2 }}>
-            No posts to show. Follow more people or communities to see posts in your feed.
-          </Typography>
         ) : (
           <>
-            {feed.map((post) => (
-              <Post key={post.id} post={post} />
-            ))}
+            {renderPosts()}
 
             {pagination.hasNext && (
               <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>

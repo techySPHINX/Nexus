@@ -249,10 +249,10 @@ const Landing: React.FC = () => {
                 fontWeight: 400,
               }}
             >
-              Nexus is KIIT's official alumni network, designed to connect past
-              and present students for mentorship, collaboration, and career
-              growth. We believe in the power of community and the strength of
-              shared experiences.
+              Nexus is KIIT&apos;s official alumni network, designed to connect
+              past and present students for mentorship, collaboration, and
+              career growth. We believe in the power of community and the
+              strength of shared experiences.
             </Typography>
           </Box>
         </motion.div>
