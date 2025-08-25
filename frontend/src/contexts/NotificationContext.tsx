@@ -46,22 +46,6 @@ const NotificationContext = createContext<NotificationContextType | undefined>(
   undefined
 );
 
-// Map frontend categories to backend types
-const categoryToTypes: Record<string, NotificationType[]> = {
-  CONNECTION: [
-    NotificationType.CONNECTION_REQUEST,
-    NotificationType.CONNECTION_ACCEPTED,
-  ],
-  POST: [NotificationType.POST_LIKE, NotificationType.POST_COMMENT],
-  MESSAGE: [NotificationType.MESSAGE],
-  SYSTEM: [NotificationType.SYSTEM],
-  EVENT: [NotificationType.EVENT],
-  REFERRAL: [
-    NotificationType.REFERRAL_APPLICATION,
-    NotificationType.REFERRAL_STATUS_UPDATE,
-    NotificationType.REFERRAL_APPLICATION_STATUS_UPDATE,
-  ],
-};
 
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
