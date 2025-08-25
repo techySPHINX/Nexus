@@ -49,6 +49,7 @@ interface PostProps {
   isAdminView?: boolean;
   onApprove?: () => void;
   onReject?: () => void;
+  onClick?: () => void;
 }
 
 export const Post: React.FC<PostProps> = ({
@@ -57,6 +58,7 @@ export const Post: React.FC<PostProps> = ({
   onDelete,
   showActions = true,
   isAdminView = false,
+  onClick,
 }) => {
   const { user, token } = useAuth();
   const {
@@ -246,7 +248,20 @@ export const Post: React.FC<PostProps> = ({
   }
 
   return (
-    <Card sx={{ mb: 3 }}>
+    <Card
+      sx={{
+        mb: 3,
+        cursor: onClick ? 'pointer' : 'default',
+        '&:hover': onClick
+          ? {
+              boxShadow: 3,
+              transform: 'translateY(-2px)',
+              transition: 'all 0.2s ease-in-out',
+            }
+          : {},
+      }}
+      onClick={onClick} // Add this onClick handler
+    >
       <CardHeader
         avatar={
           <Link
@@ -373,6 +388,10 @@ export const Post: React.FC<PostProps> = ({
             <Link
               to={`/posts/${post.id}`}
               style={{ textDecoration: 'none', color: 'inherit' }}
+              onClick={(e) => {
+                // Prevent the Link's default navigation since we're handling it with the card onClick
+                e.preventDefault();
+              }}
             >
               <Typography
                 variant="body1"
