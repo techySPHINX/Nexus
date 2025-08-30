@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,6 +28,7 @@ export const FeedPage: React.FC = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
     'success'
   );
+  const navigate = useNavigate();
 
   const showSnackbar = useCallback(
     (message: string, severity: 'success' | 'error') => {
@@ -84,7 +86,17 @@ export const FeedPage: React.FC = () => {
         return null;
       }
 
-      return <Post key={post.id} post={post} />;
+      return (
+        <Post
+          key={post.id}
+          post={post}
+          onClick={() =>
+            navigate(`/posts/${post.id}`, {
+              state: { from: '/feed' },
+            })
+          }
+        />
+      );
     });
   };
 

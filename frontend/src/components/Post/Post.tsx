@@ -49,6 +49,7 @@ interface PostProps {
   isAdminView?: boolean;
   onApprove?: () => void;
   onReject?: () => void;
+  onClick?: () => void;
 }
 
 export const Post: React.FC<PostProps> = ({
@@ -57,6 +58,9 @@ export const Post: React.FC<PostProps> = ({
   onDelete,
   showActions = true,
   isAdminView = false,
+  onApprove,
+  onReject,
+  onClick,
 }) => {
   const { user, token } = useAuth();
   const {
@@ -192,46 +196,74 @@ export const Post: React.FC<PostProps> = ({
     }
   };
 
-  const handleApprove = async () => {
-    try {
-      await approvePost(post.id);
-      if (onDelete) onDelete();
-      setSnackbar({
-        open: true,
-        message: 'Post approved successfully',
-        severity: 'success',
-      });
-    } catch (error) {
-      console.error('Error approving post:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to approve post',
-        severity: 'error',
-      });
+  const handleApproveClick = () => {
+    if (onApprove) {
+      onApprove();
+    } else {
+      // Fallback to context function if onApprove not provided
+      approvePost(post.id)
+        .then(() => {
+          if (onDelete) onDelete();
+          setSnackbar({
+            open: true,
+            message: 'Post approved successfully',
+            severity: 'success',
+          });
+        })
+        .catch((error) => {
+          console.error('Error approving post:', error);
+          setSnackbar({
+            open: true,
+            message: 'Failed to approve post',
+            severity: 'error',
+          });
+        });
     }
   };
 
-  const handleReject = async () => {
-    try {
-      await rejectPost(post.id);
-      if (onDelete) onDelete();
-      setSnackbar({
-        open: true,
-        message: 'Post rejected successfully',
-        severity: 'success',
-      });
-    } catch (error) {
-      console.error('Error rejecting post:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to reject post',
-        severity: 'error',
-      });
+  const handleRejectClick = () => {
+    if (onReject) {
+      onReject();
+    } else {
+      // Fallback to context function if onReject not provided
+      rejectPost(post.id)
+        .then(() => {
+          if (onDelete) onDelete();
+          setSnackbar({
+            open: true,
+            message: 'Post rejected successfully',
+            severity: 'success',
+          });
+        })
+        .catch((error) => {
+          console.error('Error rejecting post:', error);
+          setSnackbar({
+            open: true,
+            message: 'Failed to reject post',
+            severity: 'error',
+          });
+        });
     }
   };
 
   const handleCloseSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
+  };
+
+  const handleConfirmDelete = () => {
+    setConfirmOpen(true);
+  };
+
+  const handleCancelDelete = () => {
+    setConfirmOpen(false);
+  };
+
+  const handleContentClick = () => {
+    if (onClick) {
+      onClick(); // Use the provided onClick handler if available
+    } else {
+      navigate(`/posts/${post.id}`); // Fallback to default behavior
+    }
   };
 
   const isAuthor = user?.id === post.author.id;
@@ -278,17 +310,17 @@ export const Post: React.FC<PostProps> = ({
                     <MenuItem onClick={handleEdit}>
                       <Edit sx={{ mr: 1 }} /> Edit
                     </MenuItem>
-                    <MenuItem onClick={() => setConfirmOpen(true)}>
+                    <MenuItem onClick={handleConfirmDelete}>
                       <Delete sx={{ mr: 1 }} /> Delete
                     </MenuItem>
                   </>
                 )}
                 {isAdminView && isAdmin && (
                   <>
-                    <MenuItem onClick={handleApprove}>
+                    <MenuItem onClick={handleApproveClick}>
                       <Check sx={{ mr: 1 }} /> Approve
                     </MenuItem>
-                    <MenuItem onClick={handleReject}>
+                    <MenuItem onClick={handleRejectClick}>
                       <Close sx={{ mr: 1 }} /> Reject
                     </MenuItem>
                   </>
@@ -302,7 +334,13 @@ export const Post: React.FC<PostProps> = ({
             to={`/profile/${post.author.id}`}
             style={{ textDecoration: 'none', color: 'inherit' }}
           >
-            {post.author.name}
+            <Typography
+              variant="h6"
+              component="span"
+              sx={{ cursor: 'pointer' }}
+            >
+              {post.author.name}
+            </Typography>
           </Link>
         }
         subheader={
@@ -370,28 +408,27 @@ export const Post: React.FC<PostProps> = ({
           </>
         ) : (
           <>
-            <Link
-              to={`/posts/${post.id}`}
-              style={{ textDecoration: 'none', color: 'inherit' }}
-            >
+            <Box onClick={handleContentClick} sx={{ cursor: 'pointer' }}>
               <Typography
                 variant="body1"
                 sx={{
                   mb: 2,
-                  cursor: 'pointer',
                   '&:hover': {
-                    color: 'green',
+                    color: 'primary.main',
                   },
+                  // Conditionally apply truncation
+                  ...(window.location.pathname !== `/posts/${post.id}` && {
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }),
                 }}
               >
                 {post.content}
               </Typography>
-            </Link>
-            {post.imageUrl && (
-              <Link to={`/posts/${post.id}`} style={{ textDecoration: 'none' }}>
-                <PostImage imageUrl={post.imageUrl} />
-              </Link>
-            )}
+              {post.imageUrl && <PostImage imageUrl={post.imageUrl} />}
+            </Box>
             {isAdminView && post.status && (
               <Chip
                 label={post.status}
@@ -419,7 +456,10 @@ export const Post: React.FC<PostProps> = ({
             {isLiked ? <Favorite color="error" /> : <FavoriteBorder />}
           </IconButton>
           <Typography variant="body2">{likeCount}</Typography>
-          <CommentIcon />
+
+          <IconButton onClick={handleContentClick}>
+            <CommentIcon />
+          </IconButton>
           <Typography variant="body2">{post?._count?.Comment || 0}</Typography>
 
           <IconButton>
@@ -428,13 +468,13 @@ export const Post: React.FC<PostProps> = ({
         </CardActions>
       )}
 
-      <Dialog open={confirmOpen} onClose={() => setConfirmOpen(false)}>
+      <Dialog open={confirmOpen} onClose={handleCancelDelete}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <Typography>Are you sure you want to delete this post?</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleCancelDelete}>Cancel</Button>
           <Button onClick={handleDelete} color="error">
             Delete
           </Button>

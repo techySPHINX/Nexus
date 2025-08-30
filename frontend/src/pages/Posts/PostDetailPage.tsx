@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { Post } from '../../components/Post/Post';
 import { CommentSection } from '../../components/Post/CommentSection';
@@ -18,6 +18,58 @@ export const PostDetailPage: React.FC = () => {
   const { currentPost, getPost, loading, error } = usePosts();
   const [notFound, setNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
+
+  // Get the previous path from location state or default to '/feed'
+  const getBackPath = () => {
+    // Check if we have a previous location in state
+    if (location.state?.from) {
+      return location.state.from;
+    }
+
+    // Default paths based on referrer or current path
+    const referrer = document.referrer;
+    const currentPath = location.pathname;
+
+    // If coming from admin moderation
+    if (
+      referrer.includes('/admin/moderation') ||
+      currentPath.includes('admin')
+    ) {
+      return '/admin/moderation';
+    }
+
+    // If coming from user posts
+    if (referrer.includes('/user/') || currentPath.includes('user')) {
+      // Try to extract userId from referrer or use generic path
+      const userIdMatch = referrer.match(/\/user\/([^/]+)/);
+      if (userIdMatch) {
+        return `/user/${userIdMatch[1]}/posts`;
+      }
+      return '/';
+    }
+
+    // Default to feed
+    return '/feed';
+  };
+
+  const getBackButtonText = () => {
+    const backPath = getBackPath();
+
+    if (backPath.includes('/admin/moderation')) {
+      return 'Back to Moderation';
+    }
+
+    if (backPath.includes('/users/') && backPath.includes('/posts')) {
+      return 'Back to User Posts';
+    }
+
+    if (backPath.includes('/user/')) {
+      return 'Back to Profile';
+    }
+
+    return 'Back to Feed';
+  };
 
   useEffect(() => {
     if (id) {
@@ -105,7 +157,7 @@ export const PostDetailPage: React.FC = () => {
               startIcon={<Home />}
               size="large"
             >
-              Back to Feed
+              Back to Home
             </Button>
           </Box>
         </Box>
@@ -113,19 +165,23 @@ export const PostDetailPage: React.FC = () => {
     );
   }
 
+  const backPath = getBackPath();
+  const backButtonText = getBackButtonText();
+
   return (
     <Container maxWidth="md">
       {/* Back Button */}
       <Box sx={{ display: 'flex', justifyContent: 'flex-start', mt: 4 }}>
         <Button
           component={Link}
-          to="/feed"
+          to={backPath}
           variant="outlined"
           startIcon={<ArrowBack />}
           size="large"
           sx={{ mb: 4 }}
+          state={{ from: location.pathname }} // Pass current path for future navigation
         >
-          Back to Feed
+          {backButtonText}
         </Button>
       </Box>
 

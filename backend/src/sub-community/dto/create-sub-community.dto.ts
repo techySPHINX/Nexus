@@ -9,6 +9,10 @@ export class CreateSubCommunityDto {
   @IsNotEmpty()
   description: string;
 
+  @IsString()
+  @IsNotEmpty()
+  type: string;
+
   @IsBoolean()
   @IsOptional()
   isPrivate?: boolean;

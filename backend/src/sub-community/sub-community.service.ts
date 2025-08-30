@@ -23,6 +23,7 @@ export class SubCommunityService {
   async createSubCommunityInternal(data: {
     name: string;
     description: string;
+    type: string;
     isPrivate: boolean;
     ownerId: string;
     subCommunityCreationRequestId?: string;
@@ -46,6 +47,31 @@ export class SubCommunityService {
       },
     });
 
+    // Update the type for the existing subCommunityType if it exists, otherwise create it
+    const existingType = await this.prisma.subCommunityType.findFirst({
+      where: { type: data.type },
+    });
+
+    if (existingType) {
+      await this.prisma.subCommunityType.update({
+        where: { id: existingType.id },
+        data: {
+          SubCommunity: {
+            connect: { id: subCommunity.id },
+          },
+        },
+      });
+    } else {
+      await this.prisma.subCommunityType.create({
+        data: {
+          type: data.type,
+          SubCommunity: {
+            connect: { id: subCommunity.id },
+          },
+        },
+      });
+    }
+
     return subCommunity;
   }
 
@@ -54,7 +80,14 @@ export class SubCommunityService {
   async createSubCommunity(dto: CreateSubCommunityDto) {
     // This method is now primarily for direct admin creation or testing, not for alumni requests.
     // It does not handle the creation request flow.
-    const subCommunity = await this.prisma.subCommunity.create({ data: dto });
+    const subCommunity = await this.prisma.subCommunity.create({
+      data: {
+        name: dto.name,
+        description: dto.description,
+        isPrivate: dto.isPrivate,
+        ownerId: dto.ownerId,
+      },
+    });
 
     // Add the creator as an OWNER member
     await this.prisma.subCommunityMember.create({
@@ -64,6 +97,31 @@ export class SubCommunityService {
         role: 'OWNER',
       },
     });
+
+    // Update the type for the existing subCommunityType if it exists, otherwise create it
+    const existingType = await this.prisma.subCommunityType.findFirst({
+      where: { type: dto.type },
+    });
+
+    if (existingType) {
+      await this.prisma.subCommunityType.update({
+        where: { id: existingType.id },
+        data: {
+          SubCommunity: {
+            connect: { id: subCommunity.id },
+          },
+        },
+      });
+    } else {
+      await this.prisma.subCommunityType.create({
+        data: {
+          type: dto.type,
+          SubCommunity: {
+            connect: { id: subCommunity.id },
+          },
+        },
+      });
+    }
 
     return subCommunity;
   }
@@ -86,12 +144,66 @@ export class SubCommunityService {
           include: { user: { select: { id: true, name: true } } },
         },
         posts: { orderBy: { createdAt: 'desc' } },
+        _count: { select: { members: true, posts: true } },
       },
     });
     if (!subCommunity) {
       throw new NotFoundException('Sub-community not found.');
     }
     return subCommunity;
+  }
+
+  // Service implementation
+  async findSubCommunityByType(
+    type: string,
+    page: number = 1,
+    limit: number = 20,
+  ) {
+    const skip = (page - 1) * limit;
+
+    // Get SubCommunityTypes with their related SubCommunities
+    const subCommunityTypes = await this.prisma.subCommunityType.findMany({
+      where: { type },
+      include: {
+        SubCommunity: {
+          skip,
+          take: limit,
+          include: {
+            owner: { select: { id: true, name: true } },
+            _count: { select: { members: true, posts: true } },
+          },
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+
+    // Count total SubCommunities for this type
+    const totalCount = await this.prisma.subCommunity.count({
+      where: {
+        type: {
+          some: {
+            type: type,
+          },
+        },
+      },
+    });
+
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
+
+    return {
+      data: subCommunityTypes,
+      pagination: {
+        page,
+        limit,
+        total: totalCount,
+        totalPages,
+        hasNext,
+        hasPrev,
+      },
+    };
   }
 
   async updateSubCommunity(
@@ -124,7 +236,12 @@ export class SubCommunityService {
 
     return this.prisma.subCommunity.update({
       where: { id },
-      data: dto,
+      data: {
+        name: dto.name,
+        description: dto.description,
+        isPrivate: dto.isPrivate,
+        ownerId: dto.ownerId,
+      },
     });
   }
 
