@@ -13,12 +13,10 @@ model User {
   password                              String                        @db.VarChar(255)
   name                                  String?
   role                                  Role                          @default(STUDENT)
-  description                           String?
-  iconUrl                               String?
-  bannerUrl                             String?
-  createdAt                             DateTime                      @default(now())
-  reportsHandled                        ContentReport[]               @relation("ReportsHandled")
-  reportsMade                           ContentReport[]               @relation("ReportsMade")
+  description         String?
+  iconUrl             String?
+  bannerUrl           String?
+  createdAt           DateTime              @default(now())
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
@@ -32,6 +30,7 @@ model User {
   feedbackGiven                         Feedback[]                    @relation("FeedbackGiven")
   feedbackReceived                      Feedback[]                    @relation("FeedbackReceived")
   files                                 File[]                        @relation("UserFiles")
+  Vote                                  Vote[]
   mentorSettings                        MentorSettings?
   mentorshipsAsMentee                   Mentorship[]                  @relation("Mentee")
   mentorshipsAsMentor                   Mentorship[]                  @relation("Mentor")
@@ -259,32 +258,32 @@ model Post {
   authorId       String
   content        String
   flairId        String?
+  flair          Flair?          @relation(fields: [flairId], references: [id])
   imageUrl       String?         @db.VarChar(512)
   type           String?
   createdAt      DateTime        @default(now())
   status         PostStatus      @default(PENDING)
   subCommunityId String?
   updatedAt      DateTime        @default(now()) @updatedAt
-  reports        ContentReport[]
   Comment        Comment[]
-  author         User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  flair          Flair?          @relation(fields: [flairId], references: [id])
-  subCommunity   SubCommunity?   @relation(fields: [subCommunityId], references: [id])
   Vote           Vote[]
+  author         User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  subCommunity   SubCommunity?   @relation(fields: [subCommunityId], references: [id])
+  reports        ContentReport[]
 
   @@map("post")
 }
 
 model Vote {
-  id         String         @id @default(uuid())
-  userId     String
-  postId     String?
-  commentId  String?
-  type       VoteType
-  targetType VoteTargetType
-  comment    Comment?       @relation(fields: [commentId], references: [id])
-  post       Post?          @relation(fields: [postId], references: [id])
-  user       User           @relation(fields: [userId], references: [id])
+  id          String        @id @default(uuid())
+  userId      String
+  postId      String?
+  commentId   String?
+  type        VoteType
+  targetType  VoteTargetType
+  post        Post?         @relation(fields: [postId], references: [id])
+  comment     Comment?      @relation(fields: [commentId], references: [id])
+  user        User          @relation(fields: [userId], references: [id])
 
   @@unique([userId, postId, commentId])
   @@map("votes")
@@ -297,12 +296,12 @@ model Comment {
   postId    String
   parentId  String?
   createdAt DateTime        @default(now())
-  reports   ContentReport[]
-  parent    Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  replies   Comment[]       @relation("CommentReplies")
   post      Post            @relation(fields: [postId], references: [id])
   user      User            @relation(fields: [userId], references: [id])
+  parent    Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies   Comment[]       @relation("CommentReplies")
   votes     Vote[]
+  reports   ContentReport[]
 
   @@map("comment")
 }
