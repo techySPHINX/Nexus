@@ -425,13 +425,20 @@ model SubCommunity {
   status                        SubCommunityStatus           @default(ACTIVE)
   ownerId                       String
   subCommunityCreationRequestId String?                      @unique
+  reports                       ContentReport[]
+  flairs                        Flair[]
   joinRequests                  JoinRequest[]
   owner                         User                         @relation("OwnedSubCommunities", fields: [ownerId], references: [id])
   creationRequest               SubCommunityCreationRequest? @relation(fields: [subCommunityCreationRequestId], references: [id])
   members                       SubCommunityMember[]
   posts                         Post[]
-  reports                       ContentReport[]
-  flairs                        Flair[]
+  type                          SubCommunityType[]           @relation("TypeSubCommunity")
+}
+
+model SubCommunityType {
+  id           String         @id @default(cuid())
+  type         String         @default("OTHER")
+  SubCommunity SubCommunity[] @relation("TypeSubCommunity")
 }
 
 model SubCommunityMember {
@@ -461,19 +468,20 @@ model JoinRequest {
 }
 
 model SubCommunityCreationRequest {
-  id            String        @id @default(cuid())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  name          String
-  description   String
-  rules         String
-  documentUrls  String[]
-  status        RequestStatus @default(PENDING)
-  requesterId   String
-  adminId       String?
-  subCommunity  SubCommunity?
-  admin         User?         @relation("AdminSubCommunityCreationRequests", fields: [adminId], references: [id])
-  requester     User          @relation("RequesterSubCommunityCreationRequests", fields: [requesterId], references: [id])
+  id           String        @id @default(cuid())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  name         String
+  description  String
+  type         String        @default("OTHER")
+  rules        String
+  documentUrls String[]
+  status       RequestStatus @default(PENDING)
+  requesterId  String
+  adminId      String?
+  subCommunity SubCommunity?
+  admin        User?         @relation("AdminSubCommunityCreationRequests", fields: [adminId], references: [id])
+  requester    User          @relation("RequesterSubCommunityCreationRequests", fields: [requesterId], references: [id])
 }
 
 model UserPoints {
@@ -565,18 +573,18 @@ model ContentReport {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
   reporterId     String
-  reporter       User                @relation("ReportsMade", fields: [reporterId], references: [id])
   subCommunityId String
-  subCommunity   SubCommunity        @relation(fields: [subCommunityId], references: [id])
   type           ReportedContentType
   reason         String
   postId         String?
-  post           Post?               @relation(fields: [postId], references: [id])
   commentId      String?
-  comment        Comment?            @relation(fields: [commentId], references: [id])
   status         ReportStatus        @default(PENDING)
   handlerId      String?
+  comment        Comment?            @relation(fields: [commentId], references: [id])
   handler        User?               @relation("ReportsHandled", fields: [handlerId], references: [id])
+  post           Post?               @relation(fields: [postId], references: [id])
+  reporter       User                @relation("ReportsMade", fields: [reporterId], references: [id])
+  subCommunity   SubCommunity        @relation(fields: [subCommunityId], references: [id])
 
   @@index([subCommunityId, status])
 }

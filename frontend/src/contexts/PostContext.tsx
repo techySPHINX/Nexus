@@ -37,6 +37,7 @@ interface PostContextType {
     hasNext: boolean;
     hasPrev: boolean;
   };
+  clearUserPosts: () => void;
   createPost: (
     content: string,
     image?: File,
@@ -302,22 +303,29 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         setLoading(true);
         clearError();
-        const { data } = await getPostByUserIdService(userId, page, limit);
-        if (page === 1) {
-          setUserPosts(data.posts);
-        } else {
-          setUserPosts((prev) => [...prev, ...data.posts]);
-        }
-        setPagination({
+        const response = await getPostByUserIdService(userId, page, limit);
+
+        const posts = response.posts || [];
+        const paginationData = response.pagination || {
           page,
           limit,
-          total: data.pagination.total,
-          totalPages: data.pagination.totalPages,
-          hasNext: data.pagination.hasNext,
-          hasPrev: data.pagination.hasPrev,
+          total: posts.length,
+          totalPages: Math.ceil(posts.length / limit),
+          hasNext: false,
+          hasPrev: false,
+        };
+
+        setUserPosts((prev) => {
+          const newPosts = page === 1 ? posts : [...prev, ...posts];
+          console.log('User posts updated:', newPosts); // Log here
+          return newPosts;
         });
+
+        setPagination(paginationData);
         setLoading(false);
-        return data;
+        console.log('response posts data:', response);
+
+        return response;
       } catch (err) {
         const errorMessage = getErrorMessage(err);
         setError(errorMessage);
@@ -327,6 +335,18 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [user, clearError]
   );
+
+  const clearUserPosts = useCallback(() => {
+    setUserPosts([]);
+    setPagination({
+      page: 1,
+      limit: 10,
+      total: 0,
+      totalPages: 0,
+      hasNext: false,
+      hasPrev: false,
+    });
+  }, []);
 
   const getPost = useCallback(
     async (id: string) => {
@@ -562,6 +582,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         getFeed,
         getSubCommunityFeed,
         getUserPosts,
+        clearUserPosts,
         searchPosts,
         approvePost,
         rejectPost,
