@@ -54,6 +54,7 @@ model User {
   userPoints                            UserPoints?
   reportsMade                           ContentReport[]               @relation("ReportsMade")
   reportsHandled                        ContentReport[]               @relation("ReportsHandled")
+  events                                Event[]
 
   @@map("users")
 }
@@ -580,6 +581,24 @@ model ContentReport {
   @@index([subCommunityId, status])
 }
 
+model Event {
+  id               String      @id @default(uuid())
+  title            String
+  description      String
+  imageUrl         String?
+  registrationLink String?
+  date             DateTime
+  status           EventStatus @default(UPCOMING)
+  authorId         String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  author           User        @relation(fields: [authorId], references: [id])
+  category         EventCategory @default(GENERAL)
+  tags             String[]
+  location         String?
+
+  @@map("events")
+}
 
 enum ProjectRole {
   OWNER
@@ -706,6 +725,20 @@ enum VoteType {
 enum VoteTargetType {
   POST
   COMMENT
+}
+
+enum EventStatus {
+  UPCOMING
+  PAST
+  CANCELLED
+}
+
+enum EventCategory {
+  GENERAL
+  TECH_TALK
+  WORKSHOP
+  NETWORKING
+  COMMUNITY
 }
 
 model Flair {
