@@ -9,6 +9,7 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { SubCommunityService } from './sub-community.service';
 import { UpdateSubCommunityDto } from './dto/update-sub-community.dto';
@@ -35,9 +36,23 @@ export class SubCommunityController {
     return this.subCommunityService.createSubCommunity(createSubCommunityDto);
   }
 
+  @Get()
+  async findAll() {
+    return this.subCommunityService.findAllSubCommunities();
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.subCommunityService.findOneSubCommunity(id);
+  }
+
+  @Get('type/:type')
+  async findByType(
+    @Param('type') type: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 20,
+  ) {
+    return this.subCommunityService.findSubCommunityByType(type, page, limit);
   }
 
   @Patch(':id')

@@ -10,16 +10,28 @@ async function seedUsers() {
     // Create test users
     const users = [
       {
-        email: '22051285@kiit.ac.in',
-        password: '22051285',
+        email: 'test1@kiit.ac.in',
+        password: 'abcdef',
         name: 'Test User 1',
         role: 'STUDENT',
       },
       {
-        email: '22051280@kiit.ac.in',
-        password: '22051280',
+        email: 'test2@kiit.ac.in',
+        password: 'abcdef',
         name: 'Test User 2',
         role: 'STUDENT',
+      },
+      {
+        email: 'test3@kiit.ac.in',
+        password: 'abcdef',
+        name: 'Test User 3',
+        role: 'ALUM',
+      },
+      {
+        email: 'test4@kiit.ac.in',
+        password: 'abcdef',
+        name: 'Test User 4',
+        role: 'ADMIN',
       },
     ];
 

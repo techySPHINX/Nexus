@@ -18,7 +18,7 @@ import {
   ToggleButton,
 } from '@mui/material';
 import {
-  ArrowBack,
+  // ArrowBack,
   Refresh,
   Person,
   Article,
@@ -51,28 +51,35 @@ export const UserPostsPage: React.FC = () => {
 
       try {
         await getUserPosts(userId, page);
-        setHasLoaded(true);
       } finally {
         if (isRefresh) {
           setIsRefreshing(false);
         }
       }
     },
-    [userId, getUserPosts]
+    [userId, getUserPosts, currentUser]
   );
 
   useEffect(() => {
+    if (!currentUser) {
+      console.warn('No authenticated user found.');
+      return;
+    }
     let isActive = true;
+    setHasLoaded(false);
 
     const loadData = async () => {
-      if (userId && !hasLoaded) {
+      if (userId) {
         try {
           await loadPosts(1);
           if (isActive) {
             setHasLoaded(true);
+            console.log('Posts loaded for user ID:', userId);
           }
         } catch (error) {
           console.error('Failed to load posts:', error);
+        } finally {
+          if (isActive) setHasLoaded(true);
         }
       }
     };
@@ -83,7 +90,7 @@ export const UserPostsPage: React.FC = () => {
       isActive = false;
       clearUserPosts();
     };
-  }, [userId, loadPosts, clearUserPosts, hasLoaded]);
+  }, [userId, loadPosts, clearUserPosts, currentUser]);
 
   const handleLoadMore = () => {
     if (userId) {
@@ -146,12 +153,28 @@ export const UserPostsPage: React.FC = () => {
     );
   }
 
+  if (!firstPost) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '400px',
+        }}
+      >
+        <Typography>No posts found.</Typography>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ maxWidth: '800px', margin: '0 auto', p: { xs: 1, sm: 2 } }}>
       {/* Header Section */}
       <Paper elevation={1} sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Button
+          {/* <Button
             component={Link}
             to="/"
             variant="outlined"
@@ -159,7 +182,7 @@ export const UserPostsPage: React.FC = () => {
             size="small"
           >
             Back
-          </Button>
+          </Button> */}
 
           <IconButton
             onClick={handleRefresh}

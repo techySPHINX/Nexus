@@ -24,13 +24,14 @@ import { ProfileProvider } from './contexts/ProfileContext';
 import { FeedPage } from './pages/Posts/FeedPage';
 import { PostDetailPage } from './pages/Posts/PostDetailPage';
 import { UserPostsPage } from './pages/Posts/UserPostsPage';
-import { SubCommunityPage } from './pages/Posts/SubCommunityPage';
+import { SubCommunitiesPage } from './pages/Posts/SubCommunityPage';
 import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { PostProvider } from './contexts/PostContext';
 import { SubCommunityProvider } from './contexts/SubCommunityContext';
 import { EngagementProvider } from './contexts/engagementContext';
 import { EngagementService } from './services/engagementService';
+import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
 
 // Layout component that handles navbar positioning
 const Layout: React.FC = () => {
@@ -149,10 +150,18 @@ const Layout: React.FC = () => {
               }
             />
             <Route
-              path="/subcommunities/:subCommunityId"
+              path="/subcommunities"
               element={
                 <ProtectedRoute>
-                  <SubCommunityPage />
+                  <SubCommunitiesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subcommunities/:id"
+              element={
+                <ProtectedRoute>
+                  <SubCommunityFeedPage />
                 </ProtectedRoute>
               }
             />

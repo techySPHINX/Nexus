@@ -106,6 +106,7 @@ export class SubCommunityRequestService {
       await this.subCommunityService.createSubCommunityInternal({
         name: request.name,
         description: request.description,
+        type: request.type,
         isPrivate: false, // Default to public for now, can be part of request DTO later
         ownerId: request.requesterId,
         subCommunityCreationRequestId: request.id,

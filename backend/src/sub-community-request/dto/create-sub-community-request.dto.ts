@@ -19,6 +19,10 @@ export class CreateSubCommunityRequestDto {
 
   @IsString()
   @IsNotEmpty()
+  type: string;
+
+  @IsString()
+  @IsNotEmpty()
   rules: string;
 
   @IsArray()
