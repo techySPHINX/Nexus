@@ -72,7 +72,6 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
           borderBottom: '2px solid',
           borderColor: 'primary.main',
           width: 'fit-content',
-          cursor: 'pointer',
           transition: 'all 0.2s ease-in-out',
           '&:hover': {
             color: 'primary.main',

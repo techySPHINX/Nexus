@@ -412,6 +412,7 @@ export const SubCommunityFeedPage: React.FC = () => {
                   <Button
                     variant="contained"
                     onClick={handleJoinRequest}
+                    disabled={hasPendingRequest}
                     size="large"
                     startIcon={<People />}
                     sx={{ borderRadius: 2, fontWeight: 600 }}

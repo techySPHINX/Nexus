@@ -338,7 +338,7 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const requestToJoin = useCallback(
     async (subCommunityId: string) => {
-      setLoading(true);
+      // setLoading(true);
       try {
         const joinRequest =
           await subCommunityService.requestToJoin(subCommunityId);
@@ -351,7 +351,7 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         throw err;
       } finally {
-        setLoading(false);
+        // setLoading(false);
       }
     },
     [setError]
@@ -478,13 +478,11 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const createSubCommunityRequest = useCallback(
-    async (dto: CreateSubCommunityRequestDto, documents?: File[]) => {
+    async (dto: CreateSubCommunityRequestDto) => {
       setLoading(true);
       try {
-        const request = await subCommunityService.createSubCommunityRequest(
-          dto,
-          documents
-        );
+        const request =
+          await subCommunityService.createSubCommunityRequest(dto);
         setCreationRequests((prev) => [...prev, request]);
       } catch (err: unknown) {
         if (err instanceof Error) {

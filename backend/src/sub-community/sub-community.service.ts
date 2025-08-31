@@ -345,6 +345,8 @@ export class SubCommunityService {
       );
     }
 
+    console.log('User id ', userId, 'communityID ', subCommunityId);
+
     const existingJoinRequest = await this.prisma.joinRequest.findFirst({
       where: {
         userId: userId,

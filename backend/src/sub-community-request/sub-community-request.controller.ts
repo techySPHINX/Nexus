@@ -26,7 +26,7 @@ export class SubCommunityRequestController {
   @Roles(Role.ALUM)
   createRequest(
     @Body() createSubCommunityRequestDto: CreateSubCommunityRequestDto,
-    @GetCurrentUser('id') requesterId: string,
+    @GetCurrentUser('userId') requesterId: string,
   ) {
     return this.subCommunityRequestService.createRequest(
       createSubCommunityRequestDto,
@@ -46,7 +46,7 @@ export class SubCommunityRequestController {
   @Roles(Role.ADMIN)
   approveRequest(
     @Param('id') requestId: string,
-    @GetCurrentUser('id') adminId: string,
+    @GetCurrentUser('userId') adminId: string,
   ) {
     return this.subCommunityRequestService.approveRequest(requestId, adminId);
   }
@@ -56,7 +56,7 @@ export class SubCommunityRequestController {
   @Roles(Role.ADMIN)
   rejectRequest(
     @Param('id') requestId: string,
-    @GetCurrentUser('id') adminId: string,
+    @GetCurrentUser('userId') adminId: string,
   ) {
     return this.subCommunityRequestService.rejectRequest(requestId, adminId);
   }

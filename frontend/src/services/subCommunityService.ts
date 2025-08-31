@@ -131,21 +131,9 @@ export const subCommunityService = {
 
   // SubCommunity creation requests
   createSubCommunityRequest: async (
-    dto: CreateSubCommunityRequestDto,
-    documents?: File[]
+    dto: CreateSubCommunityRequestDto
   ): Promise<SubCommunityCreationRequest> => {
-    const formData = new FormData();
-    formData.append('data', JSON.stringify(dto));
-
-    if (documents) {
-      documents.forEach((doc) => {
-        formData.append('documents', doc);
-      });
-    }
-
-    const response = await api.post('/sub-community-requests', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await api.post('/sub-community-requests', dto);
     return response.data;
   },
 

@@ -105,7 +105,7 @@ export interface SubCommunityCreationRequest {
   name: string;
   description: string;
   rules: string;
-  documentUrls?: string[];
+  type: string;
   status: RequestStatus;
   requesterId: string;
   adminId?: string;
@@ -133,7 +133,7 @@ export interface CreateSubCommunityRequestDto {
   name: string;
   description: string;
   rules: string;
-  documentUrls?: string[];
+  type: string;
 }
 
 export interface ApproveJoinRequestDto {

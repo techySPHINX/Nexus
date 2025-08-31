@@ -56,6 +56,7 @@ export const SubCommunitiesPage: React.FC = () => {
   const [loadedTypes, setLoadedTypes] = useState<Set<string>>(new Set());
 
   const isAdmin = user?.role === 'ADMIN';
+  const isAlum = user?.role === 'ALUM';
 
   useEffect(() => {
     // Load all communities initially
@@ -130,16 +131,7 @@ export const SubCommunitiesPage: React.FC = () => {
           Communities
         </Typography>
 
-        {isAdmin ? (
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setCreateDialogOpen(true)}
-            sx={{ borderRadius: 2 }}
-          >
-            Create Community
-          </Button>
-        ) : (
+        {isAdmin && isAlum && (
           <Button
             variant="outlined"
             startIcon={<Add />}

@@ -218,6 +218,18 @@ const Navbar: React.FC = () => {
                     Feed Moderation
                   </MenuItem>
                 )}
+                {user?.role === 'ADMIN' && (
+                  <MenuItem
+                    component={Link}
+                    to="/admin/moderation/subcommunities"
+                    onClick={handleUserMenuClose}
+                  >
+                    <ListItemIcon>
+                      <Person />
+                    </ListItemIcon>
+                    SubCommunity Moderation
+                  </MenuItem>
+                )}
                 <MenuItem
                   component={Link}
                   to="/files"
@@ -523,6 +535,18 @@ const Navbar: React.FC = () => {
                 <Person />
               </ListItemIcon>
               Feed Moderation
+            </MenuItem>
+          )}
+          {user?.role === 'ADMIN' && (
+            <MenuItem
+              component={Link}
+              to="/admin/moderation/subcommunities"
+              onClick={handleUserMenuClose}
+            >
+              <ListItemIcon>
+                <Person />
+              </ListItemIcon>
+              SubCommunity Moderation
             </MenuItem>
           )}
           <MenuItem component={Link} to="/files" onClick={handleUserMenuClose}>

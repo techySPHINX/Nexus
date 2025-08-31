@@ -200,26 +200,17 @@ async function seedCommunities() {
         },
       });
 
-      // Avoid duplicate subCommunityMember entries
-      const existingMember = await prisma.subCommunityMember.findFirst({
-        where: {
-          user: { email: communityData.ownerId },
-          subCommunity: { id: community.id },
+      await prisma.subCommunityMember.create({
+        data: {
+          user: {
+            connect: { email: communityData.ownerId },
+          },
+          subCommunity: {
+            connect: { id: community.id },
+          },
+          role: 'OWNER',
         },
       });
-
-      if (!existingMember) {
-        await prisma.subCommunityMember.create({
-          data: {
-            user: {
-              connect: { email: communityData.ownerId },
-            },
-            subCommunity: {
-              connect: { id: community.id },
-            },
-          },
-        });
-      }
 
       console.log(
         `✅ Created community: ${community.name} (ID: ${community.id})`,
