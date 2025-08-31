@@ -191,17 +191,22 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
     ) => {
       const cacheKey = `${type}-${page}-${limit}`;
 
+      // Check cache first
       if (!forceRefresh && subCommunityCache[cacheKey]) {
         const cachedData = subCommunityCache[cacheKey];
-        const allSubCommunities = cachedData.data.flatMap((typeGroup) =>
-          typeGroup.SubCommunity.map((subCom) => ({
-            ...subCom,
-            type: typeGroup.type,
-          }))
-        );
         console.log('Using cached data for:', cacheKey);
-        console.log(allSubCommunities);
-        setSubCommunitiesByType(allSubCommunities);
+        // For specific types, update the byType state
+        if (type !== 'all') {
+          setSubCommunitiesByType((prev) => {
+            // Merge with existing data, avoiding duplicates
+            const newData = [...cachedData.data];
+            const existingIds = new Set(prev.map((item) => item.id));
+            const uniqueNewData = newData.filter(
+              (item) => !existingIds.has(item.id)
+            );
+            return [...prev, ...uniqueNewData];
+          });
+        }
         return;
       }
 
@@ -213,24 +218,39 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
           limit
         );
 
-        console.log('response:', response);
+        console.log('Fetched sub-communities by type:', response);
 
+        // Update cache
         setSubCommunityCache((prev) => ({
           ...prev,
           [cacheKey]: response,
         }));
 
-        const allSubCommunities = response.data.flatMap((typeGroup) =>
-          typeGroup.SubCommunity.map((subCom) => ({
-            ...subCom,
-            type: typeGroup.type,
-          }))
-        );
-
-        setSubCommunitiesByType(allSubCommunities);
+        // Update state based on type
+        if (type === 'all') {
+          setSubCommunities((prev) => {
+            // Merge with existing data, avoiding duplicates
+            const newData = [...response.data];
+            const existingIds = new Set(prev.map((item) => item.id));
+            const uniqueNewData = newData.filter(
+              (item) => !existingIds.has(item.id)
+            );
+            return [...prev, ...uniqueNewData];
+          });
+        } else {
+          setSubCommunitiesByType((prev) => {
+            // Merge with existing data, avoiding duplicates
+            const newData = [...response.data];
+            const existingIds = new Set(prev.map((item) => item.id));
+            const uniqueNewData = newData.filter(
+              (item) => !existingIds.has(item.id)
+            );
+            return [...prev, ...uniqueNewData];
+          });
+        }
       } catch (err: unknown) {
         if (err instanceof Error) {
-          setError(err.message || 'Failed to fetch sub-communities');
+          setError(err.message || 'Failed to fetch sub-communities by type');
         } else {
           setError('An unexpected error occurred');
           console.error('Unexpected error:', err);

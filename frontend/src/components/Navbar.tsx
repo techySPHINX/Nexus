@@ -69,7 +69,7 @@ const Navbar: React.FC = () => {
     { text: 'Connections', icon: <People />, path: '/connections' },
     { text: 'Messages', icon: <Message />, path: '/messages' },
     { text: 'Referrals', icon: <Work />, path: '/referrals' },
-    { text: 'Files', icon: <Folder />, path: '/files' },
+    { text: 'Community', icon: <People />, path: '/subcommunities' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -218,6 +218,16 @@ const Navbar: React.FC = () => {
                     Feed Moderation
                   </MenuItem>
                 )}
+                <MenuItem
+                  component={Link}
+                  to="/files"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Folder />
+                  </ListItemIcon>
+                  Files
+                </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
@@ -515,6 +525,12 @@ const Navbar: React.FC = () => {
               Feed Moderation
             </MenuItem>
           )}
+          <MenuItem component={Link} to="/files" onClick={handleUserMenuClose}>
+            <ListItemIcon>
+              <Folder />
+            </ListItemIcon>
+            Files
+          </MenuItem>
           <Divider />
           <MenuItem onClick={handleLogout}>
             <ListItemIcon>

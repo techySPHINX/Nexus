@@ -9,34 +9,179 @@ async function seedCommunities() {
     // Create test communities
     const communities = [
       {
-        name: 'Test Community 1',
-        description: 'This is a test community',
+        name: 'Art Enthusiasts',
+        description: 'A place for art lovers to share and discuss.',
         isPrivate: false,
         ownerId: 'test1@kiit.ac.in',
+        type: 'ART',
       },
       {
-        name: 'Test Community 2',
-        description: 'This is another test community',
+        name: 'Tech Innovators',
+        description: 'Discuss the latest in technology and innovation.',
         isPrivate: true,
         ownerId: 'test2@kiit.ac.in',
+        type: 'TECH',
       },
       {
-        name: 'Test Community 3',
-        description: 'This is another test community',
-        isPrivate: true,
-        ownerId: 'test2@kiit.ac.in',
+        name: 'Music Makers',
+        description: 'For musicians and music lovers.',
+        isPrivate: false,
+        ownerId: 'test3@kiit.ac.in',
+        type: 'ART',
       },
       {
-        name: 'Test Community 4',
-        description: 'This is another test community',
+        name: 'Startup Founders',
+        description: 'Connect with fellow entrepreneurs.',
         isPrivate: true,
-        ownerId: 'test2@kiit.ac.in',
+        ownerId: 'test4@kiit.ac.in',
+        type: 'TECH',
       },
       {
-        name: 'Test Community 5',
-        description: 'This is another test community',
+        name: 'Photography Club',
+        description: 'Share your best shots and tips.',
+        isPrivate: false,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Bookworms',
+        description: 'A community for book lovers and readers.',
+        isPrivate: false,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'AI Pioneers',
+        description: 'Discuss artificial intelligence trends and projects.',
         isPrivate: true,
         ownerId: 'test2@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Film Buffs',
+        description: 'For those who love movies and filmmaking.',
+        isPrivate: false,
+        ownerId: 'test3@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Robotics Club',
+        description: 'Building and programming robots together.',
+        isPrivate: true,
+        ownerId: 'test4@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Design Thinkers',
+        description: 'A space for creative design discussions.',
+        isPrivate: false,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Gaming Guild',
+        description: 'For gamers to connect and compete.',
+        isPrivate: false,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Writers Den',
+        description: 'Share your stories, poems, and writing tips.',
+        isPrivate: false,
+        ownerId: 'test2@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Web Devs',
+        description: 'Frontend, backend, and fullstack discussions.',
+        isPrivate: true,
+        ownerId: 'test3@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Dance Crew',
+        description: 'For dancers and dance enthusiasts.',
+        isPrivate: false,
+        ownerId: 'test4@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Cloud Computing',
+        description: 'Explore cloud platforms and architectures.',
+        isPrivate: true,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Chess Masters',
+        description: 'Challenge and learn chess strategies.',
+        isPrivate: false,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Mobile App Devs',
+        description: 'Discuss mobile app development trends.',
+        isPrivate: true,
+        ownerId: 'test2@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Theatre Group',
+        description: 'For actors and theatre lovers.',
+        isPrivate: false,
+        ownerId: 'test3@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Cybersecurity Hub',
+        description: 'Stay updated on security news and tips.',
+        isPrivate: true,
+        ownerId: 'test4@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Painters Palette',
+        description: 'Share your paintings and techniques.',
+        isPrivate: false,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Data Science Lab',
+        description: 'Discuss data analysis and machine learning.',
+        isPrivate: true,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Poetry Corner',
+        description: 'A place for poets to share and critique.',
+        isPrivate: false,
+        ownerId: 'test2@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Electronics Geeks',
+        description: 'DIY electronics and hardware hacking.',
+        isPrivate: true,
+        ownerId: 'test3@kiit.ac.in',
+        type: 'TECH',
+      },
+      {
+        name: 'Calligraphy Club',
+        description: 'For beautiful writing and lettering.',
+        isPrivate: false,
+        ownerId: 'test4@kiit.ac.in',
+        type: 'ART',
+      },
+      {
+        name: 'Blockchain Builders',
+        description: 'Explore blockchain and crypto projects.',
+        isPrivate: true,
+        ownerId: 'test1@kiit.ac.in',
+        type: 'TECH',
       },
     ];
 
@@ -46,6 +191,7 @@ async function seedCommunities() {
         update: {},
         create: {
           name: communityData.name,
+          type: communityData.type,
           description: communityData.description,
           isPrivate: communityData.isPrivate,
           owner: {
@@ -69,31 +215,6 @@ async function seedCommunities() {
               connect: { email: communityData.ownerId },
             },
             subCommunity: {
-              connect: { id: community.id },
-            },
-          },
-        });
-      }
-
-      // Update the type for the existing subCommunityType if it exists, otherwise create it
-      const existingType = await prisma.subCommunityType.findFirst({
-        where: { type: communityData.type },
-      });
-
-      if (existingType) {
-        await prisma.subCommunityType.update({
-          where: { id: existingType.id },
-          data: {
-            SubCommunity: {
-              connect: { id: community.id },
-            },
-          },
-        });
-      } else {
-        await prisma.subCommunityType.create({
-          data: {
-            type: communityData.type,
-            SubCommunity: {
               connect: { id: community.id },
             },
           },

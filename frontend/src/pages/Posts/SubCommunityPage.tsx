@@ -15,7 +15,7 @@ import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateSubCommunityDialog } from '../../components/SubCommunity/CreateSubCommunityDialog';
 import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubCommunityRequestDialog';
-import { SubCommunitySection } from '../../components/SubCommunity/SubCommuntiySection';
+import { SubCommunitySection } from '../../components/SubCommunity/SubCommunitySection';
 import { SubCommunityCard } from '../../components/SubCommunity/SubCommunityCard';
 import { SubCommunity } from '../../types/subCommunity';
 
@@ -40,9 +40,10 @@ const SUB_COMMUNITY_TYPES = [
 export const SubCommunitiesPage: React.FC = () => {
   const {
     subCommunities,
-    subCommunitiesByType, // Add this import
+    subCommunitiesByType,
     loading,
     getAllSubCommunities,
+    getSubCommunityByType,
     error,
     clearError,
   } = useSubCommunity();
@@ -52,10 +53,12 @@ export const SubCommunitiesPage: React.FC = () => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [loadedTypes, setLoadedTypes] = useState<Set<string>>(new Set());
 
   const isAdmin = user?.role === 'ADMIN';
 
   useEffect(() => {
+    // Load all communities initially
     getAllSubCommunities();
   }, [getAllSubCommunities]);
 
@@ -65,6 +68,14 @@ export const SubCommunitiesPage: React.FC = () => {
     }
   }, [error]);
 
+  // Function to load a specific type if not already loaded
+  const loadTypeIfNeeded = (type: string) => {
+    if (type !== 'all' && !loadedTypes.has(type)) {
+      getSubCommunityByType(type, 1, 20);
+      setLoadedTypes((prev) => new Set(prev).add(type));
+    }
+  };
+
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
     clearError();
@@ -72,12 +83,24 @@ export const SubCommunitiesPage: React.FC = () => {
 
   const filterCommunities = (communities: SubCommunity[]): SubCommunity[] => {
     if (!searchTerm) return communities;
-
     return communities.filter(
       (subCom) =>
         subCom.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         subCom.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
+  };
+
+  // Get communities for display - use cached data when available
+  const getDisplayCommunities = (type: string): SubCommunity[] => {
+    if (type === 'all') {
+      return subCommunities;
+    }
+
+    // Pre-load the type if needed
+    loadTypeIfNeeded(type);
+
+    // Return communities of this type from the cached byType state
+    return subCommunitiesByType.filter((subCom) => subCom.type === type);
   };
 
   if (loading && subCommunities.length === 0) {
@@ -179,26 +202,22 @@ export const SubCommunitiesPage: React.FC = () => {
       {/* Community Sections */}
       {!searchTerm &&
         SUB_COMMUNITY_TYPES.map((typeConfig) => {
-          let sectionCommunities: SubCommunity[] = [];
+          const displayCommunities = getDisplayCommunities(typeConfig.id);
 
-          if (typeConfig.id === 'all') {
-            sectionCommunities = subCommunities;
-          } else {
-            // For type-specific sections, use the subCommunitiesByType state
-            sectionCommunities = subCommunitiesByType.filter(
-              (subCom) => subCom.type === typeConfig.id
-            );
-          }
-
-          if (sectionCommunities.length === 0 && typeConfig.id !== 'all') {
+          if (displayCommunities.length === 0 && typeConfig.id !== 'all') {
             return null;
           }
+
+          console.log(`Displaying communities for type: ${typeConfig.id}`);
 
           return (
             <SubCommunitySection
               key={typeConfig.id}
               title={typeConfig.title}
               type={typeConfig.id}
+              communities={displayCommunities}
+              // hasMore={/* You can check cache for pagination info */}
+              onLoadMore={() => getSubCommunityByType(typeConfig.id, 2, 20)} // Example for next page
               initialCount={6}
             />
           );

@@ -8,7 +8,7 @@ import {
   CreateSubCommunityRequestDto,
   ApproveJoinRequestDto,
   UpdateMemberRoleDto,
-  SubCommunityTypeResponse,
+  PaginationData,
   //   SubCommunityRole,
 } from '../types/subCommunity';
 
@@ -24,12 +24,11 @@ export const subCommunityService = {
     return response.data;
   },
 
-  // In your subCommunityService.ts, add pagination support:
   getSubCommunityByType: async (
     type: string,
     page: number = 1,
     limit: number = 20
-  ): Promise<SubCommunityTypeResponse> => {
+  ): Promise<{ data: SubCommunity[]; pagination: PaginationData }> => {
     const response = await api.get(`/sub-community/type/${type}`, {
       params: { page, limit },
     });

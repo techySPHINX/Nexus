@@ -55,7 +55,7 @@ export interface SubCommunity {
   };
   members?: SubCommunityMember[];
   posts?: Post[];
-  type?: string;
+  type: string;
 }
 
 export interface PaginationData {
@@ -67,14 +67,14 @@ export interface PaginationData {
   hasPrev: boolean;
 }
 
-export interface SubCommunityType {
-  id: string;
-  type: string;
-  SubCommunity: SubCommunity[];
-}
+// export interface SubCommunityType {
+//   id: string;
+//   type: string;
+//   SubCommunity: SubCommunity[];
+// }
 
 export interface SubCommunityTypeResponse {
-  data: SubCommunityType[];
+  data: SubCommunity[];
   pagination: PaginationData;
 }
 

@@ -32,6 +32,7 @@ export class SubCommunityService {
       data: {
         name: data.name,
         description: data.description,
+        type: data.type, // Add type
         isPrivate: data.isPrivate,
         ownerId: data.ownerId,
         subCommunityCreationRequestId: data.subCommunityCreationRequestId,
@@ -47,43 +48,17 @@ export class SubCommunityService {
       },
     });
 
-    // Update the type for the existing subCommunityType if it exists, otherwise create it
-    const existingType = await this.prisma.subCommunityType.findFirst({
-      where: { type: data.type },
-    });
-
-    if (existingType) {
-      await this.prisma.subCommunityType.update({
-        where: { id: existingType.id },
-        data: {
-          SubCommunity: {
-            connect: { id: subCommunity.id },
-          },
-        },
-      });
-    } else {
-      await this.prisma.subCommunityType.create({
-        data: {
-          type: data.type,
-          SubCommunity: {
-            connect: { id: subCommunity.id },
-          },
-        },
-      });
-    }
-
     return subCommunity;
   }
 
   // --- SubCommunity CRUD Operations ---
 
   async createSubCommunity(dto: CreateSubCommunityDto) {
-    // This method is now primarily for direct admin creation or testing, not for alumni requests.
-    // It does not handle the creation request flow.
     const subCommunity = await this.prisma.subCommunity.create({
       data: {
         name: dto.name,
         description: dto.description,
+        type: dto.type, // Add type
         isPrivate: dto.isPrivate,
         ownerId: dto.ownerId,
       },
@@ -97,31 +72,6 @@ export class SubCommunityService {
         role: 'OWNER',
       },
     });
-
-    // Update the type for the existing subCommunityType if it exists, otherwise create it
-    const existingType = await this.prisma.subCommunityType.findFirst({
-      where: { type: dto.type },
-    });
-
-    if (existingType) {
-      await this.prisma.subCommunityType.update({
-        where: { id: existingType.id },
-        data: {
-          SubCommunity: {
-            connect: { id: subCommunity.id },
-          },
-        },
-      });
-    } else {
-      await this.prisma.subCommunityType.create({
-        data: {
-          type: dto.type,
-          SubCommunity: {
-            connect: { id: subCommunity.id },
-          },
-        },
-      });
-    }
 
     return subCommunity;
   }
@@ -161,40 +111,30 @@ export class SubCommunityService {
   ) {
     const skip = (page - 1) * limit;
 
-    // Get SubCommunityTypes with their related SubCommunities
-    const subCommunityTypes = await this.prisma.subCommunityType.findMany({
-      where: { type },
-      include: {
-        SubCommunity: {
-          skip,
-          take: limit,
-          include: {
-            owner: { select: { id: true, name: true } },
-            _count: { select: { members: true, posts: true } },
-          },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
+    // For "ALL" type, return all subcommunities
+    const where =
+      type.toUpperCase() === 'ALL' ? {} : { type: type.toUpperCase() };
 
-    // Count total SubCommunities for this type
-    const totalCount = await this.prisma.subCommunity.count({
-      where: {
-        type: {
-          some: {
-            type: type,
-          },
+    const [subCommunities, totalCount] = await Promise.all([
+      this.prisma.subCommunity.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          owner: { select: { id: true, name: true } },
+          _count: { select: { members: true, posts: true } },
         },
-      },
-    });
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.subCommunity.count({ where }),
+    ]);
 
-    // Calculate pagination metadata
     const totalPages = Math.ceil(totalCount / limit);
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
 
     return {
-      data: subCommunityTypes,
+      data: subCommunities,
       pagination: {
         page,
         limit,

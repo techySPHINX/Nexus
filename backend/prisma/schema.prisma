@@ -432,13 +432,7 @@ model SubCommunity {
   creationRequest               SubCommunityCreationRequest? @relation(fields: [subCommunityCreationRequestId], references: [id])
   members                       SubCommunityMember[]
   posts                         Post[]
-  type                          SubCommunityType[]           @relation("TypeSubCommunity")
-}
-
-model SubCommunityType {
-  id           String         @id @default(cuid())
-  type         String         @default("OTHER")
-  SubCommunity SubCommunity[] @relation("TypeSubCommunity")
+  type                          String                       @default("OTHER")
 }
 
 model SubCommunityMember {
