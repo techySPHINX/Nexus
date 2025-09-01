@@ -8,7 +8,7 @@ import {
   CreateSubCommunityRequestDto,
   ApproveJoinRequestDto,
   UpdateMemberRoleDto,
-  SubCommunityTypeResponse,
+  PaginationData,
   //   SubCommunityRole,
 } from '../types/subCommunity';
 
@@ -24,12 +24,11 @@ export const subCommunityService = {
     return response.data;
   },
 
-  // In your subCommunityService.ts, add pagination support:
   getSubCommunityByType: async (
     type: string,
     page: number = 1,
     limit: number = 20
-  ): Promise<SubCommunityTypeResponse> => {
+  ): Promise<{ data: SubCommunity[]; pagination: PaginationData }> => {
     const response = await api.get(`/sub-community/type/${type}`, {
       params: { page, limit },
     });
@@ -132,21 +131,9 @@ export const subCommunityService = {
 
   // SubCommunity creation requests
   createSubCommunityRequest: async (
-    dto: CreateSubCommunityRequestDto,
-    documents?: File[]
+    dto: CreateSubCommunityRequestDto
   ): Promise<SubCommunityCreationRequest> => {
-    const formData = new FormData();
-    formData.append('data', JSON.stringify(dto));
-
-    if (documents) {
-      documents.forEach((doc) => {
-        formData.append('documents', doc);
-      });
-    }
-
-    const response = await api.post('/sub-community-requests', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await api.post('/sub-community-requests', dto);
     return response.data;
   },
 

@@ -55,7 +55,7 @@ export interface SubCommunity {
   };
   members?: SubCommunityMember[];
   posts?: Post[];
-  type?: string;
+  type: string;
 }
 
 export interface PaginationData {
@@ -67,14 +67,14 @@ export interface PaginationData {
   hasPrev: boolean;
 }
 
-export interface SubCommunityType {
-  id: string;
-  type: string;
-  SubCommunity: SubCommunity[];
-}
+// export interface SubCommunityType {
+//   id: string;
+//   type: string;
+//   SubCommunity: SubCommunity[];
+// }
 
 export interface SubCommunityTypeResponse {
-  data: SubCommunityType[];
+  data: SubCommunity[];
   pagination: PaginationData;
 }
 
@@ -105,7 +105,7 @@ export interface SubCommunityCreationRequest {
   name: string;
   description: string;
   rules: string;
-  documentUrls?: string[];
+  type: string;
   status: RequestStatus;
   requesterId: string;
   adminId?: string;
@@ -133,7 +133,7 @@ export interface CreateSubCommunityRequestDto {
   name: string;
   description: string;
   rules: string;
-  documentUrls?: string[];
+  type: string;
 }
 
 export interface ApproveJoinRequestDto {
