@@ -131,7 +131,7 @@ export const SubCommunitiesPage: React.FC = () => {
           Communities
         </Typography>
 
-        {isAdmin && isAlum && (
+        {(isAdmin || isAlum) && (
           <Button
             variant="outlined"
             startIcon={<Add />}

@@ -129,6 +129,14 @@ export interface SubCommunityReport {
   subCommunity?: SubCommunity;
 }
 
+export interface UpdateSubCommunityDto {
+  name: string;
+  description: string;
+  iconUrl?: string;
+  bannerUrl?: string;
+  isPrivate: boolean;
+}
+
 export interface CreateSubCommunityRequestDto {
   name: string;
   description: string;

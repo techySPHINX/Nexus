@@ -9,6 +9,7 @@ import {
   ApproveJoinRequestDto,
   UpdateMemberRoleDto,
   PaginationData,
+  UpdateSubCommunityDto,
   //   SubCommunityRole,
 } from '../types/subCommunity';
 
@@ -47,7 +48,7 @@ export const subCommunityService = {
 
   updateSubCommunity: async (
     id: string,
-    data: { name?: string; description?: string; isPrivate?: boolean }
+    data: UpdateSubCommunityDto
   ): Promise<SubCommunity> => {
     const response = await api.patch(`/sub-community/${id}`, data);
     return response.data;

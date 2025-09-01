@@ -32,15 +32,20 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       rollupOptions: {
         output: {
-          manualChunks: {
-            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-            'mui-vendor': [
-              '@mui/material',
-              '@mui/icons-material',
-              '@emotion/react',
-              '@emotion/styled',
-            ],
-            'utils-vendor': ['axios', 'date-fns'],
+          manualChunks: (id) => {
+            if (id.includes('node_modules')) {
+              // Group vendors into logical chunks
+              if (id.includes('@mui')) return 'vendor-mui';
+              if (id.includes('react')) return 'vendor-react';
+              if (id.includes('axios') || id.includes('date-fns'))
+                return 'vendor-utils';
+              return 'vendor-other';
+            }
+
+            // Group by feature
+            if (id.includes('/Admin/') || id.includes('Moderation')) {
+              return 'moderation-features';
+            }
           },
         },
       },

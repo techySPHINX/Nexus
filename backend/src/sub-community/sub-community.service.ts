@@ -91,7 +91,15 @@ export class SubCommunityService {
       include: {
         owner: { select: { id: true, name: true } },
         members: {
-          include: { user: { select: { id: true, name: true } } },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                profile: { select: { avatarUrl: true } },
+              },
+            },
+          },
         },
         posts: { orderBy: { createdAt: 'desc' } },
         _count: { select: { members: true, posts: true } },
@@ -181,6 +189,8 @@ export class SubCommunityService {
         description: dto.description,
         isPrivate: dto.isPrivate,
         ownerId: dto.ownerId,
+        iconUrl: dto.iconUrl,
+        bannerUrl: dto.bannerUrl,
       },
     });
   }

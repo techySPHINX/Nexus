@@ -16,6 +16,18 @@ import {
   Chip,
   Avatar,
   Container,
+  Tabs,
+  Tab,
+  IconButton,
+  Menu,
+  MenuItem,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Divider,
+  Card,
+  CardContent,
 } from '@mui/material';
 import {
   People,
@@ -24,12 +36,46 @@ import {
   Lock,
   ArrowBack,
   Add,
+  MoreVert,
+  AdminPanelSettings,
+  Shield,
+  Person,
+  ExitToApp,
+  Block,
+  Edit,
+  Delete,
+  Group,
+  Settings,
 } from '@mui/icons-material';
 import { CreatePostForm } from '../../components/Post/CreatePostForm';
 import { Post } from '../../components/Post/Post';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
+import { SubCommunityRole, SubCommunityMember } from '../../types/subCommunity';
+import { Role } from '@/types/profileType';
+import { SubCommunityEditBox } from '@/components/SubCommunity/SubCommunityEditBox';
+
+// Tab panel component
+function TabPanel(props: {
+  children?: React.ReactNode;
+  index: number;
+  value: number;
+}) {
+  const { children, value, index, ...other } = props;
+
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`subcommunity-tabpanel-${index}`}
+      aria-labelledby={`subcommunity-tab-${index}`}
+      {...other}
+    >
+      {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
+    </div>
+  );
+}
 
 export const SubCommunityFeedPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +89,12 @@ export const SubCommunityFeedPage: React.FC = () => {
     requestToJoin,
     joinRequests,
     getPendingJoinRequests,
+    // members,
+    leaveSubCommunity,
+    removeMember,
+    updateMemberRole,
+    // banSubCommunity,
+    deleteSubCommunity,
   } = useSubCommunity();
 
   const {
@@ -54,14 +106,25 @@ export const SubCommunityFeedPage: React.FC = () => {
   } = usePosts();
   const { user } = useAuth();
   const theme = useTheme();
+
+  const [activeTab, setActiveTab] = useState(0);
   const [openForm, setOpenForm] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
     'success'
   );
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isMember, setIsMember] = useState(false);
+  const [userRole, setUserRole] = useState<SubCommunityRole | null>(null);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  const [memberMenuAnchor, setMemberMenuAnchor] = useState<null | HTMLElement>(
+    null
+  );
+  const [selectedMember, setSelectedMember] =
+    useState<SubCommunityMember | null>(null);
+  const [communityMenuAnchor, setCommunityMenuAnchor] =
+    useState<null | HTMLElement>(null);
 
   const showSnackbar = useCallback(
     (message: string, severity: 'success' | 'error') => {
@@ -71,6 +134,8 @@ export const SubCommunityFeedPage: React.FC = () => {
     },
     []
   );
+
+  const isAdmin = user?.role === Role.ADMIN;
 
   // Load sub-community data
   useEffect(() => {
@@ -87,6 +152,7 @@ export const SubCommunityFeedPage: React.FC = () => {
         (m) => m.userId === user.id
       );
       setIsMember(!!member);
+      setUserRole(member?.role || null);
 
       if (currentSubCommunity.isPrivate && !member) {
         getPendingJoinRequests(id!);
@@ -151,6 +217,123 @@ export const SubCommunityFeedPage: React.FC = () => {
     }
   };
 
+  const handleLeaveCommunity = async () => {
+    if (!id || !user) return;
+
+    try {
+      await leaveSubCommunity(id);
+      showSnackbar('You have left the community', 'success');
+      setIsMember(false);
+      setUserRole(null);
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!id) return;
+
+    try {
+      await removeMember(id, memberId);
+      showSnackbar('Member removed successfully', 'success');
+      setMemberMenuAnchor(null);
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
+  };
+
+  const handleUpdateMemberRole = async (
+    memberId: string,
+    newRole: SubCommunityRole
+  ) => {
+    if (!id) return;
+
+    try {
+      await updateMemberRole(id, memberId, newRole);
+      showSnackbar('Member role updated successfully', 'success');
+      setMemberMenuAnchor(null);
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
+  };
+
+  const handleBanCommunity = async () => {
+    if (!isAdmin) {
+      showSnackbar('You do not have permission to ban this community', 'error');
+      return;
+    }
+    if (!id) return;
+
+    try {
+      // await banSubCommunity(id);
+      showSnackbar(
+        'Community banned successfully but not functional',
+        'success'
+      );
+      setCommunityMenuAnchor(null);
+      navigate('/subcommunities');
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
+  };
+
+  const handleDeleteCommunity = async () => {
+    if (userRole !== SubCommunityRole.OWNER || isAdmin) {
+      showSnackbar(
+        'You do not have permission to delete this community',
+        'error'
+      );
+      return;
+    }
+    if (!id) return;
+
+    try {
+      await deleteSubCommunity(id);
+      showSnackbar('Community deleted successfully', 'success');
+      setCommunityMenuAnchor(null);
+      navigate('/subcommunities');
+    } catch (error) {
+      const errorMessage = getErrorMessage(error);
+      showSnackbar(errorMessage, 'error');
+    }
+  };
+
+  const openMemberMenu = (
+    event: React.MouseEvent<HTMLElement>,
+    member: SubCommunityMember
+  ) => {
+    setSelectedMember(member);
+    setMemberMenuAnchor(event.currentTarget);
+  };
+
+  const closeMemberMenu = () => {
+    setMemberMenuAnchor(null);
+    setSelectedMember(null);
+  };
+
+  const openCommunityMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setCommunityMenuAnchor(event.currentTarget);
+  };
+
+  const closeCommunityMenu = () => {
+    setCommunityMenuAnchor(null);
+  };
+
+  const renderRoleIcon = (role: SubCommunityRole) => {
+    switch (role) {
+      case SubCommunityRole.OWNER:
+        return <AdminPanelSettings color="primary" />;
+      case SubCommunityRole.MODERATOR:
+        return <Shield color="secondary" />;
+      default:
+        return <Person color="action" />;
+    }
+  };
+
   const renderPosts = () => {
     if (feedLoading && pagination.page === 1) {
       return (
@@ -202,6 +385,65 @@ export const SubCommunityFeedPage: React.FC = () => {
           />
         ))}
       </Box>
+    );
+  };
+
+  const renderMembersTab = () => {
+    if (
+      !currentSubCommunity?.members ||
+      currentSubCommunity.members.length === 0
+    ) {
+      return (
+        <Box sx={{ textAlign: 'center', py: 4 }}>
+          <Group sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">
+            No members yet
+          </Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <List>
+        {currentSubCommunity.members.map((member) => (
+          <React.Fragment key={member.id}>
+            <ListItem
+              secondaryAction={
+                (userRole === SubCommunityRole.OWNER ||
+                  (userRole === SubCommunityRole.MODERATOR &&
+                    member.role === SubCommunityRole.MEMBER)) &&
+                member.userId !== user?.id && (
+                  <IconButton
+                    edge="end"
+                    aria-label="member actions"
+                    onClick={(e) => openMemberMenu(e, member)}
+                  >
+                    <MoreVert />
+                  </IconButton>
+                )
+              }
+            >
+              <ListItemAvatar>
+                <Avatar src={member.user?.profile?.avatarUrl || undefined}>
+                  {member.user.name.charAt(0)}
+                </Avatar>
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Typography variant="body1" component="span">
+                      {member.user.name}
+                    </Typography>
+                    {renderRoleIcon(member.role)}
+                  </Box>
+                }
+                secondary={member.role}
+              />
+            </ListItem>
+            <Divider variant="inset" component="li" />
+          </React.Fragment>
+        ))}
+      </List>
     );
   };
 
@@ -274,20 +516,12 @@ export const SubCommunityFeedPage: React.FC = () => {
           <Box
             sx={{
               height: { xs: 120, md: 160 },
-              backgroundImage: `url(${currentSubCommunity.bannerUrl})`,
+              backgroundImage: currentSubCommunity.bannerUrl
+                ? `url(${currentSubCommunity.bannerUrl}), linear-gradient(to bottom, rgba(27,228,9,0.3), rgba(149,240,129,0.7))`
+                : 'linear-gradient(to bottom, rgba(27,228,9,0.3), rgba(149,240,129,0.7))',
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               position: 'relative',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background:
-                  'linear-gradient(to bottom, rgba(27, 228, 9, 0.3), rgba(149, 240, 129, 0.7))',
-              },
             }}
           />
 
@@ -323,13 +557,21 @@ export const SubCommunityFeedPage: React.FC = () => {
                     }}
                   />
                   <Box>
-                    <Typography
-                      variant="h3"
-                      component="h1"
-                      sx={{ fontWeight: 700, mb: 1 }}
-                    >
-                      r/{currentSubCommunity.name}
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography
+                        variant="h3"
+                        component="h1"
+                        sx={{ fontWeight: 700, mb: 1 }}
+                      >
+                        r/{currentSubCommunity.name}
+                      </Typography>
+                      {(userRole === SubCommunityRole.OWNER ||
+                        userRole === SubCommunityRole.MODERATOR) && (
+                        <IconButton onClick={openCommunityMenu} size="small">
+                          <Settings />
+                        </IconButton>
+                      )}
+                    </Box>
                     <Typography
                       variant="body1"
                       color="text.secondary"
@@ -366,6 +608,20 @@ export const SubCommunityFeedPage: React.FC = () => {
                     size="medium"
                     variant="outlined"
                   />
+                  {userRole === SubCommunityRole.OWNER && (
+                    <Button
+                      variant="outlined"
+                      onClick={() =>
+                        navigate(
+                          `/moderation/subcommunities/${currentSubCommunity.id}/join-requests`
+                        )
+                      }
+                      size="medium"
+                      sx={{ borderRadius: 2, fontWeight: 600 }}
+                    >
+                      Moderation
+                    </Button>
+                  )}
                 </Box>
               </Box>
 
@@ -435,11 +691,12 @@ export const SubCommunityFeedPage: React.FC = () => {
                 )}
 
                 {/* Leave Community Button (for members) */}
-                {isMember && (
+                {isMember && userRole !== SubCommunityRole.OWNER && (
                   <Button
                     variant="outlined"
-                    onClick={handleJoinRequest} // You'll need to implement leave functionality
+                    onClick={handleLeaveCommunity}
                     size="small"
+                    startIcon={<ExitToApp />}
                     sx={{ borderRadius: 2, fontWeight: 600, mt: 1 }}
                   >
                     Leave Community
@@ -450,65 +707,121 @@ export const SubCommunityFeedPage: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Feed Content */}
-        {isMember || !currentSubCommunity.isPrivate ? (
-          <>
-            {renderPosts()}
-
-            {pagination.hasNext && (
-              <Box
-                sx={{ display: 'flex', justifyContent: 'center', mt: 4, py: 2 }}
-              >
-                <Button
-                  variant="outlined"
-                  onClick={handleLoadMore}
-                  disabled={feedLoading}
-                  size="large"
-                  sx={{ borderRadius: 2, minWidth: '200px' }}
-                >
-                  {feedLoading ? (
-                    <CircularProgress size={24} />
-                  ) : (
-                    'Load More Posts'
-                  )}
-                </Button>
-              </Box>
-            )}
-          </>
-        ) : (
-          <Box
-            sx={{
-              textAlign: 'center',
-              p: 6,
-              bgcolor: 'background.paper',
-              borderRadius: 3,
-              boxShadow: 1,
-            }}
+        {/* Tabs for different views */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs
+            value={activeTab}
+            onChange={(_e, newValue) => setActiveTab(newValue)}
           >
-            <Lock sx={{ fontSize: 64, color: 'text.secondary', mb: 3 }} />
-            <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
-              Private Community
-            </Typography>
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{ mb: 4, maxWidth: '400px', mx: 'auto' }}
+            <Tab label="Posts" />
+            <Tab label="Members" />
+            <Tab label="About" />
+          </Tabs>
+        </Box>
+
+        {/* Tab Content */}
+        <TabPanel value={activeTab} index={0}>
+          {isMember || !currentSubCommunity.isPrivate ? (
+            <>
+              {renderPosts()}
+
+              {pagination.hasNext && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    mt: 4,
+                    py: 2,
+                  }}
+                >
+                  <Button
+                    variant="outlined"
+                    onClick={handleLoadMore}
+                    disabled={feedLoading}
+                    size="large"
+                    sx={{ borderRadius: 2, minWidth: '200px' }}
+                  >
+                    {feedLoading ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      'Load More Posts'
+                    )}
+                  </Button>
+                </Box>
+              )}
+            </>
+          ) : (
+            <Box
+              sx={{
+                textAlign: 'center',
+                p: 6,
+                bgcolor: 'background.paper',
+                borderRadius: 3,
+                boxShadow: 1,
+              }}
             >
-              This community is private. You need to be an approved member to
-              view and participate in discussions.
-            </Typography>
-            <Button
-              variant="contained"
-              onClick={handleJoinRequest}
-              disabled={hasPendingRequest}
-              size="large"
-              startIcon={<Lock />}
-              sx={{ borderRadius: 2, fontWeight: 600, px: 4 }}
-            >
-              {hasPendingRequest ? 'Request Pending' : 'Request to Join'}
-            </Button>
-          </Box>
-        )}
+              <Lock sx={{ fontSize: 64, color: 'text.secondary', mb: 3 }} />
+              <Typography variant="h5" gutterBottom sx={{ fontWeight: 600 }}>
+                Private Community
+              </Typography>
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                sx={{ mb: 4, maxWidth: '400px', mx: 'auto' }}
+              >
+                This community is private. You need to be an approved member to
+                view and participate in discussions.
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={handleJoinRequest}
+                disabled={hasPendingRequest}
+                size="large"
+                startIcon={<Lock />}
+                sx={{ borderRadius: 2, fontWeight: 600, px: 4 }}
+              >
+                {hasPendingRequest ? 'Request Pending' : 'Request to Join'}
+              </Button>
+            </Box>
+          )}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={1}>
+          {renderMembersTab()}
+        </TabPanel>
+
+        <TabPanel value={activeTab} index={2}>
+          <Card>
+            <CardContent>
+              <Typography variant="h5" gutterBottom>
+                About r/{currentSubCommunity.name}
+              </Typography>
+              <Typography variant="body1" paragraph>
+                {currentSubCommunity.description}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Created on{' '}
+                {new Date(currentSubCommunity.createdAt).toLocaleDateString()}
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                <Chip
+                  icon={currentSubCommunity.isPrivate ? <Lock /> : <Public />}
+                  label={currentSubCommunity.isPrivate ? 'Private' : 'Public'}
+                  sx={{ mr: 1 }}
+                />
+                <Chip
+                  icon={<People />}
+                  label={`${currentSubCommunity._count?.members || 0} members`}
+                  sx={{ mr: 1 }}
+                />
+                <Chip
+                  icon={<Article />}
+                  label={`${currentSubCommunity._count?.posts || 0} posts`}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+        </TabPanel>
 
         {/* Create Post Dialog */}
         <Dialog
@@ -541,6 +854,82 @@ export const SubCommunityFeedPage: React.FC = () => {
         </Dialog>
       </Box>
 
+      {/* Member Actions Menu */}
+      <Menu
+        anchorEl={memberMenuAnchor}
+        open={Boolean(memberMenuAnchor)}
+        onClose={closeMemberMenu}
+      >
+        <MenuItem
+          onClick={() => {
+            handleUpdateMemberRole(
+              selectedMember!.id,
+              SubCommunityRole.MODERATOR
+            );
+            closeMemberMenu();
+          }}
+          disabled={selectedMember?.role === SubCommunityRole.MODERATOR}
+        >
+          <Shield sx={{ mr: 1 }} /> Make Moderator
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleUpdateMemberRole(selectedMember!.id, SubCommunityRole.MEMBER);
+            closeMemberMenu();
+          }}
+          disabled={selectedMember?.role === SubCommunityRole.MEMBER}
+        >
+          <Person sx={{ mr: 1 }} /> Make Member
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            handleRemoveMember(selectedMember!.id);
+            closeMemberMenu();
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          <Block sx={{ mr: 1 }} /> Remove Member
+        </MenuItem>
+      </Menu>
+
+      {/* Community Actions Menu */}
+      <Menu
+        anchorEl={communityMenuAnchor}
+        open={Boolean(communityMenuAnchor)}
+        onClose={closeCommunityMenu}
+      >
+        <MenuItem
+          onClick={() => {
+            setEditDialogOpen(true);
+            closeCommunityMenu();
+          }}
+        >
+          <Edit sx={{ mr: 1 }} /> Edit Community
+        </MenuItem>
+        {isAdmin && (
+          <MenuItem
+            onClick={() => {
+              handleBanCommunity();
+              closeCommunityMenu();
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <Block sx={{ mr: 1 }} /> Ban Community
+          </MenuItem>
+        )}
+        {(userRole == SubCommunityRole.OWNER || isAdmin) && (
+          <MenuItem
+            onClick={() => {
+              handleDeleteCommunity();
+              closeCommunityMenu();
+            }}
+            sx={{ color: 'error.main' }}
+          >
+            <Delete sx={{ mr: 1 }} /> Delete Community
+          </MenuItem>
+        )}
+      </Menu>
+
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={4000}
@@ -560,6 +949,18 @@ export const SubCommunityFeedPage: React.FC = () => {
           {snackbarMessage}
         </Alert>
       </Snackbar>
+
+      {currentSubCommunity && (
+        <SubCommunityEditBox
+          community={currentSubCommunity}
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          onSave={() => {
+            showSnackbar('Community updated successfully!', 'success');
+            getSubCommunity(id!); // Refresh community data
+          }}
+        />
+      )}
     </>
   );
 };

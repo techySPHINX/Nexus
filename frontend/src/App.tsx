@@ -50,6 +50,10 @@ const AdminSubCommunityModerationPage = lazy(
   () => import('./pages/Posts/AdminSubCommunityModerationPage')
 );
 
+const SubCommunityJoinRequestModeration = lazy(
+  () => import('./pages/Posts/SubCommunityJoinRequestModeration')
+);
+
 // Loading component for Suspense fallback
 const LoadingSpinner: React.FC = () => (
   <Box
@@ -237,6 +241,14 @@ const Layout: React.FC = () => {
                     <AdminSubCommunityModerationPage />
                   </Suspense>
                 </AdminRoute>
+              }
+            />
+            <Route
+              path="/moderation/subcommunities/:id/join-requests"
+              element={
+                <Suspense fallback={<LoadingSpinner />}>
+                  <SubCommunityJoinRequestModeration />
+                </Suspense>
               }
             />
 

@@ -397,7 +397,7 @@ const RequestCard: React.FC<{
                   {request.name}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Requested by {request.requester.email}
+                  Requested by {request.requester?.email}
                 </Typography>
               </Box>
             </Box>
@@ -409,7 +409,7 @@ const RequestCard: React.FC<{
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
               <Chip label={request.type} size="small" variant="outlined" />
               <Chip
-                label={new Date(request.createdAt).toLocaleDateString()}
+                label={new Date(request.createdAt).toLocaleDateString('en-IN')}
                 size="small"
                 variant="outlined"
               />
@@ -512,7 +512,7 @@ const RequestDetailDialog: React.FC<{
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
             {getStatusChip(request.status)}
             <Chip
-              label={`Created: ${new Date(request.createdAt).toLocaleDateString()}`}
+              label={`Created: ${new Date(request.createdAt).toLocaleDateString('en-IN')}`}
             />
           </Box>
         </Box>
