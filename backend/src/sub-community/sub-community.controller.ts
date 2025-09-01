@@ -58,14 +58,17 @@ export class SubCommunityController {
   @Patch(':id')
   async update(
     @Param('id') id: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body() dto: UpdateSubCommunityDto,
   ) {
     return this.subCommunityService.updateSubCommunity(id, userId, dto);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string, @GetCurrentUser('id') userId: string) {
+  async remove(
+    @Param('id') id: string,
+    @GetCurrentUser('userId') userId: string,
+  ) {
     return this.subCommunityService.removeSubCommunity(id, userId);
   }
 
@@ -81,7 +84,7 @@ export class SubCommunityController {
   @Get(':subCommunityId/reports')
   async getReports(
     @Param('subCommunityId') subCommunityId: string,
-    @GetCurrentUser('id') requesterId: string,
+    @GetCurrentUser('userId') requesterId: string,
   ) {
     return this.subCommunityService.getReports(subCommunityId, requesterId);
   }
@@ -92,7 +95,7 @@ export class SubCommunityController {
     @Param('subCommunityId') subCommunityId: string,
     @Param('reportId') reportId: string,
     @Body() dto: UpdateReportDto,
-    @GetCurrentUser('id') handlerId: string,
+    @GetCurrentUser('userId') handlerId: string,
   ) {
     return this.subCommunityService.handleReport(
       subCommunityId,
@@ -107,7 +110,7 @@ export class SubCommunityController {
   @Post(':id/join-request')
   async requestToJoin(
     @Param('id') subCommunityId: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('userId') userId: string,
   ) {
     return this.subCommunityService.requestToJoinSubCommunity(
       subCommunityId,
@@ -118,7 +121,7 @@ export class SubCommunityController {
   @Get(':id/join-requests/pending')
   async getPendingJoinRequests(
     @Param('id') subCommunityId: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('userId') userId: string,
   ) {
     return this.subCommunityService.getPendingJoinRequests(
       subCommunityId,
@@ -130,7 +133,7 @@ export class SubCommunityController {
   async approveJoinRequest(
     @Param('subCommunityId') subCommunityId: string,
     @Param('joinRequestId') joinRequestId: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body() dto: ApproveJoinRequestDto,
   ) {
     return this.subCommunityService.approveJoinRequest(
@@ -146,7 +149,7 @@ export class SubCommunityController {
     @Param('subCommunityId') subCommunityId: string,
     @Param('memberId') memberId: string,
     @Body() dto: UpdateMemberRoleDto,
-    @GetCurrentUser('id') requesterId: string,
+    @GetCurrentUser('userId') requesterId: string,
   ) {
     return this.subCommunityService.updateMemberRole(
       subCommunityId,
@@ -159,7 +162,7 @@ export class SubCommunityController {
   @Post(':id/leave')
   async leaveSubCommunity(
     @Param('id') subCommunityId: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('userId') userId: string,
   ) {
     return this.subCommunityService.leaveSubCommunity(subCommunityId, userId);
   }
@@ -168,7 +171,7 @@ export class SubCommunityController {
   async removeMember(
     @Param('subCommunityId') subCommunityId: string,
     @Param('memberIdToRemove') memberIdToRemove: string,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('userId') userId: string,
   ) {
     return this.subCommunityService.removeSubCommunityMember(
       subCommunityId,

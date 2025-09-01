@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { NavbarProvider } from './contexts/NavbarContext';
@@ -21,17 +21,48 @@ import './App.css';
 import Notification from './pages/Notification';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ProfileProvider } from './contexts/ProfileContext';
+import { EngagementProvider } from './contexts/engagementContext';
+import { EngagementService } from './services/engagementService';
+import { PostProvider } from './contexts/PostContext';
+import { SubCommunityProvider } from './contexts/SubCommunityContext';
 import { FeedPage } from './pages/Posts/FeedPage';
 import { PostDetailPage } from './pages/Posts/PostDetailPage';
 import { UserPostsPage } from './pages/Posts/UserPostsPage';
 import { SubCommunitiesPage } from './pages/Posts/SubCommunityPage';
 import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
-import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
-import { PostProvider } from './contexts/PostContext';
-import { SubCommunityProvider } from './contexts/SubCommunityContext';
-import { EngagementProvider } from './contexts/engagementContext';
-import { EngagementService } from './services/engagementService';
 import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
+import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
+
+// Lazy load components for better performance
+// const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));
+// const PostDetailPage = lazy(() => import('./pages/Posts/PostDetailPage'));
+// const UserPostsPage = lazy(() => import('./pages/Posts/UserPostsPage'));
+// const SubCommunitiesPage = lazy(() => import('./pages/Posts/SubCommunityPage'));
+// const SearchResultsPage = lazy(() => import('./pages/Posts/SearchResultsPage'));
+// const SubCommunityFeedPage = lazy(
+//   () => import('./pages/Posts/SubCommunityFeedPage')
+// );
+// const AdminModerationPage = lazy(
+//   () => import('./pages/Posts/AdminModerationPage')
+// );
+
+const AdminSubCommunityModerationPage = lazy(
+  () => import('./pages/Posts/AdminSubCommunityModerationPage')
+);
+
+// Loading component for Suspense fallback
+const LoadingSpinner: React.FC = () => (
+  <Box
+    sx={{
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '400px',
+    }}
+  >
+    <CircularProgress />
+  </Box>
+);
 
 // Layout component that handles navbar positioning
 const Layout: React.FC = () => {
@@ -52,7 +83,7 @@ const Layout: React.FC = () => {
         {/* Main Content */}
         <Box
           sx={{
-            pr: position === 'left' ? 0 : 0, // No right padding for notifications
+            pr: position === 'left' ? 0 : 0,
             transition: 'all 0.3s ease',
           }}
         >
@@ -124,12 +155,15 @@ const Layout: React.FC = () => {
                 </ProtectedRoute>
               }
             />
-            {/* Post-related routes */}
+
+            {/* Post-related routes with lazy loading */}
             <Route
               path="/feed"
               element={
                 <ProtectedRoute>
-                  <FeedPage />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <FeedPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -137,7 +171,9 @@ const Layout: React.FC = () => {
               path="/posts/:id"
               element={
                 <ProtectedRoute>
-                  <PostDetailPage />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <PostDetailPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -145,7 +181,9 @@ const Layout: React.FC = () => {
               path="/users/:userId/posts"
               element={
                 <ProtectedRoute>
-                  <UserPostsPage />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <UserPostsPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -153,7 +191,9 @@ const Layout: React.FC = () => {
               path="/subcommunities"
               element={
                 <ProtectedRoute>
-                  <SubCommunitiesPage />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubCommunitiesPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -161,7 +201,9 @@ const Layout: React.FC = () => {
               path="/subcommunities/:id"
               element={
                 <ProtectedRoute>
-                  <SubCommunityFeedPage />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubCommunityFeedPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
@@ -169,20 +211,46 @@ const Layout: React.FC = () => {
               path="/search"
               element={
                 <ProtectedRoute>
-                  <SearchResultsPage />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SearchResultsPage />
+                  </Suspense>
                 </ProtectedRoute>
               }
             />
 
-            {/* Admin-only routes */}
+            {/* Admin-only routes with lazy loading */}
             <Route
               path="/admin/moderation"
               element={
                 <AdminRoute>
-                  <AdminModerationPage />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminModerationPage />
+                  </Suspense>
                 </AdminRoute>
               }
             />
+            <Route
+              path="/admin/moderation/subcommunities"
+              element={
+                <AdminRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminSubCommunityModerationPage />
+                  </Suspense>
+                </AdminRoute>
+              }
+            />
+
+            {/* Add more admin routes here with lazy loading as needed */}
+            {/* <Route
+              path="/admin/analytics"
+              element={
+                <AdminRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <AdminAnalyticsPage />
+                  </Suspense>
+                </AdminRoute>
+              }
+            /> */}
           </Routes>
         </Box>
       </Box>

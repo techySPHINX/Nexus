@@ -17,11 +17,7 @@ export class SubCommunityRequestService {
     private filesService: FilesService,
   ) {}
 
-  async createRequest(
-    dto: CreateSubCommunityRequestDto,
-    requesterId: string,
-    documents?: Express.Multer.File[],
-  ) {
+  async createRequest(dto: CreateSubCommunityRequestDto, requesterId: string) {
     const existingSubCommunity = await this.prisma.subCommunity.findUnique({
       where: { name: dto.name },
     });
@@ -47,24 +43,13 @@ export class SubCommunityRequestService {
       );
     }
 
-    const documentUrls = [];
-    if (documents && documents.length > 0) {
-      const userTokens = null;
-
-      for (const doc of documents) {
-        const uploadedFile = await this.filesService.saveFile(
-          doc,
-          requesterId,
-          userTokens,
-        );
-        documentUrls.push(uploadedFile.webViewLink);
-      }
-    }
-
     return this.prisma.subCommunityCreationRequest.create({
       data: {
-        ...dto,
-        documentUrls,
+        name: dto.name,
+        description: dto.description,
+        type: dto.type,
+        rules: dto.rules,
+        documentUrls: [], // Empty array since we removed file uploads
         requester: {
           connect: { id: requesterId },
         },
