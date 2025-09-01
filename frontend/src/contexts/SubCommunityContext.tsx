@@ -16,6 +16,7 @@ import {
   CreateSubCommunityRequestDto,
   ApproveJoinRequestDto,
   SubCommunityTypeResponse,
+  UpdateSubCommunityDto,
 } from '../types/subCommunity';
 import { useAuth } from './AuthContext';
 
@@ -47,7 +48,7 @@ interface SubCommunityContextType {
   }) => Promise<void>;
   updateSubCommunity: (
     id: string,
-    data: { name?: string; description?: string; isPrivate?: boolean }
+    data: UpdateSubCommunityDto
   ) => Promise<void>;
   deleteSubCommunity: (id: string) => Promise<void>;
   requestToJoin: (subCommunityId: string) => Promise<void>;
@@ -290,10 +291,7 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const updateSubCommunity = useCallback(
-    async (
-      id: string,
-      data: { name?: string; description?: string; isPrivate?: boolean }
-    ) => {
+    async (id: string, data: UpdateSubCommunityDto) => {
       setLoading(true);
       try {
         const updated = await subCommunityService.updateSubCommunity(id, data);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -9,37 +9,295 @@ import {
   Avatar,
   useTheme,
   useMediaQuery,
+  CircularProgress,
+  IconButton,
+  Tooltip,
 } from '@mui/material';
-import { Public, Lock, ArrowForward } from '@mui/icons-material';
+import {
+  Public,
+  Lock,
+  ArrowForward,
+  People,
+  Check,
+  Schedule,
+  AdminPanelSettings,
+  Shield,
+  Edit,
+} from '@mui/icons-material';
 import { Link, useNavigate } from 'react-router-dom';
 import { SubCommunity } from '../../types/subCommunity';
+import { useSubCommunity } from '../../contexts/SubCommunityContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { SubCommunityRole } from '../../types/subCommunity';
 
 interface SubCommunityCardProps {
   subCommunity: SubCommunity;
+  onEdit?: (community: SubCommunity) => void;
 }
 
 export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   subCommunity,
+  onEdit,
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { user } = useAuth();
+  const { requestToJoin, joinRequests, getPendingJoinRequests } =
+    useSubCommunity();
+
+  const [isMember, setIsMember] = useState(false);
+  const [userRole, setUserRole] = useState<SubCommunityRole | null>(null);
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
+
+  // Check if user is a member
+  useEffect(() => {
+    if (user && subCommunity.members) {
+      const member = subCommunity.members.find((m) => m.userId === user.id);
+      setIsMember(!!member);
+      setUserRole(member?.role || null);
+    }
+  }, [user, subCommunity.members]);
+
+  // Check for pending join requests
+  useEffect(() => {
+    if (user && joinRequests.length > 0) {
+      const userRequest = joinRequests.find(
+        (req) =>
+          req.userId === user.id && req.subCommunityId === subCommunity.id
+      );
+      setHasPendingRequest(!!userRequest);
+    }
+  }, [user, joinRequests, subCommunity.id]);
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent navigation if click is on the join button
-    if ((e.target as HTMLElement).closest('button')) {
+    // Prevent navigation if click is on the join button or edit icon
+    if (
+      (e.target as HTMLElement).closest('button') ||
+      (e.target as HTMLElement).closest('.no-navigate')
+    ) {
       return;
     }
     navigate(`/subcommunities/${subCommunity.id}`);
   };
 
-  const handleJoinClick = (e: React.MouseEvent) => {
+  const handleJoinClick = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Here you would open your join component/modal
-    console.log('Join clicked for:', subCommunity.id);
-    // Example: openJoinModal(subCommunity.id);
+
+    if (!user) {
+      navigate('/login', {
+        state: { from: `/subcommunities/${subCommunity.id}` },
+      });
+      return;
+    }
+
+    setIsJoining(true);
+    try {
+      await requestToJoin(subCommunity.id);
+      setHasPendingRequest(true);
+      // Refresh pending requests
+      getPendingJoinRequests(subCommunity.id);
+    } catch (error) {
+      console.error('Failed to join community:', error);
+    } finally {
+      setIsJoining(false);
+    }
   };
+
+  const handleEditClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onEdit) {
+      onEdit(subCommunity);
+    }
+  };
+
+  // const getTypeIcon = (type: string) => {
+  //   const typeIcons: Record<string, string> = {
+  //     TECH: '💻',
+  //     GAME: '🎮',
+  //     MUSIC: '🎵',
+  //     SPORT: '⚽',
+  //     ART: '🎨',
+  //     SCIENCE: '🔬',
+  //     EDUCATION: '📚',
+  //     ENTERTAINMENT: '🎬',
+  //     LIFESTYLE: '🌿',
+  //     OTHER: '🔮',
+  //   };
+  //   return typeIcons[type] || '🔮';
+  // };
+
+  // const getTypeColor = (type: string) => {
+  //   const typeColors: Record<string, string> = {
+  //     TECH: '#3b82f6',
+  //     GAME: '#ef4444',
+  //     MUSIC: '#8b5cf6',
+  //     SPORT: '#22c55e',
+  //     ART: '#ec4899',
+  //     SCIENCE: '#06b6d4',
+  //     EDUCATION: '#f59e0b',
+  //     ENTERTAINMENT: '#f97316',
+  //     LIFESTYLE: '#10b981',
+  //     OTHER: '#6b7280',
+  //   };
+  //   return typeColors[type] || '#6b7280';
+  // };
+
+  const getRoleIcon = (role: SubCommunityRole) => {
+    switch (role) {
+      case SubCommunityRole.OWNER:
+        return <AdminPanelSettings sx={{ fontSize: 14, color: 'gold' }} />;
+      case SubCommunityRole.MODERATOR:
+        return <Shield sx={{ fontSize: 14, color: 'silver' }} />;
+      default:
+        return <People sx={{ fontSize: 14 }} />;
+    }
+  };
+
+  const getRoleColor = (role: SubCommunityRole) => {
+    switch (role) {
+      case SubCommunityRole.OWNER:
+        return 'warning.main';
+      case SubCommunityRole.MODERATOR:
+        return 'success.main';
+      default:
+        return 'primary.main';
+    }
+  };
+
+  const renderJoinButton = () => {
+    if (isMember) {
+      return (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {/* Show user's role if they are a member */}
+          <Chip
+            icon={getRoleIcon(userRole!)}
+            label={userRole}
+            size="small"
+            sx={{
+              fontSize: '0.7rem',
+              height: 24,
+              backgroundColor: getRoleColor(userRole!),
+              color: 'white',
+              fontWeight: 600,
+            }}
+          />
+          <Button
+            variant="outlined"
+            size="small"
+            disabled
+            sx={{
+              borderRadius: 20,
+              textTransform: 'none',
+              fontWeight: 600,
+              fontSize: '0.75rem',
+              py: 0.5,
+              px: 2,
+              whiteSpace: 'nowrap',
+              minWidth: 'auto',
+              borderColor: 'success.main',
+              color: 'success.main',
+            }}
+            startIcon={<Check sx={{ fontSize: 14 }} />}
+          >
+            Joined
+          </Button>
+        </Box>
+      );
+    }
+
+    if (hasPendingRequest) {
+      return (
+        <Button
+          variant="outlined"
+          size="small"
+          disabled
+          sx={{
+            borderRadius: 20,
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.75rem',
+            py: 0.5,
+            px: 2,
+            whiteSpace: 'nowrap',
+            minWidth: 'auto',
+          }}
+          startIcon={<Schedule sx={{ fontSize: 14 }} />}
+        >
+          Pending
+        </Button>
+      );
+    }
+
+    if (subCommunity.isPrivate) {
+      return (
+        <Button
+          variant="contained"
+          size="small"
+          onClick={handleJoinClick}
+          disabled={isJoining}
+          sx={{
+            borderRadius: 20,
+            textTransform: 'none',
+            fontWeight: 600,
+            fontSize: '0.75rem',
+            py: 0.5,
+            px: 2,
+            whiteSpace: 'nowrap',
+            minWidth: 'auto',
+          }}
+          startIcon={
+            isJoining ? (
+              <CircularProgress size={12} />
+            ) : (
+              <Lock sx={{ fontSize: 14 }} />
+            )
+          }
+        >
+          {isJoining ? 'Joining...' : 'Join'}
+        </Button>
+      );
+    }
+
+    return (
+      <Button
+        variant="outlined"
+        size="small"
+        onClick={handleJoinClick}
+        disabled={isJoining}
+        sx={{
+          borderRadius: 20,
+          textTransform: 'none',
+          fontWeight: 600,
+          fontSize: '0.75rem',
+          py: 0.5,
+          px: 2,
+          whiteSpace: 'nowrap',
+          minWidth: 'auto',
+          borderWidth: 2,
+          '&:hover': {
+            borderWidth: 2,
+          },
+        }}
+        startIcon={
+          isJoining ? (
+            <CircularProgress size={12} />
+          ) : (
+            <People sx={{ fontSize: 14 }} />
+          )
+        }
+      >
+        {isJoining ? 'Joining...' : 'Join'}
+      </Button>
+    );
+  };
+
+  const canEditCommunity =
+    userRole === SubCommunityRole.OWNER ||
+    userRole === SubCommunityRole.MODERATOR;
 
   return (
     <Card
@@ -52,6 +310,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
         transition: 'all 0.2s ease-in-out',
         border: `1px solid ${theme.palette.divider}`,
         backgroundColor: theme.palette.background.paper,
+        position: 'relative',
         '&:hover': {
           transform: 'translateY(-2px)',
           boxShadow: theme.shadows[4],
@@ -60,6 +319,28 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
       }}
       onClick={handleCardClick}
     >
+      {/* Edit button for owners/moderators */}
+      {canEditCommunity && onEdit && (
+        <Tooltip title="Edit Community">
+          <IconButton
+            className="no-navigate"
+            onClick={handleEditClick}
+            sx={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              backgroundColor: 'background.paper',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              },
+            }}
+            size="small"
+          >
+            <Edit sx={{ fontSize: 16 }} />
+          </IconButton>
+        </Tooltip>
+      )}
+
       <CardContent
         sx={{
           p: 2,
@@ -92,28 +373,32 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
               sx={{
                 width: 48,
                 height: 48,
-                backgroundColor: theme.palette.primary.main,
+                // backgroundColor: getTypeColor(subCommunity.type),
                 fontSize: '1.2rem',
                 fontWeight: 'bold',
+                color: 'white',
               }}
             >
+              {/* {getTypeIcon(subCommunity.type)} */}
               {subCommunity.name.charAt(0).toUpperCase()}
             </Avatar>
           )}
 
           <Box sx={{ flex: 1 }}>
-            <Typography
-              variant="h6"
-              component="h3"
-              sx={{
-                fontWeight: 700,
-                fontSize: isMobile ? '1rem' : '1.1rem',
-                color: theme.palette.text.primary,
-                lineHeight: 1.2,
-              }}
-            >
-              r/{subCommunity.name}
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="h6"
+                component="h3"
+                sx={{
+                  fontWeight: 700,
+                  fontSize: isMobile ? '1rem' : '1.1rem',
+                  color: theme.palette.text.primary,
+                  lineHeight: 1.2,
+                }}
+              >
+                r/{subCommunity.name}
+              </Typography>
+            </Box>
 
             <Typography
               variant="body2"
@@ -165,12 +450,38 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
               flexWrap: 'wrap',
             }}
           >
+            {/* Community Type */}
+            <Chip
+              label={subCommunity.type}
+              size="small"
+              sx={{
+                fontSize: '0.7rem',
+                height: 24,
+                // backgroundColor: getTypeColor(subCommunity.type),
+                color: 'default',
+                fontWeight: 600,
+              }}
+            />
+
+            {/* Privacy Status */}
             <Chip
               icon={subCommunity.isPrivate ? <Lock /> : <Public />}
               label={subCommunity.isPrivate ? 'Private' : 'Public'}
               size="small"
               color={subCommunity.isPrivate ? 'default' : 'primary'}
               variant="filled"
+              sx={{
+                fontSize: '0.7rem',
+                height: 24,
+              }}
+            />
+
+            {/* Post Count */}
+            <Chip
+              icon={<ArrowForward />}
+              label={`${subCommunity._count?.posts?.toLocaleString() || '0'} posts`}
+              size="small"
+              variant="outlined"
               sx={{
                 fontSize: '0.7rem',
                 height: 24,
@@ -201,54 +512,14 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
 
           {/* Right side - Action Buttons */}
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            {subCommunity.isPrivate ? (
-              <Button
-                variant="contained"
-                size="small"
-                onClick={handleJoinClick}
-                sx={{
-                  borderRadius: 20,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.75rem',
-                  py: 0.5,
-                  px: 2,
-                  whiteSpace: 'nowrap',
-                  minWidth: 'auto',
-                }}
-                startIcon={<Lock sx={{ fontSize: 14 }} />}
-              >
-                Join
-              </Button>
-            ) : (
-              <Button
-                variant="outlined"
-                size="small"
-                onClick={handleJoinClick}
-                sx={{
-                  borderRadius: 20,
-                  textTransform: 'none',
-                  fontWeight: 600,
-                  fontSize: '0.75rem',
-                  py: 0.5,
-                  px: 2,
-                  whiteSpace: 'nowrap',
-                  minWidth: 'auto',
-                  borderWidth: 2,
-                  '&:hover': {
-                    borderWidth: 2,
-                  },
-                }}
-              >
-                Join
-              </Button>
-            )}
+            {renderJoinButton()}
 
             <Button
               component={Link}
               to={`/subcommunities/${subCommunity.id}`}
               variant="text"
               size="small"
+              className="no-navigate"
               sx={{
                 borderRadius: 20,
                 textTransform: 'none',
