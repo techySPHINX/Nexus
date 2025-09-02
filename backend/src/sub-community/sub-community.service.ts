@@ -518,7 +518,7 @@ export class SubCommunityService {
     }
 
     const memberToUpdate = await this.prisma.subCommunityMember.findFirst({
-      where: { userId: memberId, subCommunityId: subCommunityId },
+      where: { id: memberId, subCommunityId: subCommunityId },
     });
 
     if (!memberToUpdate) {
