@@ -119,7 +119,10 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
       setImage(null);
       setImagePreview(null);
 
-      showSnackbar('Post created successfully!', 'success');
+      showSnackbar(
+        'Post created successfully and sent for approval!',
+        'success'
+      );
 
       if (onSuccess) {
         onSuccess();

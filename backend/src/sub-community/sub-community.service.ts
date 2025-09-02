@@ -102,7 +102,9 @@ export class SubCommunityService {
           },
         },
         posts: { orderBy: { createdAt: 'desc' } },
-        _count: { select: { members: true, posts: true } },
+        _count: {
+          select: { members: true, posts: { where: { status: 'APPROVED' } } },
+        },
       },
     });
     if (!subCommunity) {

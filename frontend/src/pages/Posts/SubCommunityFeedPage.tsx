@@ -188,7 +188,7 @@ export const SubCommunityFeedPage: React.FC = () => {
 
   const handleCreatePostSuccess = useCallback(() => {
     setOpenForm(false);
-    showSnackbar('Post created successfully!', 'success');
+    showSnackbar('Post created successfully and sent for approval!', 'success');
     if (id) {
       getSubCommunityFeed(id, 1); // Refresh feed
     }
@@ -379,7 +379,7 @@ export const SubCommunityFeedPage: React.FC = () => {
             post={post}
             onClick={() =>
               navigate(`/posts/${post.id}`, {
-                state: { from: `/sub-communities/${id}` },
+                state: { from: `/subcommunities/${id}` },
               })
             }
           />
@@ -934,7 +934,7 @@ export const SubCommunityFeedPage: React.FC = () => {
         open={snackbarOpen}
         autoHideDuration={4000}
         onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
       >
         <Alert
           onClose={() => setSnackbarOpen(false)}

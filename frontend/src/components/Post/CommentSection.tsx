@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEngagement } from '../../contexts/engagementContext';
 import {
@@ -24,6 +24,9 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  useTheme,
+  alpha,
+  Stack,
 } from '@mui/material';
 import { formatDistanceToNow } from 'date-fns';
 import {
@@ -37,6 +40,7 @@ import {
   ExpandLess,
   Favorite,
   FavoriteBorder,
+  SubdirectoryArrowRight,
 } from '@mui/icons-material';
 import { Comment } from '@/types/engagement';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +55,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   postId,
   onCommentAdded,
 }) => {
+  const theme = useTheme();
   const { user: currentUser, token } = useAuth();
   const {
     commentOnPost,
@@ -93,26 +98,51 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
 
-  const loadComments = React.useCallback(
+  // Load comments for this post
+  const loadComments = useCallback(
     async (page: number = 1) => {
       try {
         const result = await getCommentsForPost(postId, page, 10);
-        setComments(result.comments);
-        setPagination(result.pagination);
+        const commentsData = result.comments || [];
+
+        if (page === 1) {
+          setComments(commentsData);
+        } else {
+          setComments((prev) => [...prev, ...commentsData]);
+        }
+
+        setPagination(
+          result.pagination || {
+            page,
+            limit: 10,
+            total: commentsData.length,
+            totalPages: Math.ceil(commentsData.length / 10),
+            hasNext: false,
+            hasPrev: false,
+          }
+        );
 
         // Initialize vote states
         const votesState: Record<string, { isLiked: boolean; count: number }> =
           {};
-        result.comments.forEach((comment) => {
-          votesState[comment.id] = {
-            isLiked:
-              comment.Vote?.some(
-                (vote) =>
-                  vote.userId === currentUser?.id && vote.type === 'UPVOTE'
-              ) || false,
-            count: comment.Vote?.length || 0,
-          };
-        });
+        const processComments = (commentList: Comment[]) => {
+          commentList.forEach((comment) => {
+            votesState[comment.id] = {
+              isLiked:
+                comment.votes?.some(
+                  (vote) =>
+                    vote.userId === currentUser?.id && vote.type === 'UPVOTE'
+                ) || false,
+              count: comment.votes?.length || 0,
+            };
+
+            if (comment.replies && comment.replies.length > 0) {
+              processComments(comment.replies);
+            }
+          });
+        };
+
+        processComments(commentsData);
         setCommentVotes(votesState);
       } catch (error) {
         console.error('Error loading comments:', error);
@@ -146,6 +176,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     if (selectedComment) {
       setEditingCommentId(selectedComment.id);
       setEditingContent(selectedComment.content);
+      setEditDialogOpen(true);
     }
     handleMenuClose();
   };
@@ -188,19 +219,36 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         parentCommentId
       );
 
+      // Update the comments state with the new reply
       setComments((prev) =>
-        prev.map((comment) =>
-          comment.id === parentCommentId
-            ? {
-                ...comment,
-                replies: [...(comment.replies || []), newReply],
-              }
-            : comment
-        )
+        prev.map((comment) => {
+          if (comment.id === parentCommentId) {
+            return {
+              ...comment,
+              replies: [...(comment.replies || []), newReply],
+            };
+          }
+          return comment;
+        })
       );
+
+      // Also update vote state for the new reply
+      setCommentVotes((prev) => ({
+        ...prev,
+        [newReply.id]: {
+          isLiked: false,
+          count: 0,
+        },
+      }));
 
       setReplyContent('');
       setReplyingToCommentId(null);
+
+      // Auto-expand replies if not already expanded
+      if (!expandedReplies.has(parentCommentId)) {
+        setExpandedReplies((prev) => new Set(prev).add(parentCommentId));
+      }
+
       if (onCommentAdded) onCommentAdded();
     } catch (error) {
       console.error('Error submitting reply:', error);
@@ -267,20 +315,20 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       };
       const newIsLiked = !currentVoteState.isLiked;
 
+      // Optimistic UI update
       setCommentVotes((prev) => ({
         ...prev,
         [commentId]: {
           isLiked: newIsLiked,
           count: newIsLiked
             ? currentVoteState.count + 1
-            : currentVoteState.count - 1,
+            : Math.max(0, currentVoteState.count - 1),
         },
       }));
 
-      await voteOnComment(
-        commentId,
-        newIsLiked ? VoteType.UPVOTE : VoteType.DOWNVOTE
-      );
+      const voteType = newIsLiked ? VoteType.UPVOTE : VoteType.DOWNVOTE;
+
+      await voteOnComment(commentId, voteType);
     } catch (error) {
       console.error('Error voting on comment:', error);
       // Revert UI state on error
@@ -290,10 +338,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       };
       setCommentVotes((prev) => ({
         ...prev,
-        [commentId]: {
-          isLiked: !currentVoteState.isLiked,
-          count: currentVoteState.count,
-        },
+        [commentId]: currentVoteState,
       }));
     }
   };
@@ -305,6 +350,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     }
     setReplyingToCommentId(commentId);
     setEditingCommentId(null);
+    setReplyContent('');
   };
 
   const cancelEditing = () => {
@@ -319,18 +365,19 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   const toggleReplies = (commentId: string) => {
-    const newExpanded = new Set(expandedReplies);
-    if (newExpanded.has(commentId)) {
-      newExpanded.delete(commentId);
-    } else {
-      newExpanded.add(commentId);
-    }
-    setExpandedReplies(newExpanded);
+    setExpandedReplies((prev) => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(commentId)) {
+        newExpanded.delete(commentId);
+      } else {
+        newExpanded.add(commentId);
+      }
+      return newExpanded;
+    });
   };
 
   const isAuthor = (comment: Comment) => {
-    const commentUserId = comment.user?.id;
-    return commentUserId && commentUserId === currentUser?.id;
+    return comment.user?.id === currentUser?.id;
   };
 
   const getUserName = (comment: Comment) => {
@@ -350,7 +397,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
     const voteState = commentVotes[comment.id] || { isLiked: false, count: 0 };
 
     return (
-      <Box sx={{ display: 'flex', gap: 1, mt: 1, alignItems: 'center' }}>
+      <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
         {/* Vote button */}
         <IconButton
           size="small"
@@ -360,6 +407,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           }}
           disabled={!token}
           color={voteState.isLiked ? 'error' : 'default'}
+          sx={{
+            color: voteState.isLiked
+              ? theme.palette.error.main
+              : theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: alpha(theme.palette.error.main, 0.1),
+            },
+          }}
         >
           {voteState.isLiked ? (
             <Favorite fontSize="small" />
@@ -367,7 +422,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             <FavoriteBorder fontSize="small" />
           )}
         </IconButton>
-        <Typography variant="body2" fontSize="0.8rem">
+        <Typography variant="body2" fontSize="0.8rem" color="text.secondary">
           {voteState.count}
         </Typography>
 
@@ -382,6 +437,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           }}
           icon={<Reply fontSize="small" />}
           disabled={!token}
+          sx={{
+            borderRadius: 2,
+            height: 24,
+            '& .MuiChip-icon': { fontSize: 14 },
+          }}
         />
 
         {/* Edit/Delete menu */}
@@ -397,14 +457,14 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
             <MoreVert fontSize="small" />
           </IconButton>
         )}
-      </Box>
+      </Stack>
     );
   };
 
   const renderEditForm = () => (
     <Paper
-      elevation={2}
-      sx={{ p: 1.5, mt: 1, bgcolor: 'grey.50' }}
+      elevation={1}
+      sx={{ p: 1.5, mt: 1, bgcolor: alpha(theme.palette.primary.main, 0.05) }}
       onClick={(e) => e.stopPropagation()}
     >
       <TextField
@@ -417,14 +477,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         size="small"
         sx={{ mb: 1 }}
       />
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+      <Stack direction="row" spacing={1} justifyContent="flex-end">
         <Button
           size="small"
           variant="outlined"
-          onClick={(e) => {
-            e.stopPropagation();
-            cancelEditing();
-          }}
+          onClick={cancelEditing}
           startIcon={<Close />}
         >
           Cancel
@@ -432,23 +489,26 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         <Button
           size="small"
           variant="contained"
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditDialogOpen(true);
-          }}
+          onClick={handleEditComment}
           startIcon={<Check />}
           disabled={!editingContent.trim()}
         >
-          Save Changes
+          Save
         </Button>
-      </Box>
+      </Stack>
     </Paper>
   );
 
   const renderReplyForm = (parentComment: Comment) => (
     <Paper
-      elevation={2}
-      sx={{ p: 1.5, mt: 1, ml: 6, bgcolor: 'grey.50' }}
+      elevation={1}
+      sx={{
+        p: 1.5,
+        mt: 1,
+        ml: { xs: 2, sm: 4 },
+        bgcolor: alpha(theme.palette.primary.main, 0.05),
+        borderLeft: `3px solid ${theme.palette.primary.main}`,
+      }}
       onClick={(e) => e.stopPropagation()}
     >
       <Typography
@@ -469,14 +529,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         size="small"
         sx={{ mb: 1 }}
       />
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+      <Stack direction="row" spacing={1} justifyContent="flex-end">
         <Button
           size="small"
           variant="outlined"
-          onClick={(e) => {
-            e.stopPropagation();
-            cancelReplying();
-          }}
+          onClick={cancelReplying}
           startIcon={<Close />}
         >
           Cancel
@@ -484,98 +541,157 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         <Button
           size="small"
           variant="contained"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleReplySubmit(parentComment.id);
-          }}
+          onClick={() => handleReplySubmit(parentComment.id)}
           startIcon={<Check />}
           disabled={!replyContent.trim()}
         >
           Reply
         </Button>
-      </Box>
+      </Stack>
     </Paper>
   );
 
-  const renderReplies = (comment: Comment) => {
-    const replies = comment.replies || [];
+  const renderComment = (
+    comment: Comment,
+    depth: number = 0,
+    isReply: boolean = false
+  ) => {
+    const hasReplies = comment.replies && comment.replies.length > 0;
+    const replyCount = comment.replies?.length || 0;
     const isExpanded = expandedReplies.has(comment.id);
-
-    if (replies.length === 0) return null;
+    const isEditing = editingCommentId === comment.id;
+    const isReplying = replyingToCommentId === comment.id;
 
     return (
-      <Box sx={{ ml: 6 }}>
-        <Button
-          size="small"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleReplies(comment.id);
+      <Box key={comment.id} sx={{ mb: 2 }}>
+        <ListItem
+          alignItems="flex-start"
+          sx={{
+            pl: 0,
+            ml: depth > 0 ? { xs: 2, sm: 4 } : 0,
+            position: 'relative',
           }}
-          sx={{ mb: 1 }}
-          startIcon={isExpanded ? <ExpandLess /> : <ExpandMore />}
         >
-          {replies.length} {replies.length === 1 ? 'reply' : 'replies'}
-        </Button>
+          {depth > 0 && (
+            <SubdirectoryArrowRight
+              sx={{
+                position: 'absolute',
+                left: -20,
+                top: 16,
+                color: 'text.secondary',
+                fontSize: 16,
+              }}
+            />
+          )}
 
-        <Collapse in={isExpanded}>
-          {replies.map((reply) => (
-            <Box key={reply.id} sx={{ mb: 2 }}>
-              <ListItem alignItems="flex-start" sx={{ pl: 0 }}>
-                <ListItemAvatar sx={{ minWidth: 40 }}>
-                  <Avatar
-                    src={getAvatarUrl(reply)}
-                    sx={{ width: 32, height: 32 }}
-                    alt={getUserName(reply)}
-                  >
-                    {getAvatarFallback(reply)}
-                  </Avatar>
-                </ListItemAvatar>
-                <ListItemText
-                  primary={
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                      }}
+          <ListItemAvatar sx={{ minWidth: 40 }}>
+            <Avatar
+              src={getAvatarUrl(comment)}
+              sx={{ width: 32, height: 32 }}
+              alt={getUserName(comment)}
+            >
+              {getAvatarFallback(comment)}
+            </Avatar>
+          </ListItemAvatar>
+
+          <ListItemText
+            primary={
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                component="span"
+              >
+                <Typography
+                  variant="subtitle2"
+                  fontSize="0.9rem"
+                  fontWeight="600"
+                >
+                  {getUserName(comment)}
+                </Typography>
+                {isAuthor(comment) && (
+                  <Chip
+                    label="You"
+                    size="small"
+                    variant="filled"
+                    color="primary"
+                    sx={{ height: 20, fontSize: '0.7rem' }}
+                  />
+                )}
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  component="span"
+                >
+                  {formatDistanceToNow(new Date(comment.createdAt), {
+                    addSuffix: true,
+                  })}
+                </Typography>
+              </Stack>
+            }
+            secondary={
+              <Box sx={{ mt: 0.5 }}>
+                {isEditing ? (
+                  renderEditForm()
+                ) : (
+                  <>
+                    <Typography
+                      component="span"
+                      variant="body2"
+                      color="text.primary"
+                      sx={{ display: 'block', mb: 0.5, lineHeight: 1.4 }}
                     >
-                      <Typography variant="subtitle2" fontSize="0.9rem">
-                        {getUserName(reply)}
-                      </Typography>
-                    </Box>
-                  }
-                  secondary={
-                    <>
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        color="text.primary"
-                        fontSize="0.9rem"
-                      >
-                        {reply.content}
-                      </Typography>
-                      <br />
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDistanceToNow(new Date(reply.createdAt), {
-                          addSuffix: true,
-                        })}
-                      </Typography>
-                      {renderCommentActions(reply)}
-                    </>
-                  }
-                />
-              </ListItem>
-              {replyingToCommentId === reply.id && renderReplyForm(reply)}
-            </Box>
-          ))}
-        </Collapse>
+                      {comment.content}
+                    </Typography>
+                    {renderCommentActions(comment)}
+                  </>
+                )}
+              </Box>
+            }
+            sx={{
+              '& .MuiListItemText-primary': { mb: 0.5 },
+              '& .MuiListItemText-secondary': { mt: 0 },
+            }}
+          />
+        </ListItem>
+
+        {/* Reply form for this comment */}
+        {isReplying && renderReplyForm(comment)}
+
+        {/* Replies section */}
+        {hasReplies && (
+          <Box sx={{ ml: { xs: 2, sm: 4 } }}>
+            <Button
+              size="small"
+              onClick={() => toggleReplies(comment.id)}
+              sx={{
+                mb: 1,
+                color: 'primary',
+                fontSize: '0.8rem',
+              }}
+              startIcon={isExpanded ? <ExpandLess /> : <ExpandMore />}
+            >
+              {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
+            </Button>
+
+            <Collapse in={isExpanded}>
+              <Stack spacing={2} sx={{ mt: 1 }}>
+                {comment.replies?.map((reply) =>
+                  renderComment(reply, depth + 1, true)
+                )}
+              </Stack>
+            </Collapse>
+          </Box>
+        )}
+
+        {!isReply && depth === 0 && <Divider sx={{ my: 2 }} />}
       </Box>
     );
   };
 
   const renderLoginPrompt = () => (
-    <Paper elevation={1} sx={{ p: 2, mb: 2, textAlign: 'center' }}>
-      <Typography variant="body1" sx={{ mb: 2 }}>
+    <Paper elevation={1} sx={{ p: 3, mb: 2, textAlign: 'center' }}>
+      <Typography variant="body1" sx={{ mb: 2 }} color="text.secondary">
         Please login to comment and engage with this post
       </Typography>
       <Button
@@ -589,23 +705,26 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
   );
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box sx={{ p: { xs: 1, sm: 2 } }}>
       {error && (
         <Alert severity="error" onClose={clearError} sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
-      {/* Main comment input - Only show if authenticated */}
+      {/* Main comment input */}
       {token ? (
-        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+        <Paper elevation={1} sx={{ p: 2, mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 2 }}>
+            Add a comment
+          </Typography>
           <TextField
             fullWidth
             multiline
             rows={3}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Write a comment..."
+            placeholder="Share your thoughts..."
             variant="outlined"
             sx={{ mb: 2 }}
             disabled={loading}
@@ -626,99 +745,64 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       )}
 
       {/* Comments list */}
-      <List sx={{ mt: 2 }}>
-        {comments.map((comment) => (
-          <Box key={comment.id} sx={{ mb: 2 }}>
-            <ListItem alignItems="flex-start" sx={{ pl: 0 }}>
-              <ListItemAvatar>
-                <Avatar src={getAvatarUrl(comment)} alt={getUserName(comment)}>
-                  {getAvatarFallback(comment)}
-                </Avatar>
-              </ListItemAvatar>
-              <ListItemText
-                primary={
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Typography variant="subtitle2">
-                      {getUserName(comment)}
-                    </Typography>
-                  </Box>
-                }
-                secondary={
-                  <>
-                    {editingCommentId === comment.id ? (
-                      renderEditForm()
-                    ) : (
-                      <>
-                        <Typography
-                          component="span"
-                          variant="body2"
-                          color="text.primary"
-                          sx={{ display: 'block', mb: 0.5 }}
-                        >
-                          {comment.content}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDistanceToNow(new Date(comment.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </Typography>
-                        {renderCommentActions(comment)}
-                      </>
-                    )}
-                  </>
-                }
-              />
-            </ListItem>
+      {comments.length > 0 ? (
+        <Box>
+          <Typography variant="h6" sx={{ mb: 2 }} component="span">
+            Comments ({pagination.total})
+          </Typography>
+          <List sx={{ mt: 1 }}>
+            {comments.map((comment) => renderComment(comment))}
+          </List>
+        </Box>
+      ) : (
+        <Paper elevation={0} sx={{ p: 4, textAlign: 'center' }}>
+          <Typography variant="body1" color="text.secondary" component="span">
+            No comments yet. Be the first to comment!
+          </Typography>
+        </Paper>
+      )}
 
-            {/* Reply form for this comment */}
-            {replyingToCommentId === comment.id && renderReplyForm(comment)}
-
-            {/* Nested replies */}
-            {renderReplies(comment)}
-
-            <Divider sx={{ my: 2 }} />
-          </Box>
-        ))}
-      </List>
-
-      {/* Edit Confirmation Dialog */}
+      {/* Dialogs */}
       <Dialog
         open={editDialogOpen}
         onClose={cancelEditing}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Confirm Edit</DialogTitle>
+        <DialogTitle>Edit Comment</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to update this comment?</Typography>
-          <Paper elevation={1} sx={{ p: 2, mt: 2, bgcolor: 'grey.50' }}>
-            <Typography variant="body2" color="primary.main" sx={{ mt: 1 }}>
-              New: {editingContent}
-            </Typography>
-          </Paper>
+          <TextField
+            fullWidth
+            multiline
+            rows={4}
+            value={editingContent}
+            onChange={(e) => setEditingContent(e.target.value)}
+            variant="outlined"
+            sx={{ mt: 1 }}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={cancelEditing}>Cancel</Button>
-          <Button onClick={handleEditComment} variant="contained">
-            Confirm
+          <Button
+            onClick={handleEditComment}
+            variant="contained"
+            disabled={!editingContent.trim()}
+          >
+            Save Changes
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
       >
-        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogTitle>Delete Comment</DialogTitle>
         <DialogContent>
-          <Typography>Are you sure you want to delete this comment?</Typography>
+          <Typography>
+            Are you sure you want to delete this comment? This action cannot be
+            undone.
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
@@ -739,35 +823,26 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         onClose={handleMenuClose}
         onClick={(e) => e.stopPropagation()}
       >
-        <MenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleEditClick();
-          }}
-        >
+        <MenuItem onClick={handleEditClick}>
           <Edit fontSize="small" sx={{ mr: 1 }} />
           Edit
         </MenuItem>
-        <MenuItem
-          onClick={(e) => {
-            e.stopPropagation();
-            handleDeleteClick();
-          }}
-          sx={{ color: 'error.main' }}
-        >
+        <MenuItem onClick={handleDeleteClick} sx={{ color: 'error.main' }}>
           <Delete fontSize="small" sx={{ mr: 1 }} />
           Delete
         </MenuItem>
       </Menu>
 
+      {/* Load more button */}
       {pagination.hasNext && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
           <Button
             variant="outlined"
             onClick={() => loadComments(pagination.page + 1)}
             disabled={loading}
+            startIcon={loading && <CircularProgress size={16} />}
           >
-            Load More Comments
+            {loading ? 'Loading...' : 'Load More Comments'}
           </Button>
         </Box>
       )}
