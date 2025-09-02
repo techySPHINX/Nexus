@@ -1,6 +1,5 @@
 import axios, { AxiosError } from 'axios';
 
-// Define a more detailed error response structure
 interface ApiErrorResponse {
   message?: string;
   error?: string;
@@ -10,7 +9,6 @@ interface ApiErrorResponse {
   timestamp?: string;
 }
 
-// Custom error types for better type safety
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -39,49 +37,50 @@ export class ValidationError extends Error {
   }
 }
 
-// Enhanced error handler with better parsing and type safety
+// Always prefer backend message/error/errors
+const extractBackendMessage = (data?: ApiErrorResponse): string | undefined => {
+  if (!data) return undefined;
+  if (data.message) return data.message;
+  if (data.error) return data.error;
+  if (data.errors?.length) return data.errors.map((e) => e.message).join(', ');
+  return undefined;
+};
+
 export const getErrorMessage = (err: unknown): string => {
-  // Handle Axios errors specifically
   if (axios.isAxiosError(err)) {
+    const responseData = err.response?.data as ApiErrorResponse | undefined;
+    const backendMsg = extractBackendMessage(responseData);
+    if (backendMsg) return backendMsg;
     return getAxiosErrorMessage(err);
   }
 
-  // Handle custom error types
-  if (err instanceof ApiError) {
+  if (
+    err instanceof ApiError &&
+    err.details &&
+    typeof err.details === 'object'
+  ) {
+    const backendMsg = extractBackendMessage(err.details as ApiErrorResponse);
+    if (backendMsg) return backendMsg;
     return err.message;
   }
 
-  if (err instanceof ValidationError) {
-    return err.message;
+  if (err instanceof ValidationError && err.fieldErrors?.length) {
+    return err.fieldErrors.map((e) => e.message).join(', ') || err.message;
   }
 
-  if (err instanceof NetworkError) {
-    return err.message;
-  }
+  if (err instanceof ValidationError) return err.message;
+  if (err instanceof NetworkError) return err.message;
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
 
-  // Handle standard JavaScript errors
-  if (err instanceof Error) {
-    return err.message;
-  }
-
-  // Handle string errors
-  if (typeof err === 'string') {
-    return err;
-  }
-
-  // Handle objects with message property
   if (typeof err === 'object' && err !== null && 'message' in err) {
     const errorObj = err as { message: unknown };
-    if (typeof errorObj.message === 'string') {
-      return errorObj.message;
-    }
+    if (typeof errorObj.message === 'string') return errorObj.message;
   }
 
-  // Fallback for completely unknown errors
   return 'An unexpected error occurred. Please try again.';
 };
 
-// Extract detailed error information (not just the message)
 export const getErrorDetails = (
   err: unknown
 ): {
@@ -91,19 +90,11 @@ export const getErrorDetails = (
   timestamp?: string;
   path?: string;
 } => {
-  const defaultResponse = {
-    message: getErrorMessage(err),
-    statusCode: 500,
-  };
-
   if (axios.isAxiosError(err)) {
     const response = err.response?.data as ApiErrorResponse;
     return {
       message:
-        response?.message ||
-        response?.error ||
-        err.message ||
-        'API request failed',
+        extractBackendMessage(response) || err.message || 'API request failed',
       statusCode: err.response?.status,
       fieldErrors: response?.errors,
       timestamp: response?.timestamp,
@@ -111,26 +102,35 @@ export const getErrorDetails = (
     };
   }
 
-  if (err instanceof ApiError) {
+  if (
+    err instanceof ApiError &&
+    err.details &&
+    typeof err.details === 'object'
+  ) {
+    const details = err.details as ApiErrorResponse;
     return {
-      message: err.message,
+      message: extractBackendMessage(details) || err.message,
       statusCode: err.statusCode,
-      ...(err.details && typeof err.details === 'object' ? err.details : {}),
+      fieldErrors: details.errors,
+      timestamp: details.timestamp,
+      path: details.path,
     };
   }
 
   if (err instanceof ValidationError) {
     return {
-      message: err.message,
+      message: err.fieldErrors?.map((e) => e.message).join(', ') || err.message,
       statusCode: 400,
       fieldErrors: err.fieldErrors,
     };
   }
 
-  return defaultResponse;
+  return {
+    message: getErrorMessage(err),
+    statusCode: 500,
+  };
 };
 
-// Check if error is a specific type
 export const isNetworkError = (err: unknown): boolean => {
   if (axios.isAxiosError(err)) {
     return !err.response && err.request && !navigator.onLine;
@@ -146,29 +146,24 @@ export const isApiError = (err: unknown): err is ApiError => {
   return err instanceof ApiError;
 };
 
-// Specific handler for Axios errors
 const getAxiosErrorMessage = (err: AxiosError): string => {
-  // Network errors (no response received)
   if (!err.response) {
-    if (!navigator.onLine) {
+    if (!navigator.onLine)
       return 'You are offline. Please check your internet connection.';
-    }
-    if (err.code === 'ECONNABORTED') {
+    if (err.code === 'ECONNABORTED')
       return 'Request timeout. Please try again.';
-    }
     return 'Network error. Please check your connection and try again.';
   }
 
-  // HTTP errors (response received with error status)
   const status = err.response.status;
   const responseData = err.response.data as ApiErrorResponse;
+  const backendMsg = extractBackendMessage(responseData);
 
-  // Handle different HTTP status codes with specific messages
+  if (backendMsg) return backendMsg;
+
   switch (status) {
     case 400:
-      return (
-        responseData?.message || 'Invalid request. Please check your input.'
-      );
+      return 'Invalid request. Please check your input.';
     case 401:
       return 'Session expired. Please log in again.';
     case 403:
@@ -178,12 +173,7 @@ const getAxiosErrorMessage = (err: AxiosError): string => {
     case 409:
       return 'Conflict occurred. This resource already exists.';
     case 422:
-      if (responseData?.errors?.length) {
-        return responseData.errors.map((e) => e.message).join(', ');
-      }
-      return (
-        responseData?.message || 'Validation failed. Please check your input.'
-      );
+      return 'Validation failed. Please check your input.';
     case 429:
       return 'Too many requests. Please try again later.';
     case 500:
@@ -191,11 +181,10 @@ const getAxiosErrorMessage = (err: AxiosError): string => {
     case 503:
       return 'Service temporarily unavailable. Please try again later.';
     default:
-      return responseData?.message || responseData?.error || `Error: ${status}`;
+      return `Error: ${status}`;
   }
 };
 
-// Utility to create specific error types
 export const createApiError = (
   message: string,
   statusCode?: number,
@@ -215,7 +204,6 @@ export const createNetworkError = (message?: string): NetworkError => {
   return new NetworkError(message);
 };
 
-// Hook-style function for consistent error handling in components
 export const useErrorHandler = () => {
   return {
     getErrorMessage,
@@ -228,18 +216,3 @@ export const useErrorHandler = () => {
     createNetworkError,
   };
 };
-
-// Example usage in components:
-/*
-const { getErrorMessage, isNetworkError } = useErrorHandler();
-
-try {
-  // API call
-} catch (error) {
-  const message = getErrorMessage(error);
-  if (isNetworkError(error)) {
-    // Show offline UI
-  }
-  // Show error message to user
-}
-*/
