@@ -78,9 +78,6 @@ export const Post: React.FC<PostProps> = ({
   const [isLiked, setIsLiked] = useState(
     (post.Vote || []).some((vote) => vote.type === VoteType.UPVOTE)
   );
-
-  console.log(post.Vote);
-
   const [likeCount, setLikeCount] = useState(post?._count?.Vote || 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);

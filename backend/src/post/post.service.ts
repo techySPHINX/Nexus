@@ -287,6 +287,12 @@ export class PostService {
               },
             },
           },
+          Vote: userId
+            ? {
+                where: { userId, targetType: VoteTargetType.POST },
+                select: { id: true, type: true },
+              }
+            : false,
           _count: {
             select: {
               Vote: true,
