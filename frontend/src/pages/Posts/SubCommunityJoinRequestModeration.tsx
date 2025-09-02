@@ -303,14 +303,14 @@ const JoinRequestCard: React.FC<{
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
           <Avatar sx={{ width: 48, height: 48 }}>
-            {request.user.name.charAt(0).toUpperCase()}
+            {/* {request.user.name.charAt(0).toUpperCase()} */}
           </Avatar>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6" component="h3">
-              {request.user.name}
+              {/* {request.user.name} */}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {request.user.email}
+              {/* {request.user.email} */}
             </Typography>
           </Box>
           {getStatusChip(request.status)}

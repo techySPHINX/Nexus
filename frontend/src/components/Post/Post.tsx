@@ -76,14 +76,12 @@ export const Post: React.FC<PostProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(post?.content || '');
   const [isLiked, setIsLiked] = useState(
-    post.Vote?.some(
-      (vote) => vote.userId === user?.id && vote.type === 'UPVOTE'
-    ) || false
+    (post.Vote || []).some((vote) => vote.type === VoteType.UPVOTE)
   );
 
-  const [likeCount, setLikeCount] = useState(
-    post.Vote?.length || post?._count?.Vote || 0
-  );
+  console.log(post.Vote);
+
+  const [likeCount, setLikeCount] = useState(post?._count?.Vote || 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | undefined>(

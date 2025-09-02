@@ -116,10 +116,12 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
       type?: string
     ) => {
       try {
-        if (user?.role !== 'ADMIN' && user?.role !== 'ALUM') {
-          throw new Error(
-            'Unauthorized: Only admins and alumni can perform this action'
-          );
+        if (!subCommunityId) {
+          if (user?.role !== 'ADMIN' && user?.role !== 'ALUM') {
+            throw new Error(
+              'Unauthorized: Only admins and alumni can perform this action'
+            );
+          }
         }
         setLoading(true);
         clearError();

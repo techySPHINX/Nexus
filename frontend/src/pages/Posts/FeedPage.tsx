@@ -57,7 +57,7 @@ export const FeedPage: React.FC = () => {
 
   const handleCreatePostSuccess = useCallback(() => {
     setOpenForm(false);
-    showSnackbar('Post created successfully!', 'success');
+    showSnackbar('Post created successfully and sent for approval!', 'success');
     getFeed(1);
   }, [getFeed, showSnackbar]);
 

@@ -56,7 +56,7 @@ export interface Comment {
     };
   };
   replies?: Comment[];
-  Vote?: Vote[];
+  votes?: Vote[];
 }
 
 export interface Vote {

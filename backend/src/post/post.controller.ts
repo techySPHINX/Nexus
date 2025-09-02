@@ -57,7 +57,6 @@ export class PostController {
    * @returns A promise that resolves to the created post.
    */
   @Post()
-  @Roles(Role.ALUM, Role.ADMIN)
   @ApiOperation({ summary: 'Create a post for the current user' })
   @ApiBody({ type: CreatePostDto })
   @ApiResponse({ status: 201, description: 'Post created successfully.' })

@@ -225,22 +225,26 @@ export class EngagementService {
             select: {
               id: true,
               email: true,
+              name: true, // Make sure to include name
               profile: {
                 select: { avatarUrl: true },
               },
             },
           },
+          votes: true, // Add this line to include votes
           replies: {
             include: {
               user: {
                 select: {
                   id: true,
                   email: true,
+                  name: true, // Make sure to include name
                   profile: {
                     select: { avatarUrl: true },
                   },
                 },
               },
+              votes: true, // Add this for replies too
               // Include nested replies up to a certain depth (e.g., 3 levels)
               replies: {
                 include: {
@@ -248,22 +252,26 @@ export class EngagementService {
                     select: {
                       id: true,
                       email: true,
+                      name: true, // Make sure to include name
                       profile: {
                         select: { avatarUrl: true },
                       },
                     },
                   },
+                  votes: true, // Add this for nested replies
                   replies: {
                     include: {
                       user: {
                         select: {
                           id: true,
                           email: true,
+                          name: true, // Make sure to include name
                           profile: {
                             select: { avatarUrl: true },
                           },
                         },
                       },
+                      votes: true, // Add this for deeply nested replies
                     },
                   },
                 },
