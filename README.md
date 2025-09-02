@@ -155,28 +155,76 @@ When you commit changes, the following will happen:
 
 This ensures that all code is formatted correctly and that commit messages are consistent and readable.
 
+
 ## Project Structure
 
 ```
 Nexus/
-├── backend/              # NestJS backend
-│   ├── src/              # Backend source code
-│   │   ├── auth/         # Authentication module
-│   │   ├── user/         # User management
-│   │   ├── connection/   # Connection handling
-│   │   ├── messaging/    # Messaging system
-│   │   ├── prisma/       # Database service
-│   │   └── common/       # Shared utilities
-│   ├── prisma/           # Database schema
-│   └── test/             # Backend tests
-├── frontend/             # React frontend
+├── backend/                  # NestJS backend
+│   ├── src/                  # Backend source code
+│   │   ├── auth/             # Authentication module (JWT, guards, DTOs)
+│   │   ├── user/             # User management
+│   │   ├── connection/       # Connection handling
+│   │   ├── messaging/        # Messaging system (real-time, gateway)
+│   │   ├── engagement/       # Engagement features
+│   │   ├── events/           # Event management
+│   │   ├── gamification/     # Gamification logic
+│   │   ├── referral/         # Referral system
+│   │   ├── showcase/         # Showcases/portfolios
+│   │   ├── sub-community/    # Sub-community logic
+│   │   ├── sub-community-request/ # Sub-community requests
+│   │   ├── email/            # Email integration
+│   │   ├── files/            # File uploads, Google Drive integration
+│   │   ├── notification/     # Notifications
+│   │   ├── prisma/           # Prisma service
+│   │   ├── common/           # Shared decorators, guards, utils
+│   │   └── app.module.ts     # Main app module
+│   ├── prisma/               # Database schema (schema.prisma)
+│   ├── data/                 # Seed scripts
+│   ├── test/                 # Backend tests
+│   └── uploads/              # Uploaded files
+├── frontend/                 # React frontend
 │   ├── src/
-│   │   ├── components/   # Reusable components
-│   │   ├── pages/        # Page components
-│   │   ├── contexts/     # React contexts
-│   │   └── App.tsx       # Main app component
-└── README.md             # This file
+│   │   ├── components/       # Reusable components
+│   │   ├── pages/            # Page components
+│   │   ├── contexts/         # React contexts (auth, user, etc.)
+│   │   ├── hooks/            # Custom hooks
+│   │   ├── route/            # Routing logic
+│   │   ├── services/         # API services (Axios)
+│   │   ├── types/            # TypeScript types
+│   │   ├── utils/            # Utility functions
+│   │   └── App.tsx           # Main app component
+│   ├── public/               # Static assets
+│   └── index.html            # HTML entry point
+├── .github/                  # GitHub workflows & Copilot instructions
+└── README.md                 # This file
 ```
+
+### Backend Conventions
+- Modular NestJS structure: each domain in its own folder
+- DTOs for request/response validation (`src/*/dto/`)
+- Role-based guards and decorators in `src/common/`
+- Service/controller separation
+- Prisma ORM for database access
+- JWT authentication, role-based access
+
+### Frontend Conventions
+- React functional components, hooks, and context
+- Material-UI for design, Framer Motion for animation
+- API calls via `services/`, types in `types/`
+- Role-based UI logic (Student, Alumni, Admin)
+
+### Integration
+- API base URL: `http://localhost:3000` (backend), `http://localhost:3001` (frontend)
+- JWT sent in `Authorization` header for protected endpoints
+- File uploads handled via backend `/files` endpoints, stored in `uploads/`
+
+### References
+- See `.github/copilot-instructions.md` for code conventions and architecture
+- Backend: `backend/README.md`
+- Frontend: `frontend/README.md`
+- DB schema: `backend/prisma/schema.prisma`
+
 
 ## Security Features
 
@@ -184,8 +232,8 @@ Nexus/
 - **Password Hashing:** Bcrypt for password security
 - **Domain Validation:** Email domain restriction (@kiit.ac.in)
 - **CORS Protection:** Cross-origin request handling
-- **Input Validation:** Comprehensive request validation
-- **Role-based Access:** Granular permission control
+- **Input Validation:** DTO-based request validation
+- **Role-based Access:** Granular permission control via guards
 
 ## Contributing
 
