@@ -5,7 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { PostStatus, VoteType, VoteTargetType } from '@prisma/client';
+import { PostStatus, Role, VoteTargetType, VoteType } from '@prisma/client';
 
 /**
  * Service for managing posts, including creation, retrieval, updates, and moderation.
@@ -477,7 +477,17 @@ export class PostService {
       throw new NotFoundException('Post not found');
     }
 
-    if (post.authorId !== userId) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isAdmin = user.role === Role.ADMIN;
+
+    if (post.authorId !== userId && !isAdmin) {
       throw new ForbiddenException('You can only update your own posts');
     }
 
@@ -508,16 +518,23 @@ export class PostService {
       }
     }
 
+    const dataToUpdate: any = {
+      ...(dto.content && { content: dto.content.trim() }),
+      ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
+      ...(dto.type && { type: dto.type }),
+      ...(dto.subCommunityId !== undefined && {
+        subCommunityId: dto.subCommunityId,
+      }),
+    };
+
+    if (isAdmin) {
+      dataToUpdate.status = PostStatus.PENDING;
+      dataToUpdate.isUrgent = true;
+    }
+
     return this.prisma.post.update({
       where: { id },
-      data: {
-        ...(dto.content && { content: dto.content.trim() }),
-        ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
-        ...(dto.type && { type: dto.type }),
-        ...(dto.subCommunityId !== undefined && {
-          subCommunityId: dto.subCommunityId,
-        }),
-      },
+      data: dataToUpdate,
       include: {
         author: {
           select: {
@@ -557,7 +574,17 @@ export class PostService {
       throw new NotFoundException('Post not found');
     }
 
-    if (post.authorId !== userId) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isAdmin = user.role === Role.ADMIN;
+
+    if (post.authorId !== userId && !isAdmin) {
       throw new ForbiddenException('You can only delete your own posts');
     }
 
@@ -707,7 +734,7 @@ export class PostService {
         where: { status: PostStatus.PENDING },
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ isUrgent: 'desc' }, { createdAt: 'desc' }],
         include: {
           author: {
             select: {
