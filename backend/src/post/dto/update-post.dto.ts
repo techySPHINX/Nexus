@@ -10,6 +10,15 @@ export class UpdatePostDto {
    */
   @IsOptional()
   @IsString()
+  @MaxLength(200, { message: 'Post subject cannot exceed 200 characters.' })
+  subject?: string;
+
+  /**
+   * Optional. The updated content of the post.
+   * @example "Updated content for my project!"
+   */
+  @IsOptional()
+  @IsString()
   @MaxLength(2000, { message: 'Post content cannot exceed 2000 characters.' })
   content?: string;
 
