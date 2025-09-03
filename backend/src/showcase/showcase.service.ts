@@ -13,11 +13,13 @@ import { UpdateStartupDto } from './dto/update-startup.dto';
 import { marked } from 'marked';
 import { CreateProjectUpdateDto } from './dto/create-project-update.dto';
 
+import { NotificationService } from '../notification/notification.service';
+
 @Injectable()
 export class ShowcaseService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly notificationService: NotificationService,
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
   ) {}
 
   async createProject(userId: string, createProjectDto: CreateProjectDto) {
@@ -428,13 +430,36 @@ export class ShowcaseService {
       throw new Error('Project not found');
     }
 
+    const mentionedUsernames =
+      createCommentDto.comment
+        .match(/@(\w+)/g)
+        ?.map((mention) => mention.substring(1)) || [];
+    const mentionedUsers = await this.prisma.user.findMany({
+      where: { name: { in: mentionedUsernames } },
+    });
+
     const comment = await this.prisma.projectComment.create({
       data: {
         userId,
         projectId,
-        ...createCommentDto,
+        comment: createCommentDto.comment,
+        mentionedUsers: {
+          connect: mentionedUsers.map((user) => ({ id: user.id })),
+        },
       },
     });
+
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    for (const user of mentionedUsers) {
+      await this.notificationService.createMentionNotification(
+        user.id,
+        currentUser.name,
+        project.id,
+      );
+    }
 
     await this.notificationService.create({
       userId: project.ownerId,

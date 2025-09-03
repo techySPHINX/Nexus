@@ -37,13 +37,16 @@ export class SubCommunityController {
   }
 
   @Get()
-  async findAll() {
-    return this.subCommunityService.findAllSubCommunities();
+  async findAll(@GetCurrentUser('userId') userId: string) {
+    return this.subCommunityService.findAllSubCommunities(userId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.subCommunityService.findOneSubCommunity(id);
+  async findOne(
+    @Param('id') id: string,
+    @GetCurrentUser('userId') userId: string,
+  ) {
+    return this.subCommunityService.findOneSubCommunity(id, userId);
   }
 
   @Get('type/:type')
