@@ -19,6 +19,7 @@ import { SubCommunityRequestModule } from './sub-community-request/sub-community
 import { GamificationModule } from './gamification/gamification.module';
 import { ReportModule } from './report/report.module';
 import { EventsModule } from './events/events.module';
+import { ShowcaseModule } from './showcase/showcase.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { EventsModule } from './events/events.module';
     GamificationModule,
     ReportModule,
     EventsModule,
+    ShowcaseModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -55,6 +55,8 @@ model User {
   reportsMade                           ContentReport[]               @relation("ReportsMade")
   reportsHandled                        ContentReport[]               @relation("ReportsHandled")
   events                                Event[]
+  startups                              Startup[]
+  projectUpdates                        ProjectUpdate[]
 
   @@map("users")
 }
@@ -77,8 +79,43 @@ model Project {
   supporters            ProjectSupport[]
   teamMembers           ProjectTeamMember[]
   owner                 User                          @relation(fields: [ownerId], references: [id])
+  skills                String[]
+  status                ProjectStatus                 @default(IDEA)
+  seeking               String[]
+  updates               ProjectUpdate[]
 
   @@map("projects")
+}
+
+model Startup {
+  id                String   @id @default(uuid())
+  name              String
+  description       String
+  imageUrl          String
+  websiteUrl        String
+  founderId         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  founder           User     @relation(fields: [founderId], references: [id])
+  status            StartupStatus @default(IDEA)
+  fundingGoal       Float?
+  fundingRaised     Float?
+  monetizationModel String?
+
+  @@map("startups")
+}
+
+model ProjectUpdate {
+  id          String   @id @default(uuid())
+  projectId   String
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  project     Project  @relation(fields: [projectId], references: [id])
+  author      User     @relation(fields: [authorId], references: [id])
+  authorId    String
+
+  @@map("project_updates")
 }
 
 model ProjectTeamMember {
@@ -600,6 +637,19 @@ model Event {
   location         String?
 
   @@map("events")
+}
+
+enum ProjectStatus {
+  IDEA
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum StartupStatus {
+  IDEA
+  PROTOTYPING
+  BETA
+  LAUNCHED
 }
 
 enum ProjectRole {
