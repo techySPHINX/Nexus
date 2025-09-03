@@ -78,9 +78,6 @@ export const Post: React.FC<PostProps> = ({
   const [isLiked, setIsLiked] = useState(
     (post.Vote || []).some((vote) => vote.type === VoteType.UPVOTE)
   );
-
-  console.log(post.Vote);
-
   const [likeCount, setLikeCount] = useState(post?._count?.Vote || 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -303,7 +300,7 @@ export const Post: React.FC<PostProps> = ({
                 open={Boolean(anchorEl)}
                 onClose={handleMenuClose}
               >
-                {isAuthor && (
+                {(isAuthor || isAdmin) && (
                   <>
                     <MenuItem onClick={handleEdit}>
                       <Edit sx={{ mr: 1 }} /> Edit
@@ -406,24 +403,42 @@ export const Post: React.FC<PostProps> = ({
           </>
         ) : (
           <>
-            <Box onClick={handleContentClick} sx={{ cursor: 'pointer' }}>
+            <Box
+              onClick={
+                window.location.pathname !== `/posts/${post.id}`
+                  ? handleContentClick
+                  : undefined
+              }
+              sx={{
+                ...(window.location.pathname !== `/posts/${post.id}`
+                  ? { cursor: 'pointer' }
+                  : { cursor: 'default' }), // disables pointer when on post page
+              }}
+            >
               <Typography
                 variant="body1"
                 sx={{
                   mb: 2,
-                  '&:hover': {
-                    color: 'primary.main',
-                  },
+                  whitespace: 'pre-line', // for preserving line breaks
                   // Conditionally apply truncation
                   ...(window.location.pathname !== `/posts/${post.id}` && {
                     display: '-webkit-box',
                     WebkitLineClamp: 3,
                     WebkitBoxOrient: 'vertical',
                     overflow: 'hidden',
+                    '&:hover': {
+                      color: 'primary.main',
+                    },
                   }),
                 }}
               >
-                {post.content}
+                {/* for preserving line breaks */}
+                {post.content.split('\n').map((line, idx) => (
+                  <span key={idx}>
+                    {line}
+                    <br />
+                  </span>
+                ))}
               </Typography>
               {post.imageUrl && <PostImage imageUrl={post.imageUrl} />}
             </Box>

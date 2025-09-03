@@ -319,13 +319,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
 
         setUserPosts((prev) => {
           const newPosts = page === 1 ? posts : [...prev, ...posts];
-          console.log('User posts updated:', newPosts); // Log here
           return newPosts;
         });
 
         setPagination(paginationData);
         setLoading(false);
-        console.log('response posts data:', response);
 
         return response;
       } catch (err) {
@@ -358,7 +356,6 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         clearError();
         const data = await getPostByIdService(id);
         setCurrentPost(data);
-        console.log('data', data);
         setLoading(false);
         return data;
       } catch (err) {

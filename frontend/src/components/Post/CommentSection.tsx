@@ -641,7 +641,13 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                       color="text.primary"
                       sx={{ display: 'block', mb: 0.5, lineHeight: 1.4 }}
                     >
-                      {comment.content}
+                      {/* for preserving line breaks */}
+                      {comment.content.split('\n').map((line, idx) => (
+                        <span key={idx}>
+                          {line}
+                          <br />
+                        </span>
+                      ))}
                     </Typography>
                     {renderCommentActions(comment)}
                   </>
