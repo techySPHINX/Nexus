@@ -293,6 +293,7 @@ model Notification {
 model Post {
   id             String          @id @default(uuid())
   authorId       String
+  subject        String
   content        String
   flairId        String?
   flair          Flair?          @relation(fields: [flairId], references: [id])

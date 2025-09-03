@@ -10,6 +10,15 @@ export class CreatePostDto {
    */
   @IsString()
   @IsNotEmpty()
+  @MaxLength(200, { message: 'Post subject cannot exceed 200 characters.' })
+  subject: string;
+
+  /**
+   * The main content of the post.
+   * @example "Excited to share my new project!"
+   */
+  @IsString()
+  @IsNotEmpty()
   @MaxLength(2000, { message: 'Post content cannot exceed 2000 characters.' })
   content: string;
 

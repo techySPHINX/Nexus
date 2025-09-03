@@ -188,16 +188,17 @@ export class SubCommunityService {
       );
     }
 
+    const dataToUpdate: any = {};
+    if (dto.name) dataToUpdate.name = dto.name;
+    if (dto.description) dataToUpdate.description = dto.description;
+    if (dto.isPrivate !== undefined) dataToUpdate.isPrivate = dto.isPrivate;
+    if (dto.ownerId) dataToUpdate.ownerId = dto.ownerId;
+    if (dto.iconUrl) dataToUpdate.iconUrl = dto.iconUrl;
+    if (dto.bannerUrl) dataToUpdate.bannerUrl = dto.bannerUrl;
+
     return this.prisma.subCommunity.update({
       where: { id },
-      data: {
-        name: dto.name,
-        description: dto.description,
-        isPrivate: dto.isPrivate,
-        ownerId: dto.ownerId,
-        iconUrl: dto.iconUrl,
-        bannerUrl: dto.bannerUrl,
-      },
+      data: dataToUpdate,
     });
   }
 

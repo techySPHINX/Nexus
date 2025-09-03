@@ -26,6 +26,7 @@ export class PostService {
   async create(
     userId: string,
     dto: {
+      subject: string;
       content: string;
       imageUrl?: string;
       type?: string;
@@ -50,6 +51,16 @@ export class PostService {
       );
     }
 
+    if (!dto.subject || dto.subject.trim().length === 0) {
+      throw new BadRequestException('Post subject cannot be empty');
+    }
+
+    if (dto.subject.length > 200) {
+      throw new BadRequestException(
+        'Post subject too long (max 200 characters)',
+      );
+    }
+
     // If subCommunityId is provided, check if the user is a member of that sub-community
     if (dto.subCommunityId) {
       const member = await this.prisma.subCommunityMember.findFirst({
@@ -69,6 +80,7 @@ export class PostService {
 
     return this.prisma.post.create({
       data: {
+        subject: dto.subject.trim(),
         content: dto.content.trim(),
         imageUrl: dto.imageUrl,
         type: dto.type || 'UPDATE',
@@ -462,6 +474,7 @@ export class PostService {
     id: string,
     userId: string,
     dto: {
+      subject?: string;
       content?: string;
       imageUrl?: string;
       type?: string;
@@ -518,7 +531,20 @@ export class PostService {
       }
     }
 
+    if (dto.subject !== undefined) {
+      if (!dto.subject || dto.subject.trim().length === 0) {
+        throw new BadRequestException('Post subject cannot be empty');
+      }
+
+      if (dto.subject.length > 200) {
+        throw new BadRequestException(
+          'Post subject too long (max 200 characters)',
+        );
+      }
+    }
+
     const dataToUpdate: any = {
+      ...(dto.subject && { subject: dto.subject.trim() }),
       ...(dto.content && { content: dto.content.trim() }),
       ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
       ...(dto.type && { type: dto.type }),
