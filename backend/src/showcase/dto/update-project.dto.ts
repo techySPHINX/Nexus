@@ -1,32 +1,39 @@
-import { IsArray, IsOptional, IsString, IsUrl } from 'class-validator';
+import { IsString, IsOptional, IsUrl, IsArray, IsEnum } from 'class-validator';
+import { ProjectStatus } from '@prisma/client';
 
 export class UpdateProjectDto {
-  @IsString()
   @IsOptional()
+  @IsString()
   title?: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   description?: string;
 
-  @IsUrl()
   @IsOptional()
-  githubUrl?: string;
-
   @IsUrl()
-  @IsOptional()
-  websiteUrl?: string;
-
-  @IsUrl()
-  @IsOptional()
   imageUrl?: string;
 
-  @IsUrl()
   @IsOptional()
-  videoUrl?: string;
+  @IsUrl()
+  projectUrl?: string;
 
+  @IsOptional()
   @IsArray()
   @IsString({ each: true })
+  skills?: string[];
+
   @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional()
+  @IsEnum(ProjectStatus)
+  status?: ProjectStatus;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  seeking?: string[];
 }

@@ -19,13 +19,16 @@ import { GetCurrentUser } from '../common/decorators/get-current-user.decorator'
 import { FilterProjectDto } from './dto/filter-project.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
+import { CreateStartupDto } from './dto/create-startup.dto';
+import { UpdateStartupDto } from './dto/update-startup.dto';
+import { CreateProjectUpdateDto } from './dto/create-project-update.dto';
 
 @Controller('showcase')
 @UseGuards(JwtAuthGuard)
 export class ShowcaseController {
   constructor(private readonly showcaseService: ShowcaseService) {}
 
-  @Post()
+  @Post('project')
   createProject(
     @GetCurrentUser('sub') userId: string,
     @Body() createProjectDto: CreateProjectDto,
@@ -33,7 +36,7 @@ export class ShowcaseController {
     return this.showcaseService.createProject(userId, createProjectDto);
   }
 
-  @Put(':id')
+  @Put('project/:id')
   updateProject(
     @GetCurrentUser('sub') userId: string,
     @Param('id') projectId: string,
@@ -46,7 +49,7 @@ export class ShowcaseController {
     );
   }
 
-  @Delete(':id')
+  @Delete('project/:id')
   deleteProject(
     @GetCurrentUser('sub') userId: string,
     @Param('id') projectId: string,
@@ -54,14 +57,74 @@ export class ShowcaseController {
     return this.showcaseService.deleteProject(userId, projectId);
   }
 
-  @Get()
-  getProjects(@Query() filterProjectDto: FilterProjectDto) {
-    return this.showcaseService.getProjects(filterProjectDto);
+  @Get('project')
+  getProjects(
+    @GetCurrentUser('sub') userId: string,
+    @Query() filterProjectDto: FilterProjectDto,
+  ) {
+    return this.showcaseService.getProjects(userId, filterProjectDto);
   }
 
-  @Get(':id')
+  @Get('project/:id')
   getProjectById(@Param('id') projectId: string) {
     return this.showcaseService.getProjectById(projectId);
+  }
+
+  @Post('project/:id/update')
+  createProjectUpdate(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') projectId: string,
+    @Body() createProjectUpdateDto: CreateProjectUpdateDto,
+  ) {
+    return this.showcaseService.createProjectUpdate(
+      userId,
+      projectId,
+      createProjectUpdateDto,
+    );
+  }
+
+  @Get('project/:id/updates')
+  getProjectUpdates(@Param('id') projectId: string) {
+    return this.showcaseService.getProjectUpdates(projectId);
+  }
+
+  @Post('startup')
+  createStartup(
+    @GetCurrentUser('sub') userId: string,
+    @Body() createStartupDto: CreateStartupDto,
+  ) {
+    return this.showcaseService.createStartup(userId, createStartupDto);
+  }
+
+  @Put('startup/:id')
+  updateStartup(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') startupId: string,
+    @Body() updateStartupDto: UpdateStartupDto,
+  ) {
+    return this.showcaseService.updateStartup(
+      userId,
+      startupId,
+      updateStartupDto,
+    );
+  }
+
+  @Delete('startup/:id')
+  deleteStartup(
+    @GetCurrentUser('sub') userId: string,
+    @Param('id') startupId: string,
+  ) {
+    return this.showcaseService.deleteStartup(userId, startupId);
+  }
+
+  @Get('startup')
+  getStartups() {
+    return this.showcaseService.getStartups();
+  }
+
+  @Get('startup/:id')
+  getStartupById(@Param('id') startupId: string) {
+    return this.showcaseService.getStartupById(startupId);
   }
 
   @Post(':id/support')
