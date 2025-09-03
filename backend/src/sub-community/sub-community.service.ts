@@ -76,8 +76,13 @@ export class SubCommunityService {
     return subCommunity;
   }
 
-  async findAllSubCommunities() {
+  async findAllSubCommunities(userId?: string) {
+    const where: Prisma.SubCommunityWhereInput = {
+      OR: [{ isPrivate: false }, { members: { some: { userId } } }],
+    };
+
     return this.prisma.subCommunity.findMany({
+      where,
       include: {
         owner: { select: { id: true, name: true } },
         _count: {
@@ -87,7 +92,7 @@ export class SubCommunityService {
     });
   }
 
-  async findOneSubCommunity(id: string) {
+  async findOneSubCommunity(id: string, userId?: string) {
     const subCommunity = await this.prisma.subCommunity.findUnique({
       where: { id },
       include: {
@@ -109,9 +114,23 @@ export class SubCommunityService {
         },
       },
     });
+
     if (!subCommunity) {
       throw new NotFoundException('Sub-community not found.');
     }
+
+    if (subCommunity.isPrivate) {
+      const isMember = await this.prisma.subCommunityMember.findFirst({
+        where: { subCommunityId: id, userId },
+      });
+
+      if (!isMember) {
+        throw new ForbiddenException(
+          'You do not have permission to view this sub-community.',
+        );
+      }
+    }
+
     return subCommunity;
   }
 
@@ -362,29 +381,39 @@ export class SubCommunityService {
       );
     }
 
-    console.log('User id ', userId, 'communityID ', subCommunityId);
+    if (!subCommunity.isPrivate) {
+      // If public, add member directly
+      await this.prisma.subCommunityMember.create({
+        data: {
+          userId: userId,
+          subCommunityId: subCommunityId,
+          role: 'MEMBER',
+        },
+      });
+      return { message: 'Successfully joined sub-community.' };
+    } else {
+      // If private, create a join request
+      const existingJoinRequest = await this.prisma.joinRequest.findFirst({
+        where: {
+          userId: userId,
+          subCommunityId: subCommunityId,
+          status: 'PENDING',
+        },
+      });
+      if (existingJoinRequest) {
+        throw new BadRequestException(
+          'You already have a pending join request for this sub-community.',
+        );
+      }
 
-    const existingJoinRequest = await this.prisma.joinRequest.findFirst({
-      where: {
-        userId: userId,
-        subCommunityId: subCommunityId,
-        status: 'PENDING',
-      },
-    });
-    if (existingJoinRequest) {
-      throw new BadRequestException(
-        'You already have a pending join request for this sub-community.',
-      );
+      return this.prisma.joinRequest.create({
+        data: {
+          userId: userId,
+          subCommunityId: subCommunityId,
+          status: 'PENDING',
+        },
+      });
     }
-
-    // Always create a PENDING join request, regardless of subCommunity.isPrivate
-    return this.prisma.joinRequest.create({
-      data: {
-        userId: userId,
-        subCommunityId: subCommunityId,
-        status: 'PENDING',
-      },
-    });
   }
 
   async getPendingJoinRequests(subCommunityId: string, userId: string) {

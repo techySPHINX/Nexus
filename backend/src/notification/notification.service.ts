@@ -17,6 +17,7 @@ export enum NotificationType {
   POST_VOTE = 'POST_VOTE',
   COMMENT_VOTE = 'COMMENT_VOTE',
   POST_COMMENT = 'POST_COMMENT',
+  COMMENT_MENTION = 'COMMENT_MENTION',
   MESSAGE = 'MESSAGE',
   SYSTEM = 'SYSTEM',
   EVENT = 'EVENT',
@@ -475,6 +476,28 @@ export class NotificationService {
       userId: postAuthorId,
       message: `${commenterName} commented on your post: "${truncatedContent}"`,
       type: NotificationType.POST_COMMENT,
+    });
+  }
+
+  async createMentionNotification(
+    mentionedUserId: string,
+    commenterName: string,
+    postId: string,
+  ) {
+    const post = await this.prisma.post.findUnique({ where: { id: postId } });
+    if (!post) {
+      return;
+    }
+
+    const truncatedContent =
+      post.content.length > 50
+        ? post.content.substring(0, 50) + '...'
+        : post.content;
+
+    return this.create({
+      userId: mentionedUserId,
+      message: `${commenterName} mentioned you in a comment on the post: "${truncatedContent}"`,
+      type: NotificationType.COMMENT_MENTION,
     });
   }
 

@@ -57,6 +57,7 @@ model User {
   events                                Event[]
   startups                              Startup[]
   projectUpdates                        ProjectUpdate[]
+  mentionedIn                           Comment[]                     @relation("mentionedUsers")
 
   @@map("users")
 }
@@ -341,6 +342,7 @@ model Comment {
   replies   Comment[]       @relation("CommentReplies")
   votes     Vote[]
   reports   ContentReport[]
+  mentionedUsers User[]       @relation("mentionedUsers")
 
   @@map("comment")
 }

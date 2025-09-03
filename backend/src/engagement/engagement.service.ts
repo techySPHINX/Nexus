@@ -7,12 +7,17 @@ import {
 import { VoteTargetType, VoteType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
 
+import { NotificationService } from '../notification/notification.service';
+
 /**
  * Service for managing user engagement with posts, including likes and comments.
  */
 @Injectable()
 export class EngagementService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private notificationService: NotificationService,
+  ) {}
 
   /**
    * Allows a user to vote on a specific post.
@@ -183,14 +188,37 @@ export class EngagementService {
       }
     }
 
-    return this.prisma.comment.create({
+    const mentionedUsernames =
+      content.match(/@(\w+)/g)?.map((mention) => mention.substring(1)) || [];
+    const mentionedUsers = await this.prisma.user.findMany({
+      where: { name: { in: mentionedUsernames } },
+    });
+
+    const newComment = await this.prisma.comment.create({
       data: {
         userId,
         postId,
         content: content.trim(),
         parentId,
+        mentionedUsers: {
+          connect: mentionedUsers.map((user) => ({ id: user.id })),
+        },
       },
     });
+
+    const currentUser = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    for (const user of mentionedUsers) {
+      await this.notificationService.createMentionNotification(
+        user.id,
+        currentUser.name,
+        post.id,
+      );
+    }
+
+    return newComment;
   }
 
   /**
