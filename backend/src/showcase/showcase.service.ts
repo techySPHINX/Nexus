@@ -8,6 +8,10 @@ import { FilterProjectDto } from './dto/filter-project.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { NotificationService } from '../notification/notification.service';
+import { CreateStartupDto } from './dto/create-startup.dto';
+import { UpdateStartupDto } from './dto/update-startup.dto';
+import { marked } from 'marked';
+import { CreateProjectUpdateDto } from './dto/create-project-update.dto';
 
 @Injectable()
 export class ShowcaseService {
@@ -17,10 +21,13 @@ export class ShowcaseService {
   ) {}
 
   async createProject(userId: string, createProjectDto: CreateProjectDto) {
+    const { description, ...rest } = createProjectDto;
+    const htmlDescription = marked.parse(description) as string;
     return this.prisma.project.create({
       data: {
         ownerId: userId,
-        ...createProjectDto,
+        description: htmlDescription,
+        ...rest,
       },
     });
   }
@@ -36,6 +43,13 @@ export class ShowcaseService {
     if (!project || project.ownerId !== userId) {
       throw new Error('Project not found or you are not the owner');
     }
+
+    if (updateProjectDto.description) {
+      updateProjectDto.description = marked.parse(
+        updateProjectDto.description,
+      ) as string;
+    }
+
     return this.prisma.project.update({
       where: { id: projectId },
       data: updateProjectDto,
@@ -52,14 +66,37 @@ export class ShowcaseService {
     return this.prisma.project.delete({ where: { id: projectId } });
   }
 
-  async getProjects(filterProjectDto: FilterProjectDto) {
-    const { tags, sortBy, search } = filterProjectDto;
+  async getProjects(userId: string, filterProjectDto: FilterProjectDto) {
+    const { tags, sortBy, search, personalize, status, seeking } =
+      filterProjectDto;
     const where: any = {};
     let orderBy: any = {};
+
+    if (personalize) {
+      const userProfile = await this.prisma.profile.findUnique({
+        where: { userId },
+        include: { skills: true },
+      });
+      if (userProfile && userProfile.skills.length > 0) {
+        where.skills = {
+          hasSome: userProfile.skills.map((s) => s.name),
+        };
+      }
+    }
 
     if (tags) {
       where.tags = {
         hasSome: tags,
+      };
+    }
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (seeking) {
+      where.seeking = {
+        hasSome: seeking,
       };
     }
 
@@ -92,6 +129,16 @@ export class ShowcaseService {
           _count: 'desc',
         },
       };
+    } else if (sortBy === 'comments') {
+      orderBy = {
+        comments: {
+          _count: 'desc',
+        },
+      };
+    } else if (sortBy === 'updatedAt') {
+      orderBy = {
+        updatedAt: 'desc',
+      };
     } else {
       orderBy = {
         createdAt: 'desc',
@@ -101,7 +148,12 @@ export class ShowcaseService {
     return this.prisma.project.findMany({
       where,
       orderBy,
-      include: { owner: true, supporters: true, followers: true },
+      include: {
+        owner: true,
+        supporters: true,
+        followers: true,
+        comments: true,
+      },
     });
   }
 
@@ -115,7 +167,111 @@ export class ShowcaseService {
         collaborationRequests: true,
         comments: true,
         teamMembers: true,
+        updates: true,
       },
+    });
+  }
+
+  async createProjectUpdate(
+    userId: string,
+    projectId: string,
+    createProjectUpdateDto: CreateProjectUpdateDto,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+    if (!project || project.ownerId !== userId) {
+      throw new Error('Project not found or you are not the owner');
+    }
+
+    const projectUpdate = await this.prisma.projectUpdate.create({
+      data: {
+        projectId,
+        authorId: userId,
+        ...createProjectUpdateDto,
+      },
+    });
+
+    const followers = await this.prisma.projectFollower.findMany({
+      where: { projectId },
+    });
+
+    for (const follower of followers) {
+      await this.notificationService.create({
+        userId: follower.userId,
+        message: `The project "${project.title}" has a new update: "${projectUpdate.title}"`,
+        type: 'PROJECT_UPDATE',
+      });
+    }
+
+    return projectUpdate;
+  }
+
+  async getProjectUpdates(projectId: string) {
+    return this.prisma.projectUpdate.findMany({
+      where: { projectId },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async createStartup(userId: string, createStartupDto: CreateStartupDto) {
+    const { description, ...rest } = createStartupDto;
+    const htmlDescription = marked.parse(description) as string;
+    return this.prisma.startup.create({
+      data: {
+        founderId: userId,
+        description: htmlDescription,
+        ...rest,
+      },
+    });
+  }
+
+  async updateStartup(
+    userId: string,
+    startupId: string,
+    updateStartupDto: UpdateStartupDto,
+  ) {
+    const startup = await this.prisma.startup.findUnique({
+      where: { id: startupId },
+    });
+    if (!startup || startup.founderId !== userId) {
+      throw new Error('Startup not found or you are not the founder');
+    }
+
+    if (updateStartupDto.description) {
+      updateStartupDto.description = marked.parse(
+        updateStartupDto.description,
+      ) as string;
+    }
+
+    return this.prisma.startup.update({
+      where: { id: startupId },
+      data: updateStartupDto,
+    });
+  }
+
+  async deleteStartup(userId: string, startupId: string) {
+    const startup = await this.prisma.startup.findUnique({
+      where: { id: startupId },
+    });
+    if (!startup || startup.founderId !== userId) {
+      throw new Error('Startup not found or you are not the founder');
+    }
+    return this.prisma.startup.delete({ where: { id: startupId } });
+  }
+
+  async getStartups() {
+    return this.prisma.startup.findMany({
+      include: { founder: true },
+    });
+  }
+
+  async getStartupById(startupId: string) {
+    return this.prisma.startup.findUnique({
+      where: { id: startupId },
+      include: { founder: true },
     });
   }
 
