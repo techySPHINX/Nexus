@@ -80,7 +80,9 @@ export class SubCommunityService {
     return this.prisma.subCommunity.findMany({
       include: {
         owner: { select: { id: true, name: true } },
-        _count: { select: { members: true, posts: true } },
+        _count: {
+          select: { members: true, posts: { where: { status: 'APPROVED' } } },
+        },
       },
     });
   }
@@ -132,7 +134,9 @@ export class SubCommunityService {
         take: limit,
         include: {
           owner: { select: { id: true, name: true } },
-          _count: { select: { members: true, posts: true } },
+          _count: {
+            select: { members: true, posts: { where: { status: 'APPROVED' } } },
+          },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -518,7 +522,7 @@ export class SubCommunityService {
     }
 
     const memberToUpdate = await this.prisma.subCommunityMember.findFirst({
-      where: { userId: memberId, subCommunityId: subCommunityId },
+      where: { id: memberId, subCommunityId: subCommunityId },
     });
 
     if (!memberToUpdate) {

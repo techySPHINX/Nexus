@@ -148,7 +148,6 @@ export async function getPostByUserIdService(
 export async function getPostByIdService(postId: string) {
   try {
     const { data } = await api.get(`/posts/${postId}`);
-    console.log('getPostByIdService data:', data);
     return data;
   } catch (err) {
     if (axios.isAxiosError(err)) {
