@@ -441,6 +441,9 @@ export class ShowcaseService {
         userId,
         projectId,
         comment: createCommentDto.comment,
+        // mentionedUsers: {
+        //   connect: mentionedUsers.map((user) => ({ id: user.id })),
+        // },
       },
     });
 
