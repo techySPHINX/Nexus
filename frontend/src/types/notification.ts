@@ -10,7 +10,7 @@ export enum NotificationCategory {
 export enum NotificationType {
   CONNECTION_REQUEST = 'CONNECTION_REQUEST',
   CONNECTION_ACCEPTED = 'CONNECTION_ACCEPTED',
-  POST_LIKE = 'POST_LIKE',
+  POST_VOTE = 'POST_VOTE',
   POST_COMMENT = 'POST_COMMENT',
   MESSAGE = 'MESSAGE',
   SYSTEM = 'SYSTEM',
@@ -22,7 +22,7 @@ export enum NotificationType {
 
 export const categoryToTypes: Record<string, string[]> = {
   CONNECTION: ['CONNECTION_REQUEST', 'CONNECTION_ACCEPTED'],
-  POST: ['POST_LIKE', 'POST_COMMENT'],
+  POST: ['POST_VOTE', 'POST_COMMENT'],
   MESSAGE: ['MESSAGE'],
   SYSTEM: ['SYSTEM'],
   EVENT: ['EVENT'],
@@ -40,4 +40,13 @@ export interface Notification {
   message: string;
   createdAt: Date;
   read: boolean;
+}
+
+export interface pagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }

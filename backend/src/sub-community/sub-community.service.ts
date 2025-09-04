@@ -14,6 +14,7 @@ import {
   SubCommunityRole,
   ReportStatus,
   ReportedContentType,
+  Prisma,
 } from '@prisma/client';
 
 @Injectable()

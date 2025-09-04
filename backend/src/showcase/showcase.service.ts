@@ -13,8 +13,6 @@ import { UpdateStartupDto } from './dto/update-startup.dto';
 import { marked } from 'marked';
 import { CreateProjectUpdateDto } from './dto/create-project-update.dto';
 
-import { NotificationService } from '../notification/notification.service';
-
 @Injectable()
 export class ShowcaseService {
   constructor(
@@ -443,9 +441,9 @@ export class ShowcaseService {
         userId,
         projectId,
         comment: createCommentDto.comment,
-        mentionedUsers: {
-          connect: mentionedUsers.map((user) => ({ id: user.id })),
-        },
+        // mentionedUsers: {
+        //   connect: mentionedUsers.map((user) => ({ id: user.id })),
+        // },
       },
     });
 
