@@ -1,8 +1,5 @@
 import { IsString, IsOptional, IsNotEmpty, MaxLength } from 'class-validator';
 
-/**
- * Data transfer object for creating a new post.
- */
 export class CreatePostDto {
   /**
    * The main content of the post.
@@ -14,8 +11,8 @@ export class CreatePostDto {
   subject: string;
 
   /**
-   * The main content of the post.
-   * @example "Excited to share my new project!"
+   * The main content of the post. Newline characters are preserved.
+   * @example "Excited to share my new project!\nThis is a new line."
    */
   @IsString()
   @IsNotEmpty()

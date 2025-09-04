@@ -1,8 +1,5 @@
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 
-/**
- * Data transfer object for updating an existing post.
- */
 export class UpdatePostDto {
   /**
    * Optional. The updated content of the post.
@@ -14,8 +11,8 @@ export class UpdatePostDto {
   subject?: string;
 
   /**
-   * Optional. The updated content of the post.
-   * @example "Updated content for my project!"
+   * Optional. The updated content of the post. Newline characters are preserved.
+   * @example "Updated content for my project!\nThis is a new line."
    */
   @IsOptional()
   @IsString()
