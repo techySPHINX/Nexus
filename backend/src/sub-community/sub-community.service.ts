@@ -14,6 +14,7 @@ import {
   SubCommunityRole,
   ReportStatus,
   ReportedContentType,
+  Prisma,
 } from '@prisma/client';
 
 @Injectable()
@@ -51,8 +52,6 @@ export class SubCommunityService {
     return subCommunity;
   }
 
-  // --- SubCommunity CRUD Operations ---
-
   async createSubCommunity(dto: CreateSubCommunityDto) {
     const subCommunity = await this.prisma.subCommunity.create({
       data: {
@@ -64,7 +63,6 @@ export class SubCommunityService {
       },
     });
 
-    // Add the creator as an OWNER member
     await this.prisma.subCommunityMember.create({
       data: {
         userId: dto.ownerId,
