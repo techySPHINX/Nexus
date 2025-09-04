@@ -447,6 +447,10 @@ export class ShowcaseService {
       },
     });
 
+    // Store mentioned user IDs in a separate table or handle mentions differently
+    // For now, we'll skip the mentionedUsers relationship update
+    // You may need to add a ProjectCommentMention model or update your schema
+
     const currentUser = await this.prisma.user.findUnique({
       where: { id: userId },
     });
