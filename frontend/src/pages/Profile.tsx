@@ -68,10 +68,10 @@ import { useParams } from 'react-router-dom';
 
 // Import the new components
 // import StartupsSection from '@/components/Profile/StartupsSection';
-import ReferralsSection from '@/components/Profile/ReferralsSection';
+// import ReferralsSection from '@/components/Profile/ReferralsSection';
 // import ProjectsSection from '@/components/Profile/ProjectsSection';
-import PointsSection from '@/components/Profile/PointsSection';
-import EventsSection from '@/components/Profile/EventsSection';
+// import PointsSection from '@/components/Profile/PointsSection';
+// import EventsSection from '@/components/Profile/EventsSection';
 // import { Post } from '@/components/Post/Post';
 import { getErrorMessage } from '@/utils/errorHandler';
 
@@ -721,7 +721,7 @@ const Profile: React.FC = () => {
               </Paper>
 
               {/* Additional Sections */}
-              {profile.user.postedReferrals &&
+              {/* {profile.user.postedReferrals &&
                 profile.user.postedReferrals.length > 0 && (
                   <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
                     <ReferralsSection
@@ -740,7 +740,7 @@ const Profile: React.FC = () => {
                 <Paper elevation={1} sx={{ p: 3 }}>
                   <EventsSection events={profile.user.events} />
                 </Paper>
-              )}
+              )} */}
             </Grid>
 
             {/* Right Column - Main Content */}
