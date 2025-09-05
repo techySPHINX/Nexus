@@ -40,6 +40,7 @@ import { SubCommunityBadge } from './SubCommunityBadge';
 import { Link, useNavigate } from 'react-router-dom';
 import { Post as PostType } from '@/types/post';
 import { VoteType } from '@/types/engagement';
+import { ProfileNameLink } from '@/utils/ProfileNameLink';
 
 interface PostProps {
   post: PostType;
@@ -325,21 +326,42 @@ export const Post: React.FC<PostProps> = ({
           )
         }
         title={
-          <Link
-            to={`/profile/${post.author.id}`}
-            style={{ textDecoration: 'none', color: 'inherit' }}
-          >
-            <Typography
-              variant="h6"
-              component="span"
-              sx={{ cursor: 'pointer' }}
-            >
-              {post.author.name}
-            </Typography>
-          </Link>
+          <ProfileNameLink
+            user={{
+              id: post.author.id,
+              name: post.author.name,
+              role: post.author.role ?? 'STUDENT',
+              profile: post.author.profile,
+            }}
+            showRoleBadge={
+              window.location.pathname !== `/users/${user?.id}/posts` &&
+              window.location.pathname !== `/profile` &&
+              window.location.pathname !== `/profile/${user?.id}` // hide role badge on own profile and posts page
+            }
+            showYouBadge={
+              window.location.pathname !== `/profile` &&
+              window.location.pathname !== `/users/${user?.id}/posts` &&
+              window.location.pathname !== `/profile/${user?.id}` // hide "You" badge on own profile and posts page
+            }
+            linkToProfile={window.location.pathname === `/posts/${post.id}`}
+            variant="h6"
+            fontSize="1.35rem"
+          />
         }
         subheader={
           <>
+            {post.type && (
+              <>
+                {' '}
+                <Typography
+                  variant="body2"
+                  color="primary"
+                  sx={{ display: 'inline', mr: 1 }}
+                >
+                  #{post.type}
+                </Typography>
+              </>
+            )}
             Posted{' '}
             {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
             {post.updatedAt !== post.createdAt && (
@@ -415,31 +437,61 @@ export const Post: React.FC<PostProps> = ({
                   : { cursor: 'default' }), // disables pointer when on post page
               }}
             >
-              <Typography
-                variant="body1"
-                sx={{
-                  mb: 2,
-                  whitespace: 'pre-line', // for preserving line breaks
-                  // Conditionally apply truncation
-                  ...(window.location.pathname !== `/posts/${post.id}` && {
-                    display: '-webkit-box',
-                    WebkitLineClamp: 3,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    '&:hover': {
-                      color: 'primary.main',
-                    },
-                  }),
-                }}
-              >
-                {/* for preserving line breaks */}
-                {post.content.split('\n').map((line, idx) => (
-                  <span key={idx}>
-                    {line}
-                    <br />
-                  </span>
-                ))}
-              </Typography>
+              {/* Subject (Title) - Always visible */}
+              {post.subject && (
+                <Typography
+                  variant={
+                    window.location.pathname === `/posts/${post.id}`
+                      ? 'h5'
+                      : 'h6'
+                  }
+                  sx={{
+                    mb: 1,
+                    fontWeight: 600,
+                    ...(window.location.pathname !== `/posts/${post.id}` && {
+                      '&:hover': {
+                        color: 'primary.main',
+                      },
+                    }),
+                  }}
+                >
+                  {/* for preserving line breaks */}
+                  {post.subject.split('\n').map((line, idx) => (
+                    <span key={idx}>
+                      {line}
+                      <br />
+                    </span>
+                  ))}
+                </Typography>
+              )}
+
+              {/* Content - With truncation on list pages */}
+              {post.content &&
+                window.location.pathname === `/posts/${post.id}` && (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mb: 1,
+                      whiteSpace: 'pre-line',
+                      ...(window.location.pathname !== `/posts/${post.id}` && {
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        fontSize: '1rem',
+                        '&:hover': { color: 'primary.main' },
+                      }),
+                    }}
+                  >
+                    {post.content.split('\n').map((line, idx) => (
+                      <span key={idx}>
+                        {line}
+                        <br />
+                      </span>
+                    ))}
+                  </Typography>
+                )}
+
               {post.imageUrl && <PostImage imageUrl={post.imageUrl} />}
             </Box>
             {isAdminView && post.status && (

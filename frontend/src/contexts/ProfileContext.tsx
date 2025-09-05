@@ -232,6 +232,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     }
   }, []);
+  
 
   // Memoize the entire context value
   const contextValue = useMemo(

@@ -294,6 +294,7 @@ export class PostService {
             select: {
               id: true,
               name: true,
+              role: true,
               profile: {
                 select: { bio: true, avatarUrl: true },
               },
@@ -350,6 +351,7 @@ export class PostService {
           select: {
             id: true,
             name: true,
+            role: true,
             profile: {
               select: { bio: true, avatarUrl: true },
             },
@@ -430,6 +432,7 @@ export class PostService {
             select: {
               id: true,
               name: true,
+              role: true,
               profile: {
                 select: { bio: true, avatarUrl: true },
               },
@@ -709,6 +712,7 @@ export class PostService {
             select: {
               id: true,
               name: true,
+              role: true,
               profile: {
                 select: { bio: true, avatarUrl: true },
               },
@@ -766,6 +770,7 @@ export class PostService {
             select: {
               id: true,
               name: true,
+              role: true,
               profile: {
                 select: { bio: true, avatarUrl: true },
               },
