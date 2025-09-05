@@ -12,11 +12,15 @@ import {
   updateProfileService,
   searchAllProfileDataService,
   searchedProfileDataService,
+  getAllSkillsService,
+  getAllBadgesService,
 } from '../services/profileService';
 import {
   Profile,
   ProfileBadge,
   UpdateProfileInput,
+  Skill,
+  Badge,
 } from '../types/profileType';
 import { useAuth } from './AuthContext';
 
@@ -25,6 +29,8 @@ interface ProfileContextType {
   profile: Profile | null;
   badges: ProfileBadge[];
   //   connections: Connection[];
+  allSkills: Skill[];
+  allBadges: Badge[];
   loading: boolean;
   error: string;
   fetchProfileData: () => Promise<void>;
@@ -34,6 +40,8 @@ interface ProfileContextType {
   endorseSkill: (skillId: string) => Promise<void>;
   awardBadge: (userId: string, badgeId: string) => Promise<void>;
   //   handleConnection: (userId: string, action: 'accept' | 'reject') => Promise<void>;
+  fetchAllSkills: () => Promise<void>;
+  fetchAllBadges: () => Promise<void>;
   updateProfile: (profileData: UpdateProfileInput) => Promise<void>;
   setError: (error: string) => void;
 }
@@ -42,6 +50,8 @@ const ProfileContext = createContext<ProfileContextType>({
   profile: null,
   badges: [],
   //   connections: [],
+  allSkills: [],
+  allBadges: [],
   loading: false,
   error: '',
   fetchProfileData: async () => {},
@@ -50,6 +60,9 @@ const ProfileContext = createContext<ProfileContextType>({
   searchedProfile: async () => {},
   endorseSkill: async () => {},
   awardBadge: async () => {},
+  fetchAllSkills: async () => {},
+  fetchAllBadges: async () => {},
+  //   handleConnection: async () => {},
   updateProfile: async () => {},
   setError: () => {},
 });
@@ -60,6 +73,9 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [badges, setBadges] = useState<ProfileBadge[]>([]);
+  const [allSkills, setAllSkills] = useState<Skill[]>([]);
+  const [allBadges, setAllBadges] = useState<Badge[]>([]);
+  //   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -109,8 +125,10 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       if (!user?.id) return;
       setLoading(true);
       try {
-        const { SearchedProfile } = await searchedProfileDataService(userId);
+        const { SearchedProfile, Badges } =
+          await searchedProfileDataService(userId);
         setProfile(SearchedProfile);
+        setBadges(Badges);
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message || 'Failed to search profile');
@@ -187,11 +205,42 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
     [refreshProfile]
   );
 
+  const fetchAllSkills = useCallback(async () => {
+    try {
+      const skills = await getAllSkillsService();
+      setAllSkills(skills);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to fetch skills');
+      } else {
+        setError('An unexpected error occurred.');
+        console.error('Unexpected error:', err);
+      }
+    }
+  }, []);
+
+  const fetchAllBadges = useCallback(async () => {
+    try {
+      const badges = await getAllBadgesService();
+      setAllBadges(badges);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to fetch badges');
+      } else {
+        setError('An unexpected error occurred.');
+        console.error('Unexpected error:', err);
+      }
+    }
+  }, []);
+
   // Memoize the entire context value
   const contextValue = useMemo(
     () => ({
       profile,
       badges,
+      allSkills,
+      allBadges,
+      //   connections,
       loading,
       error,
       fetchProfileData,
@@ -200,12 +249,18 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       searchedProfile,
       endorseSkill,
       awardBadge,
+      fetchAllSkills,
+      fetchAllBadges,
+      //   handleConnection,
       updateProfile,
       setError,
     }),
     [
       profile,
       badges,
+      allSkills,
+      allBadges,
+      //   connections,
       loading,
       error,
       fetchProfileData,
@@ -213,6 +268,9 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       allSearchedProfile,
       searchedProfile,
       endorseSkill,
+      fetchAllSkills,
+      fetchAllBadges,
+      //   handleConnection,
       awardBadge,
       updateProfile,
     ]

@@ -127,4 +127,22 @@ export class ProfileController {
   async getBadgesForUser(@Param('userId') userId: string) {
     return this.profileService.getBadgesForUser(userId);
   }
+
+  /**
+   * Retrieves all skills available in table for user to choose from.
+   * @returns A promise that resolves to an array of all skills.
+   */
+  @Get('skills/all')
+  async getAllSkills() {
+    return this.profileService.getAllSkills();
+  }
+
+  /**
+   * Retrieves all badges available in table for admin to choose from.
+   * @returns A promise that resolves to an array of all badges.
+   */
+  @Get('badges/all')
+  async getAllBadges() {
+    return this.profileService.getAllBadges();
+  }
 }
