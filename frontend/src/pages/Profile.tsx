@@ -1,3 +1,4 @@
+// Profile.tsx - Redesigned with modern layout
 import React, { useEffect, useState } from 'react';
 import {
   Container,
@@ -14,15 +15,20 @@ import {
   Grid,
   CircularProgress,
   Tooltip,
-  // Dialog,
-  // DialogTitle,
-  // DialogContent,
-  // DialogActions,
-  // Select,
-  // MenuItem,
-  // FormControl,
-  // InputLabel,
-  Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Badge as MuiBadge,
+  Autocomplete,
+  Tabs,
+  Tab,
+  Card,
+  // CardContent,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -33,28 +39,77 @@ import {
   Interests,
   Upload as UploadIcon,
   Work,
-  Email,
   Score,
   Edit,
   ThumbUp,
   MilitaryTech,
   Business,
+  Article,
+  Comment as CommentIcon,
+  Code,
+  BusinessCenter,
+  EmojiEvents,
+  Refresh,
+  // ArrowUpward,
+  // ArrowDownward,
+  // Visibility,
+  Star,
 } from '@mui/icons-material';
 import axios from 'axios';
-import { Role } from '@/types/profileType';
+import {
+  Role,
+  UserBadge,
+  // UserPost,
+  // UserComment,
+  Badge as BadgeType,
+  Skill,
+} from '@/types/profileType';
+import { useParams } from 'react-router-dom';
+
+// Import the new components
+// import StartupsSection from '@/components/Profile/StartupsSection';
+import ReferralsSection from '@/components/Profile/ReferralsSection';
+// import ProjectsSection from '@/components/Profile/ProjectsSection';
+import PointsSection from '@/components/Profile/PointsSection';
+import EventsSection from '@/components/Profile/EventsSection';
+// import { Post } from '@/components/Post/Post';
+import { getErrorMessage } from '@/utils/errorHandler';
+
+// Tab panel component
+function TabPanel(props: {
+  children?: React.ReactNode;
+  value: number;
+  index: number;
+}) {
+  const { children, value, index, ...other } = props;
+  return (
+    <div role="tabpanel" hidden={value !== index} {...other}>
+      {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
+    </div>
+  );
+}
 
 const Profile: React.FC = () => {
   const {
     profile,
     badges,
+    allSkills,
+    allBadges,
     loading,
     error,
     refreshProfile,
+    searchedProfile,
     endorseSkill,
-    // awardBadge,
+    awardBadge,
     setError,
     updateProfile,
+    fetchAllSkills,
+    fetchAllBadges,
   } = useProfile();
+
+  const { userId } = useParams<{ userId?: string }>();
+  const { user: currentUser } = useAuth();
+  // const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [localProfile, setLocalProfile] = useState({
@@ -63,15 +118,19 @@ const Profile: React.FC = () => {
     interests: '',
     avatarUrl: '',
   });
-  const [skillsInput, setSkillsInput] = useState('');
+  const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [success, setSuccess] = useState('');
-  // const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
-  // const [selectedBadge, setSelectedBadge] = useState('');
-  // const [availableBadges, setAvailableBadges] = useState<ProfileBadge[]>([]);
+  const [badgeDialogOpen, setBadgeDialogOpen] = useState(false);
+  const [selectedBadge, setSelectedBadge] = useState('');
   const [profileLoading, setProfileLoading] = useState(true);
-
   const [apiError, setApiError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState(0);
+  const [avatarPreview, setAvatarPreview] = useState('');
+  // const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Check if viewing own profile or another user's profile
+  const isOwnProfile = !userId || userId === currentUser?.id;
 
   // Initialize local profile
   useEffect(() => {
@@ -82,54 +141,33 @@ const Profile: React.FC = () => {
         interests: profile.interests || '',
         avatarUrl: profile.avatarUrl || '',
       });
-      setSkillsInput(profile.skills?.map((s) => s.name).join(', ') || '');
+      setSelectedSkills(profile.skills?.map((s) => s.name) || []);
+      setAvatarPreview(profile.avatarUrl || '');
     }
   }, [profile]);
 
-  // Fetch available badges for admin
-  // useEffect(() => {
-  //   if (user?.role === 'ADMIN') {
-  //     if (!user?.id) return;
-
-  //     const controller = new AbortController();
-
-  //     const fetchBadges = async () => {
-  //       try {
-  //         const res = await api.get(`profile/${user.id}/badges`, {
-  //           signal: controller.signal,
-  //         });
-  //         setAvailableBadges(res.data);
-  //       } catch (error: unknown) {
-  //         if (axios.isCancel(error)) {
-  //           console.error('Failed to fetch badges');
-  //         }
-  //       }
-  //     };
-
-  //     fetchBadges();
-
-  //     return () => controller.abort();
-  //   }
-  // }, [user?.role, user?.id]);
-
-  // Fetch profile data when user changes
-
+  // Fetch profile data
   useEffect(() => {
-    console.log('Fetching profile data... with user Id', user?.id);
-    if (!user?.id) return;
-
     let isMounted = true;
     setProfileLoading(true);
 
     const loadProfile = async () => {
       try {
-        console.log('Loading profile...');
-        await refreshProfile();
-        if (isMounted) console.log('Profile loaded');
-      } catch {
-        if (isMounted) setApiError('Failed to load profile');
+        if (isOwnProfile) {
+          await refreshProfile();
+        } else if (userId) {
+          await searchedProfile(userId);
+        }
+
+        await fetchAllSkills();
+        await fetchAllBadges();
+      } catch (err) {
+        if (isMounted) {
+          setApiError('Failed to load profile');
+          console.error('Profile loading error:', err);
+        }
       } finally {
-        setProfileLoading(false);
+        if (isMounted) setProfileLoading(false);
       }
     };
 
@@ -138,7 +176,14 @@ const Profile: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [user?.id, refreshProfile]);
+  }, [
+    userId,
+    isOwnProfile,
+    refreshProfile,
+    searchedProfile,
+    fetchAllSkills,
+    fetchAllBadges,
+  ]);
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -153,45 +198,29 @@ const Profile: React.FC = () => {
     }
   };
 
-  const getRoleColor2 = (role: string) => {
-    switch (role) {
-      case 'STUDENT':
-        return 'primary';
-      case 'ALUM':
-        return 'secondary';
-      case 'ADMIN':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
   const handleChange =
     (field: keyof typeof localProfile) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      setLocalProfile((prev) => ({ ...prev, [field]: e.target.value }));
-    };
+      const newValue = e.target.value;
+      setLocalProfile((prev) => ({ ...prev, [field]: newValue }));
 
-  const handleSkillsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSkillsInput(e.target.value);
-  };
+      // Update preview for avatar URL
+      if (field === 'avatarUrl') {
+        setAvatarPreview(newValue);
+      }
+    };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !profile) {
+    if (!currentUser || !profile) {
       setError('Authentication required');
       return;
     }
 
-    const skillsArray = skillsInput
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
-
     try {
       await updateProfile({
         ...localProfile,
-        skills: skillsArray,
+        skills: selectedSkills,
       });
       setSuccess('Profile updated successfully!');
       setIsEditing(false);
@@ -221,28 +250,56 @@ const Profile: React.FC = () => {
     }
   };
 
-  // Can't be done now as no available badge
-  // const handleAwardBadge = async () => {
-  //   try {
-  //     await awardBadge(profile?.user?.id || '', selectedBadge);
-  //     setSuccess('Badge awarded successfully!');
-  //     setBadgeDialogOpen(false);
-  //   } catch (error: unknown) {
-  //     if (axios.isAxiosError(error)) {
-  //       setError(error.response?.data?.message || 'Failed to award badge');
-  //     } else {
-  //       setError('An unexpected error occurred');
-  //     }
-  //   }
+  const handleAwardBadge = async () => {
+    try {
+      if (!profile) return;
+      await awardBadge(profile.user.id, selectedBadge);
+      setSuccess('Badge awarded successfully!');
+      setBadgeDialogOpen(false);
+      setSelectedBadge('');
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        setError(error.response?.data?.message || 'Failed to award badge');
+      } else {
+        setError('An unexpected error occurred');
+      }
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      if (isOwnProfile) {
+        await refreshProfile();
+      } else if (userId) {
+        await searchedProfile(userId);
+      }
+      setSuccess('Profile refreshed successfully!');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // const handleSortChange = () => {
+  //   setSortBy((prev) => (prev === 'newest' ? 'oldest' : 'newest'));
   // };
 
-  // const handleConnectionAction = async (userId: string, action: 'accept' | 'reject') => {
-  //   try {
-  //     await handleConnection(userId, action);
-  //     setSuccess(`Connection ${action}ed successfully!`);
-  //   } catch (err) {
-  //     setError(`Failed to ${action} connection`);
-  //   }
+  // const getSortedPosts = (posts: UserPost[]) => {
+  //   return posts.sort((a, b) => {
+  //     const dateA = new Date(a.createdAt).getTime();
+  //     const dateB = new Date(b.createdAt).getTime();
+  //     return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+  //   });
+  // };
+
+  // const getSortedComments = (comments: UserComment[]) => {
+  //   return comments.sort((a, b) => {
+  //     const dateA = new Date(a.createdAt).getTime();
+  //     const dateB = new Date(b.createdAt).getTime();
+  //     return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
+  //   });
   // };
 
   const InfoCard: React.FC<{
@@ -252,31 +309,173 @@ const Profile: React.FC = () => {
     multiline?: boolean;
     children?: React.ReactNode;
   }> = ({ icon, title, value, multiline = false, children }) => (
-    <Box>
-      <Typography
-        variant="subtitle2"
-        color="text.secondary"
-        sx={{ display: 'flex', alignItems: 'center' }}
-      >
-        {icon}{' '}
-        <Box component="span" sx={{ ml: 1 }}>
+    <Card variant="outlined" sx={{ p: 2, height: '100%' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+        {icon}
+        <Typography variant="subtitle2" sx={{ ml: 1, fontWeight: 600 }}>
           {title}
-        </Box>
-      </Typography>
+        </Typography>
+      </Box>
       {children || (
         <Typography
           variant="body2"
+          color="text.secondary"
           sx={{ mt: 0.5, whiteSpace: multiline ? 'normal' : 'nowrap' }}
         >
           {value || '—'}
         </Typography>
       )}
-    </Box>
+    </Card>
   );
+
+  // Helper components for different content sections
+  // const PostsSection = () => (
+  //   <Box>
+  //     <Box
+  //       sx={{
+  //         display: 'flex',
+  //         justifyContent: 'space-between',
+  //         alignItems: 'center',
+  //         mb: 3,
+  //       }}
+  //     >
+  //       <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
+  //         <Article sx={{ mr: 1 }} /> Recent Posts
+  //       </Typography>
+  //       <Button
+  //         variant="outlined"
+  //         size="small"
+  //         onClick={handleSortChange}
+  //         startIcon={sortBy === 'newest' ? <ArrowDownward /> : <ArrowUpward />}
+  //       >
+  //         {sortBy === 'newest' ? 'Newest First' : 'Oldest First'}
+  //       </Button>
+  //     </Box>
+  //     {profile?.user.Post && profile.user.Post.length > 0 ? (
+  //       <Box>
+  //         {getSortedPosts(profile.user.Post)
+  //           .slice(0, 5)
+  //           .map((post: UserPost) => (
+  //             <Post
+  //               key={post.id}
+  //               post={{
+  //                 ...post,
+  //                 content: post.subject || '',
+  //                 authorId: profile.user.id,
+  //                 author: {
+  //                   ...profile.user,
+  //                   profile: profile.user.profile
+  //                     ? {
+  //                         ...profile.user.profile,
+  //                         bio: profile.user.profile.bio ?? '',
+  //                         avatarUrl: profile.user.profile.avatarUrl ?? '',
+  //                       }
+  //                     : {},
+  //                 },
+  //                 createdAt: post.createdAt,
+  //                 updatedAt: post.createdAt,
+  //                 status: 'APPROVED',
+  //                 type: post.type ?? 'GENERAL',
+  //                 Vote: post.Vote || undefined,
+  //                 _count: {
+  //                   Comment: post.Comment?.length || 0,
+  //                   Vote: post.Vote?.length || 0,
+  //                 },
+  //                 subCommunity: post.subCommunity
+  //                   ? {
+  //                       id: post.subCommunity.id,
+  //                       name: post.subCommunity.name,
+  //                       description: post.subCommunity.description ?? '',
+  //                     }
+  //                   : undefined,
+  //               }}
+  //               showActions={false}
+  //               onClick={() =>
+  //                 navigate(`/posts/${post.id}`, {
+  //                   state: { from: `/profile/${profile.user.id}` },
+  //                 })
+  //               }
+  //             />
+  //           ))}
+  //       </Box>
+  //     ) : (
+  //       <Paper sx={{ p: 4, textAlign: 'center' }}>
+  //         <Typography variant="body2" color="text.secondary">
+  //           No posts yet
+  //         </Typography>
+  //       </Paper>
+  //     )}
+  //   </Box>
+  // );
+
+  // const CommentsSection = () => (
+  //   <Box>
+  //     <Box
+  //       sx={{
+  //         display: 'flex',
+  //         justifyContent: 'space-between',
+  //         alignItems: 'center',
+  //         mb: 3,
+  //       }}
+  //     >
+  //       <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
+  //         <CommentIcon sx={{ mr: 1 }} /> Recent Comments
+  //       </Typography>
+  //       <Button
+  //         variant="outlined"
+  //         size="small"
+  //         onClick={handleSortChange}
+  //         startIcon={sortBy === 'newest' ? <ArrowDownward /> : <ArrowUpward />}
+  //       >
+  //         {sortBy === 'newest' ? 'Newest First' : 'Oldest First'}
+  //       </Button>
+  //     </Box>
+  //     {profile?.user.Comment && profile.user.Comment.length > 0 ? (
+  //       <Box>
+  //         {getSortedComments(profile.user.Comment)
+  //           .slice(0, 5)
+  //           .map((comment: UserComment) => (
+  //             <Card key={comment.id} variant="outlined" sx={{ mb: 2 }}>
+  //               <CardContent>
+  //                 <Typography variant="body2" sx={{ mb: 1 }}>
+  //                   {comment.content}
+  //                 </Typography>
+  //                 <Box
+  //                   sx={{
+  //                     display: 'flex',
+  //                     justifyContent: 'space-between',
+  //                     alignItems: 'center',
+  //                   }}
+  //                 >
+  //                   <Typography variant="caption" color="text.secondary">
+  //                     On: {comment.post?.subject} •{' '}
+  //                     {new Date(comment.createdAt).toLocaleDateString()}
+  //                   </Typography>
+  //                   <Button
+  //                     size="small"
+  //                     startIcon={<Visibility />}
+  //                     onClick={() => navigate(`/posts/${comment.postId}`)}
+  //                   >
+  //                     View Post
+  //                   </Button>
+  //                 </Box>
+  //               </CardContent>
+  //             </Card>
+  //           ))}
+  //       </Box>
+  //     ) : (
+  //       <Paper sx={{ p: 4, textAlign: 'center' }}>
+  //         <Typography variant="body2" color="text.secondary">
+  //           No comments yet
+  //         </Typography>
+  //       </Paper>
+  //     )}
+  //   </Box>
+  // );
 
   if (loading || profileLoading) {
     return (
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         <Box
           sx={{
             display: 'flex',
@@ -294,7 +493,7 @@ const Profile: React.FC = () => {
 
   if (error || apiError) {
     return (
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         <Alert severity="error" sx={{ mt: 4 }}>
           {error || apiError}
         </Alert>
@@ -304,7 +503,7 @@ const Profile: React.FC = () => {
 
   if (!profile) {
     return (
-      <Container maxWidth="md">
+      <Container maxWidth="lg">
         <Alert severity="warning" sx={{ mt: 4 }}>
           Profile not found
         </Alert>
@@ -313,7 +512,7 @@ const Profile: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="md">
+    <Container maxWidth="lg">
       <Box sx={{ py: 4 }}>
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -340,22 +539,131 @@ const Profile: React.FC = () => {
             </Alert>
           )}
 
-          <Paper elevation={3} sx={{ p: 4, borderRadius: 4 }}>
+          {/* Header Section */}
+          <Paper
+            elevation={1}
+            sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}
+          >
             <Box
               sx={{
                 display: 'flex',
-                flexDirection: { xs: 'column', md: 'row' },
-                gap: 4,
+                flexDirection: { xs: 'column', sm: 'row' },
+                justifyContent: 'space-between',
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                gap: 2,
               }}
             >
-              {/* Left Column - Avatar and Basic Info */}
-              <Box sx={{ minWidth: 250 }}>
+              <Box>
+                <Typography variant="h4" gutterBottom>
+                  {profile.user.name}&apos;s Profile
+                </Typography>
+                <Typography variant="subtitle1" color="text.secondary">
+                  <Chip
+                    label={profile.user.role}
+                    color={
+                      ['primary', 'secondary', 'error', 'default'].includes(
+                        getRoleColor(profile.user.role)
+                      )
+                        ? (getRoleColor(profile.user.role) as
+                            | 'primary'
+                            | 'secondary'
+                            | 'error'
+                            | 'default')
+                        : 'default'
+                    }
+                    sx={{
+                      mr: 1,
+                      whiteSpace: 'pre-line',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      fontSize: '0.7rem',
+                    }}
+                  />
+                  • {profile.user.email}
+                </Typography>
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button
+                  variant="outlined"
+                  onClick={handleRefresh}
+                  startIcon={<Refresh />}
+                  disabled={isRefreshing}
+                  size="small"
+                >
+                  {isRefreshing ? <CircularProgress size={20} /> : 'Refresh'}
+                </Button>
+                {isOwnProfile && (
+                  <Button
+                    variant="contained"
+                    onClick={() => setIsEditing(true)}
+                    startIcon={<Edit />}
+                  >
+                    Edit Profile
+                  </Button>
+                )}
+                {!isOwnProfile && currentUser?.role === Role.ADMIN && (
+                  <Button
+                    variant="outlined"
+                    onClick={() => setBadgeDialogOpen(true)}
+                    startIcon={<MilitaryTech />}
+                  >
+                    Award Badge
+                  </Button>
+                )}
+              </Box>
+            </Box>
+
+            {/* Stats */}
+            <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
+              {profile.user._count?.Post > 0 && (
+                <Chip
+                  label={`${profile.user._count?.Post || 0} Posts`}
+                  color="primary"
+                  variant="outlined"
+                />
+              )}
+              {profile.user._count?.Comment > 0 && (
+                <Chip
+                  label={`${profile.user._count?.Comment || 0} Post Comments`}
+                  variant="outlined"
+                />
+              )}
+              {profile.user._count?.projects > 0 && (
+                <Chip
+                  label={`${profile.user._count?.projects} Projects`}
+                  variant="outlined"
+                />
+              )}
+              {badges && badges.length > 0 && (
+                <Chip label={`${badges.length} Badges`} variant="outlined" />
+              )}
+              {profile.user._count?.ownedSubCommunities > 0 && (
+                <Chip
+                  label={`${profile.user._count?.ownedSubCommunities} Sub-Communities Created`}
+                  variant="outlined"
+                />
+              )}
+              {profile.user._count?.subCommunityMemberships > 0 && (
+                <Chip
+                  label={`${profile.user._count?.subCommunityMemberships} Sub-Communities Joined`}
+                  variant="outlined"
+                />
+              )}
+            </Box>
+          </Paper>
+
+          {/* Main Content Grid */}
+          <Grid container spacing={3}>
+            {/* Left Column - Profile Info */}
+            <Grid item xs={12} md={4}>
+              <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
                 <Box sx={{ textAlign: 'center', mb: 3 }}>
-                  <Badge
+                  <MuiBadge
                     overlap="circular"
                     anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                     badgeContent={
-                      badges.length ? (
+                      badges.length > 0 ? (
                         <Tooltip title={`${badges.length} badges`}>
                           <MilitaryTech color="primary" />
                         </Tooltip>
@@ -371,447 +679,469 @@ const Profile: React.FC = () => {
                         border: '3px solid',
                         borderColor: getRoleColor(profile.user.role),
                         boxShadow: 3,
+                        mx: 'auto',
                       }}
                     />
-                  </Badge>
-                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                    {profile.user.name}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.5 }}
-                  >
-                    <Email
-                      sx={{ fontSize: 16, verticalAlign: 'middle', mr: 0.5 }}
-                    />
-                    {profile.user.email}
-                  </Typography>
-                  <Chip
-                    label={profile.user.role}
-                    color={getRoleColor2(profile.user.role)}
-                    size="small"
-                    sx={{
-                      mt: 1,
-                      fontWeight: 600,
-                      textTransform: 'uppercase',
-                      fontSize: '0.7rem',
-                    }}
-                  />
+                  </MuiBadge>
                 </Box>
 
-                {/* Connections
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <InfoCard
+                      icon={
+                        <Business color={getRoleColor(profile.user.role)} />
+                      }
+                      title="Department"
+                      value={
+                        profile.user.role === Role.STUDENT
+                          ? 'Computer Science'
+                          : 'Alumni'
+                      }
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <InfoCard
+                      icon={<Score color={getRoleColor(profile.user.role)} />}
+                      title="Graduation Year"
+                      value={
+                        profile.user.role === Role.STUDENT ? '2024' : '2018'
+                      }
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <InfoCard
+                      icon={
+                        <LocationOn color={getRoleColor(profile.user.role)} />
+                      }
+                      title="Location"
+                      value={profile.location}
+                    />
+                  </Grid>
+                </Grid>
+              </Paper>
+
+              {/* Additional Sections */}
+              {profile.user.postedReferrals &&
+                profile.user.postedReferrals.length > 0 && (
+                  <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
+                    <ReferralsSection
+                      referrals={profile.user.postedReferrals}
+                    />
+                  </Paper>
+                )}
+
+              {profile.user.userPoints && (
+                <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
+                  <PointsSection userPoints={profile.user.userPoints} />
+                </Paper>
+              )}
+
+              {profile.user.events && profile.user.events.length > 0 && (
+                <Paper elevation={1} sx={{ p: 3 }}>
+                  <EventsSection events={profile.user.events} />
+                </Paper>
+              )}
+            </Grid>
+
+            {/* Right Column - Main Content */}
+            <Grid item xs={12} md={8}>
+              <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
+                {/* Bio Section */}
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="subtitle1" sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                    <People sx={{ mr: 1 }} /> Connections
+                  <Typography
+                    variant="h6"
+                    sx={{ mb: 2, display: 'flex', alignItems: 'center' }}
+                  >
+                    <Info
+                      color={getRoleColor(profile.user.role)}
+                      sx={{ mr: 1 }}
+                    />{' '}
+                    Bio
                   </Typography>
-                  {connections.length > 0 ? (
-                    <List dense>
-                      {connections.map(conn => (
-                        <ListItem key={conn.id} sx={{ px: 0 }}>
-                          <ListItemAvatar>
-                            <Avatar sx={{ width: 32, height: 32 }} />
-                          </ListItemAvatar>
-                          <ListItemText
-                            primary={conn.requester.id === user?.id ? conn.recipient.name : conn.requester.name}
-                            secondary={conn.status}
-                          />
-                          {conn.status === ConnectionStatus.PENDING && conn.recipient.id === user?.id && (
-                            <Box>
-                              <IconButton size="small" onClick={() => handleConnectionAction(conn.requester.id, 'accept')}>
-                                <Check color="success" />
-                              </IconButton>
-                              <IconButton size="small" onClick={() => handleConnectionAction(conn.requester.id, 'reject')}>
-                                <Close color="error" />
-                              </IconButton>
-                            </Box>
-                          )}
-                        </ListItem>
+                  <Typography
+                    variant="body1"
+                    color="text.secondary"
+                    sx={{ lineHeight: 1.6 }}
+                  >
+                    {profile.bio || 'No bio provided'}
+                  </Typography>
+                </Box>
+
+                {/* Interests Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ mb: 2, display: 'flex', alignItems: 'center' }}
+                  >
+                    <Star
+                      color={getRoleColor(profile.user.role)}
+                      sx={{ mr: 1 }}
+                    />{' '}
+                    Interests
+                  </Typography>
+                  {profile.interests ? (
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: 1,
+                        mt: 0.5,
+                      }}
+                    >
+                      {profile.interests.split(',').map((interest, idx) => (
+                        <Chip
+                          key={idx}
+                          label={interest.trim()}
+                          variant="outlined"
+                          color="primary"
+                          size="small"
+                        />
                       ))}
-                    </List>
+                    </Box>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
-                      No connections yet
+                      No interests added yet
                     </Typography>
                   )}
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    fullWidth
-                    sx={{ mt: 1 }}
-                    startIcon={<Link />}
+                </Box>
+
+                {/* Skills Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ mb: 2, display: 'flex', alignItems: 'center' }}
                   >
-                    Manage Connections
-                  </Button>
-                </Box> */}
+                    <Work
+                      color={getRoleColor(profile.user.role)}
+                      sx={{ mr: 1 }}
+                    />{' '}
+                    Skills
+                  </Typography>
+                  {profile.skills.length > 0 ? (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                      {profile.skills.map((skill) => (
+                        <Tooltip
+                          key={skill.id}
+                          title={
+                            skill.endorsements?.length > 0
+                              ? `Endorsed by ${skill.endorsements.map((e) => e.endorser.name).join(', ')}`
+                              : 'No endorsements yet'
+                          }
+                        >
+                          <Chip
+                            label={skill.name}
+                            variant="outlined"
+                            color="primary"
+                            onDelete={
+                              !isOwnProfile &&
+                              currentUser?.id !== profile.user.id
+                                ? () => handleEndorse(skill.id)
+                                : undefined
+                            }
+                            deleteIcon={<ThumbUp />}
+                          />
+                        </Tooltip>
+                      ))}
+                    </Box>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No skills added yet
+                    </Typography>
+                  )}
+                </Box>
 
-                {/* Can't be done now as no available badge */}
-                {/* Admin Actions */}
-                {/* {user?.role === Role.ADMIN && (
-                  <Box>
-                    <Button
-                      variant="outlined"
-                      size="small"
-                      fullWidth
-                      onClick={() => setBadgeDialogOpen(true)}
-                      startIcon={<MilitaryTech />}
-                    >
-                      Award Badge
-                    </Button>
-                  </Box>
-                )} */}
-              </Box>
-
-              {/* Right Column - Profile Content */}
-              <Box sx={{ flex: 1 }}>
-                {!isEditing ? (
-                  <>
-                    <Stack spacing={3}>
-                      {/* About Section */}
-                      <Box>
-                        <Typography variant="h6" sx={{ mb: 2 }}>
-                          About
-                        </Typography>
-                        <Grid container spacing={2}>
-                          <Grid item xs={12} sm={6}>
-                            <InfoCard
-                              icon={
-                                <Business
-                                  color={getRoleColor(profile.user.role)}
-                                />
-                              }
-                              title="Department"
-                              value={
-                                profile.user.role === Role.STUDENT
-                                  ? 'Computer Science'
-                                  : 'Alumni'
-                              }
+                {/* Badges Section */}
+                <Box sx={{ mb: 3 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ mb: 2, display: 'flex', alignItems: 'center' }}
+                  >
+                    <EmojiEvents
+                      sx={{ mr: 1 }}
+                      color={getRoleColor(profile.user.role)}
+                    />{' '}
+                    Badges
+                  </Typography>
+                  {badges.length > 0 ? (
+                    <Grid container spacing={1}>
+                      {badges.map((badge: UserBadge) => (
+                        <Grid item key={badge.badge.id}>
+                          <Tooltip
+                            title={
+                              <Box sx={{ textAlign: 'center' }}>
+                                <Typography variant="subtitle2">
+                                  {badge.badge.name}
+                                </Typography>
+                                <Typography variant="caption">
+                                  {badge.badge.description}
+                                </Typography>
+                                <br />
+                                <Typography variant="caption">
+                                  Awarded:{' '}
+                                  {new Date(
+                                    badge.assignedAt
+                                  ).toLocaleDateString()}
+                                </Typography>
+                              </Box>
+                            }
+                            arrow
+                          >
+                            <Avatar
+                              src={badge.badge.icon}
+                              sx={{
+                                width: 50,
+                                height: 50,
+                                cursor: 'pointer',
+                                border: '2px solid',
+                                borderColor: 'primary.main',
+                              }}
                             />
-                          </Grid>
-                          <Grid item xs={12} sm={6}>
-                            <InfoCard
-                              icon={
-                                <Score
-                                  color={getRoleColor(profile.user.role)}
-                                />
-                              }
-                              title="Graduation Year"
-                              value={
-                                profile.user.role === Role.STUDENT
-                                  ? '2024'
-                                  : '2018'
-                              }
-                            />
-                          </Grid>
+                          </Tooltip>
                         </Grid>
-                      </Box>
+                      ))}
+                    </Grid>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      No badges yet
+                    </Typography>
+                  )}
+                </Box>
+              </Paper>
 
-                      {/* Bio */}
-                      <InfoCard
-                        icon={<Info color={getRoleColor(profile.user.role)} />}
-                        title="Bio"
-                        value={profile.bio}
-                        multiline
-                      />
+              {/* Content Tabs */}
+              <Paper elevation={1}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
+                  <Tabs
+                    value={activeTab}
+                    onChange={(_e, newValue) => setActiveTab(newValue)}
+                  >
+                    <Tab
+                      label="Posts"
+                      icon={<Article />}
+                      iconPosition="start"
+                    />
+                    <Tab
+                      label="Comments"
+                      icon={<CommentIcon />}
+                      iconPosition="start"
+                    />
+                    <Tab
+                      label="Projects"
+                      icon={<Code />}
+                      iconPosition="start"
+                    />
+                    <Tab
+                      label="Startups"
+                      icon={<BusinessCenter />}
+                      iconPosition="start"
+                    />
+                  </Tabs>
+                </Box>
 
-                      {/* Location */}
-                      <InfoCard
-                        icon={
-                          <LocationOn color={getRoleColor(profile.user.role)} />
-                        }
-                        title="Location"
-                        value={profile.location}
-                      />
-
-                      {/* Interests */}
-                      <InfoCard
-                        icon={
-                          <Interests color={getRoleColor(profile.user.role)} />
-                        }
-                        title="Interests"
-                      >
-                        {profile.interests ? (
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              flexWrap: 'wrap',
-                              gap: 1,
-                              mt: 0.5,
-                            }}
-                          >
-                            {profile.interests
-                              .split(',')
-                              .map((interest, idx) => (
-                                <Chip
-                                  key={idx}
-                                  label={interest.trim()}
-                                  variant="outlined"
-                                  color="primary"
-                                  size="small"
-                                />
-                              ))}
-                          </Box>
-                        ) : null}
-                      </InfoCard>
-
-                      {/* Skills */}
-                      <Box>
-                        <Typography
-                          variant="subtitle1"
-                          sx={{ display: 'flex', alignItems: 'center', mb: 1 }}
-                        >
-                          <Work
-                            color={getRoleColor(profile.user.role)}
-                            sx={{ mr: 1 }}
-                          />{' '}
-                          Skills
-                        </Typography>
-                        {profile.skills.length > 0 ? (
-                          <Box
-                            sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
-                          >
-                            {profile.skills.map((skill) => (
-                              <Tooltip
-                                key={skill.id}
-                                title={
-                                  skill?.endorsements?.length > 0
-                                    ? `Endorsed by ${skill?.endorsements.map((e) => e.endorser.name).join(', ')}`
-                                    : 'No endorsements yet'
-                                }
-                              >
-                                <Chip
-                                  label={skill.name}
-                                  variant="outlined"
-                                  color="primary"
-                                  onDelete={
-                                    profile.user.id !== user?.id
-                                      ? () => handleEndorse(skill.id)
-                                      : undefined
-                                  }
-                                  deleteIcon={<ThumbUp />}
-                                />
-                              </Tooltip>
-                            ))}
-                          </Box>
-                        ) : (
-                          <Typography variant="body2" color="text.secondary">
-                            No skills added
-                          </Typography>
-                        )}
-                      </Box>
-
-                      {/* Badges */}
-                      {badges.length > 0 && (
-                        <Box>
-                          <Typography
-                            variant="subtitle1"
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              mb: 1,
-                            }}
-                          >
-                            <MilitaryTech sx={{ mr: 1 }} /> Badges
-                          </Typography>
-                          <Box
-                            sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
-                          >
-                            {badges.map((badge) => (
-                              <Tooltip
-                                key={badge.badge.id}
-                                title={
-                                  <Box
-                                    sx={{
-                                      px: 1,
-                                      py: 0.5,
-                                      bgcolor: 'grey.900',
-                                      color: 'white',
-                                      borderRadius: 1,
-                                    }}
-                                  >
-                                    {badge.badge.name}
-                                  </Box>
-                                }
-                                arrow
-                              >
-                                <Avatar
-                                  src={badge.badge.icon}
-                                  sx={{
-                                    width: 40,
-                                    height: 40,
-                                    cursor: 'pointer',
-                                  }}
-                                />
-                              </Tooltip>
-                            ))}
-                          </Box>
-                        </Box>
-                      )}
-                    </Stack>
-
-                    {profile.user.id === user?.id && (
-                      <Button
-                        variant="contained"
-                        fullWidth
-                        sx={{ mt: 3 }}
-                        onClick={() => setIsEditing(true)}
-                        startIcon={<Edit />}
-                      >
-                        Edit Profile
-                      </Button>
-                    )}
-                  </>
-                ) : (
-                  <motion.form onSubmit={handleSubmit}>
-                    <Stack spacing={3}>
-                      <TextField
-                        fullWidth
-                        label="Bio"
-                        multiline
-                        minRows={3}
-                        value={localProfile.bio || ''}
-                        onChange={handleChange('bio')}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Info color="action" />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-
-                      <TextField
-                        fullWidth
-                        label="Location"
-                        value={localProfile.location || ''}
-                        onChange={handleChange('location')}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <LocationOn color="action" />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-
-                      <TextField
-                        fullWidth
-                        label="Interests"
-                        value={localProfile.interests || ''}
-                        onChange={handleChange('interests')}
-                        helperText="Comma separated values"
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Interests color="action" />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-
-                      <TextField
-                        fullWidth
-                        label="Skills"
-                        value={skillsInput}
-                        onChange={handleSkillsChange}
-                        helperText="Comma separated values (e.g. React, Node, SQL)"
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Work color="action" />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-
-                      <TextField
-                        fullWidth
-                        label="Avatar URL"
-                        value={localProfile.avatarUrl || ''}
-                        onChange={handleChange('avatarUrl')}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <UploadIcon color="action" />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-
-                      <Box sx={{ display: 'flex', gap: 2 }}>
-                        <Button
-                          type="submit"
-                          variant="contained"
-                          size="large"
-                          disabled={loading}
-                          sx={{ flex: 1 }}
-                        >
-                          {loading ? (
-                            <CircularProgress size={24} />
-                          ) : (
-                            'Save Changes'
-                          )}
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          size="large"
-                          sx={{ flex: 1 }}
-                          onClick={() => setIsEditing(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </Box>
-                    </Stack>
-                  </motion.form>
-                )}
-              </Box>
-            </Box>
-          </Paper>
+                <Box sx={{ p: 3 }}>
+                  <TabPanel value={activeTab} index={0}>
+                    {/* <PostsSection /> */}
+                  </TabPanel>
+                  <TabPanel value={activeTab} index={1}>
+                    {/* <CommentsSection /> */}
+                  </TabPanel>
+                  <TabPanel value={activeTab} index={2}>
+                    {/* <ProjectsSection projects={profile.user.projects || []} /> */}
+                  </TabPanel>
+                  <TabPanel value={activeTab} index={3}>
+                    {/* <StartupsSection startups={profile.user.startups || []} /> */}
+                  </TabPanel>
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
         </motion.div>
       </Box>
 
-      {/* Can't be done now as no available badge */}
-      {/* Badge Award Dialog */}
-      {/* {user?.role == Role.ADMIN && (
-        <Dialog
-          open={badgeDialogOpen}
-          onClose={() => setBadgeDialogOpen(false)}
-        >
-          <DialogTitle>Award Badge</DialogTitle>
-          <DialogContent>
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Select Badge</InputLabel>
-              <Select
-                value={selectedBadge}
-                onChange={(e) => setSelectedBadge(e.target.value as string)}
-                label="Select Badge"
-              >
-                {availableBadges.map((badge) => (
-                  <MenuItem key={badge.badge.id} value={badge.badge.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar
-                        src={badge.badge.icon}
-                        sx={{ width: 24, height: 24 }}
+      {/* Edit Profile Dialog */}
+      <Dialog
+        open={isEditing}
+        onClose={() => setIsEditing(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Edit Profile</DialogTitle>
+        <DialogContent>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+            <Stack spacing={3}>
+              {/* Avatar Preview and URL Input */}
+              <Box sx={{ textAlign: 'center' }}>
+                <Avatar
+                  src={avatarPreview || undefined}
+                  sx={{ width: 80, height: 80, mb: 2, mx: 'auto' }}
+                />
+                <TextField
+                  fullWidth
+                  label="Avatar URL"
+                  value={localProfile.avatarUrl}
+                  onChange={handleChange('avatarUrl')}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <UploadIcon color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
+
+              <TextField
+                fullWidth
+                label="Bio"
+                multiline
+                minRows={3}
+                value={localProfile.bio}
+                onChange={handleChange('bio')}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Info color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Location"
+                value={localProfile.location}
+                onChange={handleChange('location')}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <LocationOn color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Interests"
+                value={localProfile.interests}
+                onChange={handleChange('interests')}
+                helperText="Comma separated values"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Interests color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <Autocomplete
+                multiple
+                options={allSkills.map((skill: Skill) => skill.name)}
+                value={selectedSkills}
+                onChange={(_event, newValue) => {
+                  setSelectedSkills(newValue);
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Skills"
+                    helperText="Select or type to add new skills"
+                    InputProps={{
+                      ...params.InputProps,
+                      startAdornment: (
+                        <>
+                          <InputAdornment position="start">
+                            <Work color="action" />
+                          </InputAdornment>
+                          {params.InputProps.startAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+                freeSolo
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => {
+                    const { key, ...tagProps } = getTagProps({ index });
+                    return (
+                      <Chip
+                        key={key}
+                        label={option}
+                        {...tagProps}
+                        onDelete={() => {
+                          const newSkills = [...selectedSkills];
+                          newSkills.splice(index, 1);
+                          setSelectedSkills(newSkills);
+                        }}
                       />
-                      {badge.badge.name}
-                    </Box>
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setBadgeDialogOpen(false)}>Cancel</Button>
-            <Button
-              onClick={handleAwardBadge}
-              disabled={!selectedBadge}
-              variant="contained"
+                    );
+                  })
+                }
+              />
+
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={loading}
+                  sx={{ flex: 1 }}
+                >
+                  {loading ? <CircularProgress size={24} /> : 'Save Changes'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="large"
+                  sx={{ flex: 1 }}
+                  onClick={() => setIsEditing(false)}
+                >
+                  Cancel
+                </Button>
+              </Box>
+            </Stack>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/*  Award Dialog */}
+      <Dialog open={badgeDialogOpen} onClose={() => setBadgeDialogOpen(false)}>
+        <DialogTitle>Award Badge</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Select Badge</InputLabel>
+            <Select
+              value={selectedBadge}
+              onChange={(e) => setSelectedBadge(e.target.value as string)}
+              label="Select Badge"
             >
-              Award
-            </Button>
-          </DialogActions>
-        </Dialog>
-      )} */}
+              {allBadges.map((badge: BadgeType) => (
+                <MenuItem key={badge.id} value={badge.id}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Avatar src={badge.icon} sx={{ width: 24, height: 24 }} />
+                    <Box>
+                      <Typography variant="body2">{badge.name}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {badge.description}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBadgeDialogOpen(false)}>Cancel</Button>
+          <Button
+            onClick={handleAwardBadge}
+            disabled={!selectedBadge}
+            variant="contained"
+          >
+            Award
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
