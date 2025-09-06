@@ -21,6 +21,7 @@ interface ProfileNameLinkProps {
   showAvatar?: boolean;
   showRoleBadge?: boolean;
   showYouBadge?: boolean;
+  onlyFirstName?: boolean;
   variant?: 'subtitle1' | 'subtitle2' | 'body1' | 'body2' | 'h6';
   fontSize?: string;
   fontWeight?: number | string;
@@ -33,6 +34,7 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
   showAvatar = false,
   showRoleBadge = true,
   showYouBadge = true,
+  onlyFirstName = false,
   variant = 'subtitle2',
   fontSize = '0.9rem',
   fontWeight = 600,
@@ -108,9 +110,10 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
         sx={{
           cursor: linkToProfile ? 'pointer' : 'default',
           '&:hover': linkToProfile ? { color: 'primary.main' } : {},
+          display: 'inline',
         }}
       >
-        {getUserName()}
+        {onlyFirstName ? getUserName().split(' ')[0] : getUserName()}
       </Typography>
 
       {/* Role Badge */}

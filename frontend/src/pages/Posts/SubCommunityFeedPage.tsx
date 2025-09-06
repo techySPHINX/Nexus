@@ -656,7 +656,14 @@ export const SubCommunityFeedPage: React.FC = () => {
                   >
                     <Avatar sx={{ width: 32, height: 32 }} />
                     <Typography variant="body2" color="text.secondary">
-                      Owned by u/{currentSubCommunity.owner.name}
+                      Owned by
+                      <ProfileNameLink
+                        user={{
+                          id: currentSubCommunity.owner.id,
+                          name: currentSubCommunity.owner.name,
+                        }}
+                        onlyFirstName={true}
+                      />
                     </Typography>
                   </Box>
                 )}
