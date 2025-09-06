@@ -49,7 +49,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const { createPost, clearError } = usePosts();
   const [content, setContent] = useState('');
   const [subject, setSubject] = useState('');
-  const [type, setType] = useState<'DISCUSSION' | 'QUESTION' | 'UPDATE'>('UPDATE');
+  const [type, setType] = useState<'DISCUSSION' | 'QUESTION' | 'UPDATE'>(
+    'UPDATE'
+  );
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -124,7 +126,13 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     clearError();
 
     try {
-      await createPost(subject, content, image || undefined, subCommunityId, type);
+      await createPost(
+        subject,
+        content,
+        image || undefined,
+        subCommunityId,
+        type
+      );
 
       // Reset form
       setContent('');
@@ -224,32 +232,38 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               gap: 1,
               pb: 1,
               '&::-webkit-scrollbar': { height: 6 },
-              '&::-webkit-scrollbar-thumb': { bgcolor: 'grey.300', borderRadius: 3 },
+              '&::-webkit-scrollbar-thumb': {
+                bgcolor: 'grey.300',
+                borderRadius: 3,
+              },
             }}
           >
             {[
               { label: 'Discussion', value: 'DISCUSSION' },
               { label: 'Question', value: 'QUESTION' },
               // Only show Announcement if user is owner, admin, or moderator
-              ...(userRole === 'OWNER' || user?.role === 'ADMIN' || userRole === 'MODERATOR'
-          ? [{ label: 'Announcement', value: 'ANNOUNCEMENT' },
-              { label: 'Update', value: 'UPDATE' },
-          ]
-          : []),
+              ...(userRole === 'OWNER' ||
+              user?.role === 'ADMIN' ||
+              userRole === 'MODERATOR'
+                ? [
+                    { label: 'Announcement', value: 'ANNOUNCEMENT' },
+                    { label: 'Update', value: 'UPDATE' },
+                  ]
+                : []),
             ].map((option) => (
               <Chip
-          key={option.value}
-          label={option.label}
-          color={type === option.value ? 'primary' : 'default'}
-          variant={type === option.value ? 'filled' : 'outlined'}
-          clickable
-          onClick={() => setType(option.value as typeof type)}
-          sx={{
-            fontWeight: type === option.value ? 600 : 400,
-            fontSize: '1rem',
-            px: 2,
-          }}
-          disabled={isSubmitting}
+                key={option.value}
+                label={option.label}
+                color={type === option.value ? 'primary' : 'default'}
+                variant={type === option.value ? 'filled' : 'outlined'}
+                clickable
+                onClick={() => setType(option.value as typeof type)}
+                sx={{
+                  fontWeight: type === option.value ? 600 : 400,
+                  fontSize: '1rem',
+                  px: 2,
+                }}
+                disabled={isSubmitting}
               />
             ))}
           </Box>
