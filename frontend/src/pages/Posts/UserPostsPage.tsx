@@ -74,7 +74,6 @@ export const UserPostsPage: React.FC = () => {
         try {
           await loadPosts(1);
           if (isActive) {
-            setHasLoaded(true);
             console.log('Posts loaded for user ID:', userId);
           }
         } catch (error) {
@@ -167,7 +166,6 @@ export const UserPostsPage: React.FC = () => {
         }}
       >
         <Typography>No posts found.</Typography>
-        <CircularProgress />
       </Box>
     );
   }
@@ -298,8 +296,16 @@ export const UserPostsPage: React.FC = () => {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {statusFilter === 'approved'
-              ? "This user doesn't have any approved posts yet."
-              : "This user doesn't have any pending posts."}
+              ? isCurrentUserProfile
+                ? "You don't have any approved posts yet."
+                : "This user doesn't have any approved posts yet."
+              : statusFilter === 'pending'
+                ? isCurrentUserProfile
+                  ? "You don't have any pending posts."
+                  : "This user doesn't have any pending posts."
+                : isCurrentUserProfile
+                  ? "You don't have any rejected posts."
+                  : "This user doesn't have any rejected posts."}
           </Typography>
           <Button
             variant="outlined"

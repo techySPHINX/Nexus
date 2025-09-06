@@ -406,7 +406,12 @@ export class PostService {
    * @throws {NotFoundException} If the user is not found.
    * @throws {BadRequestException} If pagination parameters are invalid.
    */
-  async findByUser(userId: string, page = 1, limit = 10) {
+  async findByUser(
+    userId: string,
+    currentUserId: string,
+    page = 1,
+    limit = 10,
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
@@ -421,9 +426,16 @@ export class PostService {
 
     const skip = (page - 1) * limit;
 
+    // Only allow all posts if it's the current user's profile
+    const whereCondition: any = { authorId: userId };
+
+    if (currentUserId !== userId) {
+      whereCondition.status = 'APPROVED';
+    }
+
     const [posts, total] = await Promise.all([
       this.prisma.post.findMany({
-        where: { authorId: userId },
+        where: whereCondition,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -446,7 +458,7 @@ export class PostService {
           },
         },
       }),
-      this.prisma.post.count({ where: { authorId: userId } }),
+      this.prisma.post.count({ where: whereCondition }),
     ]);
 
     return {
