@@ -200,8 +200,6 @@ export const SubCommunitiesPage: React.FC = () => {
             return null;
           }
 
-          console.log(`Displaying communities for type: ${typeConfig.id}`);
-
           return (
             <SubCommunitySection
               key={typeConfig.id}

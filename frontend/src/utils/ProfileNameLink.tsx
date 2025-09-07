@@ -1,13 +1,19 @@
 import { Typography, Chip, Box, Tooltip, Avatar } from '@mui/material';
 import { useAuth } from '@/contexts/AuthContext';
-import { User } from '@/types/engagement';
+import { Role } from '@/types/engagement';
 import { useNavigate } from 'react-router-dom';
-import {
-  AdminPanelSettings,
-  School,
-  Person,
-  MilitaryTech,
-} from '@mui/icons-material';
+import { Person, MenuBook, EmojiEvents, Security } from '@mui/icons-material';
+import { useProfile } from '@/contexts/ProfileContext';
+
+interface User {
+  id?: string;
+  email?: string;
+  role?: Role;
+  name?: string;
+  profile?: {
+    avatarUrl?: string;
+  };
+}
 
 interface ProfileNameLinkProps {
   user: User;
@@ -15,30 +21,32 @@ interface ProfileNameLinkProps {
   showAvatar?: boolean;
   showRoleBadge?: boolean;
   showYouBadge?: boolean;
-  variant?: 'subtitle1' | 'subtitle2' | 'body1' | 'body2';
+  onlyFirstName?: boolean;
+  variant?: 'subtitle1' | 'subtitle2' | 'body1' | 'body2' | 'h6';
   fontSize?: string;
   fontWeight?: number | string;
   avatarSize?: number;
 }
 
-const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
+export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
   user,
   linkToProfile = true,
   showAvatar = false,
   showRoleBadge = true,
   showYouBadge = true,
+  onlyFirstName = false,
   variant = 'subtitle2',
   fontSize = '0.9rem',
   fontWeight = 600,
   avatarSize = 24,
 }) => {
   const { user: authUser } = useAuth();
+  const { profile: authProfile } = useProfile();
   const navigate = useNavigate();
 
   const isAuthor = authUser?.id === user?.id;
   const isAdmin = user?.role === 'ADMIN';
   const isAlum = user?.role === 'ALUM';
-  const isStudent = user?.role === 'STUDENT';
 
   const getUserName = () => user?.name || 'Unknown User';
 
@@ -53,20 +61,20 @@ const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
       return {
         label: 'Admin',
         color: 'error' as const,
-        icon: <AdminPanelSettings fontSize="small" />,
+        icon: <Security fontSize="small" />,
       };
     }
     if (isAlum) {
       return {
-        label: 'Alum',
+        label: 'Alumni',
         color: 'secondary' as const,
-        icon: <MilitaryTech fontSize="small" />,
+        icon: <EmojiEvents fontSize="small" />,
       };
     }
     return {
       label: 'Student',
       color: 'info' as const,
-      icon: <School fontSize="small" />,
+      icon: <MenuBook fontSize="small" />,
     };
   };
 
@@ -80,7 +88,7 @@ const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
       {showAvatar && (
         <Tooltip title={getUserName()}>
           <Avatar
-            src={user?.profile?.avatarUrl}
+            src={authProfile?.avatarUrl || undefined}
             sx={{
               width: avatarSize,
               height: avatarSize,
@@ -102,24 +110,33 @@ const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
         sx={{
           cursor: linkToProfile ? 'pointer' : 'default',
           '&:hover': linkToProfile ? { color: 'primary.main' } : {},
+          display: 'inline',
         }}
       >
-        {getUserName()}
+        {onlyFirstName ? getUserName().split(' ')[0] : getUserName()}
       </Typography>
 
       {/* Role Badge */}
       {showRoleBadge && user?.role && (
-        <Tooltip title={`User role: ${roleConfig.label}`}>
+        <Tooltip title={`${roleConfig.label}`} arrow placement="top">
           <Chip
             icon={roleConfig.icon}
-            label={roleConfig.label}
             size="small"
-            variant="filled"
+            variant="outlined"
             color={roleConfig.color}
             sx={{
-              height: 20,
-              fontSize: '0.7rem',
-              '& .MuiChip-icon': { fontSize: 14 },
+              height: 22,
+              minWidth: 22,
+              width: 22,
+              borderRadius: '50%', // circle style
+              px: 0,
+              '& .MuiChip-icon': {
+                fontSize: 18,
+                margin: 0,
+              },
+              '& .MuiChip-label': {
+                display: 'none', // hide text label
+              },
             }}
           />
         </Tooltip>
@@ -145,5 +162,3 @@ const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
     </Box>
   );
 };
-
-export default ProfileNameLink;

@@ -82,7 +82,7 @@ export class SubCommunityService {
     return this.prisma.subCommunity.findMany({
       where,
       include: {
-        owner: { select: { id: true, name: true } },
+        owner: { select: { id: true, name: true, role: true } },
         _count: {
           select: { members: true, posts: { where: { status: 'APPROVED' } } },
         },
@@ -101,6 +101,7 @@ export class SubCommunityService {
               select: {
                 id: true,
                 name: true,
+                role: true,
                 profile: { select: { avatarUrl: true } },
               },
             },
@@ -150,7 +151,7 @@ export class SubCommunityService {
         skip,
         take: limit,
         include: {
-          owner: { select: { id: true, name: true } },
+          owner: { select: { id: true, name: true, role: true } },
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },

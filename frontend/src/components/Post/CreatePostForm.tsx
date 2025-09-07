@@ -6,16 +6,16 @@ import {
   TextField,
   Button,
   IconButton,
-  Avatar,
   Divider,
   Chip,
-  Typography,
   Snackbar,
   Alert,
   CircularProgress,
 } from '@mui/material';
 import { Image, Close, Cancel } from '@mui/icons-material';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { ProfileNameLink } from '@/utils/ProfileNameLink';
+import { SubCommunityRole } from '@/types/subCommunity';
 
 export interface Profile {
   id: string;
@@ -27,22 +27,31 @@ export interface Profile {
 
 interface CreatePostFormProps {
   subCommunityId?: string;
+  subCommunityName?: string;
   onSuccess?: () => void;
   onError?: (error: unknown) => void;
   onCancel?: () => void;
   profile?: Pick<Profile, 'id' | 'avatarUrl'>;
+  userRole?: SubCommunityRole | null;
 }
 
 export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   subCommunityId,
+  subCommunityName,
   onSuccess,
   onError,
   onCancel,
   profile,
+  userRole,
 }) => {
+  console.log('Profile prop in CreatePostForm:', profile);
   const { user } = useAuth();
   const { createPost, clearError } = usePosts();
   const [content, setContent] = useState('');
+  const [subject, setSubject] = useState('');
+  const [type, setType] = useState<'DISCUSSION' | 'QUESTION' | 'UPDATE'>(
+    'UPDATE'
+  );
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -103,8 +112,13 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!subject.trim()) {
+      showSnackbar('Please provide a subject for your post.', 'error');
+      return;
+    }
+
     if (!content.trim()) {
-      showSnackbar('Please write something to post.', 'error');
+      showSnackbar('Please provide content for your post.', 'error');
       return;
     }
 
@@ -112,7 +126,13 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     clearError();
 
     try {
-      await createPost(content, image || undefined, subCommunityId);
+      await createPost(
+        subject,
+        content,
+        image || undefined,
+        subCommunityId,
+        type
+      );
 
       // Reset form
       setContent('');
@@ -146,33 +166,36 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }
   };
 
-  const isFormEmpty = !content.trim() && !image;
+  const isFormEmpty = !subject.trim() && !content.trim() && !image;
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
       <Box sx={{ mb: 3, p: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Avatar
-            src={profile?.avatarUrl ?? undefined}
-            sx={{
-              bgcolor: 'primary.light',
-              width: 48,
-              height: 48,
+          <ProfileNameLink
+            user={{
+              id: user?.id,
+              name: user?.name,
+              profile: {
+                avatarUrl: profile?.avatarUrl ?? undefined,
+              },
             }}
-          >
-            {user?.name?.charAt(0) || 'U'}
-          </Avatar>
-          <Typography variant="subtitle1" sx={{ ml: 2, fontWeight: 500 }}>
-            {user?.name || 'User'}
-          </Typography>
+            showAvatar={true}
+            showYouBadge={false}
+            linkToProfile={false}
+            variant="subtitle1"
+            fontSize="1.2rem"
+            fontWeight={500}
+            avatarSize={45}
+          />
         </Box>
 
         <TextField
           fullWidth
           multiline
-          rows={4}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
+          rows={2}
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
           placeholder="What's on your mind?"
           variant="outlined"
           sx={{
@@ -183,6 +206,68 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
           }}
           disabled={isSubmitting}
         />
+
+        <TextField
+          fullWidth
+          multiline
+          rows={4}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder="Write your post content here..."
+          variant="outlined"
+          sx={{
+            mb: 2,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+            },
+          }}
+          disabled={isSubmitting}
+        />
+
+        <Box sx={{ mb: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              overflowX: 'auto',
+              gap: 1,
+              pb: 1,
+              '&::-webkit-scrollbar': { height: 6 },
+              '&::-webkit-scrollbar-thumb': {
+                bgcolor: 'grey.300',
+                borderRadius: 3,
+              },
+            }}
+          >
+            {[
+              { label: 'Discussion', value: 'DISCUSSION' },
+              { label: 'Question', value: 'QUESTION' },
+              // Only show Announcement if user is owner, admin, or moderator
+              ...(userRole === 'OWNER' ||
+              user?.role === 'ADMIN' ||
+              userRole === 'MODERATOR'
+                ? [
+                    { label: 'Announcement', value: 'ANNOUNCEMENT' },
+                    { label: 'Update', value: 'UPDATE' },
+                  ]
+                : []),
+            ].map((option) => (
+              <Chip
+                key={option.value}
+                label={option.label}
+                color={type === option.value ? 'primary' : 'default'}
+                variant={type === option.value ? 'filled' : 'outlined'}
+                clickable
+                onClick={() => setType(option.value as typeof type)}
+                sx={{
+                  fontWeight: type === option.value ? 600 : 400,
+                  fontSize: '1rem',
+                  px: 2,
+                }}
+                disabled={isSubmitting}
+              />
+            ))}
+          </Box>
+        </Box>
 
         {imagePreview && (
           <Box sx={{ position: 'relative', mb: 2 }}>
@@ -246,9 +331,9 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
               </Button>
             </label>
 
-            {subCommunityId && (
+            {subCommunityName && (
               <Chip
-                label={`Community: ${subCommunityId}`}
+                label={`Community: c/${subCommunityName}`}
                 size="small"
                 color="primary"
                 variant="outlined"

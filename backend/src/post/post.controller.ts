@@ -149,13 +149,19 @@ export class PostController {
   @ApiParam({ name: 'userId', type: String })
   @ApiResponse({ status: 200, description: 'List of posts by user.' })
   findByUser(
+    @GetCurrentUser('userId') currentUserId: string,
     @Param('userId') userId: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
     const pageNum = page ?? 1;
     const limitNum = limit ?? 10;
-    return this.postService.findByUser(userId, pageNum, limitNum);
+    return this.postService.findByUser(
+      userId,
+      currentUserId,
+      pageNum,
+      limitNum,
+    );
   }
 
   /**

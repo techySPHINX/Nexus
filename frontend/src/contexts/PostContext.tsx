@@ -39,6 +39,7 @@ interface PostContextType {
   };
   clearUserPosts: () => void;
   createPost: (
+    subject: string,
     content: string,
     image?: File,
     subCommunityId?: string,
@@ -110,6 +111,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const createPost = useCallback(
     async (
+      subject: string,
       content: string,
       image?: File,
       subCommunityId?: string,
@@ -126,6 +128,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(true);
         clearError();
         const response = await createPostService(
+          subject,
           content,
           image,
           subCommunityId,
@@ -142,6 +145,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
           author: createdPost.author || {
             id: user?.id || 'unknown',
             name: user?.name || 'Unknown User',
+            role: user?.role || 'STUDENT',
             profile: {
               avatarUrl: null,
               bio: null,

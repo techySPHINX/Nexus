@@ -21,6 +21,7 @@ function getUser() {
 }
 
 export async function createPostService(
+  subject: string,
   content: string,
   imageFile?: File,
   subCommunityId?: string,
@@ -37,6 +38,7 @@ export async function createPostService(
   try {
     const formData = new FormData();
     formData.append('content', content);
+    formData.append('subject', subject);
     if (type) formData.append('type', type);
     if (subCommunityId) formData.append('subCommunityId', subCommunityId);
     if (imageFile) formData.append('image', imageFile);
