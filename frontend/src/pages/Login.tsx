@@ -23,7 +23,6 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import ThemeToggle from '../components/ThemeToggle';
-import { getErrorMessage } from '@/utils/errorHandler';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -40,14 +39,26 @@ const Login: React.FC = () => {
     setError('');
     setLoading(true);
 
-    try {
-      await login(email, password);
+    const result = await login(email, password);
+
+    if (result.status === 'OK') {
       navigate('/dashboard');
-    } catch (err: unknown) {
-      setError(getErrorMessage(err) || 'Failed to log in');
-    } finally {
-      setLoading(false);
+    } else if (result.status === 'EMAIL_NOT_VERIFIED') {
+      console.log('Navigating to verify-email with email:', email);
+      // Store email in localStorage for the verification page
+      localStorage.setItem('pendingVerificationEmail', email);
+      navigate('/verify-email', {
+        state: {
+          email,
+          message: result.message,
+        },
+      });
+      setError(result.message || 'Please verify your email first');
+    } else {
+      setError(result.message || 'Failed to log in');
     }
+
+    setLoading(false);
   };
 
   return (

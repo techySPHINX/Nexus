@@ -91,7 +91,9 @@ const Register: React.FC = () => {
         formData.name,
         formData.role
       );
-      navigate('/dashboard');
+      navigate('/verify-email', {
+        state: { email: formData.email },
+      });
     } catch (err: unknown) {
       setError(getErrorMessage(err));
     } finally {

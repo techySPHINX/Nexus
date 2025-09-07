@@ -6,7 +6,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { NavbarProvider } from './contexts/NavbarContext';
 import { useNavbar } from './contexts/NavbarContext';
 import Navbar from './components/Navbar';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './route/ProtectedRoute';
 import AdminRoute from './route/AdminRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -32,6 +32,7 @@ import { SubCommunitiesPage } from './pages/Posts/SubCommunityPage';
 import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
 import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
+import EmailVerify from './pages/EmailVerify';
 
 // Lazy load components for better performance
 // const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));
@@ -95,6 +96,7 @@ const Layout: React.FC = () => {
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<EmailVerify />} />
             <Route
               path="/dashboard"
               element={
@@ -274,25 +276,25 @@ const engagementService = new EngagementService();
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <NavbarProvider>
-          <NotificationProvider>
-            <ProfileProvider>
-              <SubCommunityProvider>
-                <PostProvider>
-                  <EngagementProvider engagementService={engagementService}>
-                    <Router>
+    <Router>
+      <ThemeProvider>
+        <AuthProvider>
+          <NavbarProvider>
+            <NotificationProvider>
+              <ProfileProvider>
+                <SubCommunityProvider>
+                  <PostProvider>
+                    <EngagementProvider engagementService={engagementService}>
                       <Layout />
-                    </Router>
-                  </EngagementProvider>
-                </PostProvider>
-              </SubCommunityProvider>
-            </ProfileProvider>
-          </NotificationProvider>
-        </NavbarProvider>
-      </AuthProvider>
-    </ThemeProvider>
+                    </EngagementProvider>
+                  </PostProvider>
+                </SubCommunityProvider>
+              </ProfileProvider>
+            </NotificationProvider>
+          </NavbarProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </Router>
   );
 }
 

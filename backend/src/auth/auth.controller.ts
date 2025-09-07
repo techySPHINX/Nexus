@@ -1,8 +1,17 @@
-import { Controller, Post, Body, Get } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-email-verification.dto';
 
 /**
  * Controller responsible for handling authentication-related requests.
@@ -30,6 +39,28 @@ export class AuthController {
   @Post('login')
   async login(@Body() dto: LoginDto): Promise<AuthResponseDto> {
     return this.authService.login(dto);
+  }
+
+  /**
+   * Verifies a user's email using a verification token.
+   * @param dto - The data required to verify the email, including the token.
+   * @returns A promise that resolves when the email has been successfully verified.
+   */
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.authService.verifyEmail(dto);
+  }
+
+  /**
+   * Resends the email verification token to the user's email address.
+   * @param email - The email address of the user to resend the verification token to.
+   * @returns A promise that resolves when the verification email has been sent.
+   */
+  @Post('resend-verification')
+  @HttpCode(HttpStatus.OK)
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    return this.authService.resendVerification(dto);
   }
 
   /**

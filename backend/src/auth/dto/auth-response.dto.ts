@@ -37,6 +37,12 @@ export class AuthResponseDto {
     role: 'STUDENT' | 'ALUM' | 'ADMIN';
 
     /**
+     * Indicates whether the user's email has been verified.
+     * @example true
+     */
+    emailVerified: boolean;
+
+    /**
      * Indicates whether the user has completed their profile.
      * @example false
      */

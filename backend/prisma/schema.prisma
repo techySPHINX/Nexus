@@ -17,6 +17,10 @@ model User {
   iconUrl             String?
   bannerUrl           String?
   createdAt           DateTime              @default(now())
+  profileCompleted                      Boolean                       @default(false)
+  emailVerified                         Boolean                       @default(false)
+  verificationToken                     String?
+  verificationTokenExpires              DateTime?
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")

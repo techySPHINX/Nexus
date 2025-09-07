@@ -3,7 +3,7 @@ import { IsEmail, IsNotEmpty, IsString, Length } from 'class-validator';
 /**
  * Data transfer object for verifying OTP.
  */
-export class VerifyOtpDto {
+export class VerifyEmailDto {
   /**
    * The user's email address.
    * @example "test@kiit.ac.in"

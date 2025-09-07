@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 interface User {
   id: string;
@@ -14,6 +15,7 @@ interface User {
   name: string;
   role: 'STUDENT' | 'ALUM' | 'ADMIN';
   profileCompleted: boolean;
+  emailVerified: boolean;
   profile?: Profile;
 }
 
@@ -22,6 +24,7 @@ interface DecodedToken {
   name: string;
   email: string;
   role: 'STUDENT' | 'ALUM' | 'ADMIN'; // adjust if you have more roles
+  emailVerified: boolean;
   profileCompleted: boolean;
   profile?: Profile; // make this stricter if you know its shape
 }
@@ -43,7 +46,13 @@ interface AuthResponse {
 interface AuthContextType {
   user: User | null;
   token: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{
+    status: 'OK' | 'EMAIL_NOT_VERIFIED' | 'ERROR';
+    message?: string;
+  }>;
   register: (
     email: string,
     password: string,
@@ -51,6 +60,8 @@ interface AuthContextType {
     role: string
   ) => Promise<void>;
   logout: () => void;
+  verifyEmail: (email: string, otp: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -90,6 +101,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email: decoded.email,
           role: decoded.role,
           profileCompleted: decoded.profileCompleted,
+          emailVerified: decoded.emailVerified,
           profile: decoded.profile,
         };
 
@@ -106,7 +118,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (
+    email: string,
+    password: string
+  ): Promise<{
+    status: 'OK' | 'EMAIL_NOT_VERIFIED' | 'ERROR';
+    message?: string;
+  }> => {
     try {
       const response = await axios.post<AuthResponse>('/auth/login', {
         email,
@@ -117,11 +135,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const decoded: DecodedToken = jwtDecode(accessToken);
 
       const user: User = {
-        id: decoded.sub, // ✅ direct mapping
+        id: decoded.sub,
         name: decoded.name,
         email: decoded.email,
         role: decoded.role,
         profileCompleted: decoded.profileCompleted,
+        emailVerified: decoded.emailVerified,
         profile: decoded.profile,
       };
 
@@ -129,20 +148,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(user);
 
       localStorage.setItem('token', accessToken);
-
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+
+      return { status: 'OK' };
     } catch (error: unknown) {
       console.error('Login error:', error);
-      let message = 'Login failed. Please try again.';
-      if (
-        axios.isAxiosError(error) &&
-        error.response &&
-        error.response.data &&
-        typeof error.response.data.message === 'string'
-      ) {
-        message = error.response.data.message;
+
+      if (axios.isAxiosError(error)) {
+        // Check for email not verified error
+        if (error.response?.status === 401) {
+          const errorMessage = error.response.data?.message;
+
+          if (errorMessage === 'Email not verified') {
+            // Automatically resend verification email
+            try {
+              await axios.post('/auth/resend-verification', { email });
+              return {
+                status: 'EMAIL_NOT_VERIFIED',
+                message: 'Verification email sent. Please check your inbox.',
+              };
+            } catch (error) {
+              console.log('Error resending verification email:', error);
+              return {
+                status: 'EMAIL_NOT_VERIFIED',
+                message:
+                  'Email not verified. Please verify your email to continue.',
+              };
+            }
+          }
+
+          return { status: 'ERROR', message: 'Invalid credentials' };
+        }
+
+        if (error.response?.data?.message) {
+          return { status: 'ERROR', message: error.response.data.message };
+        }
       }
-      throw new Error(message);
+
+      return { status: 'ERROR', message: 'Login failed. Please try again.' };
     }
   };
 
@@ -169,6 +212,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         email: decoded.email,
         role: decoded.role,
         profileCompleted: decoded.profileCompleted,
+        emailVerified: decoded.emailVerified,
         profile: decoded.profile,
       };
 
@@ -192,6 +236,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const verifyEmail = async (email: string, otp: string) => {
+    try {
+      await axios.post('/auth/verify-email', { email, otp });
+
+      if (user) {
+        setUser({ ...user, emailVerified: true });
+      }
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error));
+    }
+  };
+
+  const resendVerification = async (email: string) => {
+    try {
+      await axios.post('/auth/resend-verification', { email });
+    } catch (error: unknown) {
+      throw new Error(getErrorMessage(error));
+    }
+  };
+
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -205,6 +269,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     register,
     logout,
+    verifyEmail,
+    resendVerification,
     loading,
   };
 

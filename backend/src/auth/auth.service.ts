@@ -3,6 +3,7 @@ import {
   UnauthorizedException,
   BadRequestException,
   ForbiddenException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
@@ -11,6 +12,9 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { Role } from '@prisma/client';
+import { EmailService } from 'src/email/email.service';
+import { VerifyEmailDto } from './dto/verify-email.dto';
+import { ResendVerificationDto } from './dto/resend-email-verification.dto';
 
 const ALLOWED_DOMAIN = 'kiit.ac.in';
 
@@ -23,6 +27,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -51,12 +56,18 @@ export class AuthService {
 
     const hash = await bcrypt.hash(dto.password, 10);
 
+    const otp = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit OTP
+    const verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
         password: hash,
         name: dto.name,
         role: dto.role || Role.STUDENT,
+        emailVerified: false,
+        verificationToken: otp,
+        verificationTokenExpires,
         profile: {
           create: {
             bio: '',
@@ -67,6 +78,12 @@ export class AuthService {
         },
       },
       include: { profile: true },
+    });
+
+    await this.emailService.sendOtp({
+      email: user.email,
+      otp,
+      name: user.name,
     });
 
     return this.signToken(user);
@@ -93,7 +110,84 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    // this needs to be checked
+    if (!user.emailVerified) {
+      throw new UnauthorizedException('Email not verified');
+    }
+
     return this.signToken(user);
+  }
+
+  async verifyEmail(dto: VerifyEmailDto): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    if (!user.verificationToken || !user.verificationTokenExpires) {
+      throw new BadRequestException('No verification token found');
+    }
+
+    if (user.verificationTokenExpires < new Date()) {
+      throw new BadRequestException('Verification token expired');
+    }
+
+    if (user.verificationToken !== dto.otp) {
+      throw new BadRequestException('Invalid verification token');
+    }
+
+    await this.prisma.user.update({
+      where: { email: dto.email },
+      data: {
+        emailVerified: true,
+        verificationToken: null,
+        verificationTokenExpires: null,
+      },
+    });
+
+    return { message: 'Email verified successfully' };
+  }
+
+  async resendVerification(
+    dto: ResendVerificationDto,
+  ): Promise<{ message: string }> {
+    const user = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    if (user.emailVerified) {
+      throw new BadRequestException('Email already verified');
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const verificationTokenExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
+
+    await this.prisma.user.update({
+      where: { email: dto.email },
+      data: {
+        verificationToken: otp,
+        verificationTokenExpires,
+      },
+    });
+
+    await this.emailService.sendOtp({
+      email: user.email,
+      otp,
+      name: user.name,
+    });
+
+    return { message: 'Verification email resent successfully' };
   }
 
   /**
@@ -108,7 +202,10 @@ export class AuthService {
       name: user.name,
       email: user.email,
       role: user.role,
+      emailVerified: user.emailVerified,
+      profileCompleted: user.profileCompleted,
     };
+
     const token = this.jwt.sign(payload);
 
     return {
@@ -118,7 +215,8 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
-        profileCompleted: false,
+        emailVerified: user.emailVerified,
+        profileCompleted: user.profileCompleted,
       },
     };
   }
