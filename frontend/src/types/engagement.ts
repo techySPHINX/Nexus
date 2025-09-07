@@ -49,7 +49,8 @@ export interface Comment {
   createdAt: string;
   user: {
     id: string;
-    email: string;
+    email?: string;
+    role: Role;
     name?: string;
     profile?: {
       avatarUrl?: string;

@@ -1,4 +1,3 @@
-// Profile.tsx - Redesigned with modern layout
 import React, { useEffect, useState } from 'react';
 import {
   Container,
@@ -25,10 +24,7 @@ import {
   InputLabel,
   Badge as MuiBadge,
   Autocomplete,
-  Tabs,
-  Tab,
   Card,
-  // CardContent,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -44,50 +40,19 @@ import {
   ThumbUp,
   MilitaryTech,
   Business,
-  Article,
-  Comment as CommentIcon,
-  Code,
-  BusinessCenter,
   EmojiEvents,
   Refresh,
-  // ArrowUpward,
-  // ArrowDownward,
-  // Visibility,
   Star,
 } from '@mui/icons-material';
 import axios from 'axios';
 import {
   Role,
   UserBadge,
-  // UserPost,
-  // UserComment,
   Badge as BadgeType,
   Skill,
 } from '@/types/profileType';
-import { useParams } from 'react-router-dom';
-
-// Import the new components
-// import StartupsSection from '@/components/Profile/StartupsSection';
-import ReferralsSection from '@/components/Profile/ReferralsSection';
-// import ProjectsSection from '@/components/Profile/ProjectsSection';
-import PointsSection from '@/components/Profile/PointsSection';
-import EventsSection from '@/components/Profile/EventsSection';
-// import { Post } from '@/components/Post/Post';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getErrorMessage } from '@/utils/errorHandler';
-
-// Tab panel component
-function TabPanel(props: {
-  children?: React.ReactNode;
-  value: number;
-  index: number;
-}) {
-  const { children, value, index, ...other } = props;
-  return (
-    <div role="tabpanel" hidden={value !== index} {...other}>
-      {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
-    </div>
-  );
-}
 
 const Profile: React.FC = () => {
   const {
@@ -109,7 +74,7 @@ const Profile: React.FC = () => {
 
   const { userId } = useParams<{ userId?: string }>();
   const { user: currentUser } = useAuth();
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
   const [localProfile, setLocalProfile] = useState({
@@ -124,9 +89,7 @@ const Profile: React.FC = () => {
   const [selectedBadge, setSelectedBadge] = useState('');
   const [profileLoading, setProfileLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState(0);
   const [avatarPreview, setAvatarPreview] = useState('');
-  // const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Check if viewing own profile or another user's profile
@@ -282,26 +245,6 @@ const Profile: React.FC = () => {
     }
   };
 
-  // const handleSortChange = () => {
-  //   setSortBy((prev) => (prev === 'newest' ? 'oldest' : 'newest'));
-  // };
-
-  // const getSortedPosts = (posts: UserPost[]) => {
-  //   return posts.sort((a, b) => {
-  //     const dateA = new Date(a.createdAt).getTime();
-  //     const dateB = new Date(b.createdAt).getTime();
-  //     return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
-  //   });
-  // };
-
-  // const getSortedComments = (comments: UserComment[]) => {
-  //   return comments.sort((a, b) => {
-  //     const dateA = new Date(a.createdAt).getTime();
-  //     const dateB = new Date(b.createdAt).getTime();
-  //     return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
-  //   });
-  // };
-
   const InfoCard: React.FC<{
     icon: React.ReactNode;
     title: string;
@@ -327,151 +270,6 @@ const Profile: React.FC = () => {
       )}
     </Card>
   );
-
-  // Helper components for different content sections
-  // const PostsSection = () => (
-  //   <Box>
-  //     <Box
-  //       sx={{
-  //         display: 'flex',
-  //         justifyContent: 'space-between',
-  //         alignItems: 'center',
-  //         mb: 3,
-  //       }}
-  //     >
-  //       <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
-  //         <Article sx={{ mr: 1 }} /> Recent Posts
-  //       </Typography>
-  //       <Button
-  //         variant="outlined"
-  //         size="small"
-  //         onClick={handleSortChange}
-  //         startIcon={sortBy === 'newest' ? <ArrowDownward /> : <ArrowUpward />}
-  //       >
-  //         {sortBy === 'newest' ? 'Newest First' : 'Oldest First'}
-  //       </Button>
-  //     </Box>
-  //     {profile?.user.Post && profile.user.Post.length > 0 ? (
-  //       <Box>
-  //         {getSortedPosts(profile.user.Post)
-  //           .slice(0, 5)
-  //           .map((post: UserPost) => (
-  //             <Post
-  //               key={post.id}
-  //               post={{
-  //                 ...post,
-  //                 content: post.subject || '',
-  //                 authorId: profile.user.id,
-  //                 author: {
-  //                   ...profile.user,
-  //                   profile: profile.user.profile
-  //                     ? {
-  //                         ...profile.user.profile,
-  //                         bio: profile.user.profile.bio ?? '',
-  //                         avatarUrl: profile.user.profile.avatarUrl ?? '',
-  //                       }
-  //                     : {},
-  //                 },
-  //                 createdAt: post.createdAt,
-  //                 updatedAt: post.createdAt,
-  //                 status: 'APPROVED',
-  //                 type: post.type ?? 'GENERAL',
-  //                 Vote: post.Vote || undefined,
-  //                 _count: {
-  //                   Comment: post.Comment?.length || 0,
-  //                   Vote: post.Vote?.length || 0,
-  //                 },
-  //                 subCommunity: post.subCommunity
-  //                   ? {
-  //                       id: post.subCommunity.id,
-  //                       name: post.subCommunity.name,
-  //                       description: post.subCommunity.description ?? '',
-  //                     }
-  //                   : undefined,
-  //               }}
-  //               showActions={false}
-  //               onClick={() =>
-  //                 navigate(`/posts/${post.id}`, {
-  //                   state: { from: `/profile/${profile.user.id}` },
-  //                 })
-  //               }
-  //             />
-  //           ))}
-  //       </Box>
-  //     ) : (
-  //       <Paper sx={{ p: 4, textAlign: 'center' }}>
-  //         <Typography variant="body2" color="text.secondary">
-  //           No posts yet
-  //         </Typography>
-  //       </Paper>
-  //     )}
-  //   </Box>
-  // );
-
-  // const CommentsSection = () => (
-  //   <Box>
-  //     <Box
-  //       sx={{
-  //         display: 'flex',
-  //         justifyContent: 'space-between',
-  //         alignItems: 'center',
-  //         mb: 3,
-  //       }}
-  //     >
-  //       <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center' }}>
-  //         <CommentIcon sx={{ mr: 1 }} /> Recent Comments
-  //       </Typography>
-  //       <Button
-  //         variant="outlined"
-  //         size="small"
-  //         onClick={handleSortChange}
-  //         startIcon={sortBy === 'newest' ? <ArrowDownward /> : <ArrowUpward />}
-  //       >
-  //         {sortBy === 'newest' ? 'Newest First' : 'Oldest First'}
-  //       </Button>
-  //     </Box>
-  //     {profile?.user.Comment && profile.user.Comment.length > 0 ? (
-  //       <Box>
-  //         {getSortedComments(profile.user.Comment)
-  //           .slice(0, 5)
-  //           .map((comment: UserComment) => (
-  //             <Card key={comment.id} variant="outlined" sx={{ mb: 2 }}>
-  //               <CardContent>
-  //                 <Typography variant="body2" sx={{ mb: 1 }}>
-  //                   {comment.content}
-  //                 </Typography>
-  //                 <Box
-  //                   sx={{
-  //                     display: 'flex',
-  //                     justifyContent: 'space-between',
-  //                     alignItems: 'center',
-  //                   }}
-  //                 >
-  //                   <Typography variant="caption" color="text.secondary">
-  //                     On: {comment.post?.subject} •{' '}
-  //                     {new Date(comment.createdAt).toLocaleDateString()}
-  //                   </Typography>
-  //                   <Button
-  //                     size="small"
-  //                     startIcon={<Visibility />}
-  //                     onClick={() => navigate(`/posts/${comment.postId}`)}
-  //                   >
-  //                     View Post
-  //                   </Button>
-  //                 </Box>
-  //               </CardContent>
-  //             </Card>
-  //           ))}
-  //       </Box>
-  //     ) : (
-  //       <Paper sx={{ p: 4, textAlign: 'center' }}>
-  //         <Typography variant="body2" color="text.secondary">
-  //           No comments yet
-  //         </Typography>
-  //       </Paper>
-  //     )}
-  //   </Box>
-  // );
 
   if (loading || profileLoading) {
     return (
@@ -555,7 +353,7 @@ const Profile: React.FC = () => {
             >
               <Box>
                 <Typography variant="h4" gutterBottom>
-                  {profile.user.name}&apos;s Profile
+                  {isOwnProfile ? 'My' : `${profile.user.name}'s`} Profile
                 </Typography>
                 <Typography variant="subtitle1" color="text.secondary">
                   <Chip
@@ -579,37 +377,39 @@ const Profile: React.FC = () => {
                       fontSize: '0.7rem',
                     }}
                   />
-                  • {profile.user.email}
+                  {isOwnProfile ? `• ${profile.user.email}` : null}
                 </Typography>
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleRefresh}
-                  startIcon={<Refresh />}
-                  disabled={isRefreshing}
-                  size="small"
-                >
-                  {isRefreshing ? <CircularProgress size={20} /> : 'Refresh'}
-                </Button>
-                {isOwnProfile && (
-                  <Button
-                    variant="contained"
-                    onClick={() => setIsEditing(true)}
-                    startIcon={<Edit />}
-                  >
-                    Edit Profile
-                  </Button>
-                )}
-                {!isOwnProfile && currentUser?.role === Role.ADMIN && (
+                <Tooltip title="Refresh profile data">
                   <Button
                     variant="outlined"
-                    onClick={() => setBadgeDialogOpen(true)}
-                    startIcon={<MilitaryTech />}
+                    onClick={handleRefresh}
+                    startIcon={<Refresh />}
+                    disabled={isRefreshing}
+                    size="small"
                   >
-                    Award Badge
+                    {isRefreshing && <CircularProgress size={20} />}
                   </Button>
+                </Tooltip>
+                {isOwnProfile && (
+                  <Tooltip title="Edit your profile">
+                    <Button
+                      variant="contained"
+                      onClick={() => setIsEditing(true)}
+                      startIcon={<Edit />}
+                    ></Button>
+                  </Tooltip>
+                )}
+                {!isOwnProfile && currentUser?.role === Role.ADMIN && (
+                  <Tooltip title="Award a badge to this user">
+                    <Button
+                      variant="outlined"
+                      onClick={() => setBadgeDialogOpen(true)}
+                      startIcon={<MilitaryTech />}
+                    ></Button>
+                  </Tooltip>
                 )}
               </Box>
             </Box>
@@ -617,11 +417,25 @@ const Profile: React.FC = () => {
             {/* Stats */}
             <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
               {profile.user._count?.Post > 0 && (
-                <Chip
-                  label={`${profile.user._count?.Post || 0} Posts`}
-                  color="primary"
-                  variant="outlined"
-                />
+                <Tooltip title="View all posts">
+                  <Chip
+                    label={`${profile.user._count?.Post || 0} Posts`}
+                    variant="outlined"
+                    onClick={() => {
+                      navigate(`/users/${profile.user.id}/posts`);
+                    }}
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        backgroundColor: 'primary.main',
+                        color: 'green',
+                        borderColor: 'primary.main',
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                  />
+                </Tooltip>
               )}
               {profile.user._count?.Comment > 0 && (
                 <Chip
@@ -647,6 +461,18 @@ const Profile: React.FC = () => {
               {profile.user._count?.subCommunityMemberships > 0 && (
                 <Chip
                   label={`${profile.user._count?.subCommunityMemberships} Sub-Communities Joined`}
+                  variant="outlined"
+                />
+              )}
+              {profile.user._count?.events > 0 && (
+                <Chip
+                  label={`${profile.user._count?.events} Events`}
+                  variant="outlined"
+                />
+              )}
+              {profile.user._count?.postedReferrals > 0 && (
+                <Chip
+                  label={`${profile.user._count?.postedReferrals} Referrals`}
                   variant="outlined"
                 />
               )}
@@ -721,7 +547,7 @@ const Profile: React.FC = () => {
               </Paper>
 
               {/* Additional Sections */}
-              {profile.user.postedReferrals &&
+              {/* {profile.user.postedReferrals &&
                 profile.user.postedReferrals.length > 0 && (
                   <Paper elevation={1} sx={{ p: 3, mb: 3 }}>
                     <ReferralsSection
@@ -740,7 +566,7 @@ const Profile: React.FC = () => {
                 <Paper elevation={1} sx={{ p: 3 }}>
                   <EventsSection events={profile.user.events} />
                 </Paper>
-              )}
+              )} */}
             </Grid>
 
             {/* Right Column - Main Content */}
@@ -905,52 +731,6 @@ const Profile: React.FC = () => {
                       No badges yet
                     </Typography>
                   )}
-                </Box>
-              </Paper>
-
-              {/* Content Tabs */}
-              <Paper elevation={1}>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider', px: 2 }}>
-                  <Tabs
-                    value={activeTab}
-                    onChange={(_e, newValue) => setActiveTab(newValue)}
-                  >
-                    <Tab
-                      label="Posts"
-                      icon={<Article />}
-                      iconPosition="start"
-                    />
-                    <Tab
-                      label="Comments"
-                      icon={<CommentIcon />}
-                      iconPosition="start"
-                    />
-                    <Tab
-                      label="Projects"
-                      icon={<Code />}
-                      iconPosition="start"
-                    />
-                    <Tab
-                      label="Startups"
-                      icon={<BusinessCenter />}
-                      iconPosition="start"
-                    />
-                  </Tabs>
-                </Box>
-
-                <Box sx={{ p: 3 }}>
-                  <TabPanel value={activeTab} index={0}>
-                    {/* <PostsSection /> */}
-                  </TabPanel>
-                  <TabPanel value={activeTab} index={1}>
-                    {/* <CommentsSection /> */}
-                  </TabPanel>
-                  <TabPanel value={activeTab} index={2}>
-                    {/* <ProjectsSection projects={profile.user.projects || []} /> */}
-                  </TabPanel>
-                  <TabPanel value={activeTab} index={3}>
-                    {/* <StartupsSection startups={profile.user.startups || []} /> */}
-                  </TabPanel>
                 </Box>
               </Paper>
             </Grid>

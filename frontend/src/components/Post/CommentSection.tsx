@@ -45,6 +45,7 @@ import {
 import { Comment } from '@/types/engagement';
 import { useNavigate } from 'react-router-dom';
 import { VoteType } from '@/types/engagement';
+import { ProfileNameLink } from '@/utils/ProfileNameLink';
 
 interface CommentSectionProps {
   postId: string;
@@ -602,22 +603,11 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
                 alignItems="center"
                 component="span"
               >
-                <Typography
-                  variant="subtitle2"
-                  fontSize="0.9rem"
-                  fontWeight="600"
-                >
-                  {getUserName(comment)}
-                </Typography>
-                {isAuthor(comment) && (
-                  <Chip
-                    label="You"
-                    size="small"
-                    variant="filled"
-                    color="primary"
-                    sx={{ height: 20, fontSize: '0.7rem' }}
-                  />
-                )}
+                <ProfileNameLink
+                  user={comment.user}
+                  linkToProfile={true}
+                  showRoleBadge={true}
+                />
                 <Typography
                   variant="caption"
                   color="text.secondary"

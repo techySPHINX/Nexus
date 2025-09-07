@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -18,15 +18,15 @@ import {
   ToggleButton,
 } from '@mui/material';
 import {
-  // ArrowBack,
   Refresh,
   Person,
   Article,
   CheckCircle,
   Pending,
+  Cancel,
 } from '@mui/icons-material';
 
-type PostStatusFilter = 'all' | 'approved' | 'pending';
+type PostStatusFilter = 'approved' | 'pending' | 'rejected';
 
 export const UserPostsPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -35,7 +35,8 @@ export const UserPostsPage: React.FC = () => {
   const { user: currentUser } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<PostStatusFilter>('all');
+  const [statusFilter, setStatusFilter] =
+    useState<PostStatusFilter>('approved');
   const navigate = useNavigate();
 
   const loadPosts = useCallback(
@@ -73,7 +74,6 @@ export const UserPostsPage: React.FC = () => {
         try {
           await loadPosts(1);
           if (isActive) {
-            setHasLoaded(true);
             console.log('Posts loaded for user ID:', userId);
           }
         } catch (error) {
@@ -120,6 +120,8 @@ export const UserPostsPage: React.FC = () => {
         return post.status === 'APPROVED';
       case 'pending':
         return post.status === 'PENDING';
+      case 'rejected':
+        return post.status === 'REJECTED';
       default:
         return true; // 'all' - show all posts
     }
@@ -127,9 +129,9 @@ export const UserPostsPage: React.FC = () => {
 
   // Count posts by status
   const postCounts = {
-    all: userPosts.length,
     approved: userPosts.filter((post) => post.status === 'APPROVED').length,
     pending: userPosts.filter((post) => post.status === 'PENDING').length,
+    rejected: userPosts.filter((post) => post.status === 'REJECTED').length,
   };
 
   const isCurrentUserProfile = currentUser?.id === userId;
@@ -164,7 +166,6 @@ export const UserPostsPage: React.FC = () => {
         }}
       >
         <Typography>No posts found.</Typography>
-        <CircularProgress />
       </Box>
     );
   }
@@ -174,16 +175,6 @@ export const UserPostsPage: React.FC = () => {
       {/* Header Section */}
       <Paper elevation={1} sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          {/* <Button
-            component={Link}
-            to="/"
-            variant="outlined"
-            startIcon={<ArrowBack />}
-            size="small"
-          >
-            Back
-          </Button> */}
-
           <IconButton
             onClick={handleRefresh}
             disabled={loading || isRefreshing}
@@ -200,7 +191,7 @@ export const UserPostsPage: React.FC = () => {
 
           <Box>
             <Typography variant="h4" gutterBottom>
-              {userDisplayName}&apos;s Posts
+              {isCurrentUserProfile ? 'My' : `${userDisplayName}'s`} Posts
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
               {isCurrentUserProfile
@@ -219,17 +210,6 @@ export const UserPostsPage: React.FC = () => {
             aria-label="post status filter"
             sx={{ flexWrap: 'wrap', gap: 1 }}
           >
-            <ToggleButton value="all" aria-label="all posts">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Article fontSize="small" />
-                All
-                <Chip
-                  label={postCounts.all}
-                  size="small"
-                  sx={{ ml: 1, height: '20px' }}
-                />
-              </Box>
-            </ToggleButton>
             <ToggleButton value="approved" aria-label="approved posts">
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <CheckCircle fontSize="small" color="success" />
@@ -242,18 +222,34 @@ export const UserPostsPage: React.FC = () => {
                 />
               </Box>
             </ToggleButton>
-            <ToggleButton value="pending" aria-label="pending posts">
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Pending fontSize="small" color="warning" />
-                Pending
-                <Chip
-                  label={postCounts.pending}
-                  size="small"
-                  sx={{ ml: 1, height: '20px' }}
-                  color="warning"
-                />
-              </Box>
-            </ToggleButton>
+            {isCurrentUserProfile && (
+              <>
+                <ToggleButton value="pending" aria-label="pending posts">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Pending fontSize="small" color="warning" />
+                    Pending
+                    <Chip
+                      label={postCounts.pending}
+                      size="small"
+                      sx={{ ml: 1, height: '20px' }}
+                      color="warning"
+                    />
+                  </Box>
+                </ToggleButton>
+                <ToggleButton value="rejected" aria-label="rejected posts">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Cancel fontSize="small" color="error" />
+                    Rejected
+                    <Chip
+                      label={postCounts.rejected}
+                      size="small"
+                      sx={{ ml: 1, height: '20px' }}
+                      color="error"
+                    />
+                  </Box>
+                </ToggleButton>
+              </>
+            )}
           </ToggleButtonGroup>
         </Box>
 
@@ -261,22 +257,20 @@ export const UserPostsPage: React.FC = () => {
         {userPosts.length > 0 && (
           <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
             <Chip
-              icon={<Article />}
-              label={`${pagination.total} Total Posts`}
-              variant="outlined"
-            />
-            <Chip
               label={`Page ${pagination.page} of ${pagination.totalPages}`}
               variant="outlined"
             />
-            <Chip label={`${userPosts.length} Loaded`} variant="outlined" />
-            {statusFilter !== 'all' && (
-              <Chip
-                label={`${filteredPosts.length} ${statusFilter}`}
-                variant="filled"
-                color={statusFilter === 'approved' ? 'success' : 'warning'}
-              />
-            )}
+            <Chip
+              label={`${filteredPosts.length} ${statusFilter}`}
+              variant="filled"
+              color={
+                statusFilter === 'approved'
+                  ? 'success'
+                  : statusFilter === 'pending'
+                    ? 'warning'
+                    : 'error'
+              }
+            />
           </Box>
         )}
       </Paper>
@@ -293,16 +287,6 @@ export const UserPostsPage: React.FC = () => {
               ? "You haven't published any posts yet. Start sharing your thoughts!"
               : "This user hasn't published any posts yet."}
           </Typography>
-          {isCurrentUserProfile && (
-            <Button
-              variant="contained"
-              component={Link}
-              to="/create-post"
-              sx={{ mt: 2 }}
-            >
-              Create Your First Post
-            </Button>
-          )}
         </Paper>
       ) : filteredPosts.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center', mt: 2 }}>
@@ -312,15 +296,23 @@ export const UserPostsPage: React.FC = () => {
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {statusFilter === 'approved'
-              ? "This user doesn't have any approved posts yet."
-              : "This user doesn't have any pending posts."}
+              ? isCurrentUserProfile
+                ? "You don't have any approved posts yet."
+                : "This user doesn't have any approved posts yet."
+              : statusFilter === 'pending'
+                ? isCurrentUserProfile
+                  ? "You don't have any pending posts."
+                  : "This user doesn't have any pending posts."
+                : isCurrentUserProfile
+                  ? "You don't have any rejected posts."
+                  : "This user doesn't have any rejected posts."}
           </Typography>
           <Button
             variant="outlined"
-            onClick={() => setStatusFilter('all')}
+            onClick={() => setStatusFilter('approved')}
             sx={{ mt: 2 }}
           >
-            View All Posts
+            View Posts
           </Button>
         </Paper>
       ) : (

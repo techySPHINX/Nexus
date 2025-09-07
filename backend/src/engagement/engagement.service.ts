@@ -254,6 +254,7 @@ export class EngagementService {
               id: true,
               email: true,
               name: true, // Make sure to include name
+              role: true, // Include role to show role badge
               profile: {
                 select: { avatarUrl: true },
               },
@@ -267,6 +268,7 @@ export class EngagementService {
                   id: true,
                   email: true,
                   name: true, // Make sure to include name
+                  role: true,
                   profile: {
                     select: { avatarUrl: true },
                   },
@@ -281,6 +283,7 @@ export class EngagementService {
                       id: true,
                       email: true,
                       name: true, // Make sure to include name
+                      role: true,
                       profile: {
                         select: { avatarUrl: true },
                       },
@@ -294,6 +297,7 @@ export class EngagementService {
                           id: true,
                           email: true,
                           name: true, // Make sure to include name
+                          role: true,
                           profile: {
                             select: { avatarUrl: true },
                           },

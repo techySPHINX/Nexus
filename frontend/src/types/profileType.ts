@@ -59,6 +59,9 @@ export interface User {
     projects: number;
     ownedSubCommunities: number;
     subCommunityMemberships: number;
+    startups: number;
+    postedReferrals: number;
+    events: number;
   };
 }
 
