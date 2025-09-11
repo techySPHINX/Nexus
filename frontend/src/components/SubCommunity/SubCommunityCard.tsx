@@ -168,10 +168,6 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   };
 
   const renderJoinButton = () => {
-    if (!subCommunity.isPrivate) {
-      return null;
-    }
-
     if (isMember) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
