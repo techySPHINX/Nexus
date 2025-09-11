@@ -74,20 +74,27 @@ export class SubCommunityService {
     return subCommunity;
   }
 
-  async findAllSubCommunities(userId?: string) {
+  async findAllSubCommunities(userId: string) {
     const where: Prisma.SubCommunityWhereInput = {
       OR: [{ isPrivate: false }, { members: { some: { userId } } }],
     };
 
-    return this.prisma.subCommunity.findMany({
-      where,
-      include: {
-        owner: { select: { id: true, name: true, role: true } },
-        _count: {
-          select: { members: true, posts: { where: { status: 'APPROVED' } } },
+    // If userId is provided, include membership info
+    if (userId) {
+      return this.prisma.subCommunity.findMany({
+        where,
+        include: {
+          owner: { select: { id: true, name: true, role: true } },
+          _count: {
+            select: { members: true, posts: { where: { status: 'APPROVED' } } },
+          },
+          members: {
+            where: { userId },
+            select: { userId: true, role: true },
+          },
         },
-      },
-    });
+      });
+    }
   }
 
   async findOneSubCommunity(id: string, userId?: string) {
@@ -138,13 +145,23 @@ export class SubCommunityService {
     type: string,
     page: number = 1,
     limit: number = 20,
+    userId?: string,
   ) {
     const skip = (page - 1) * limit;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
 
     // For "ALL" type, return all subcommunities
     const where =
       type.toUpperCase() === 'ALL' ? {} : { type: type.toUpperCase() };
 
+    // Find sub-communities and total count, and mark if user is a member
     const [subCommunities, totalCount] = await Promise.all([
       this.prisma.subCommunity.findMany({
         where,
@@ -155,6 +172,12 @@ export class SubCommunityService {
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },
+          members: userId
+            ? {
+                where: { userId },
+                select: { userId: true, role: true },
+              }
+            : undefined,
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -176,6 +199,22 @@ export class SubCommunityService {
         hasPrev,
       },
     };
+
+    // const totalPages = Math.ceil(totalCount / limit);
+    // const hasNext = page < totalPages;
+    // const hasPrev = page > 1;
+
+    // return {
+    //   data: subCommunities,
+    //   pagination: {
+    //     page,
+    //     limit,
+    //     total: totalCount,
+    //     totalPages,
+    //     hasNext,
+    //     hasPrev,
+    //   },
+    // };
   }
 
   async updateSubCommunity(

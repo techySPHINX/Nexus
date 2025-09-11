@@ -43,8 +43,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
-  const { requestToJoin, joinRequests, getPendingJoinRequests } =
-    useSubCommunity();
+  const { requestToJoin, joinRequests } = useSubCommunity();
 
   const [isMember, setIsMember] = useState(false);
   const [userRole, setUserRole] = useState<SubCommunityRole | null>(null);
@@ -54,9 +53,10 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   // Check if user is a member
   useEffect(() => {
     if (user && subCommunity.members) {
+      // Find the current user's membership and set their role
       const member = subCommunity.members.find((m) => m.userId === user.id);
       setIsMember(!!member);
-      setUserRole(member?.role || null);
+      setUserRole(member ? member.role : null);
     }
   }, [user, subCommunity.members]);
 
@@ -98,7 +98,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
       await requestToJoin(subCommunity.id);
       setHasPendingRequest(true);
       // Refresh pending requests
-      getPendingJoinRequests(subCommunity.id);
+      // getPendingJoinRequests(subCommunity.id);
     } catch (error) {
       console.error('Failed to join community:', error);
     } finally {
@@ -169,6 +169,10 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   };
 
   const renderJoinButton = () => {
+    if (!subCommunity.isPrivate) {
+      return null;
+    }
+
     if (isMember) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

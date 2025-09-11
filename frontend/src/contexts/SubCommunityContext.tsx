@@ -19,6 +19,7 @@ import {
   UpdateSubCommunityDto,
 } from '../types/subCommunity';
 import { useAuth } from './AuthContext';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 interface SubCommunityContextType {
   // State
@@ -332,20 +333,15 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const requestToJoin = useCallback(
     async (subCommunityId: string) => {
-      // setLoading(true);
+      setLoading(true);
       try {
         const joinRequest =
           await subCommunityService.requestToJoin(subCommunityId);
         setJoinRequests((prev) => [...prev, joinRequest]);
       } catch (err: unknown) {
-        if (err instanceof Error) {
-          setError(err.message || 'Failed to request join');
-        } else {
-          setError('Failed to request join');
-        }
-        throw err;
+        setError(getErrorMessage(err));
       } finally {
-        // setLoading(false);
+        setLoading(false);
       }
     },
     [setError]
