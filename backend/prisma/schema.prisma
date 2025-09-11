@@ -208,6 +208,10 @@ model Profile {
   endorsements Endorsement[]
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills       Skill[]       @relation("ProfileSkills")
+  dept         String?
+  year         String?
+  branch       String?
+  course       String?
 
   @@map("profile")
 }

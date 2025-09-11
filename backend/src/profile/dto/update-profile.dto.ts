@@ -67,4 +67,36 @@ export class UpdateProfileDto {
   })
   @Transform(({ value }) => (value === '' ? undefined : value))
   avatarUrl?: string;
+
+  /**
+   * The user's department.
+   * @example "Computer Science"
+   */
+  @IsOptional()
+  @IsString()
+  dept?: string;
+
+  /**
+   * The user's year of study.
+   * @example "3"
+   */
+  @IsOptional()
+  @IsString()
+  year?: string;
+
+  /**
+   * The user's branch of study.
+   * @example "B.Tech"
+   */
+  @IsOptional()
+  @IsString()
+  branch?: string;
+
+  /**
+   * The user's course of study.
+   * @example "Software Engineering"
+   */
+  @IsOptional()
+  @IsString()
+  course?: string;
 }
