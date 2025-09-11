@@ -148,7 +148,6 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
     setLoading(true);
     try {
       const data = await subCommunityService.getAllSubCommunities();
-      console.log('Fetched sub-communities:', data);
       setSubCommunities(data);
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -195,7 +194,6 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       // Check cache first
       if (!forceRefresh && subCommunityCache[cacheKey]) {
         const cachedData = subCommunityCache[cacheKey];
-        console.log('Using cached data for:', cacheKey);
         // For specific types, update the byType state
         if (type !== 'all') {
           setSubCommunitiesByType((prev) => {
@@ -218,8 +216,6 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
           page,
           limit
         );
-
-        console.log('Fetched sub-communities by type:', response);
 
         // Update cache
         setSubCommunityCache((prev) => ({

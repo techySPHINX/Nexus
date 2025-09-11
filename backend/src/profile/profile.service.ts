@@ -32,15 +32,257 @@ export class ProfileService {
             name: true,
             email: true,
             role: true,
+            bannerUrl: true,
+            createdAt: true,
+            description: true,
+            // iconUrl: true, // profiel.avatarUrl is same??
+            // Subcommunities owned
+            ownedSubCommunities: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                type: true,
+                createdAt: true,
+                iconUrl: true,
+                status: true,
+              },
+            },
+            // Subcommunity memberships
             subCommunityMemberships: {
               select: {
+                role: true,
                 subCommunity: {
                   select: {
                     id: true,
                     name: true,
                     description: true,
+                    type: true,
+                    iconUrl: true,
+                    status: true,
                   },
                 },
+              },
+            },
+            // Comments
+            Comment: {
+              select: {
+                id: true,
+                content: true,
+                postId: true,
+                createdAt: true,
+                post: {
+                  select: {
+                    subject: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 10, // Limit to recent comments
+            },
+            // Posts
+            Post: {
+              select: {
+                id: true,
+                subject: true,
+                type: true,
+                createdAt: true,
+                subCommunity: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
+                Comment: {
+                  select: {
+                    id: true,
+                  },
+                },
+                Vote: {
+                  select: {
+                    type: true,
+                  },
+                },
+              },
+              where: { status: 'APPROVED' },
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 10, // Limit to recent posts
+            },
+            // Badges
+            // badges: {
+            //   select: {
+            //     assignedAt: true,
+            //     badge: {
+            //       select: {
+            //         id: true,
+            //         name: true,
+            //         icon: true,
+            //       },
+            //     },
+            //   },
+            //   orderBy: {
+            //     assignedAt: 'desc',
+            //   },
+            // },
+            // Projects
+            projects: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                githubUrl: true,
+                websiteUrl: true,
+                imageUrl: true,
+                videoUrl: true,
+                tags: true,
+                status: true,
+                seeking: true,
+                skills: true,
+                createdAt: true,
+                supporters: {
+                  select: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+                followers: {
+                  select: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+            // Startups
+            startups: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                imageUrl: true,
+                websiteUrl: true,
+                status: true,
+                fundingGoal: true,
+                fundingRaised: true,
+                monetizationModel: true,
+                createdAt: true,
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+            // User points
+            userPoints: {
+              select: {
+                points: true,
+                transactions: {
+                  select: {
+                    points: true,
+                    type: true,
+                    entityId: true,
+                    createdAt: true,
+                  },
+                  orderBy: {
+                    createdAt: 'desc',
+                  },
+                  take: 10, // Limit to recent transactions
+                },
+              },
+            },
+            // Referrals posted
+            postedReferrals: {
+              select: {
+                id: true,
+                company: true,
+                jobTitle: true,
+                description: true,
+                requirements: true,
+                location: true,
+                status: true,
+                createdAt: true,
+                updatedAt: true,
+                applications: {
+                  select: {
+                    id: true,
+                    status: true,
+                    createdAt: true,
+                    student: {
+                      select: {
+                        id: true,
+                        name: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+            // Project updates
+            projectUpdates: {
+              select: {
+                id: true,
+                title: true,
+                content: true,
+                createdAt: true,
+                project: {
+                  select: {
+                    id: true,
+                    title: true,
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 10, // Limit to recent updates
+            },
+            // Events created
+            events: {
+              select: {
+                id: true,
+                title: true,
+                description: true,
+                imageUrl: true,
+                registrationLink: true,
+                date: true,
+                status: true,
+                category: true,
+                tags: true,
+                location: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+            _count: {
+              select: {
+                Post: { where: { status: 'APPROVED' } },
+                Comment: { where: { parentId: null } },
+                projects: true,
+                startups: true,
+                postedReferrals: true,
+                events: true,
+                ownedSubCommunities: { where: { status: 'ACTIVE' } },
+                subCommunityMemberships: true,
               },
             },
           },
@@ -48,11 +290,18 @@ export class ProfileService {
         endorsements: {
           include: {
             skill: true,
-            endorser: true,
+            endorser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
           },
         },
       },
     });
+
     if (!profile) throw new NotFoundException('Profile not found');
     return profile;
   }
@@ -306,6 +555,26 @@ export class ProfileService {
       include: {
         badge: true,
       },
+    });
+  }
+
+  /**
+   * Retrieves all skills available in the system.
+   * @returns A promise that resolves to an array of all skills.
+   */
+  async getAllSkills() {
+    return this.prisma.skill.findMany({
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  /**
+   * Retrieves all badges available in the system.
+   * @returns A promise that resolves to an array of all badges.
+   */
+  async getAllBadges() {
+    return this.prisma.badge.findMany({
+      orderBy: { name: 'asc' },
     });
   }
 }

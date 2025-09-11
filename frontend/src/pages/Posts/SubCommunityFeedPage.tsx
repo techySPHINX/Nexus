@@ -55,6 +55,7 @@ import { useTheme } from '@mui/material/styles';
 import { SubCommunityRole, SubCommunityMember } from '../../types/subCommunity';
 import { Role } from '@/types/profileType';
 import { SubCommunityEditBox } from '@/components/SubCommunity/SubCommunityEditBox';
+import { ProfileNameLink } from '@/utils/ProfileNameLink';
 
 // Tab panel component
 function TabPanel(props: {
@@ -431,9 +432,19 @@ export const SubCommunityFeedPage: React.FC = () => {
               <ListItemText
                 primary={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography variant="body1" component="span">
-                      {member.user.name}
-                    </Typography>
+                    <ProfileNameLink
+                      user={{
+                        id: member.user.id,
+                        name: member.user.name,
+                        role: member.user.role,
+                        profile: {
+                          avatarUrl:
+                            member.user?.profile?.avatarUrl || undefined,
+                        },
+                      }}
+                      showRoleBadge={true}
+                      linkToProfile={true}
+                    />
                     {renderRoleIcon(member.role)}
                   </Box>
                 }
@@ -645,7 +656,14 @@ export const SubCommunityFeedPage: React.FC = () => {
                   >
                     <Avatar sx={{ width: 32, height: 32 }} />
                     <Typography variant="body2" color="text.secondary">
-                      Owned by u/{currentSubCommunity.owner.name}
+                      Owned by
+                      <ProfileNameLink
+                        user={{
+                          id: currentSubCommunity.owner.id,
+                          name: currentSubCommunity.owner.name,
+                        }}
+                        onlyFirstName={true}
+                      />
                     </Typography>
                   </Box>
                 )}
@@ -846,9 +864,11 @@ export const SubCommunityFeedPage: React.FC = () => {
           <DialogContent sx={{ p: 3, minHeight: '400px' }}>
             <CreatePostForm
               subCommunityId={currentSubCommunity.id}
+              subCommunityName={currentSubCommunity.name}
               onSuccess={handleCreatePostSuccess}
               onError={handleCreatePostError}
               onCancel={() => setOpenForm(false)}
+              userRole={userRole}
             />
           </DialogContent>
         </Dialog>

@@ -1,4 +1,6 @@
-// Export enums and types that will be used in other files
+import { VoteType } from './engagement';
+
+// profileType.ts
 export enum Role {
   STUDENT = 'STUDENT',
   ALUM = 'ALUM',
@@ -12,12 +14,211 @@ export enum ConnectionStatus {
   BLOCKED = 'BLOCKED',
 }
 
+export enum PostStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
+export enum ProjectStatus {
+  IDEA = 'IDEA',
+  IN_PROGRESS = 'IN_PROGRESS',
+  COMPLETED = 'COMPLETED',
+}
+
+export enum StartupStatus {
+  IDEA = 'IDEA',
+  PROTOTYPING = 'PROTOTYPING',
+  BETA = 'BETA',
+  LAUNCHED = 'LAUNCHED',
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
   role: Role;
+  bannerUrl?: string;
+  description?: string;
+  createdAt: string;
   profile?: Profile;
+  ownedSubCommunities?: SubCommunity[];
+  subCommunityMemberships?: SubCommunityMembership[];
+  Comment?: UserComment[];
+  Post?: UserPost[];
+  badges?: UserBadge[];
+  projects?: Project[];
+  startups?: Startup[];
+  userPoints?: UserPoints;
+  postedReferrals?: Referral[];
+  projectUpdates?: ProjectUpdate[];
+  events?: Event[];
+  _count: {
+    Post: number;
+    Comment: number;
+    projects: number;
+    ownedSubCommunities: number;
+    subCommunityMemberships: number;
+    startups: number;
+    postedReferrals: number;
+    events: number;
+  };
+}
+
+export interface SubCommunity {
+  id: string;
+  name: string;
+  description?: string;
+  type: string;
+  iconUrl?: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface SubCommunityMembership {
+  role: string;
+  subCommunity: SubCommunity;
+}
+
+export interface UserComment {
+  id: string;
+  content: string;
+  postId: string;
+  createdAt: string;
+  post?: {
+    subject: string;
+  };
+}
+
+export interface UserPost {
+  id: string;
+  subject: string;
+  type?: string;
+  createdAt: Date;
+  subCommunity?: {
+    id: string;
+    name: string;
+    description?: string;
+  };
+  Comment?: { id: string }[];
+  Vote?: [{ id: string; type: VoteType }];
+}
+
+export interface UserBadge {
+  assignedAt: string;
+  badge: Badge;
+}
+
+export interface Badge {
+  id: string;
+  name: string;
+  icon: string;
+  description?: string;
+}
+
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  githubUrl?: string;
+  websiteUrl?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  tags: string[];
+  status: ProjectStatus;
+  seeking: string[];
+  skills: string[];
+  createdAt: string;
+  supporters?: ProjectSupport[];
+  followers?: ProjectFollower[];
+}
+
+export interface ProjectSupport {
+  user: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface ProjectFollower {
+  user: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface Startup {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  websiteUrl: string;
+  status: StartupStatus;
+  fundingGoal?: number;
+  fundingRaised?: number;
+  monetizationModel?: string;
+  createdAt: string;
+}
+
+export interface UserPoints {
+  points: number;
+  transactions: PointTransaction[];
+}
+
+export interface PointTransaction {
+  points: number;
+  type: string;
+  entityId?: string;
+  createdAt: string;
+}
+
+export interface Referral {
+  id: string;
+  company: string;
+  jobTitle: string;
+  description: string;
+  requirements: string;
+  location: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  applications?: ReferralApplication[];
+}
+
+export interface ReferralApplication {
+  id: string;
+  status: string;
+  createdAt: string;
+  student: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface ProjectUpdate {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  project: {
+    id: string;
+    title: string;
+  };
+}
+
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl?: string;
+  registrationLink?: string;
+  date: string;
+  status: string;
+  category: string;
+  tags: string[];
+  location?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Skill {
@@ -29,16 +230,13 @@ export interface Skill {
 export interface Endorsement {
   id: string;
   endorser: User;
+  skill: Skill;
   createdAt: string;
 }
 
 export interface ProfileBadge {
-  badge: {
-    id: string;
-    name: string;
-    icon: string;
-    assignedAt?: string;
-  };
+  badge: Badge;
+  assignedAt: string;
 }
 
 export interface Connection {

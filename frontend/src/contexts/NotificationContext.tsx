@@ -52,7 +52,7 @@ const categoryToTypes: Record<string, NotificationType[]> = {
     NotificationType.CONNECTION_REQUEST,
     NotificationType.CONNECTION_ACCEPTED,
   ],
-  POST: [NotificationType.POST_LIKE, NotificationType.POST_COMMENT],
+  POST: [NotificationType.POST_VOTE, NotificationType.POST_COMMENT],
   MESSAGE: [NotificationType.MESSAGE],
   SYSTEM: [NotificationType.SYSTEM],
   EVENT: [NotificationType.EVENT],
