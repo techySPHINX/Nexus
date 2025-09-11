@@ -18,7 +18,6 @@ import {
   Lock,
   ArrowForward,
   People,
-  Check,
   Schedule,
   AdminPanelSettings,
   Shield,
@@ -169,10 +168,6 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   };
 
   const renderJoinButton = () => {
-    if (!subCommunity.isPrivate) {
-      return null;
-    }
-
     if (isMember) {
       return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -189,7 +184,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
               fontWeight: 600,
             }}
           />
-          <Button
+          {/* <Button
             variant="outlined"
             size="small"
             disabled
@@ -208,7 +203,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
             startIcon={<Check sx={{ fontSize: 14 }} />}
           >
             Joined
-          </Button>
+          </Button> */}
         </Box>
       );
     }
@@ -234,6 +229,10 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
           Pending
         </Button>
       );
+    }
+
+    if (!subCommunity.isPrivate) {
+      return;
     }
 
     if (subCommunity.isPrivate) {

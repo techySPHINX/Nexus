@@ -25,6 +25,7 @@ import {
   Badge as MuiBadge,
   Autocomplete,
   Card,
+  IconButton,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -383,15 +384,14 @@ const Profile: React.FC = () => {
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Tooltip title="Refresh profile data">
-                  <Button
-                    variant="outlined"
+                  <IconButton
                     onClick={handleRefresh}
-                    startIcon={<Refresh />}
                     disabled={isRefreshing}
-                    size="small"
+                    size="large"
                   >
+                    <Refresh />
                     {isRefreshing && <CircularProgress size={20} />}
-                  </Button>
+                  </IconButton>
                 </Tooltip>
                 {isOwnProfile && (
                   <Tooltip title="Edit your profile">

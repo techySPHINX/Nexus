@@ -28,6 +28,7 @@ import {
   Divider,
   Card,
   CardContent,
+  Tooltip,
 } from '@mui/material';
 import {
   People,
@@ -46,6 +47,7 @@ import {
   Delete,
   Group,
   Settings,
+  Refresh,
 } from '@mui/icons-material';
 import { CreatePostForm } from '../../components/Post/CreatePostForm';
 import { Post } from '../../components/Post/Post';
@@ -208,13 +210,16 @@ export const SubCommunityFeedPage: React.FC = () => {
 
     try {
       await requestToJoin(id);
-      showSnackbar('Join request sent successfully!', 'success');
       setHasPendingRequest(true);
+      showSnackbar('Join request sent successfully!', 'success');
       // Refresh pending requests
       getPendingJoinRequests(id);
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       showSnackbar(errorMessage, 'error');
+    } finally {
+      getSubCommunity(id);
+      getSubCommunityFeed(id, 1);
     }
   };
 
@@ -501,17 +506,49 @@ export const SubCommunityFeedPage: React.FC = () => {
   return (
     <>
       <Box sx={{ maxWidth: '1200px', margin: '0 auto', p: { xs: 1, sm: 2 } }}>
-        {/* Breadcrumbs */}
-        <Button
-          component={Link}
-          to="/subcommunities"
-          startIcon={<ArrowBack />}
-          sx={{ mt: 2, mb: 3 }}
-          variant="outlined"
-          size="small"
+        {/*  Navigation */}
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mb: 2,
+            flexWrap: 'wrap',
+          }}
         >
-          Back to Communities
-        </Button>
+          {/* Back Button (left side) */}
+          <Button
+            component={Link}
+            to="/subcommunities"
+            startIcon={<ArrowBack />}
+            sx={{ mt: 2, mb: 2, mr: 2 }}
+          >
+            Back to Communities
+          </Button>
+
+          {/* Refresh Button with Tooltip (right side) */}
+          <Tooltip title="Refresh community">
+            <IconButton
+              onClick={() => {
+                if (id) {
+                  getSubCommunity(id);
+                  getSubCommunityFeed(id, 1);
+                  showSnackbar('Community refreshed!', 'success');
+                }
+              }}
+              size="large"
+              sx={{
+                borderRadius: '50%',
+                bgcolor: 'background.green',
+                boxShadow: 1,
+                '&:hover': { bgcolor: 'primary.light' },
+              }}
+              aria-label="Refresh Community"
+            >
+              <Refresh />
+            </IconButton>
+          </Tooltip>
+        </Box>
 
         {/* Community Header with Banner */}
         <Box
