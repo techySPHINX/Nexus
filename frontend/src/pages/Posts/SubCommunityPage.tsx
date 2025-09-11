@@ -84,10 +84,12 @@ export const SubCommunitiesPage: React.FC = () => {
 
   const filterCommunities = (communities: SubCommunity[]): SubCommunity[] => {
     if (!searchTerm) return communities;
+
     return communities.filter(
       (subCom) =>
         subCom.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subCom.description.toLowerCase().includes(searchTerm.toLowerCase())
+        subCom.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subCom.type.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
 
@@ -146,7 +148,7 @@ export const SubCommunitiesPage: React.FC = () => {
       {/* Search Bar */}
       <TextField
         fullWidth
-        placeholder="Search communities..."
+        placeholder="Search communities by name, description, or type..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         sx={{ mb: 4 }}
@@ -207,7 +209,7 @@ export const SubCommunitiesPage: React.FC = () => {
               type={typeConfig.id}
               communities={displayCommunities}
               // hasMore={/* You can check cache for pagination info */}
-              onLoadMore={() => getSubCommunityByType(typeConfig.id, 2, 20)} // Example for next page
+              onLoadMore={() => getSubCommunityByType(typeConfig.id, 2, 20)}
               initialCount={6}
             />
           );
