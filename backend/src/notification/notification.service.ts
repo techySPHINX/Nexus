@@ -552,7 +552,7 @@ export class NotificationService {
     const typeToCategory = {
       CONNECTION_REQUEST: 'CONNECTION',
       CONNECTION_ACCEPTED: 'CONNECTION',
-      POST_LIKE: 'POST',
+      POST_VOTE: 'POST',
       POST_COMMENT: 'POST',
       MESSAGE: 'MESSAGE',
       SYSTEM: 'SYSTEM',

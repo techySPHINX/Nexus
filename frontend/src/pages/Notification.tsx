@@ -89,7 +89,7 @@ const Notification: React.FC = () => {
   // Map for category to types (same as in context for consistency)
   const categoryToTypes: Record<string, string[]> = {
     CONNECTION: ['CONNECTION_REQUEST', 'CONNECTION_ACCEPTED'],
-    POST: ['POST_LIKE', 'POST_COMMENT'],
+    POST: ['POST_VOTE', 'POST_COMMENT'],
     MESSAGE: ['MESSAGE'],
     SYSTEM: ['SYSTEM'],
     EVENT: ['EVENT'],
@@ -222,7 +222,7 @@ const Notification: React.FC = () => {
         return <PersonAddIcon sx={{ color: '#1976d2' }} />;
       case NotificationType.CONNECTION_ACCEPTED:
         return <PeopleAltIcon sx={{ color: '#2e7d32' }} />;
-      case NotificationType.POST_LIKE:
+      case NotificationType.POST_VOTE:
         return <FavoriteIcon sx={{ color: '#d32f2f' }} />;
       case NotificationType.POST_COMMENT:
         return <ChatBubbleIcon sx={{ color: '#0288d1' }} />;
@@ -504,6 +504,9 @@ const Notification: React.FC = () => {
                           component="span"
                           variant="body2"
                           color="text.secondary"
+                          sx={{
+                            display: 'block',
+                          }}
                         >
                           {formatDistanceToNow(
                             new Date(notification.createdAt),

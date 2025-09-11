@@ -1,8 +1,9 @@
-import { VoteType } from './engagement';
+import { Role, VoteType } from './engagement';
 
 export interface Post {
   id: string;
   authorId: string;
+  subject: string;
   content: string;
   flairId?: string;
   imageUrl?: string;
@@ -14,6 +15,7 @@ export interface Post {
   author: {
     id: string;
     name: string;
+    role: Role;
     profile: {
       bio?: string;
       avatarUrl?: string;
