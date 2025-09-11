@@ -18,6 +18,7 @@ import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubComm
 import { SubCommunitySection } from '../../components/SubCommunity/SubCommunitySection';
 import { SubCommunityCard } from '../../components/SubCommunity/SubCommunityCard';
 import { SubCommunity } from '../../types/subCommunity';
+import { Link } from 'react-router-dom';
 
 const SUB_COMMUNITY_TYPES = [
   { id: 'all', label: 'Recommended', title: 'Recommended Communities' },
@@ -132,6 +133,27 @@ export const SubCommunitiesPage: React.FC = () => {
         <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
           Communities
         </Typography>
+
+        <Button
+          component={Link}
+          to="/subcommunities/my"
+          variant="contained"
+          color="primary"
+          startIcon={<Add />}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 1,
+            fontWeight: 600,
+            px: 3,
+            py: 1.2,
+            minWidth: 170,
+            ml: { xs: 0, sm: 2 },
+            mb: { xs: 1, sm: 0 },
+            textTransform: 'none',
+          }}
+        >
+          My Communities
+        </Button>
 
         {(isAdmin || isAlum) && (
           <Button
