@@ -63,7 +63,19 @@ export class ProfileService {
    * @returns A promise that resolves to an array of filtered profiles.
    */
   async getFilteredProfiles(filterDto: FilterProfilesDto) {
-    const { name, email, roles, location, skills, skip, take } = filterDto;
+    const {
+      name,
+      email,
+      roles,
+      location,
+      skills,
+      skip,
+      take,
+      dept,
+      year,
+      branch,
+      course,
+    } = filterDto;
 
     const where: any = {};
 
@@ -95,6 +107,22 @@ export class ProfileService {
           name: { in: skills, mode: 'insensitive' },
         },
       };
+    }
+
+    if (dept) {
+      where.dept = { contains: dept, mode: 'insensitive' };
+    }
+
+    if (year) {
+      where.year = { contains: year, mode: 'insensitive' };
+    }
+
+    if (branch) {
+      where.branch = { contains: branch, mode: 'insensitive' };
+    }
+
+    if (course) {
+      where.course = { contains: course, mode: 'insensitive' };
     }
 
     const profiles = await this.prisma.profile.findMany({

@@ -55,6 +55,38 @@ export class FilterProfilesDto {
   skills?: string[];
 
   /**
+   * Filter by department (case-insensitive, partial match).
+   * @example "Computer Science"
+   */
+  @IsOptional()
+  @IsString()
+  dept?: string;
+
+  /**
+   * Filter by year (case-insensitive, partial match).
+   * @example "3"
+   */
+  @IsOptional()
+  @IsString()
+  year?: string;
+
+  /**
+   * Filter by branch (case-insensitive, partial match).
+   * @example "B.Tech"
+   */
+  @IsOptional()
+  @IsString()
+  branch?: string;
+
+  /**
+   * Filter by course (case-insensitive, partial match).
+   * @example "Software Engineering"
+   */
+  @IsOptional()
+  @IsString()
+  course?: string;
+
+  /**
    * Number of records to skip for pagination.
    * @example 0
    */

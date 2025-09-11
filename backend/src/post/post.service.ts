@@ -551,6 +551,7 @@ export class PostService {
       ...(dto.subCommunityId !== undefined && {
         subCommunityId: dto.subCommunityId,
       }),
+      updatedAt: new Date(),
     };
 
     if (isAdmin) {
@@ -811,7 +812,10 @@ export class PostService {
 
     return this.prisma.post.update({
       where: { id },
-      data: { status: PostStatus.APPROVED },
+      data: {
+        status: PostStatus.APPROVED,
+        updatedAt: post.updatedAt,
+      },
     });
   }
 
@@ -837,7 +841,10 @@ export class PostService {
 
     return this.prisma.post.update({
       where: { id },
-      data: { status: PostStatus.REJECTED },
+      data: {
+        status: PostStatus.REJECTED,
+        updatedAt: post.updatedAt,
+      },
     });
   }
 }
