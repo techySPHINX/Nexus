@@ -224,7 +224,7 @@ export interface Event {
 export interface Skill {
   id: string;
   name: string;
-  endorsements: Endorsement[];
+  endorsements?: Endorsement[];
 }
 
 export interface Endorsement {
