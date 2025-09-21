@@ -18,6 +18,7 @@ import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubComm
 import { SubCommunitySection } from '../../components/SubCommunity/SubCommunitySection';
 import { SubCommunityCard } from '../../components/SubCommunity/SubCommunityCard';
 import { SubCommunity } from '../../types/subCommunity';
+import { Link } from 'react-router-dom';
 
 const SUB_COMMUNITY_TYPES = [
   { id: 'all', label: 'Recommended', title: 'Recommended Communities' },
@@ -84,10 +85,12 @@ export const SubCommunitiesPage: React.FC = () => {
 
   const filterCommunities = (communities: SubCommunity[]): SubCommunity[] => {
     if (!searchTerm) return communities;
+
     return communities.filter(
       (subCom) =>
         subCom.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subCom.description.toLowerCase().includes(searchTerm.toLowerCase())
+        subCom.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        subCom.type.toLowerCase().includes(searchTerm.toLowerCase())
     );
   };
 
@@ -131,6 +134,27 @@ export const SubCommunitiesPage: React.FC = () => {
           Communities
         </Typography>
 
+        <Button
+          component={Link}
+          to="/subcommunities/my"
+          variant="contained"
+          color="primary"
+          startIcon={<Add />}
+          sx={{
+            borderRadius: 2,
+            boxShadow: 1,
+            fontWeight: 600,
+            px: 3,
+            py: 1.2,
+            minWidth: 170,
+            ml: { xs: 0, sm: 2 },
+            mb: { xs: 1, sm: 0 },
+            textTransform: 'none',
+          }}
+        >
+          My Communities
+        </Button>
+
         {(isAdmin || isAlum) && (
           <Button
             variant="outlined"
@@ -146,7 +170,7 @@ export const SubCommunitiesPage: React.FC = () => {
       {/* Search Bar */}
       <TextField
         fullWidth
-        placeholder="Search communities..."
+        placeholder="Search communities by name, description, or type..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         sx={{ mb: 4 }}
@@ -207,7 +231,7 @@ export const SubCommunitiesPage: React.FC = () => {
               type={typeConfig.id}
               communities={displayCommunities}
               // hasMore={/* You can check cache for pagination info */}
-              onLoadMore={() => getSubCommunityByType(typeConfig.id, 2, 20)} // Example for next page
+              onLoadMore={() => getSubCommunityByType(typeConfig.id, 2, 20)}
               initialCount={6}
             />
           );
