@@ -54,8 +54,14 @@ export class SubCommunityController {
     @Param('type') type: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
+    @GetCurrentUser('userId') userId: string,
   ) {
-    return this.subCommunityService.findSubCommunityByType(type, page, limit);
+    return this.subCommunityService.findSubCommunityByType(
+      type,
+      page,
+      limit,
+      userId,
+    );
   }
 
   @Patch(':id')

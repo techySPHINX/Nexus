@@ -32,6 +32,7 @@ import { SubCommunitiesPage } from './pages/Posts/SubCommunityPage';
 import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
 import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
+import { MySubCommunitiesPage } from './pages/SubCommunity.tsx/MySubCommunityPage';
 
 // Lazy load components for better performance
 // const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));
@@ -207,6 +208,16 @@ const Layout: React.FC = () => {
                 <ProtectedRoute>
                   <Suspense fallback={<LoadingSpinner />}>
                     <SubCommunityFeedPage />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subcommunities/my"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <MySubCommunitiesPage />
                   </Suspense>
                 </ProtectedRoute>
               }

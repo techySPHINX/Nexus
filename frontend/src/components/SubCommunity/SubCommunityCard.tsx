@@ -18,7 +18,6 @@ import {
   Lock,
   ArrowForward,
   People,
-  Check,
   Schedule,
   AdminPanelSettings,
   Shield,
@@ -43,8 +42,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { user } = useAuth();
-  const { requestToJoin, joinRequests, getPendingJoinRequests } =
-    useSubCommunity();
+  const { requestToJoin, joinRequests } = useSubCommunity();
 
   const [isMember, setIsMember] = useState(false);
   const [userRole, setUserRole] = useState<SubCommunityRole | null>(null);
@@ -54,9 +52,10 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   // Check if user is a member
   useEffect(() => {
     if (user && subCommunity.members) {
+      // Find the current user's membership and set their role
       const member = subCommunity.members.find((m) => m.userId === user.id);
       setIsMember(!!member);
-      setUserRole(member?.role || null);
+      setUserRole(member ? member.role : null);
     }
   }, [user, subCommunity.members]);
 
@@ -98,7 +97,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
       await requestToJoin(subCommunity.id);
       setHasPendingRequest(true);
       // Refresh pending requests
-      getPendingJoinRequests(subCommunity.id);
+      // getPendingJoinRequests(subCommunity.id);
     } catch (error) {
       console.error('Failed to join community:', error);
     } finally {
@@ -185,7 +184,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
               fontWeight: 600,
             }}
           />
-          <Button
+          {/* <Button
             variant="outlined"
             size="small"
             disabled
@@ -204,7 +203,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
             startIcon={<Check sx={{ fontSize: 14 }} />}
           >
             Joined
-          </Button>
+          </Button> */}
         </Box>
       );
     }
@@ -230,6 +229,10 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
           Pending
         </Button>
       );
+    }
+
+    if (!subCommunity.isPrivate) {
+      return;
     }
 
     if (subCommunity.isPrivate) {
