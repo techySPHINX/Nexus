@@ -70,6 +70,11 @@ export class ShowcaseController {
     return this.showcaseService.getProjectById(projectId);
   }
 
+  @Get('project/:id/comments')
+  getProjectComments(@Param('id') projectId: string) {
+    return this.showcaseService.getProjectByIDComments(projectId);
+  }
+
   @Post('project/:id/update')
   createProjectUpdate(
     @GetCurrentUser('userId') userId: string,

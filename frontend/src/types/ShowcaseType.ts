@@ -1,6 +1,3 @@
-import { User } from './profileType';
-
-// import { Skill } from './profileType';
 export enum status {
   IDEA = 'IDEA',
   IN_PROGRESS = 'IN_PROGRESS',
@@ -20,24 +17,55 @@ export interface CreateProjectInterface {
   seeking?: string;
 }
 
-export interface ProjectInterface extends CreateProjectInterface {
+export interface ProjectInterface {
   id: string;
+  title: string;
+  description: string;
+  githubUrl?: string;
+  websiteUrl?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  skills: string[];
+  tags: string[];
+  status: status;
+  seeking?: string[];
   createdAt: Date;
   updatedAt: Date;
-  owner: User;
-  supporters?: supporters_followers_Interface[];
-  followers?: supporters_followers_Interface[];
-  collaborationRequests?: CollaborationRequestInterface[];
-  comments?: ProjectComment[];
+  owner: {
+    id: string;
+    name: string;
+    role?: string;
+    profile: {
+      avatarUrl?: string;
+    };
+  };
+  _count: {
+    supporters: number;
+    followers: number;
+    comments?: number;
+    teamMembers?: number;
+    updates?: number;
+  };
+  supporters?: {
+    userId: string;
+  }[];
+  followers?: {
+    userId: string;
+  }[];
+  collaborationRequests?: {
+    userId: string;
+  }[];
   teamMembers?: ProjectTeam[];
-  updates?: ProjectUpdateInterface[];
 }
 
-interface supporters_followers_Interface {
-  id: string;
-  userId: string;
-  projectId: string;
-  createdAt: Date;
+export interface ProjectDetailInterface extends ProjectInterface {
+  updates?: ProjectUpdateInterface[];
+  comments?: ProjectComment[];
+  isSupported?: boolean;
+  isFollowing?: boolean;
+  isOwner?: boolean;
+  isTeamMember?: boolean;
+  userCollaborationRequest?: CollaborationRequestInterface | null;
 }
 
 export enum sortBy {
@@ -55,6 +83,8 @@ export interface FilterProjectInterface {
   status?: status;
   seeking?: string[];
   personalize?: boolean;
+  page?: number;
+  pageSize?: number;
 }
 
 export interface CreateProjectUpdateInterface {
@@ -90,11 +120,44 @@ export interface CollaborationRequestInterface
 }
 
 export interface ProjectComment {
-  userId: string;
+  id: string;
   comment: string;
+  createdAt: Date;
+  user?: {
+    id: string;
+    name: string;
+    role?: string;
+    profile: {
+      avatarUrl?: string;
+    };
+  };
 }
 
 export interface ProjectTeam {
   userId: string;
   role: string;
+  user?: {
+    id: string;
+    name: string;
+    role?: string;
+    profile: {
+      avatarUrl?: string;
+    };
+  };
+}
+
+export interface ProjectsResponse {
+  data: ProjectInterface[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
+}
+
+export interface ProjectCommentsResponse {
+  comments: ProjectComment[];
 }

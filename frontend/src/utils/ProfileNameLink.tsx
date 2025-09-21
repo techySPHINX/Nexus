@@ -3,7 +3,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Role } from '@/types/engagement';
 import { useNavigate } from 'react-router-dom';
 import { Person, MenuBook, EmojiEvents, Security } from '@mui/icons-material';
-import { useProfile } from '@/contexts/ProfileContext';
 
 interface User {
   id?: string;
@@ -22,7 +21,7 @@ interface ProfileNameLinkProps {
   showRoleBadge?: boolean;
   showYouBadge?: boolean;
   onlyFirstName?: boolean;
-  variant?: 'subtitle1' | 'subtitle2' | 'body1' | 'body2' | 'h6';
+  variant?: 'subtitle1' | 'subtitle2' | 'body1' | 'body2' | 'h6' | 'caption';
   fontSize?: string;
   fontWeight?: number | string;
   avatarSize?: number;
@@ -41,7 +40,6 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
   avatarSize = 24,
 }) => {
   const { user: authUser } = useAuth();
-  const { profile: authProfile } = useProfile();
   const navigate = useNavigate();
 
   const isAuthor = authUser?.id === user?.id;
@@ -88,7 +86,7 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
       {showAvatar && (
         <Tooltip title={getUserName()}>
           <Avatar
-            src={authProfile?.avatarUrl || undefined}
+            src={user.profile?.avatarUrl || undefined}
             sx={{
               width: avatarSize,
               height: avatarSize,

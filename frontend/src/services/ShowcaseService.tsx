@@ -5,12 +5,14 @@ import {
   CreateProjectUpdateInterface,
   FilterProjectInterface,
   ProjectTeam,
+  ProjectComment,
 } from '@/types/ShowcaseType';
 import api from './api';
 
 export const ShowcaseService = {
   createProject: async (data: CreateProjectInterface) => {
     try {
+      console.log('API call - createProject with data:', data);
       const response = await api.post('/showcase/project', data);
       return response.data;
     } catch (error) {
@@ -41,6 +43,7 @@ export const ShowcaseService = {
 
   getAllProjects: async (filterProjectDto?: FilterProjectInterface) => {
     try {
+      console.log('API call - getAllProjects with filters:', filterProjectDto);
       const response = await api.get('/showcase/project', {
         params: filterProjectDto,
       });
@@ -56,6 +59,16 @@ export const ShowcaseService = {
       return response.data;
     } catch (error) {
       throw new Error('Failed to get project by ID with error: ' + error);
+    }
+  },
+
+  // Add this method to your ShowcaseService
+  async getProjectComments(projectId: string): Promise<ProjectComment> {
+    try {
+      const response = await api.get(`/showcase/project/${projectId}/comments`);
+      return response.data.comments;
+    } catch (error) {
+      throw new Error('Failed to get project comments with error: ' + error);
     }
   },
 

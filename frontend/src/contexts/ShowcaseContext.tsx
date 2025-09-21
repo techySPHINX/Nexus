@@ -6,11 +6,12 @@ import {
   CreateProjectInterface,
   CreateProjectUpdateInterface,
   FilterProjectInterface,
+  ProjectComment,
   ProjectInterface,
   ProjectTeam,
   ProjectUpdateInterface,
 } from '@/types/ShowcaseType';
-import React from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
 
 // Define the context type with all exposed functions
@@ -21,12 +22,16 @@ export interface ShowcaseContextType {
   projectByIdUpdates: ProjectUpdateInterface[];
   collaborationRequests: CollaborationRequestInterface[];
   loading: boolean;
+  comments: ProjectComment[];
+  teamMembers: ProjectTeam[];
+  error: string | null;
+  clearError: () => void;
 
   //Actions
-  createProject: (data: ProjectInterface) => Promise<void>;
+  createProject: (data: CreateProjectInterface) => Promise<void>;
   updateProject: (
     projectId: string,
-    data: Partial<ProjectInterface>
+    data: Partial<CreateProjectInterface>
   ) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   getAllProjects: (
@@ -35,8 +40,9 @@ export interface ShowcaseContextType {
   getProjectById: (projectId: string) => Promise<void>;
   createProjectUpdate: (
     projectId: string,
-    data: ProjectUpdateInterface
+    data: CreateProjectUpdateInterface
   ) => Promise<void>;
+  getProjectIDComments: (projectId: string) => Promise<void>;
   getProjectUpdates: (projectId: string) => Promise<void>;
   supportProject: (projectId: string) => Promise<void>;
   unsupportProject: (projectId: string) => Promise<void>;
@@ -44,7 +50,7 @@ export interface ShowcaseContextType {
   unfollowProject: (projectId: string) => Promise<void>;
   requestCollaboration: (
     projectId: string,
-    data: CollaborationRequestInterface
+    data: CreateCollaborationRequestInterface
   ) => Promise<void>;
   updateStatusCollaboration: (
     projectId: string,
@@ -67,6 +73,10 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   projectByIdUpdates: [],
   collaborationRequests: [],
   loading: false,
+  comments: [],
+  teamMembers: [],
+  error: null,
+  clearError: () => {},
 
   //actions
   createProject: async () => {},
@@ -74,6 +84,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   deleteProject: async () => {},
   getAllProjects: async () => {},
   getProjectById: async () => {},
+  getProjectIDComments: async () => {},
   createProjectUpdate: async () => {},
   getProjectUpdates: async () => {},
   supportProject: async () => {},
@@ -93,355 +104,557 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
 export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [loading, setLoading] = React.useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
   const { user } = useAuth();
-  const [projects, setProjects] = React.useState<ProjectInterface[]>([]);
-  const [projectById, setProjectById] = React.useState<ProjectInterface | null>(
-    null
-  );
-  const [projectByIdUpdates, setProjectByIdUpdates] = React.useState<
+  const [projects, setProjects] = useState<ProjectInterface[]>([]);
+  const [projectById, setProjectById] = useState<ProjectInterface | null>(null);
+  const [projectByIdUpdates, setProjectByIdUpdates] = useState<
     ProjectUpdateInterface[]
   >([]);
-  const [collaborationRequests, setCollaborationRequests] = React.useState<
+  const [collaborationRequests, setCollaborationRequests] = useState<
     CollaborationRequestInterface[]
   >([]);
+  const [comments, setComments] = useState<ProjectComment[]>([]);
+  const [teamMembers, setTeamMembers] = useState<ProjectTeam[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-  const createProject = async (data: CreateProjectInterface) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      const response = await ShowcaseService.createProject(data);
-      setProjects((prev) => [...prev, response]);
-    } catch (error) {
-      throw new Error('Failed to create project with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const clearError = useCallback(() => setError(null), []);
 
-  const updateProject = async (
-    projectId: string,
-    data: Partial<CreateProjectInterface>
-  ) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      const response = await ShowcaseService.updateProject(projectId, data);
-      setProjects((prev) =>
-        prev.map((project) => (project.id === projectId ? response : project))
-      );
-    } catch (error) {
-      throw new Error('Failed to update project with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteProject = async (projectId: string) => {
-    try {
+  const createProject = useCallback(
+    async (data: CreateProjectInterface) => {
       if (!user) {
-        throw new Error('User not authenticated');
+        setError('User not authenticated');
+        return;
       }
       setLoading(true);
-      const response = await ShowcaseService.deleteProject(projectId);
-      setProjects((prev) =>
-        prev.filter((project) => project.id !== response.id)
-      );
-    } catch (error) {
-      throw new Error('Failed to delete project with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        console.log('Creating project with data 2:', data);
+        const response = await ShowcaseService.createProject(data);
+        setProjects((prev) => [response, ...prev]);
+      } catch (err) {
+        setError(
+          `Failed to create project: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const getAllProjects = async (
-    filterProjectDto?: FilterProjectInterface | undefined
-  ) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      const response = await ShowcaseService.getAllProjects(filterProjectDto);
-      setProjects(response);
-    } catch (error) {
-      throw new Error('Failed to get projects with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const updateProject = useCallback(
+    async (projectId: string, data: Partial<CreateProjectInterface>) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.updateProject(projectId, data);
+        setProjects((prev) =>
+          prev.map((project) => (project.id === projectId ? response : project))
+        );
+        if (projectById?.id === projectId) {
+          setProjectById(response);
+        }
+      } catch (err) {
+        setError(
+          `Failed to update project: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, projectById]
+  );
 
-  const getProjectById = async (projectId: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      const response = await ShowcaseService.getProjectById(projectId);
-      setProjectById(response);
-      setProjectByIdUpdates(response.updates || []);
-    } catch (error) {
-      throw new Error('Failed to get project by ID with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const deleteProject = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        await ShowcaseService.deleteProject(projectId);
+        setProjects((prev) =>
+          prev.filter((project) => project.id !== projectId)
+        );
+        if (projectById?.id === projectId) {
+          setProjectById(null);
+        }
+      } catch (err) {
+        setError(
+          `Failed to delete project: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, projectById]
+  );
 
-  const createProjectUpdate = async (
-    projectId: string,
-    data: CreateProjectUpdateInterface
-  ) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      const response = await ShowcaseService.createProjectUpdate(
-        projectId,
-        data
-      );
-      setProjectById((project) =>
-        project
-          ? {
-              ...project,
-              updates: project.updates
-                ? [...project.updates, response]
-                : [response],
-            }
-          : project
-      );
-      setProjectByIdUpdates((prev) => [...prev, response]);
-    } catch (error) {
-      throw new Error('Failed to create project update with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getAllProjects = useCallback(
+    async (filterProjectDto?: FilterProjectInterface | undefined) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.getAllProjects(filterProjectDto);
+        setProjects(response);
+      } catch (err) {
+        setError(
+          `Failed to get projects: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  // isn't this redundant with the updates in getProjectById?
-  const getProjectUpdates = async (projectId: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      const response = await ShowcaseService.getProjectUpdates(projectId);
-      setProjectByIdUpdates(response);
-    } catch (error) {
-      throw new Error('Failed to get project updates with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getProjectById = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        console.log('Fetching project by ID:', projectId);
+        const response = await ShowcaseService.getProjectById(projectId);
+        setProjectById(response);
+        setProjectByIdUpdates(response.updates || []);
+        setProjects((prev) => {
+          // If the project already exists in the list, update it; otherwise, add it
+          const exists = prev.some((proj) => proj.id === response.id);
+          if (exists) {
+            return prev.map((proj) =>
+              proj.id === response.id ? response : proj
+            );
+          } else {
+            return [response, ...prev];
+          }
+        });
+      } catch (err) {
+        setError(
+          `Failed to get project by ID: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const supportProject = async (projectId: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      await ShowcaseService.supportProject(projectId);
-    } catch (error) {
-      throw new Error('Failed to support project with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getProjectIDComments = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.getProjectComments(projectId);
+        return response || [];
+      } catch (err) {
+        setError(
+          `Failed to get project comments: ${err instanceof Error ? err.message : String(err)}`
+        );
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const unsupportProject = async (projectId: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      await ShowcaseService.unsupportProject(projectId);
-    } catch (error) {
-      throw new Error('Failed to unsupport project with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const createProjectUpdate = useCallback(
+    async (projectId: string, data: CreateProjectUpdateInterface) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.createProjectUpdate(
+          projectId,
+          data
+        );
+        setProjectById((project) =>
+          project
+            ? {
+                ...project,
+                updates: project.updates
+                  ? [...project.updates, response]
+                  : [response],
+              }
+            : project
+        );
+        setProjectByIdUpdates((prev) => [...prev, response]);
+      } catch (err) {
+        setError(
+          `Failed to create project update: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const followProject = async (projectId: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      await ShowcaseService.followProject(projectId);
-    } catch (error) {
-      throw new Error('Failed to follow project with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const getProjectUpdates = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.getProjectUpdates(projectId);
+        setProjectByIdUpdates(response);
+      } catch (err) {
+        setError(
+          `Failed to get project updates: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const unfollowProject = async (projectId: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      await ShowcaseService.unfollowProject(projectId);
-    } catch (error) {
-      throw new Error('Failed to unfollow project with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const supportProject = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        console.log('Supporting project ID:', projectId);
+        await ShowcaseService.supportProject(projectId);
+        // Refresh project data
+        await getProjectById(projectId);
+      } catch (err) {
+        setError(
+          `Failed to support project: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, getProjectById]
+  );
 
-  const requestCollaboration = async (
-    projectId: string,
-    data: CreateCollaborationRequestInterface
-  ) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      await ShowcaseService.requestCollaboration(projectId, data);
-    } catch (error) {
-      throw new Error('Failed to request collaboration with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const unsupportProject = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        await ShowcaseService.unsupportProject(projectId);
+        // Refresh project data
+        await getProjectById(projectId);
+      } catch (err) {
+        setError(
+          `Failed to unsupport project: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, getProjectById]
+  );
 
-  const updateStatusCollaboration = async (
-    projectId: string,
-    status: CollaborationStatus
-  ) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      await ShowcaseService.updateStatusCollaboration(projectId, status);
-    } catch (error) {
-      throw new Error(
-        'Failed to update status collaboration with error: ' + error
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const followProject = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        await ShowcaseService.followProject(projectId);
+        // Refresh project data
+        await getProjectById(projectId);
+      } catch (err) {
+        setError(
+          `Failed to follow project: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, getProjectById]
+  );
 
-  const getCollaborationRequests = async (projectId: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      const response =
-        await ShowcaseService.getCollaborationRequests(projectId);
-      setCollaborationRequests(response);
-    } catch (error) {
-      throw new Error(
-        'Failed to get collaboration requests with error: ' + error
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const unfollowProject = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        await ShowcaseService.unfollowProject(projectId);
+        // Refresh project data
+        await getProjectById(projectId);
+      } catch (err) {
+        setError(
+          `Failed to unfollow project: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, getProjectById]
+  );
 
-  const createComment = async (projectId: string, data: string) => {
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-    setLoading(true);
-    try {
-      const response = await ShowcaseService.createComment(projectId, data);
-      return response;
-    } catch (error) {
-      throw new Error('Failed to create comment with error: ' + error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const requestCollaboration = useCallback(
+    async (projectId: string, data: CreateCollaborationRequestInterface) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        await ShowcaseService.requestCollaboration(projectId, data);
+      } catch (err) {
+        setError(
+          `Failed to request collaboration: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const getComments = async (projectId: string) => {
-    try {
-      const response = await ShowcaseService.getComments(projectId);
-      return response;
-    } catch (error) {
-      throw new Error('Failed to get comments with error: ' + error);
-    }
-  };
+  const getCollaborationRequests = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response =
+          await ShowcaseService.getCollaborationRequests(projectId);
+        setCollaborationRequests(response);
+      } catch (err) {
+        setError(
+          `Failed to get collaboration requests: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const createProjectTeamMember = async (
-    projectId: string,
-    data: ProjectTeam
-  ) => {
-    try {
-      const response = await ShowcaseService.createProjectTeamMember(
-        projectId,
-        data
-      );
-      return response;
-    } catch (error) {
-      throw new Error(
-        'Failed to create project team member with error: ' + error
-      );
-    }
-  };
+  const updateStatusCollaboration = useCallback(
+    async (projectId: string, status: CollaborationStatus) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        await ShowcaseService.updateStatusCollaboration(projectId, status);
+        // Refresh collaboration requests
+        await getCollaborationRequests(projectId);
+      } catch (err) {
+        setError(
+          `Failed to update collaboration status: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, getCollaborationRequests]
+  );
 
-  const getProjectTeamMembers = async (projectId: string) => {
-    try {
-      const response = await ShowcaseService.getProjectTeamMembers(projectId);
-      return response;
-    } catch (error) {
-      throw new Error(
-        'Failed to get project team members with error: ' + error
-      );
-    }
-  };
+  const createComment = useCallback(
+    async (projectId: string, data: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.createComment(projectId, data);
+        setComments((prev) => [...prev, response]);
+      } catch (err) {
+        setError(
+          `Failed to create comment: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const removeProjectTeamMember = async (projectId: string, userId: string) => {
-    try {
-      const response = await ShowcaseService.removeProjectTeamMember(
-        projectId,
-        userId
-      );
-      return response;
-    } catch (error) {
-      throw new Error(
-        'Failed to remove project team member with error: ' + error
-      );
-    }
-  };
+  const getComments = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.getComments(projectId);
+        setComments(response);
+      } catch (err) {
+        setError(
+          `Failed to get comments: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-  const state: ShowcaseContextType = {
-    projects,
-    projectById,
-    projectByIdUpdates,
-    collaborationRequests,
-    loading,
+  const createProjectTeamMember = useCallback(
+    async (projectId: string, data: ProjectTeam) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.createProjectTeamMember(
+          projectId,
+          data
+        );
+        setTeamMembers((prev) => [...prev, response]);
+      } catch (err) {
+        setError(
+          `Failed to create team member: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
-    //actions
-    createProject,
-    updateProject,
-    deleteProject,
-    getAllProjects,
-    getProjectById,
-    createProjectUpdate,
-    getProjectUpdates,
-    supportProject,
-    unsupportProject,
-    followProject,
-    unfollowProject,
-    requestCollaboration,
-    updateStatusCollaboration,
-    getCollaborationRequests,
-    createComment,
-    getComments,
-    createProjectTeamMember,
-    getProjectTeamMembers,
-    removeProjectTeamMember,
-  };
+  const getProjectTeamMembers = useCallback(
+    async (projectId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        const response = await ShowcaseService.getProjectTeamMembers(projectId);
+        setTeamMembers(response);
+      } catch (err) {
+        setError(
+          `Failed to get team members: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
+
+  const removeProjectTeamMember = useCallback(
+    async (projectId: string, userId: string) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setLoading(true);
+      try {
+        await ShowcaseService.removeProjectTeamMember(projectId, userId);
+        setTeamMembers((prev) =>
+          prev.filter((member) => member.userId !== userId)
+        );
+      } catch (err) {
+        setError(
+          `Failed to remove team member: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
+
+  const state: ShowcaseContextType = useMemo(
+    () => ({
+      projects,
+      projectById,
+      projectByIdUpdates,
+      collaborationRequests,
+      loading,
+      error,
+      comments,
+      teamMembers,
+      clearError,
+
+      //actions
+      createProject,
+      updateProject,
+      deleteProject,
+      getAllProjects,
+      getProjectById,
+      getProjectIDComments,
+      createProjectUpdate,
+      getProjectUpdates,
+      supportProject,
+      unsupportProject,
+      followProject,
+      unfollowProject,
+      requestCollaboration,
+      updateStatusCollaboration,
+      getCollaborationRequests,
+      createComment,
+      getComments,
+      createProjectTeamMember,
+      getProjectTeamMembers,
+      removeProjectTeamMember,
+    }),
+    [
+      projects,
+      projectById,
+      projectByIdUpdates,
+      collaborationRequests,
+      loading,
+      error,
+      comments,
+      teamMembers,
+      clearError,
+      createProject,
+      updateProject,
+      deleteProject,
+      getAllProjects,
+      getProjectById,
+      getProjectIDComments,
+      createProjectUpdate,
+      getProjectUpdates,
+      supportProject,
+      unsupportProject,
+      followProject,
+      unfollowProject,
+      requestCollaboration,
+      updateStatusCollaboration,
+      getCollaborationRequests,
+      createComment,
+      getComments,
+      createProjectTeamMember,
+      getProjectTeamMembers,
+      removeProjectTeamMember,
+    ]
+  );
 
   return (
     <ShowcaseContext.Provider value={state}>
