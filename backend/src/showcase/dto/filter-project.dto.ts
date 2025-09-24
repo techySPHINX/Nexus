@@ -33,6 +33,7 @@ export class FilterProjectDto {
   seeking?: string[];
 
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   personalize?: boolean;
 

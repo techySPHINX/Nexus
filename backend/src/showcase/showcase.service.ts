@@ -127,6 +127,8 @@ export class ShowcaseService {
           hasSome: userProfile.skills.map((s) => s.name),
         };
       }
+      // Exclude own projects when personalize is true
+      where.ownerId = { not: userId };
     }
 
     if (tags) {
