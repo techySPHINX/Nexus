@@ -60,6 +60,7 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
         label: 'Admin',
         color: 'error' as const,
         icon: <Security fontSize="small" />,
+        short: 'AD',
       };
     }
     if (isAlum) {
@@ -67,12 +68,14 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
         label: 'Alumni',
         color: 'secondary' as const,
         icon: <EmojiEvents fontSize="small" />,
+        short: 'AL',
       };
     }
     return {
       label: 'Student',
       color: 'info' as const,
       icon: <MenuBook fontSize="small" />,
+      short: 'ST',
     };
   };
 
@@ -114,48 +117,102 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
         {onlyFirstName ? getUserName().split(' ')[0] : getUserName()}
       </Typography>
 
-      {/* Role Badge */}
+      {/* Role Badge: icon on desktop, short text on mobile/tablet */}
       {showRoleBadge && user?.role && (
-        <Tooltip title={`${roleConfig.label}`} arrow placement="top">
+        <>
+          {/* Mobile/Tablet: show short text */}
           <Chip
-            icon={roleConfig.icon}
             size="small"
             variant="outlined"
             color={roleConfig.color}
+            label={roleConfig.short}
             sx={{
               height: 22,
               minWidth: 22,
-              width: 22,
-              borderRadius: '50%', // circle style
-              px: 0,
-              '& .MuiChip-icon': {
-                fontSize: 18,
-                margin: 0,
-              },
+              borderRadius: '50%',
+              px: 0.5,
+              fontWeight: 700,
+              fontSize: { xs: '0.8rem', sm: '0.9rem' },
+              display: { xs: 'inline-flex', sm: 'none' },
               '& .MuiChip-label': {
-                display: 'none', // hide text label
+                pl: 0.5,
               },
             }}
           />
-        </Tooltip>
+          {/* Desktop: show icon with tooltip */}
+          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
+            <Tooltip title={roleConfig.label} arrow placement="top">
+              <Chip
+                icon={roleConfig.icon}
+                size="small"
+                variant="outlined"
+                color={roleConfig.color}
+                sx={{
+                  height: 22,
+                  minWidth: 22,
+                  width: 22,
+                  borderRadius: '50%',
+                  px: 0,
+                  '& .MuiChip-icon': {
+                    fontSize: 18,
+                    margin: 0,
+                  },
+                  '& .MuiChip-label': {
+                    display: 'none',
+                  },
+                }}
+              />
+            </Tooltip>
+          </Box>
+        </>
       )}
 
-      {/* "You" Badge */}
+      {/* "You" Badge: 'YOU' on mobile/tablet, icon on desktop */}
       {showYouBadge && isAuthor && (
-        <Tooltip title="This is you">
+        <>
+          {/* Mobile/Tablet: show 'YOU' text */}
           <Chip
-            icon={<Person fontSize="small" />}
-            label="You"
             size="small"
             variant="filled"
             color="primary"
+            label="YOU"
             sx={{
-              height: 20,
-              fontSize: '0.7rem',
-              '& .MuiChip-icon': { fontSize: 14 },
+              height: 22,
+              minWidth: 22,
+              borderRadius: '50%',
+              px: 0.5,
+              fontWeight: 700,
+              fontSize: { xs: '0.8rem', sm: '0.9rem' },
+              display: { xs: 'inline-flex', sm: 'none' },
+              '& .MuiChip-label': {
+                pl: 0.5,
+              },
             }}
           />
-        </Tooltip>
+          {/* Desktop: show icon with tooltip */}
+          <Box sx={{ display: { xs: 'none', sm: 'inline-flex' } }}>
+            <Tooltip title="This is you" arrow placement="bottom">
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  bgcolor: 'primary.main',
+                  color: 'primary.contrastText',
+                  boxShadow: 2,
+                  cursor: 'default',
+                  fontWeight: 700,
+                  fontSize: '0.9rem',
+                }}
+              >
+                <Person fontSize="inherit" />
+              </Box>
+            </Tooltip>
+          </Box>
+        </>
       )}
     </Box>
   );
