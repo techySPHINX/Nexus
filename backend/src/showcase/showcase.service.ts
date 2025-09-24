@@ -25,6 +25,12 @@ export class ShowcaseService {
       data: {
         ownerId: userId,
         ...createProjectDto,
+        teamMembers: {
+          create: {
+            userId,
+            role: 'OWNER',
+          },
+        },
       },
     });
 
@@ -38,7 +44,18 @@ export class ShowcaseService {
       },
     });
 
-    return { ...project, owner: user };
+    return {
+      id: project.id,
+      title: project.title,
+      imageUrl: project.imageUrl,
+      githubUrl: project.githubUrl,
+      tags: project.tags,
+      status: project.status,
+      seeking: project.seeking,
+      createdAt: project.createdAt,
+      owner: user,
+      _count: { supporters: 0, followers: 0 },
+    };
   }
 
   async updateProject(
@@ -48,29 +65,40 @@ export class ShowcaseService {
   ) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
+      select: { ownerId: true },
     });
-    if (!project || project.ownerId !== userId) {
-      throw new Error('Project not found or you are not the owner');
+    if (!project) {
+      throw new Error('Project not found');
+    }
+    if (project.ownerId !== userId) {
+      throw new Error('You are not the owner of this project');
     }
 
-    if (updateProjectDto.description) {
-      updateProjectDto.description = marked.parse(
-        updateProjectDto.description,
-      ) as string;
-    }
-
-    return this.prisma.project.update({
+    const updated = await this.prisma.project.update({
       where: { id: projectId },
       data: updateProjectDto,
+      select: {
+        id: true,
+        ...Object.fromEntries(
+          Object.keys(updateProjectDto).map((key) => [key, true]),
+        ),
+      },
     });
+    return updated;
   }
 
   async deleteProject(userId: string, projectId: string) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
+      select: { ownerId: true },
     });
-    if (!project || project.ownerId !== userId) {
-      throw new Error('Project not found or you are not the owner');
+
+    if (!project) {
+      throw new Error('Project not found');
+    }
+
+    if (project.ownerId !== userId) {
+      throw new Error('You are not the owner of this project');
     }
     return this.prisma.project.delete({ where: { id: projectId } });
   }
@@ -263,35 +291,21 @@ export class ShowcaseService {
           },
         },
         teamMembers: {
-          include: { user: true },
-        },
-        updates: {
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-        },
-      },
-    });
-  }
-
-  async getProjectByIDComments(projectId: string) {
-    return this.prisma.project.findUnique({
-      where: { id: projectId },
-      select: {
-        comments: {
           select: {
-            id: true,
-            comment: true,
-            createdAt: true,
+            userId: true,
+            role: true,
             user: {
               select: {
-                id: true,
                 name: true,
                 role: true,
                 profile: { select: { avatarUrl: true } },
               },
             },
           },
+        },
+        updates: {
           orderBy: { createdAt: 'desc' },
+          take: 5,
         },
       },
     });
@@ -597,11 +611,45 @@ export class ShowcaseService {
     return comment;
   }
 
-  async getComments(projectId: string) {
-    return this.prisma.projectComment.findMany({
+  async getComments(projectId: string, page = 1) {
+    const pageSize = 10;
+    // Ensure page is a number
+    const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
+
+    const comments = await this.prisma.projectComment.findMany({
       where: { projectId },
-      include: { user: true },
+      orderBy: { createdAt: 'desc' },
+      skip: (pageNum - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        comment: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+      },
     });
+
+    const total = await this.prisma.projectComment.count({
+      where: { projectId },
+    });
+    return {
+      data: comments,
+      pagination: {
+        page: pageNum,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+        hasNext: pageNum * pageSize < total,
+        hasPrev: pageNum > 1,
+      },
+    };
   }
 
   async addTeamMember(
