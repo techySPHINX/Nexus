@@ -16,9 +16,28 @@ import {
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
 
-// Define the context type with all exposed functions
+// Cache interfaces
+interface ProjectCache {
+  project: ProjectDetailInterface;
+  lastFetched: number;
+  updates: ProjectUpdateInterface[];
+}
+
+interface CommentsCache {
+  comments: ProjectComment[];
+  lastFetched: number;
+  pagination: ProjectsPaginationResponse;
+}
+
+// Cache configuration
+const CACHE_CONFIG = {
+  PROJECT_TTL: 5 * 60 * 1000, // 5 minutes
+  COMMENTS_TTL: 3 * 60 * 1000, // 3 minutes
+  MAX_CACHE_SIZE: 50, // Maximum number of items to cache
+};
+
 export interface ShowcaseContextType {
-  //states
+  // States
   projects: ProjectInterface[];
   pagination: ProjectsPaginationResponse;
   projectById: ProjectDetailInterface | null;
@@ -29,14 +48,21 @@ export interface ShowcaseContextType {
     support: Set<string>;
     follow: Set<string>;
     comment: Set<string>;
+    projectDetails: Set<string>;
   };
   comments: Record<string, ProjectComment[]>;
-  commentsPagination: ProjectsPaginationResponse;
+  commentsPagination: Record<string, ProjectsPaginationResponse>;
   teamMembers: ProjectTeam[];
   error: string | null;
   clearError: () => void;
 
-  //Actions
+  // Cache info (for debugging/development)
+  cacheInfo: {
+    projects: number;
+    comments: number;
+  };
+
+  // Actions
   createProject: (data: CreateProjectInterface) => Promise<void>;
   updateProject: (
     projectId: string,
@@ -44,9 +70,10 @@ export interface ShowcaseContextType {
   ) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
   getAllProjects: (
-    filterProjectDto?: FilterProjectInterface | undefined
+    filterProjectDto?: FilterProjectInterface | undefined,
+    loadMore?: boolean
   ) => Promise<void>;
-  getProjectById: (projectId: string) => Promise<void>;
+  getProjectById: (projectId: string, forceRefresh?: boolean) => Promise<void>;
   getProjectForSharing: (
     projectId: string
   ) => Promise<ProjectDetailInterface | null>;
@@ -54,7 +81,10 @@ export interface ShowcaseContextType {
     projectId: string,
     data: CreateProjectUpdateInterface
   ) => Promise<void>;
-  getProjectUpdates: (projectId: string) => Promise<void>;
+  getProjectUpdates: (
+    projectId: string,
+    forceRefresh?: boolean
+  ) => Promise<void>;
   supportProject: (projectId: string) => Promise<void>;
   unsupportProject: (projectId: string) => Promise<void>;
   followProject: (projectId: string) => Promise<void>;
@@ -69,7 +99,11 @@ export interface ShowcaseContextType {
   ) => Promise<void>;
   getCollaborationRequests: (projectId: string) => Promise<void>;
   createComment: (projectId: string, comment: string) => Promise<void>;
-  getComments: (projectId: string) => Promise<void>;
+  getComments: (
+    projectId: string,
+    page?: number,
+    forceRefresh?: boolean
+  ) => Promise<void>;
   createProjectTeamMember: (
     projectId: string,
     data: ProjectTeam
@@ -77,6 +111,7 @@ export interface ShowcaseContextType {
   getProjectTeamMembers: (projectId: string) => Promise<void>;
   removeProjectTeamMember: (projectId: string, userId: string) => Promise<void>;
   clearProjectsCache: () => void;
+  clearSpecificCache: (projectId: string) => void; // New method to clear specific cache
 }
 
 const ShowcaseContext = React.createContext<ShowcaseContextType>({
@@ -97,19 +132,15 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
     support: new Set<string>(),
     follow: new Set<string>(),
     comment: new Set<string>(),
+    projectDetails: new Set<string>(),
   },
   comments: {},
-  commentsPagination: {
-    page: 1,
-    pageSize: 10,
-    total: 0,
-    totalPages: 0,
-    hasNext: false,
-    hasPrev: false,
-  },
+  commentsPagination: {},
+  cacheInfo: { projects: 0, comments: 0 },
   teamMembers: [],
   error: null,
   clearError: () => {},
+  clearSpecificCache: () => {},
 
   //actions
   createProject: async () => {},
@@ -143,8 +174,11 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     support: new Set<string>(),
     follow: new Set<string>(),
     comment: new Set<string>(),
+    projectDetails: new Set<string>(),
   });
   const { user } = useAuth();
+
+  // States
   const [projects, setProjects] = useState<ProjectInterface[]>([]);
   const [pagination, setPagination] = useState<ProjectsPaginationResponse>({
     page: 1,
@@ -154,15 +188,6 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     hasNext: false,
     hasPrev: false,
   });
-
-  // Refs for pagination and loading
-  const paginationRef = React.useRef(pagination);
-  const loadingRef = React.useRef(loading);
-
-  useEffect(() => {
-    paginationRef.current = pagination;
-    loadingRef.current = loading;
-  }, [pagination, loading]);
   const [projectById, setProjectById] = useState<ProjectDetailInterface | null>(
     null
   );
@@ -172,20 +197,135 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const [collaborationRequests, setCollaborationRequests] = useState<
     CollaborationRequestInterface[]
   >([]);
+  const [teamMembers, setTeamMembers] = useState<ProjectTeam[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Cache states
+  const [projectsCache, setProjectsCache] = useState<Map<string, ProjectCache>>(
+    new Map()
+  );
+  const [commentsCache, setCommentsCache] = useState<
+    Map<string, CommentsCache>
+  >(new Map());
+
+  // Comments state (now backed by cache)
   const [comments, setComments] = useState<Record<string, ProjectComment[]>>(
     {}
   );
-  const [commentsPagination, setCommentsPagination] =
-    useState<ProjectsPaginationResponse>({
-      page: 1,
-      pageSize: 10,
-      total: 0,
-      totalPages: 0,
-      hasNext: false,
-      hasPrev: false,
-    });
-  const [teamMembers, setTeamMembers] = useState<ProjectTeam[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [commentsPagination, setCommentsPagination] = useState<
+    Record<string, ProjectsPaginationResponse>
+  >({});
+
+  // Refs for better performance
+  const paginationRef = React.useRef(pagination);
+  const loadingRef = React.useRef(loading);
+  const projectsCacheRef = React.useRef(projectsCache);
+  const commentsCacheRef = React.useRef(commentsCache);
+
+  useEffect(() => {
+    paginationRef.current = pagination;
+    loadingRef.current = loading;
+    projectsCacheRef.current = projectsCache;
+    commentsCacheRef.current = commentsCache;
+  }, [pagination, loading, projectsCache, commentsCache]);
+
+  // Cache management functions
+  const getCachedProject = useCallback(
+    (projectId: string): ProjectDetailInterface | null => {
+      const cache = projectsCacheRef.current.get(projectId);
+      if (!cache) return null;
+
+      const isExpired =
+        Date.now() - cache.lastFetched > CACHE_CONFIG.PROJECT_TTL;
+      if (isExpired) {
+        // Remove expired cache
+        setProjectsCache((prev) => {
+          const newCache = new Map(prev);
+          newCache.delete(projectId);
+          return newCache;
+        });
+        return null;
+      }
+
+      return cache.project;
+    },
+    []
+  );
+
+  const setCachedProject = useCallback(
+    (
+      projectId: string,
+      project: ProjectDetailInterface,
+      updates: ProjectUpdateInterface[] = []
+    ) => {
+      setProjectsCache((prev) => {
+        const newCache = new Map(prev);
+
+        // Enforce max cache size
+        if (newCache.size >= CACHE_CONFIG.MAX_CACHE_SIZE) {
+          // Remove oldest item (first one)
+          const firstKey = newCache.keys().next().value;
+          if (typeof firstKey === 'string') {
+            newCache.delete(firstKey);
+          }
+        }
+
+        newCache.set(projectId, { project, updates, lastFetched: Date.now() });
+        return newCache;
+      });
+    },
+    []
+  );
+
+  const getCachedComments = useCallback(
+    (projectId: string): ProjectComment[] | null => {
+      const cache = commentsCacheRef.current.get(projectId);
+      if (!cache) return null;
+
+      const isExpired =
+        Date.now() - cache.lastFetched > CACHE_CONFIG.COMMENTS_TTL;
+      if (isExpired) {
+        setCommentsCache((prev) => {
+          const newCache = new Map(prev);
+          newCache.delete(projectId);
+          return newCache;
+        });
+        return null;
+      }
+
+      return cache.comments;
+    },
+    []
+  );
+
+  const setCachedComments = useCallback(
+    (
+      projectId: string,
+      comments: ProjectComment[],
+      pagination: ProjectsPaginationResponse
+    ) => {
+      setCommentsCache((prev) => {
+        const newCache = new Map(prev);
+
+        if (newCache.size >= CACHE_CONFIG.MAX_CACHE_SIZE) {
+          // Remove the first (oldest) entry from Map
+          const firstKey = newCache.keys().next().value;
+          if (typeof firstKey === 'string') {
+            newCache.delete(firstKey);
+          }
+        }
+
+        // Add new entry (will be at the end)
+        newCache.set(projectId, {
+          comments,
+          pagination,
+          lastFetched: Date.now(),
+        });
+        return newCache;
+      });
+    },
+    []
+  );
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -210,6 +350,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     [user]
   );
 
+  // Enhanced project mutations - invalidate relevant caches
   const updateProject = useCallback(
     async (projectId: string, data: Partial<CreateProjectInterface>) => {
       if (!user) {
@@ -224,9 +365,17 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
             project.id === projectId ? { ...project, ...response } : project
           )
         );
-        // If the updated project is the one currently viewed, update it too
+
+        // Update cache if exists
+        if (projectsCacheRef.current.get(projectId)) {
+          setCachedProject(projectId, {
+            ...projectsCacheRef.current.get(projectId)?.project,
+            ...response,
+          });
+        }
+
         if (projectById?.id === projectId) {
-          setProjectById({ ...projectById, ...response });
+          setProjectById((prev) => (prev ? { ...prev, ...response } : prev));
         }
       } catch (err) {
         setError(
@@ -236,7 +385,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user, projectById]
+    [user, projectById, setCachedProject]
   );
 
   const deleteProject = useCallback(
@@ -251,6 +400,19 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setProjects((prev) =>
           prev.filter((project) => project.id !== projectId)
         );
+
+        // Clear cache for deleted project
+        setProjectsCache((prev) => {
+          const newCache = new Map(prev);
+          newCache.delete(projectId);
+          return newCache;
+        });
+        setCommentsCache((prev) => {
+          const newCache = new Map(prev);
+          newCache.delete(projectId);
+          return newCache;
+        });
+
         if (projectById?.id === projectId) {
           setProjectById(null);
         }
@@ -282,7 +444,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      setLoading(true);
+      if (!loadMore) setLoading(true);
       try {
         const response = await ShowcaseService.getAllProjects(filterProjectDto);
 
@@ -303,23 +465,37 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     [user] // pagination and loading handled via refs
   );
 
+  // Enhanced getProjectById with caching
   const getProjectById = useCallback(
-    async (projectId: string) => {
+    async (projectId: string, forceRefresh: boolean = false) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
 
-      setLoading(true);
+      // Check cache first (unless force refresh)
+      if (!forceRefresh) {
+        const cachedProject = getCachedProject(projectId);
+        if (cachedProject) {
+          setProjectById(cachedProject);
+          setProjectByIdUpdates(
+            projectsCacheRef.current.get(projectId)?.updates || []
+          );
+          return;
+        }
+      }
+
+      setActionLoading((prev) => ({
+        ...prev,
+        projectDetails: new Set(prev.projectDetails).add(projectId),
+      }));
       try {
         const existingProject = projects.find((proj) => proj.id === projectId);
         const details = await ShowcaseService.getProjectById(projectId);
 
-        // Create properly typed object instead of casting
         const fullProject: ProjectDetailInterface = {
           ...(existingProject || {}),
           ...details,
-          // Ensure required fields are present
           id: projectId,
           title: existingProject?.title || details.title || '',
           tags: existingProject?.tags || details.tags || [],
@@ -349,6 +525,11 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setProjectById(fullProject);
         setProjectByIdUpdates(details.updates || []);
 
+        console.log('Fetched project details:', fullProject);
+
+        // Update cache
+        setCachedProject(projectId, fullProject, details.updates || []);
+
         if (!existingProject) {
           setProjects((prev) => [fullProject, ...prev]);
         }
@@ -357,10 +538,15 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           `Failed to get project by ID: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => {
+          const next = new Set(prev.projectDetails);
+          next.delete(projectId);
+          return { ...prev, projectDetails: next };
+        });
+        // setLoading(false); --- IGNORE ---
       }
     },
-    [projects, user]
+    [projects, user, getCachedProject, setCachedProject]
   );
 
   // Add project sharing function
@@ -432,16 +618,44 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     [user]
   );
 
+  // Enhanced getProjectUpdates with caching
   const getProjectUpdates = useCallback(
-    async (projectId: string) => {
+    async (projectId: string, forceRefresh: boolean = false) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
+
+      // Check cache first
+      if (!forceRefresh && projectsCacheRef.current.get(projectId)?.updates) {
+        const cache = projectsCacheRef.current.get(projectId);
+        let isExpired = true;
+        if (cache) {
+          isExpired = Date.now() - cache.lastFetched > CACHE_CONFIG.PROJECT_TTL;
+        }
+        if (cache && !isExpired) {
+          setProjectByIdUpdates(cache.updates);
+          return;
+        }
+      }
+
       setLoading(true);
       try {
         const response = await ShowcaseService.getProjectUpdates(projectId);
         setProjectByIdUpdates(response);
+
+        // Update cache
+        if (projectsCacheRef.current.get(projectId)) {
+          setProjectsCache((prev) => {
+            const newCache = new Map(prev);
+            const cacheItem = newCache.get(projectId);
+            if (cacheItem) {
+              cacheItem.updates = response;
+              newCache.set(projectId, cacheItem);
+            }
+            return newCache;
+          });
+        }
       } catch (err) {
         setError(
           `Failed to get project updates: ${err instanceof Error ? err.message : String(err)}`
@@ -762,6 +976,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     [user, getCollaborationRequests]
   );
 
+  // Enhanced createComment - invalidate cache
   const createComment = useCallback(
     async (projectId: string, comment: string) => {
       if (!user) {
@@ -783,11 +998,16 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           ...prev,
           [projectId]: [response, ...(prev[projectId] ?? [])],
         }));
+
+        // Invalidate comments cache for this project
+        setCommentsCache((prev) => {
+          const newCache = new Map(prev);
+          newCache.delete(projectId);
+          return newCache;
+        });
       } catch (err) {
         setError(
-          `Failed to create comment: ${
-            err instanceof Error ? err.message : String(err)
-          }`
+          `Failed to create comment: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
         setActionLoading((prev) => {
@@ -800,12 +1020,39 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     [user]
   );
 
+  // Enhanced getComments with caching
   const getComments = useCallback(
-    async (projectId: string, page: number = 1) => {
+    async (
+      projectId: string,
+      page: number = 1,
+      forceRefresh: boolean = false
+    ) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
+
+      // Check cache first (unless force refresh or loading more pages)
+      if (!forceRefresh && page === 1) {
+        const cachedComments = getCachedComments(projectId);
+        if (cachedComments) {
+          setComments((prev) => ({ ...prev, [projectId]: cachedComments }));
+          setCommentsPagination((prev) => ({
+            ...prev,
+            [projectId]: commentsCacheRef.current.get(projectId)
+              ?.pagination || {
+              page: 1,
+              pageSize: 10,
+              total: 0,
+              totalPages: 0,
+              hasNext: false,
+              hasPrev: false,
+            },
+          }));
+          return;
+        }
+      }
+
       setActionLoading((prev) => ({
         ...prev,
         comment: new Set(prev.comment).add(projectId),
@@ -814,10 +1061,21 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         const response = await ShowcaseService.getComments(projectId, page);
 
-        setComments((prev) => ({
-          ...prev,
-          [projectId]: [...(prev[projectId] ?? []), ...response.comments],
-        }));
+        if (page === 1) {
+          // First page - replace comments
+          setComments((prev) => ({
+            ...prev,
+            [projectId]: response.comments,
+          }));
+          // Cache first page results
+          setCachedComments(projectId, response.comments, response.pagination);
+        } else {
+          // Subsequent pages - append comments
+          setComments((prev) => ({
+            ...prev,
+            [projectId]: [...(prev[projectId] ?? []), ...response.comments],
+          }));
+        }
 
         setCommentsPagination((prev) => ({
           ...prev,
@@ -825,9 +1083,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         }));
       } catch (err) {
         setError(
-          `Failed to get project comments: ${
-            err instanceof Error ? err.message : String(err)
-          }`
+          `Failed to get project comments: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
         setActionLoading((prev) => {
@@ -837,7 +1093,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
     },
-    [user]
+    [user, getCachedComments, setCachedComments]
   );
 
   const createProjectTeamMember = useCallback(
@@ -908,10 +1164,25 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     [user]
   );
 
-  // Optional: Add cache clearing for when user logs out/changes
+  // New method to clear specific project cache
+  const clearSpecificCache = useCallback((projectId: string) => {
+    setProjectsCache((prev) => {
+      const newCache = { ...prev };
+      newCache.delete(projectId);
+      return newCache;
+    });
+    setCommentsCache((prev) => {
+      const newCache = new Map(prev);
+      newCache.delete(projectId);
+      return newCache;
+    });
+  }, []);
+
   const clearProjectsCache = useCallback(() => {
     setProjects([]);
     setProjectById(null);
+    setProjectsCache(new Map());
+    setCommentsCache(new Map());
     setPagination({
       page: 1,
       pageSize: 15,
@@ -922,38 +1193,47 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, []);
 
+  // Cache info for debugging
+  const cacheInfo = useMemo(
+    () => ({
+      projects: Object.keys(projectsCache).length,
+      comments: Object.keys(commentsCache).length,
+    }),
+    [projectsCache, commentsCache]
+  );
+
   // Add infinite scroll functionality
   // Add debounce to prevent multiple rapid calls
-  useEffect(() => {
-    let ticking = false;
+  // useEffect(() => {
+  //   let ticking = false;
 
-    const handleScroll = () => {
-      if (!ticking) {
-        requestAnimationFrame(() => {
-          if (loadingRef.current || !paginationRef.current.hasNext) return;
+  //   const handleScroll = () => {
+  //     if (!ticking) {
+  //       requestAnimationFrame(() => {
+  //         if (loadingRef.current || !paginationRef.current.hasNext) return;
 
-          const scrollTop = document.documentElement.scrollTop;
-          const scrollHeight = document.documentElement.scrollHeight;
-          const clientHeight = document.documentElement.clientHeight;
+  //         const scrollTop = document.documentElement.scrollTop;
+  //         const scrollHeight = document.documentElement.scrollHeight;
+  //         const clientHeight = document.documentElement.clientHeight;
 
-          if (scrollTop + clientHeight >= scrollHeight - 100) {
-            getAllProjects(
-              {
-                ...paginationRef.current,
-                page: paginationRef.current.page + 1,
-              },
-              true
-            );
-          }
-          ticking = false;
-        });
-        ticking = true;
-      }
-    };
+  //         if (scrollTop + clientHeight >= scrollHeight - 100) {
+  //           getAllProjects(
+  //             {
+  //               ...paginationRef.current,
+  //               page: paginationRef.current.page + 1,
+  //             },
+  //             true
+  //           );
+  //         }
+  //         ticking = false;
+  //       });
+  //       ticking = true;
+  //     }
+  //   };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [getAllProjects]);
+  //   window.addEventListener('scroll', handleScroll, { passive: true });
+  //   return () => window.removeEventListener('scroll', handleScroll);
+  // }, [getAllProjects]);
 
   const state: ShowcaseContextType = useMemo(
     () => ({
@@ -968,9 +1248,11 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       comments,
       commentsPagination,
       teamMembers,
+      cacheInfo,
       clearError,
+      clearSpecificCache,
 
-      //actions
+      // Actions (include all the existing ones)
       createProject,
       updateProject,
       deleteProject,
@@ -1001,6 +1283,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       collaborationRequests,
       loading,
       actionLoading,
+      cacheInfo,
       error,
       comments,
       commentsPagination,
@@ -1027,6 +1310,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       getProjectTeamMembers,
       removeProjectTeamMember,
       clearProjectsCache,
+      clearSpecificCache,
     ]
   );
 
