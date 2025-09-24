@@ -7,22 +7,31 @@ import {
   CreateProjectUpdateInterface,
   FilterProjectInterface,
   ProjectComment,
+  ProjectDetailInterface,
   ProjectInterface,
+  ProjectsPaginationResponse,
   ProjectTeam,
   ProjectUpdateInterface,
 } from '@/types/ShowcaseType';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
 
 // Define the context type with all exposed functions
 export interface ShowcaseContextType {
   //states
   projects: ProjectInterface[];
-  projectById: ProjectInterface | null;
+  pagination: ProjectsPaginationResponse;
+  projectById: ProjectDetailInterface | null;
   projectByIdUpdates: ProjectUpdateInterface[];
   collaborationRequests: CollaborationRequestInterface[];
   loading: boolean;
-  comments: ProjectComment[];
+  actionLoading: {
+    support: Set<string>;
+    follow: Set<string>;
+    comment: Set<string>;
+  };
+  comments: Record<string, ProjectComment[]>;
+  commentsPagination: ProjectsPaginationResponse;
   teamMembers: ProjectTeam[];
   error: string | null;
   clearError: () => void;
@@ -38,11 +47,13 @@ export interface ShowcaseContextType {
     filterProjectDto?: FilterProjectInterface | undefined
   ) => Promise<void>;
   getProjectById: (projectId: string) => Promise<void>;
+  getProjectForSharing: (
+    projectId: string
+  ) => Promise<ProjectDetailInterface | null>;
   createProjectUpdate: (
     projectId: string,
     data: CreateProjectUpdateInterface
   ) => Promise<void>;
-  getProjectIDComments: (projectId: string) => Promise<void>;
   getProjectUpdates: (projectId: string) => Promise<void>;
   supportProject: (projectId: string) => Promise<void>;
   unsupportProject: (projectId: string) => Promise<void>;
@@ -65,15 +76,37 @@ export interface ShowcaseContextType {
   ) => Promise<void>;
   getProjectTeamMembers: (projectId: string) => Promise<void>;
   removeProjectTeamMember: (projectId: string, userId: string) => Promise<void>;
+  clearProjectsCache: () => void;
 }
 
 const ShowcaseContext = React.createContext<ShowcaseContextType>({
   projects: [],
+  pagination: {
+    page: 1,
+    pageSize: 15,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  },
   projectById: null,
   projectByIdUpdates: [],
   collaborationRequests: [],
   loading: false,
-  comments: [],
+  actionLoading: {
+    support: new Set<string>(),
+    follow: new Set<string>(),
+    comment: new Set<string>(),
+  },
+  comments: {},
+  commentsPagination: {
+    page: 1,
+    pageSize: 10,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  },
   teamMembers: [],
   error: null,
   clearError: () => {},
@@ -84,7 +117,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   deleteProject: async () => {},
   getAllProjects: async () => {},
   getProjectById: async () => {},
-  getProjectIDComments: async () => {},
+  getProjectForSharing: async () => null,
   createProjectUpdate: async () => {},
   getProjectUpdates: async () => {},
   supportProject: async () => {},
@@ -99,22 +132,58 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   createProjectTeamMember: async () => {},
   getProjectTeamMembers: async () => {},
   removeProjectTeamMember: async () => {},
+  clearProjectsCache: () => {},
 });
 
 export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
+  const [actionLoading, setActionLoading] = useState({
+    support: new Set<string>(),
+    follow: new Set<string>(),
+    comment: new Set<string>(),
+  });
   const { user } = useAuth();
   const [projects, setProjects] = useState<ProjectInterface[]>([]);
-  const [projectById, setProjectById] = useState<ProjectInterface | null>(null);
+  const [pagination, setPagination] = useState<ProjectsPaginationResponse>({
+    page: 1,
+    pageSize: 15,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrev: false,
+  });
+
+  // Refs for pagination and loading
+  const paginationRef = React.useRef(pagination);
+  const loadingRef = React.useRef(loading);
+
+  useEffect(() => {
+    paginationRef.current = pagination;
+    loadingRef.current = loading;
+  }, [pagination, loading]);
+  const [projectById, setProjectById] = useState<ProjectDetailInterface | null>(
+    null
+  );
   const [projectByIdUpdates, setProjectByIdUpdates] = useState<
     ProjectUpdateInterface[]
   >([]);
   const [collaborationRequests, setCollaborationRequests] = useState<
     CollaborationRequestInterface[]
   >([]);
-  const [comments, setComments] = useState<ProjectComment[]>([]);
+  const [comments, setComments] = useState<Record<string, ProjectComment[]>>(
+    {}
+  );
+  const [commentsPagination, setCommentsPagination] =
+    useState<ProjectsPaginationResponse>({
+      page: 1,
+      pageSize: 10,
+      total: 0,
+      totalPages: 0,
+      hasNext: false,
+      hasPrev: false,
+    });
   const [teamMembers, setTeamMembers] = useState<ProjectTeam[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -128,7 +197,6 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       setLoading(true);
       try {
-        console.log('Creating project with data 2:', data);
         const response = await ShowcaseService.createProject(data);
         setProjects((prev) => [response, ...prev]);
       } catch (err) {
@@ -152,10 +220,13 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         const response = await ShowcaseService.updateProject(projectId, data);
         setProjects((prev) =>
-          prev.map((project) => (project.id === projectId ? response : project))
+          prev.map((project) =>
+            project.id === projectId ? { ...project, ...response } : project
+          )
         );
+        // If the updated project is the one currently viewed, update it too
         if (projectById?.id === projectId) {
-          setProjectById(response);
+          setProjectById({ ...projectById, ...response });
         }
       } catch (err) {
         setError(
@@ -195,15 +266,32 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const getAllProjects = useCallback(
-    async (filterProjectDto?: FilterProjectInterface | undefined) => {
+    async (
+      filterProjectDto?: FilterProjectInterface | undefined,
+      loadMore: boolean = false
+    ) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
+
+      // Use refs for pagination and loading
+      const currentPagination = paginationRef.current;
+      const isLoading = loadingRef.current;
+      if (loadMore && (isLoading || !currentPagination.hasNext)) {
+        return;
+      }
+
       setLoading(true);
       try {
         const response = await ShowcaseService.getAllProjects(filterProjectDto);
-        setProjects(response);
+
+        if (loadMore) {
+          setProjects((prev) => [...prev, ...response.data]);
+        } else {
+          setProjects(response.data);
+        }
+        setPagination(response.pagination);
       } catch (err) {
         setError(
           `Failed to get projects: ${err instanceof Error ? err.message : String(err)}`
@@ -212,7 +300,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user]
+    [user] // pagination and loading handled via refs
   );
 
   const getProjectById = useCallback(
@@ -221,23 +309,49 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setError('User not authenticated');
         return;
       }
+
       setLoading(true);
       try {
-        console.log('Fetching project by ID:', projectId);
-        const response = await ShowcaseService.getProjectById(projectId);
-        setProjectById(response);
-        setProjectByIdUpdates(response.updates || []);
-        setProjects((prev) => {
-          // If the project already exists in the list, update it; otherwise, add it
-          const exists = prev.some((proj) => proj.id === response.id);
-          if (exists) {
-            return prev.map((proj) =>
-              proj.id === response.id ? response : proj
-            );
-          } else {
-            return [response, ...prev];
-          }
-        });
+        const existingProject = projects.find((proj) => proj.id === projectId);
+        const details = await ShowcaseService.getProjectById(projectId);
+
+        // Create properly typed object instead of casting
+        const fullProject: ProjectDetailInterface = {
+          ...(existingProject || {}),
+          ...details,
+          // Ensure required fields are present
+          id: projectId,
+          title: existingProject?.title || details.title || '',
+          tags: existingProject?.tags || details.tags || [],
+          status: existingProject?.status || details.status,
+          createdAt: existingProject?.createdAt || details.createdAt,
+          owner: existingProject?.owner || details.owner,
+          _count: {
+            supporters:
+              existingProject?._count?.supporters ||
+              details._count?.supporters ||
+              0,
+            followers:
+              existingProject?._count?.followers ||
+              details._count?.followers ||
+              0,
+            comments: details._count?.comments || 0,
+            teamMembers: details._count?.teamMembers || 0,
+            updates: details._count?.updates || 0,
+          },
+          seeking: details.seeking || [],
+          skills: details.skills || [],
+          description: details.description || '',
+          teamMembers: details.teamMembers || [],
+          updates: details.updates || [],
+        };
+
+        setProjectById(fullProject);
+        setProjectByIdUpdates(details.updates || []);
+
+        if (!existingProject) {
+          setProjects((prev) => [fullProject, ...prev]);
+        }
       } catch (err) {
         setError(
           `Failed to get project by ID: ${err instanceof Error ? err.message : String(err)}`
@@ -246,29 +360,42 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user]
+    [projects, user]
   );
 
-  const getProjectIDComments = useCallback(
-    async (projectId: string) => {
-      if (!user) {
-        setError('User not authenticated');
-        return;
-      }
-      setLoading(true);
+  // Add project sharing function
+  const getProjectForSharing = useCallback(
+    async (projectId: string): Promise<ProjectDetailInterface | null> => {
       try {
-        const response = await ShowcaseService.getProjectComments(projectId);
-        return response || [];
-      } catch (err) {
-        setError(
-          `Failed to get project comments: ${err instanceof Error ? err.message : String(err)}`
-        );
-        return [];
-      } finally {
-        setLoading(false);
+        // First check if we have the project in context
+        if (projectById?.id === projectId) {
+          return projectById;
+        }
+
+        const existingProject = projects.find((p) => p.id === projectId);
+
+        if (existingProject) {
+          // We have basic info, try to get details
+          try {
+            const details = await ShowcaseService.getProjectById(projectId);
+            return { ...existingProject, ...details } as ProjectDetailInterface;
+          } catch (error) {
+            // If details fetch fails, return at least the basic info
+            setError(
+              `Failed to get project by ID: ${error instanceof Error ? error.message : String(error)}`
+            );
+            return existingProject as ProjectDetailInterface;
+          }
+        }
+
+        // If not in context, fetch the complete project
+        return await ShowcaseService.getProjectById(projectId);
+      } catch (error) {
+        console.error('Failed to get project for sharing:', error);
+        return null;
       }
     },
-    [user]
+    [projectById, projects]
   );
 
   const createProjectUpdate = useCallback(
@@ -332,21 +459,60 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setError('User not authenticated');
         return;
       }
-      setLoading(true);
+      setActionLoading((prev) => ({
+        ...prev,
+        support: new Set(prev.support).add(projectId),
+      }));
       try {
         console.log('Supporting project ID:', projectId);
         await ShowcaseService.supportProject(projectId);
-        // Refresh project data
-        await getProjectById(projectId);
+        // Optimistically update the supporters count and list
+        setProjects((prev) => {
+          return prev.map((proj) =>
+            proj.id === projectId
+              ? {
+                  ...proj,
+                  _count: {
+                    ...proj._count,
+                    supporters: (proj._count.supporters || 0) + 1,
+                  },
+                  supporters: Array.isArray(proj.supporters)
+                    ? [...proj.supporters, { userId: user.id }]
+                    : [{ userId: user.id }],
+                }
+              : proj
+          );
+        });
+
+        if (projectById?.id === projectId) {
+          setProjectById((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  _count: {
+                    ...prev._count,
+                    supporters: (prev._count.supporters || 0) + 1,
+                  },
+                  supporters: Array.isArray(prev.supporters)
+                    ? [...prev.supporters, { userId: user.id }]
+                    : [{ userId: user.id }],
+                }
+              : prev
+          );
+        }
       } catch (err) {
         setError(
           `Failed to support project: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => {
+          const next = new Set(prev.support);
+          next.delete(projectId);
+          return { ...prev, support: next };
+        });
       }
     },
-    [user, getProjectById]
+    [projectById?.id, user]
   );
 
   const unsupportProject = useCallback(
@@ -355,20 +521,59 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setError('User not authenticated');
         return;
       }
-      setLoading(true);
+      setActionLoading((prev) => ({
+        ...prev,
+        support: new Set(prev.support).add(projectId),
+      }));
       try {
         await ShowcaseService.unsupportProject(projectId);
-        // Refresh project data
-        await getProjectById(projectId);
+        // Optimistically update the supporters count and list
+        setProjects((prev) => {
+          return prev.map((proj) =>
+            proj.id === projectId
+              ? {
+                  ...proj,
+                  _count: {
+                    ...proj._count,
+                    supporters: Math.max((proj._count.supporters || 1) - 1, 0),
+                  },
+                  supporters: proj.supporters
+                    ? proj.supporters.filter((s) => s.userId !== user.id)
+                    : [],
+                }
+              : proj
+          );
+        });
+
+        if (projectById?.id === projectId) {
+          setProjectById((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  _count: {
+                    ...prev._count,
+                    supporters: Math.max((prev._count.supporters || 1) - 1, 0),
+                  },
+                  supporters: prev.supporters
+                    ? prev.supporters.filter((s) => s.userId !== user.id)
+                    : [],
+                }
+              : prev
+          );
+        }
       } catch (err) {
         setError(
           `Failed to unsupport project: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => {
+          const next = new Set(prev.support);
+          next.delete(projectId);
+          return { ...prev, support: next };
+        });
       }
     },
-    [user, getProjectById]
+    [user, projectById?.id]
   );
 
   const followProject = useCallback(
@@ -377,20 +582,59 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setError('User not authenticated');
         return;
       }
-      setLoading(true);
+      setActionLoading((prev) => ({
+        ...prev,
+        follow: new Set(prev.follow).add(projectId),
+      }));
       try {
         await ShowcaseService.followProject(projectId);
-        // Refresh project data
-        await getProjectById(projectId);
+        // optimistically update the followers count and list
+        setProjects((prev) => {
+          return prev.map((proj) =>
+            proj.id === projectId
+              ? {
+                  ...proj,
+                  _count: {
+                    ...proj._count,
+                    followers: (proj._count.followers || 0) + 1,
+                  },
+                  followers: Array.isArray(proj.followers)
+                    ? [...proj.followers, { userId: user.id }]
+                    : [{ userId: user.id }],
+                }
+              : proj
+          );
+        });
+
+        if (projectById?.id === projectId) {
+          setProjectById((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  _count: {
+                    ...prev._count,
+                    followers: (prev._count.followers || 0) + 1,
+                  },
+                  followers: Array.isArray(prev.followers)
+                    ? [...prev.followers, { userId: user.id }]
+                    : [{ userId: user.id }],
+                }
+              : prev
+          );
+        }
       } catch (err) {
         setError(
           `Failed to follow project: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => {
+          const next = new Set(prev.follow);
+          next.delete(projectId);
+          return { ...prev, follow: next };
+        });
       }
     },
-    [user, getProjectById]
+    [user, projectById?.id]
   );
 
   const unfollowProject = useCallback(
@@ -399,20 +643,59 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setError('User not authenticated');
         return;
       }
-      setLoading(true);
+      setActionLoading((prev) => ({
+        ...prev,
+        follow: new Set(prev.follow).add(projectId),
+      }));
       try {
         await ShowcaseService.unfollowProject(projectId);
-        // Refresh project data
-        await getProjectById(projectId);
+        // Optimistically update the followers count and list
+        setProjects((prev) => {
+          return prev.map((proj) =>
+            proj.id === projectId
+              ? {
+                  ...proj,
+                  _count: {
+                    ...proj._count,
+                    followers: Math.max((proj._count.followers || 1) - 1, 0),
+                  },
+                  followers: proj.followers
+                    ? proj.followers.filter((f) => f.userId !== user.id)
+                    : [],
+                }
+              : proj
+          );
+        });
+
+        if (projectById?.id === projectId) {
+          setProjectById((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  _count: {
+                    ...prev._count,
+                    followers: Math.max((prev._count.followers || 1) - 1, 0),
+                  },
+                  followers: prev.followers
+                    ? prev.followers.filter((f) => f.userId !== user.id)
+                    : [],
+                }
+              : prev
+          );
+        }
       } catch (err) {
         setError(
           `Failed to unfollow project: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => {
+          const next = new Set(prev.follow);
+          next.delete(projectId);
+          return { ...prev, follow: next };
+        });
       }
     },
-    [user, getProjectById]
+    [user, projectById?.id]
   );
 
   const requestCollaboration = useCallback(
@@ -480,42 +763,78 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const createComment = useCallback(
-    async (projectId: string, data: string) => {
+    async (projectId: string, comment: string) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
-      setLoading(true);
+      setActionLoading((prev) => ({
+        ...prev,
+        comment: new Set(prev.comment).add(projectId),
+      }));
+
       try {
-        const response = await ShowcaseService.createComment(projectId, data);
-        setComments((prev) => [...prev, response]);
+        const response = await ShowcaseService.createComment(
+          projectId,
+          comment
+        );
+
+        setComments((prev) => ({
+          ...prev,
+          [projectId]: [response, ...(prev[projectId] ?? [])],
+        }));
       } catch (err) {
         setError(
-          `Failed to create comment: ${err instanceof Error ? err.message : String(err)}`
+          `Failed to create comment: ${
+            err instanceof Error ? err.message : String(err)
+          }`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => {
+          const next = new Set(prev.comment);
+          next.delete(projectId);
+          return { ...prev, comment: next };
+        });
       }
     },
     [user]
   );
 
   const getComments = useCallback(
-    async (projectId: string) => {
+    async (projectId: string, page: number = 1) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
-      setLoading(true);
+      setActionLoading((prev) => ({
+        ...prev,
+        comment: new Set(prev.comment).add(projectId),
+      }));
+
       try {
-        const response = await ShowcaseService.getComments(projectId);
-        setComments(response);
+        const response = await ShowcaseService.getComments(projectId, page);
+
+        setComments((prev) => ({
+          ...prev,
+          [projectId]: [...(prev[projectId] ?? []), ...response.comments],
+        }));
+
+        setCommentsPagination((prev) => ({
+          ...prev,
+          [projectId]: response.pagination,
+        }));
       } catch (err) {
         setError(
-          `Failed to get comments: ${err instanceof Error ? err.message : String(err)}`
+          `Failed to get project comments: ${
+            err instanceof Error ? err.message : String(err)
+          }`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => {
+          const next = new Set(prev.comment);
+          next.delete(projectId);
+          return { ...prev, comment: next };
+        });
       }
     },
     [user]
@@ -589,15 +908,65 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     [user]
   );
 
+  // Optional: Add cache clearing for when user logs out/changes
+  const clearProjectsCache = useCallback(() => {
+    setProjects([]);
+    setProjectById(null);
+    setPagination({
+      page: 1,
+      pageSize: 15,
+      total: 0,
+      totalPages: 0,
+      hasNext: false,
+      hasPrev: false,
+    });
+  }, []);
+
+  // Add infinite scroll functionality
+  // Add debounce to prevent multiple rapid calls
+  useEffect(() => {
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (!ticking) {
+        requestAnimationFrame(() => {
+          if (loadingRef.current || !paginationRef.current.hasNext) return;
+
+          const scrollTop = document.documentElement.scrollTop;
+          const scrollHeight = document.documentElement.scrollHeight;
+          const clientHeight = document.documentElement.clientHeight;
+
+          if (scrollTop + clientHeight >= scrollHeight - 100) {
+            getAllProjects(
+              {
+                ...paginationRef.current,
+                page: paginationRef.current.page + 1,
+              },
+              true
+            );
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [getAllProjects]);
+
   const state: ShowcaseContextType = useMemo(
     () => ({
       projects,
+      pagination,
       projectById,
       projectByIdUpdates,
       collaborationRequests,
       loading,
+      actionLoading,
       error,
       comments,
+      commentsPagination,
       teamMembers,
       clearError,
 
@@ -607,7 +976,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       deleteProject,
       getAllProjects,
       getProjectById,
-      getProjectIDComments,
+      getProjectForSharing,
       createProjectUpdate,
       getProjectUpdates,
       supportProject,
@@ -622,15 +991,19 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       createProjectTeamMember,
       getProjectTeamMembers,
       removeProjectTeamMember,
+      clearProjectsCache,
     }),
     [
       projects,
+      pagination,
       projectById,
       projectByIdUpdates,
       collaborationRequests,
       loading,
+      actionLoading,
       error,
       comments,
+      commentsPagination,
       teamMembers,
       clearError,
       createProject,
@@ -638,7 +1011,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       deleteProject,
       getAllProjects,
       getProjectById,
-      getProjectIDComments,
+      getProjectForSharing,
       createProjectUpdate,
       getProjectUpdates,
       supportProject,
@@ -653,6 +1026,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       createProjectTeamMember,
       getProjectTeamMembers,
       removeProjectTeamMember,
+      clearProjectsCache,
     ]
   );
 
