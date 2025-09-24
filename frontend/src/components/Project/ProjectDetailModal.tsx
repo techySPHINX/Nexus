@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// ProjectDetailModal.tsx
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -19,6 +20,13 @@ import {
   ListItemAvatar,
   CircularProgress,
   Stack,
+  TextField,
+  Skeleton,
+  Card,
+  CardContent,
+  Tooltip,
+  Grid,
+  useTheme,
 } from '@mui/material';
 import {
   Close,
@@ -36,26 +44,32 @@ import {
   CalendarToday,
   Code,
   Label,
+  Send,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import {
-  ProjectInterface,
   status,
   ProjectComment,
   ProjectTeam,
   ProjectUpdateInterface,
+  ProjectDetailInterface,
 } from '@/types/ShowcaseType';
 
 interface ProjectDetailModalProps {
-  project: ProjectInterface;
+  project: ProjectDetailInterface;
   open: boolean;
-  onClose: () => void;
+  comments?: ProjectComment[];
   loading?: boolean;
+  loadingComments?: boolean;
   currentUserId?: string;
+  onClose: () => void;
   onSupport: (isSupported: boolean) => void;
   onFollow: (isFollowing: boolean) => void;
   onCollaborate: () => void;
+  onLoadComments: (page?: number, forceRefresh?: boolean) => void;
+  onCreateComment: (comment: string) => Promise<void>;
+  onRefresh: () => void;
 }
 
 interface TabPanelProps {
@@ -66,7 +80,6 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
-
   return (
     <div
       role="tabpanel"
@@ -80,28 +93,77 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
+const listItemVariants = {
+  hidden: { opacity: 0, y: 8 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.03,
+      type: 'spring',
+      stiffness: 300,
+      damping: 22,
+    },
+  }),
+};
+
+const containerStagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.03 } },
+};
+
 const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   project,
   open,
-  onClose,
+  comments = [],
   loading = false,
+  loadingComments = false,
   currentUserId,
+  onClose,
   onSupport,
   onFollow,
   onCollaborate,
+  onLoadComments,
+  onCreateComment,
+  onRefresh,
 }) => {
+  const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
-  const isSupported = project.supporters?.some(
+  const [commentText, setCommentText] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const submitDebounce = useRef<number | null>(null);
+
+  // Accessibility: focus first action when open
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      // delay focus to allow dialog to mount
+      const t = setTimeout(() => closeButtonRef.current?.focus(), 80);
+      return () => clearTimeout(t);
+    }
+  }, [open]);
+
+  // handle Esc close (Dialog already handles Esc, this is defensive)
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [open, onClose]);
+
+  const isSupported = !!project.supporters?.some(
     (s) => s.userId === currentUserId
   );
-  const isFollowing = project.followers?.some(
+  const isFollowing = !!project.followers?.some(
     (f) => f.userId === currentUserId
   );
-  console.log('Project owner id:', project.owner.id);
-  console.log('Current user id:', currentUserId);
-  const isOwner = currentUserId && project.owner.id === currentUserId;
+  const isOwner = !!(currentUserId && project.owner?.id === currentUserId);
 
-  const statusColors = {
+  const statusColors: Record<status, 'default' | 'primary' | 'success'> = {
     [status.IDEA]: 'default',
     [status.IN_PROGRESS]: 'primary',
     [status.COMPLETED]: 'success',
@@ -113,14 +175,63 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     [status.COMPLETED]: 'Completed',
   };
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
+    // lazy load comments when user switches to comments tab
+    if (newValue === 2 && comments.length === 0 && !loadingComments) {
+      onLoadComments(1, false);
+    }
   };
 
-  const handleExternalLink = (url: string | undefined) => {
-    if (url) {
-      window.open(url, '_blank');
+  // Debounced comment submit: prevents rapid double-submits
+  const handleSubmitComment = async () => {
+    if (!commentText.trim() || isSubmittingComment) return;
+
+    // Simple debounce: ignore if fired within 500ms
+    if (submitDebounce.current) {
+      window.clearTimeout(submitDebounce.current);
     }
+    submitDebounce.current = window.setTimeout(async () => {
+      setIsSubmittingComment(true);
+      try {
+        await onCreateComment(commentText.trim());
+        setCommentText('');
+        // refresh comments first page to ensure latest (optionally you could just prepend)
+        onLoadComments(1, true);
+      } catch (err) {
+        console.error('Failed to submit comment', err);
+      } finally {
+        setIsSubmittingComment(false);
+      }
+    }, 300);
+  };
+
+  // When modal closes, clear local compose state
+  useEffect(() => {
+    if (!open) {
+      setCommentText('');
+      setIsSubmittingComment(false);
+    }
+  }, [open]);
+
+  // helper: lazy image fallback
+  const imageProps = {
+    src: project.imageUrl || '/default-project.png',
+    alt: project.title || 'Project image',
+    loading: 'lazy' as const,
+    style: {
+      width: '100%',
+      maxHeight: 300,
+      objectFit: 'cover' as React.CSSProperties['objectFit'],
+      display: 'block',
+    } as React.CSSProperties,
+  };
+
+  // Scrollable list style
+  const listContainerSx = {
+    maxHeight: 340,
+    overflowY: 'auto' as const,
+    pr: 1,
   };
 
   return (
@@ -129,17 +240,16 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
       onClose={onClose}
       maxWidth="lg"
       fullWidth
-      PaperComponent={motion.div}
+      aria-labelledby="project-detail-title"
+      aria-describedby="project-detail-description"
+      role="dialog"
+      // PaperComponent={motion.div}
       PaperProps={{
-        initial: { opacity: 0, scale: 0.9 },
-        animate: { opacity: 1, scale: 1 },
-        exit: { opacity: 0, scale: 0.9 },
-        transition: { duration: 0.3 },
-        sx: {
-          borderRadius: 3,
-          maxHeight: '90vh',
-          overflow: 'hidden',
-        },
+        initial: { opacity: 0, scale: 0.98, y: -8 },
+        animate: { opacity: 1, scale: 1, y: 0 },
+        exit: { opacity: 0, scale: 0.98, y: -8 },
+        transition: { type: 'spring', stiffness: 300, damping: 30 },
+        sx: { borderRadius: 3, maxHeight: '90vh', overflow: 'hidden' },
       }}
     >
       {loading ? (
@@ -148,41 +258,56 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            minHeight: 400,
+            minHeight: 420,
           }}
         >
-          <CircularProgress size={60} thickness={4} />
+          <CircularProgress
+            size={60}
+            thickness={4}
+            aria-label="Loading project"
+          />
         </Box>
       ) : (
         <>
           <DialogTitle
+            id="project-detail-title"
             sx={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'flex-start',
               pb: 1,
+              bgcolor: 'background.default',
+              borderBottom: 1,
+              borderColor: 'divider',
             }}
           >
             <Box sx={{ flex: 1, pr: 2 }}>
               <Typography
                 variant="h4"
                 component="h2"
-                sx={{ fontWeight: 700, mb: 1 }}
+                sx={{
+                  fontWeight: 800,
+                  mb: 1,
+                  color: 'primary.main',
+                  letterSpacing: 0.6,
+                }}
               >
                 {project.title}
               </Typography>
+
               <Box
                 sx={{
                   display: 'flex',
-                  flexWrap: 'wrap',
                   gap: 1,
+                  flexWrap: 'wrap',
                   alignItems: 'center',
                 }}
               >
                 <Chip
                   label={statusLabels[project.status]}
-                  color={statusColors[project.status] as any}
+                  color={statusColors[project.status]}
                   size="small"
+                  sx={{ fontWeight: 700 }}
                 />
                 <Box
                   sx={{
@@ -196,330 +321,675 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     {format(new Date(project.createdAt), 'MMM d, yyyy')}
                   </Typography>
                 </Box>
+                {project.githubUrl && (
+                  <Button
+                    size="small"
+                    startIcon={<GitHub />}
+                    onClick={() => window.open(project.githubUrl, '_blank')}
+                    aria-label="Open GitHub repository"
+                  >
+                    Repo
+                  </Button>
+                )}
               </Box>
             </Box>
-            <IconButton onClick={onClose} size="large">
+
+            <IconButton
+              onClick={onClose}
+              size="large"
+              aria-label="Close project details"
+              ref={closeButtonRef}
+            >
               <Close />
             </IconButton>
           </DialogTitle>
 
-          <DialogContent dividers sx={{ overflowY: 'auto' }}>
-            {/* Project Header with Image */}
-            {project.imageUrl && (
-              <Box sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
-                <img
-                  src={project.imageUrl}
-                  alt={project.title}
-                  style={{ width: '100%', maxHeight: 300, objectFit: 'cover' }}
-                />
-              </Box>
-            )}
+          <DialogContent
+            dividers
+            sx={{
+              overflowY: 'auto',
+              bgcolor: 'background.paper',
+              px: 4,
+              py: 3,
+            }}
+          >
+            <Grid container spacing={3}>
+              {/* left: image + owner + stat chips */}
+              <Grid item xs={12} md={5}>
+                <Card elevation={2} sx={{ borderRadius: 3 }}>
+                  <Box sx={{ borderRadius: 3, overflow: 'hidden' }}>
+                    {/* lazy image + skeleton fallback */}
+                    {project.imageUrl ? (
+                      <img {...imageProps} alt={project.title} />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: '100%',
+                          height: 220,
+                          bgcolor: 'grey.100',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Typography variant="subtitle1" color="text.secondary">
+                          No preview
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
 
-            {/* Owner Info */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-              <Avatar src={project.owner.avatarUrl} sx={{ mr: 2 }}>
-                <Person />
-              </Avatar>
-              <Box>
-                <Typography variant="subtitle1" fontWeight={600}>
-                  {project.owner.username || project.owner.email}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Project Owner
-                </Typography>
-              </Box>
-            </Box>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Avatar
+                        src={project.owner?.profile?.avatarUrl}
+                        sx={{ mr: 2, width: 48, height: 48 }}
+                      >
+                        <Person />
+                      </Avatar>
+                      <Box>
+                        <Typography
+                          variant="subtitle1"
+                          fontWeight={700}
+                          color="primary"
+                        >
+                          {project.owner?.name || 'Owner'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Project Owner • {project.owner?.role || '—'}
+                        </Typography>
+                      </Box>
+                    </Box>
 
-            {/* Description */}
-            <Box sx={{ mb: 3 }}>
-              <Typography
-                variant="h6"
-                gutterBottom
-                sx={{ display: 'flex', alignItems: 'center' }}
-              >
-                <Code sx={{ mr: 1 }} /> Description
-              </Typography>
-              <Typography variant="body1" paragraph>
-                {project.description}
-              </Typography>
-            </Box>
+                    <Divider sx={{ my: 2 }} />
 
-            {/* External Links */}
-            {(project.githubUrl || project.websiteUrl) && (
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Links
-                </Typography>
-                <Stack direction="row" spacing={2}>
-                  {project.githubUrl && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<GitHub />}
-                      onClick={() => handleExternalLink(project.githubUrl)}
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      justifyContent="center"
+                      flexWrap="wrap"
+                      sx={{ gap: 1 }}
                     >
-                      GitHub Repository
-                    </Button>
-                  )}
-                  {project.websiteUrl && (
-                    <Button
-                      variant="outlined"
-                      startIcon={<Language />}
-                      onClick={() => handleExternalLink(project.websiteUrl)}
-                    >
-                      Live Website
-                    </Button>
-                  )}
-                </Stack>
-              </Box>
-            )}
+                      <Tooltip title="Supporters">
+                        <Chip
+                          icon={<Favorite color="error" />}
+                          label={project._count?.supporters ?? 0}
+                          variant="outlined"
+                        />
+                      </Tooltip>
+                      <Tooltip title="Followers">
+                        <Chip
+                          icon={<Visibility />}
+                          label={project._count?.followers ?? 0}
+                          variant="outlined"
+                        />
+                      </Tooltip>
+                      <Tooltip title="Comments">
+                        <Chip
+                          icon={<CommentIcon />}
+                          label={project._count?.comments ?? 0}
+                          variant="outlined"
+                        />
+                      </Tooltip>
+                      <Tooltip title="Team Members">
+                        <Chip
+                          icon={<Group />}
+                          label={project._count?.teamMembers ?? 0}
+                          variant="outlined"
+                        />
+                      </Tooltip>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
 
-            {/* Seeking Help */}
-            {project.seeking && (
-              <Box sx={{ mb: 3, p: 2, bgcolor: 'info.main', borderRadius: 2 }}>
-                <Typography variant="h6" gutterBottom color="info.contrastText">
-                  🤝 Looking for Help
-                </Typography>
-                <Typography variant="body1" color="info.contrastText">
-                  {project.seeking}
-                </Typography>
-              </Box>
-            )}
+              {/* right: description and links */}
+              <Grid item xs={12} md={7}>
+                <Card
+                  elevation={0}
+                  sx={{ borderRadius: 3, bgcolor: 'background.default' }}
+                >
+                  <CardContent>
+                    <Box sx={{ mb: 3 }}>
+                      <Typography
+                        variant="h6"
+                        gutterBottom
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          fontWeight: 700,
+                        }}
+                      >
+                        <Code sx={{ mr: 1 }} /> Description
+                      </Typography>
+                      <Typography
+                        id="project-detail-description"
+                        variant="body1"
+                        color="text.primary"
+                        paragraph
+                      >
+                        {project.description || 'No description provided.'}
+                      </Typography>
+                    </Box>
 
-            {/* Tabs for additional information */}
-            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                    {(project.githubUrl || project.websiteUrl) && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography variant="h6" gutterBottom fontWeight={700}>
+                          <Language sx={{ mr: 1 }} /> Links
+                        </Typography>
+                        <Stack direction="row" spacing={2}>
+                          {project.githubUrl && (
+                            <Button
+                              variant="outlined"
+                              startIcon={<GitHub />}
+                              onClick={() =>
+                                window.open(project.githubUrl, '_blank')
+                              }
+                              sx={{ borderRadius: 2 }}
+                            >
+                              GitHub Repository
+                            </Button>
+                          )}
+                          {project.websiteUrl && (
+                            <Button
+                              variant="outlined"
+                              startIcon={<Language />}
+                              onClick={() =>
+                                window.open(project.websiteUrl, '_blank')
+                              }
+                              sx={{ borderRadius: 2 }}
+                            >
+                              Live Website
+                            </Button>
+                          )}
+                        </Stack>
+                      </Box>
+                    )}
+
+                    {project.seeking && project.seeking.length > 0 && (
+                      <Box
+                        sx={{
+                          mt: 2,
+                          p: 2,
+                          bgcolor: 'info.light',
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          gutterBottom
+                          color="info.main"
+                          fontWeight={700}
+                        >
+                          🤝 Looking for Help
+                        </Typography>
+                        <Typography variant="body1" color="info.main">
+                          {Array.isArray(project.seeking)
+                            ? project.seeking.join(', ')
+                            : project.seeking}
+                        </Typography>
+                      </Box>
+                    )}
+                  </CardContent>
+                </Card>
+              </Grid>
+            </Grid>
+
+            {/* TABS */}
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 4, mb: 2 }}>
               <Tabs
                 value={activeTab}
                 onChange={handleTabChange}
                 variant="scrollable"
                 scrollButtons="auto"
+                aria-label="Project detail tabs"
               >
-                <Tab icon={<Label />} label="Tags & Skills" />
-                <Tab icon={<Group />} label="Team" />
-                <Tab icon={<CommentIcon />} label="Comments" />
-                <Tab icon={<Update />} label="Updates" />
-                <Tab icon={<Favorite />} label="Supporters" />
+                <Tab
+                  icon={<Label />}
+                  label="Tags & Skills"
+                  id="project-detail-tab-0"
+                  aria-controls="project-detail-tabpanel-0"
+                />
+                <Tab
+                  icon={<Group />}
+                  label="Team"
+                  id="project-detail-tab-1"
+                  aria-controls="project-detail-tabpanel-1"
+                />
+                <Tab
+                  icon={<CommentIcon />}
+                  label={`Comments (${project._count?.comments ?? 0})`}
+                  id="project-detail-tab-2"
+                  aria-controls="project-detail-tabpanel-2"
+                />
+                <Tab
+                  icon={<Update />}
+                  label={`Updates (${project._count?.updates ?? 0})`}
+                  id="project-detail-tab-3"
+                  aria-controls="project-detail-tabpanel-3"
+                />
+                <Tab
+                  icon={<Favorite />}
+                  label={`Supporters (${project._count?.supporters ?? 0})`}
+                  id="project-detail-tab-4"
+                  aria-controls="project-detail-tabpanel-4"
+                />
               </Tabs>
             </Box>
 
-            {/* Tags & Skills Tab */}
+            {/* TAB PANELS */}
             <TabPanel value={activeTab} index={0}>
-              <Box sx={{ mb: 3 }}>
-                <Typography variant="h6" gutterBottom>
-                  Skills
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
-                  {project.skills.map((skill) => (
-                    <Chip key={skill} label={skill} variant="outlined" />
-                  ))}
-                </Box>
-
-                <Typography variant="h6" gutterBottom>
-                  Tags
-                </Typography>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                  {project.tags.map((tag) => (
-                    <Chip
-                      key={tag}
-                      label={tag}
-                      variant="outlined"
-                      color="primary"
-                    />
-                  ))}
-                </Box>
-              </Box>
-            </TabPanel>
-
-            {/* Team Tab */}
-            <TabPanel value={activeTab} index={1}>
-              <List>
-                <ListItem>
-                  <ListItemAvatar>
-                    <Avatar src={project.owner.avatarUrl}>
-                      <Person />
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={project.owner.username || project.owner.email}
-                    secondary="Owner"
-                  />
-                </ListItem>
-                {project.teamMembers?.map((member: ProjectTeam) => (
-                  <ListItem key={member.userId}>
-                    <ListItemAvatar>
-                      <Avatar>
-                        <Person />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={`User ${member.userId}`}
-                      secondary={member.role || 'Team Member'}
-                    />
-                  </ListItem>
-                ))}
-                {(!project.teamMembers || project.teamMembers.length === 0) && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ py: 2, textAlign: 'center' }}
-                  >
-                    No team members yet
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={containerStagger}
+              >
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Skills Required
                   </Typography>
-                )}
-              </List>
-            </TabPanel>
-
-            {/* Comments Tab */}
-            <TabPanel value={activeTab} index={2}>
-              <List>
-                {project.comments?.map((comment: ProjectComment, index) => (
-                  <Box key={index}>
-                    <ListItem alignItems="flex-start">
-                      <ListItemAvatar>
-                        <Avatar>
-                          <Person />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={comment.comment}
-                        secondary={`User ${comment.userId}`}
-                      />
-                    </ListItem>
-                    {index < (project.comments?.length || 0) - 1 && (
-                      <Divider variant="inset" component="li" />
+                  <Box
+                    sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}
+                  >
+                    {(project.skills ?? []).length ? (
+                      (project.skills ?? []).map((skill) => (
+                        <Chip
+                          key={skill}
+                          label={skill}
+                          variant="outlined"
+                          color="primary"
+                        />
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No skills listed.
+                      </Typography>
                     )}
                   </Box>
-                ))}
-                {(!project.comments || project.comments.length === 0) && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ py: 2, textAlign: 'center' }}
-                  >
-                    No comments yet
-                  </Typography>
-                )}
-              </List>
-            </TabPanel>
 
-            {/* Updates Tab */}
-            <TabPanel value={activeTab} index={3}>
-              <List>
-                {project.updates?.map((update: ProjectUpdateInterface) => (
-                  <Box key={update.id} sx={{ mb: 2 }}>
-                    <ListItem alignItems="flex-start">
-                      <ListItemAvatar>
-                        <Avatar>
-                          <Update />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={update.title}
-                        secondary={
-                          <>
-                            <Typography
-                              variant="body2"
-                              color="text.primary"
-                              gutterBottom
-                            >
-                              {update.content}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {format(
-                                new Date(update.createdAt),
-                                'MMM d, yyyy • h:mm a'
-                              )}
-                            </Typography>
-                          </>
-                        }
-                      />
-                    </ListItem>
-                    <Divider variant="inset" component="li" />
+                  <Typography variant="h6" gutterBottom>
+                    Project Tags
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {(project.tags ?? []).length ? (
+                      (project.tags ?? []).map((tag) => (
+                        <Chip
+                          key={tag}
+                          label={tag}
+                          variant="filled"
+                          color="secondary"
+                        />
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No tags.
+                      </Typography>
+                    )}
                   </Box>
-                ))}
-                {(!project.updates || project.updates.length === 0) && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ py: 2, textAlign: 'center' }}
-                  >
-                    No updates yet
-                  </Typography>
-                )}
-              </List>
+                </Box>
+              </motion.div>
             </TabPanel>
 
-            {/* Supporters Tab */}
-            <TabPanel value={activeTab} index={4}>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Favorite color="error" sx={{ mr: 1 }} />
-                <Typography variant="h6">
-                  {project.supporters?.length || 0} Supporters
-                </Typography>
-              </Box>
-              <List>
-                {project.supporters?.map((supporter) => (
-                  <ListItem key={supporter.id}>
-                    <ListItemAvatar>
-                      <Avatar>
-                        <Person />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText primary={`User ${supporter.userId}`} />
-                  </ListItem>
-                ))}
-                {(!project.supporters || project.supporters.length === 0) && (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ py: 2, textAlign: 'center' }}
+            <TabPanel value={activeTab} index={1}>
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={containerStagger}
+              >
+                <List>
+                  <motion.div
+                    variants={containerStagger}
+                    initial="hidden"
+                    animate="visible"
                   >
-                    No supporters yet
-                  </Typography>
+                    <motion.div variants={listItemVariants} custom={0}>
+                      <ListItem>
+                        <ListItemAvatar>
+                          <Avatar src={project.owner?.profile?.avatarUrl}>
+                            <Person />
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText
+                          primary={project.owner?.name || 'Owner'}
+                          secondary="Owner"
+                        />
+                      </ListItem>
+                    </motion.div>
+                    {(project.teamMembers ?? []).length ? (
+                      (project.teamMembers ?? []).map(
+                        (member: ProjectTeam, i: number) => (
+                          <motion.div
+                            key={member.userId}
+                            variants={listItemVariants}
+                            custom={i + 1}
+                          >
+                            <ListItem>
+                              <ListItemAvatar>
+                                <Avatar src={member.user?.profile?.avatarUrl}>
+                                  <Person />
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  member.user?.name || `User ${member.userId}`
+                                }
+                                secondary={member.role || 'Team Member'}
+                              />
+                            </ListItem>
+                          </motion.div>
+                        )
+                      )
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ py: 2, textAlign: 'center' }}
+                      >
+                        No team members yet
+                      </Typography>
+                    )}
+                  </motion.div>
+                </List>
+              </motion.div>
+            </TabPanel>
+
+            <TabPanel value={activeTab} index={2}>
+              {/* Comment composer */}
+              {!isOwner && currentUserId && (
+                <Box sx={{ mb: 2 }}>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={3}
+                    placeholder="Add a comment..."
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    variant="outlined"
+                    size="small"
+                    disabled={isSubmittingComment}
+                    aria-label="Add a comment"
+                    InputProps={{
+                      endAdornment: (
+                        <IconButton
+                          edge="end"
+                          onClick={handleSubmitComment}
+                          disabled={!commentText.trim() || isSubmittingComment}
+                          color="primary"
+                          aria-label="Send comment"
+                        >
+                          {isSubmittingComment ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <Send />
+                          )}
+                        </IconButton>
+                      ),
+                    }}
+                  />
+                </Box>
+              )}
+
+              {/* Comments list (scrollable) */}
+              <Box sx={listContainerSx} aria-live="polite">
+                {loadingComments ? (
+                  <Stack spacing={2}>
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <Box key={i} sx={{ display: 'flex', gap: 2 }}>
+                        <Skeleton variant="circular" width={40} height={40} />
+                        <Box sx={{ flex: 1 }}>
+                          <Skeleton variant="text" width="40%" height={20} />
+                          <Skeleton variant="text" width="90%" height={40} />
+                        </Box>
+                      </Box>
+                    ))}
+                  </Stack>
+                ) : (
+                  <AnimatePresence initial={false}>
+                    <motion.ul
+                      style={{ listStyle: 'none', padding: 0, margin: 0 }}
+                      variants={containerStagger}
+                      initial="hidden"
+                      animate="visible"
+                      exit="hidden"
+                    >
+                      {(comments ?? []).length ? (
+                        (comments ?? []).map(
+                          (comment: ProjectComment, idx: number) => (
+                            <motion.li
+                              key={comment.id ?? idx}
+                              variants={listItemVariants}
+                              custom={idx}
+                            >
+                              <ListItem
+                                alignItems="flex-start"
+                                sx={{ alignItems: 'flex-start' }}
+                              >
+                                <ListItemAvatar>
+                                  <Avatar
+                                    src={comment.user?.profile?.avatarUrl}
+                                  >
+                                    <Person />
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={
+                                    <Box
+                                      sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'baseline',
+                                      }}
+                                    >
+                                      <Typography variant="subtitle2">
+                                        {comment.user?.name || 'Anonymous'}
+                                      </Typography>
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {format(
+                                          new Date(comment.createdAt),
+                                          'MMM d, yyyy • h:mm a'
+                                        )}
+                                      </Typography>
+                                    </Box>
+                                  }
+                                  secondary={
+                                    <Typography variant="body1" sx={{ mt: 1 }}>
+                                      {comment.comment}
+                                    </Typography>
+                                  }
+                                />
+                              </ListItem>
+                              {idx < (comments?.length ?? 0) - 1 && (
+                                <Divider variant="inset" component="li" />
+                              )}
+                            </motion.li>
+                          )
+                        )
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ py: 2, textAlign: 'center' }}
+                        >
+                          No comments yet — be the first to comment.
+                        </Typography>
+                      )}
+                    </motion.ul>
+                  </AnimatePresence>
                 )}
-              </List>
+              </Box>
+            </TabPanel>
+
+            <TabPanel value={activeTab} index={3}>
+              <Box sx={listContainerSx}>
+                <List>
+                  {(project.updates ?? []).length ? (
+                    (project.updates ?? []).map(
+                      (update: ProjectUpdateInterface, i: number) => (
+                        <motion.div
+                          key={update.id}
+                          initial="hidden"
+                          animate="visible"
+                          variants={listItemVariants}
+                          custom={i}
+                        >
+                          <ListItem alignItems="flex-start">
+                            <ListItemAvatar>
+                              <Avatar
+                                sx={{ bgcolor: theme.palette.primary.main }}
+                              >
+                                <Update />
+                              </Avatar>
+                            </ListItemAvatar>
+                            <ListItemText
+                              primary={
+                                <Typography variant="h6">
+                                  {update.title}
+                                </Typography>
+                              }
+                              secondary={
+                                <>
+                                  <Typography
+                                    variant="body2"
+                                    color="text.primary"
+                                    paragraph
+                                  >
+                                    {update.content}
+                                  </Typography>
+                                  <Typography
+                                    variant="caption"
+                                    color="text.secondary"
+                                  >
+                                    {format(
+                                      new Date(update.createdAt),
+                                      'MMM d, yyyy • h:mm a'
+                                    )}
+                                  </Typography>
+                                </>
+                              }
+                            />
+                          </ListItem>
+                          <Divider variant="inset" component="li" />
+                        </motion.div>
+                      )
+                    )
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ py: 2, textAlign: 'center' }}
+                    >
+                      No updates yet
+                    </Typography>
+                  )}
+                </List>
+              </Box>
+            </TabPanel>
+
+            <TabPanel value={activeTab} index={4}>
+              <Box sx={listContainerSx}>
+                <Typography variant="h6" sx={{ mb: 1 }}>
+                  <Favorite color="error" sx={{ mr: 1 }} />
+                  Supporters ({project.supporters?.length ?? 0})
+                </Typography>
+                <List>
+                  {(project.supporters ?? []).length ? (
+                    (project.supporters ?? []).map((s, i) => (
+                      <motion.div
+                        key={s.userId ?? i}
+                        variants={listItemVariants}
+                        custom={i}
+                      >
+                        <ListItem>
+                          <ListItemAvatar>
+                            <Avatar>
+                              <Person />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText primary={`User ${s.userId}`} />
+                        </ListItem>
+                        <Divider variant="inset" component="li" />
+                      </motion.div>
+                    ))
+                  ) : (
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ py: 2, textAlign: 'center' }}
+                    >
+                      No supporters yet
+                    </Typography>
+                  )}
+                </List>
+              </Box>
             </TabPanel>
           </DialogContent>
 
-          <DialogActions sx={{ justifyContent: 'space-between', p: 2 }}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+          {/* Sticky action bar */}
+          <DialogActions
+            sx={{
+              justifyContent: 'space-between',
+              p: 2,
+              position: 'sticky',
+              bottom: 0,
+              bgcolor: 'background.paper',
+              borderTop: 1,
+              borderColor: 'divider',
+              zIndex: 40,
+            }}
+          >
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
               {!isOwner && currentUserId && (
                 <>
                   <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.96 }}
                   >
-                    <IconButton
-                      onClick={() => onSupport(!!isSupported)}
-                      color={isSupported ? 'error' : 'default'}
-                      size="large"
-                    >
-                      {isSupported ? <Favorite /> : <FavoriteBorder />}
-                    </IconButton>
+                    <Tooltip title={isSupported ? 'Un-support' : 'Support'}>
+                      <IconButton
+                        aria-pressed={isSupported}
+                        aria-label={
+                          isSupported ? 'Un-support project' : 'Support project'
+                        }
+                        onClick={() => onSupport(isSupported)}
+                        color={isSupported ? 'error' : 'default'}
+                        size="large"
+                      >
+                        {isSupported ? <Favorite /> : <FavoriteBorder />}
+                      </IconButton>
+                    </Tooltip>
                   </motion.div>
+
                   <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.06 }}
+                    whileTap={{ scale: 0.96 }}
                   >
-                    <IconButton
-                      onClick={() => onFollow(!!isFollowing)}
-                      color={isFollowing ? 'primary' : 'default'}
-                      size="large"
-                    >
-                      {isFollowing ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
+                    <Tooltip title={isFollowing ? 'Unfollow' : 'Follow'}>
+                      <IconButton
+                        aria-pressed={isFollowing}
+                        aria-label={
+                          isFollowing ? 'Unfollow project' : 'Follow project'
+                        }
+                        onClick={() => onFollow(isFollowing)}
+                        color={isFollowing ? 'primary' : 'default'}
+                        size="large"
+                      >
+                        {isFollowing ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </Tooltip>
                   </motion.div>
+
                   <motion.div
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
                   >
                     <Button
                       variant="contained"
                       startIcon={<Handshake />}
                       onClick={onCollaborate}
-                      sx={{ ml: 1 }}
+                      aria-label="Request collaboration"
                     >
                       Collaborate
                     </Button>
@@ -527,9 +997,24 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 </>
               )}
             </Box>
-            <Button onClick={onClose} variant="outlined">
-              Close
-            </Button>
+
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                onClick={onRefresh}
+                variant="outlined"
+                size="small"
+                aria-label="Refresh project details"
+              >
+                Refresh
+              </Button>
+              <Button
+                onClick={onClose}
+                variant="outlined"
+                aria-label="Close project modal"
+              >
+                Close
+              </Button>
+            </Box>
           </DialogActions>
         </>
       )}

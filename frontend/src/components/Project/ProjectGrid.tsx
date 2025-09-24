@@ -1,48 +1,97 @@
 import React from 'react';
-import { Grid, Box, Typography, CircularProgress, Alert } from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Grid, Box, Typography, Alert, Button, Skeleton } from '@mui/material';
+import { motion } from 'framer-motion';
 import { ProjectInterface } from '@/types/ShowcaseType';
 import ProjectCard from './ProjectCard';
+import { Add } from '@mui/icons-material';
 
 interface ProjectsGridProps {
   projects: ProjectInterface[];
   loading: boolean;
   error: string | null;
-  currentUserId?: string;
+  isProjectOwner: (project: ProjectInterface | null) => boolean | null;
+  user: { id: string | null };
+  emptyMessage: {
+    title: string;
+    description: string;
+    action: () => void;
+    actionText: string;
+  };
   onSupport: (projectId: string, isSupported: boolean) => void;
   onFollow: (projectId: string, isFollowing: boolean) => void;
   onCollaborate: (project: ProjectInterface) => void;
-  onEdit: (project: ProjectInterface) => void;
-  onDelete: (projectId: string) => void;
-  onManageTeam: (project: ProjectInterface) => void;
-  onViewDetails: (projectId: string) => void;
+  onViewDetails: (project: ProjectInterface) => void;
 }
 
-const ProjectsGrid: React.FC<ProjectsGridProps> = ({
+const ProjectGrid: React.FC<ProjectsGridProps> = ({
   projects,
   loading,
   error,
-  currentUserId,
   onSupport,
   onFollow,
   onCollaborate,
-  onEdit,
-  onDelete,
-  onManageTeam,
   onViewDetails,
+  user,
+  isProjectOwner,
+  emptyMessage,
 }) => {
-  if (loading) {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+      },
+    },
+  };
+
+  // Skeleton loading cards
+  if (loading && projects.length === 0) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: 400,
-        }}
-      >
-        <CircularProgress size={60} thickness={4} />
-      </Box>
+      <Grid container spacing={3}>
+        {[...Array(6)].map((_, index) => (
+          <Grid item xs={12} sm={6} md={4} key={index}>
+            <Box
+              sx={{
+                borderRadius: 3,
+                overflow: 'hidden',
+                height: 340,
+                boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+              }}
+            >
+              <Skeleton variant="rectangular" width="100%" height={200} />
+              <Box sx={{ p: 2 }}>
+                <Skeleton variant="text" width="80%" height={30} />
+                <Skeleton variant="text" width="60%" height={20} />
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    mt: 2,
+                  }}
+                >
+                  <Skeleton variant="circular" width={40} height={40} />
+                  <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Skeleton variant="text" width={30} height={20} />
+                    <Skeleton variant="text" width={30} height={20} />
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          </Grid>
+        ))}
+      </Grid>
     );
   }
 
@@ -54,54 +103,73 @@ const ProjectsGrid: React.FC<ProjectsGridProps> = ({
     );
   }
 
-  if (projects.length === 0) {
+  if (!projects || projects.length === 0) {
     return (
       <Box sx={{ textAlign: 'center', py: 8 }}>
-        <Typography variant="h6" color="text.secondary">
-          No projects found. Create the first one!
+        <Typography
+          variant="h5"
+          color="text.secondary"
+          gutterBottom
+          sx={{ fontWeight: 600 }}
+        >
+          {emptyMessage.title}
         </Typography>
+        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+          {emptyMessage.description}
+        </Typography>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            variant="contained"
+            startIcon={
+              emptyMessage.actionText.includes('Create') ? <Add /> : undefined
+            }
+            onClick={emptyMessage.action}
+            size="large"
+            sx={{ borderRadius: 3, px: 3, fontWeight: 600 }}
+          >
+            {emptyMessage.actionText}
+          </Button>
+        </motion.div>
       </Box>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <Grid container spacing={3}>
-        <AnimatePresence>
-          {projects.map((project, index) => (
-            <Grid
-              item
-              xs={12}
-              sm={6}
-              lg={4}
-              key={project.id}
-              component={motion.div}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              layout
-            >
-              <ProjectCard
-                project={project}
-                currentUserId={currentUserId}
-                onSupport={onSupport}
-                onFollow={onFollow}
-                onCollaborate={onCollaborate}
-                onEdit={onEdit}
-                onDelete={onDelete}
-                onManageTeam={onManageTeam}
-                onViewDetails={onViewDetails}
-              />
+    <>
+      <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
+        {emptyMessage.title.includes('own')
+          ? 'Projects You Own'
+          : emptyMessage.title.includes('support')
+            ? 'Projects You Support'
+            : emptyMessage.title.includes('follow')
+              ? "Projects You're Following"
+              : 'All Projects'}
+      </Typography>
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <Grid container spacing={3}>
+          {projects.map((project) => (
+            <Grid item xs={12} sm={6} md={4} key={project?.id || Math.random()}>
+              <motion.div variants={itemVariants}>
+                <ProjectCard
+                  project={project}
+                  currentUserId={user?.id}
+                  isOwner={isProjectOwner(project)}
+                  onSupport={onSupport}
+                  onFollow={onFollow}
+                  onCollaborate={() => onCollaborate(project)}
+                  onViewDetails={() => onViewDetails(project)}
+                />
+              </motion.div>
             </Grid>
           ))}
-        </AnimatePresence>
-      </Grid>
-    </motion.div>
+        </Grid>
+      </motion.div>
+    </>
   );
 };
 
-export default ProjectsGrid;
+export default ProjectGrid;

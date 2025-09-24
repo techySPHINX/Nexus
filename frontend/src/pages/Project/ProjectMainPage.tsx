@@ -1,3 +1,4 @@
+// ProjectMainPage.tsx - Updated implementation
 import React, { useState, useEffect, useCallback } from 'react';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,14 +7,13 @@ import {
   FilterProjectInterface,
   CreateProjectInterface,
   CreateCollaborationRequestInterface,
-  ProjectsResponse,
+  ProjectDetailInterface,
 } from '@/types/ShowcaseType';
 
 // Material-UI Components
 import {
   Box,
   Typography,
-  Grid,
   CircularProgress,
   Tabs,
   Tab,
@@ -23,17 +23,16 @@ import {
   Alert,
   Fade,
   Container,
-  Pagination,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Custom Components
-import ProjectCard from '@/components/Project/ProjectCard';
 import ProjectFilter from '@/components/Project/ProjectFilter';
 import ProjectModal from '@/components/Project/ProjectModal';
 import CollaborationModal from '@/components/Project/CollaborationModal';
 import ProjectDetailModal from '@/components/Project/ProjectDetailModal';
+import ProjectGrid from '@/components/Project/ProjectGrid';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -60,22 +59,24 @@ function TabPanel(props: TabPanelProps) {
 const ProjectsMainPage: React.FC = () => {
   const {
     projects,
+    pagination,
     projectById,
-    getProjectById,
-    loading: projectLoading,
     loading,
+    actionLoading,
     error,
     getAllProjects,
+    getProjectById,
     createProject,
-    updateProject,
-    deleteProject,
+    // updateProject,
     supportProject,
     unsupportProject,
     followProject,
     unfollowProject,
     requestCollaboration,
     clearError,
-    getProjectIDComments,
+    getComments,
+    createComment,
+    // clearSpecificCache,
   } = useShowcase();
 
   const { user } = useAuth();
@@ -91,23 +92,8 @@ const ProjectsMainPage: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
   );
-  const [projectDetails, setProjectDetails] = useState<ProjectInterface | null>(
-    null
-  );
-  const [projectComments, setProjectComments] = useState<any[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [editingProject, setEditingProject] = useState<ProjectInterface | null>(
-    null
-  );
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 15,
-    total: 0,
-    totalPages: 1,
-    hasNext: false,
-    hasPrev: false,
-  });
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const [filteredProjects, setFilteredProjects] = useState<{
     owned: ProjectInterface[];
@@ -116,9 +102,36 @@ const ProjectsMainPage: React.FC = () => {
     all: ProjectInterface[];
   }>({ owned: [], supported: [], following: [], all: [] });
 
+  // Load projects initially
   useEffect(() => {
     getAllProjects(filters);
   }, [getAllProjects, filters]);
+
+  const loadMoreProjects = useCallback(async () => {
+    if (loading || isLoadingMore || !pagination.hasNext) return;
+
+    setIsLoadingMore(true);
+    try {
+      await getAllProjects(
+        {
+          ...filters,
+          page: pagination.page + 1,
+        },
+        true
+      );
+    } catch (err) {
+      console.error('Failed to load more projects:', err);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [
+    filters,
+    getAllProjects,
+    isLoadingMore,
+    loading,
+    pagination.hasNext,
+    pagination.page,
+  ]);
 
   useEffect(() => {
     if (error) {
@@ -126,82 +139,75 @@ const ProjectsMainPage: React.FC = () => {
     }
   }, [error]);
 
+  // Handle scroll for infinite loading
   useEffect(() => {
-    // Update pagination when projects change
-    if (projects && 'pagination' in projects) {
-      const projectsResponse = projects as ProjectsResponse;
-      setPagination(projectsResponse.pagination);
-      setFilteredProjectsFromResponse(projectsResponse.data);
-    } else if (Array.isArray(projects)) {
-      setPagination({
-        page: 1,
-        pageSize: 15,
-        total: projects.length,
-        totalPages: 1,
-        hasNext: false,
-        hasPrev: false,
-      });
-      setFilteredProjectsFromResponse(projects);
-    }
-  }, [projects, user]);
+    const handleScroll = () => {
+      if (loading || isLoadingMore || !pagination.hasNext) return;
 
-  const setFilteredProjectsFromResponse = (
-    projectsList: ProjectInterface[]
-  ) => {
-    if (!user) {
+      const scrollTop = document.documentElement.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight;
+      const clientHeight = document.documentElement.clientHeight;
+
+      // Load more when 100px from bottom
+      if (scrollTop + clientHeight >= scrollHeight) {
+        loadMoreProjects();
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [loading, isLoadingMore, pagination.hasNext, loadMoreProjects]);
+
+  // Filter projects based on user relationship
+  useEffect(() => {
+    if (projects && user) {
+      const owned: ProjectInterface[] = [];
+      const supported: ProjectInterface[] = [];
+      const following: ProjectInterface[] = [];
+
+      projects.forEach((project) => {
+        if (!project) return;
+
+        // Check if user owns this project
+        if (project.owner?.id === user.id) {
+          owned.push(project);
+        }
+
+        // Check if user supports this project
+        const isSupported = project.supporters?.some(
+          (s) => s?.userId === user.id
+        );
+        if (isSupported) {
+          supported.push(project);
+        }
+
+        // Check if user follows this project
+        const isFollowing = project.followers?.some(
+          (f) => f?.userId === user.id
+        );
+        if (isFollowing) {
+          following.push(project);
+        }
+      });
+
+      setFilteredProjects({
+        owned,
+        supported,
+        following,
+        all: projects,
+      });
+    } else if (projects) {
       setFilteredProjects({
         owned: [],
         supported: [],
         following: [],
-        all: projectsList,
+        all: projects,
       });
-      return;
     }
-
-    const owned: ProjectInterface[] = [];
-    const supported: ProjectInterface[] = [];
-    const following: ProjectInterface[] = [];
-
-    projectsList.forEach((project) => {
-      if (!project) return;
-
-      // Check if user owns this project
-      if (project.owner?.id === user.id) {
-        owned.push(project);
-      }
-
-      // Check if user supports this project
-      const isSupported = project.supporters?.some(
-        (s) => s?.userId === user.id
-      );
-      if (isSupported) {
-        supported.push(project);
-      }
-
-      // Check if user follows this project
-      const isFollowing = project.followers?.some((f) => f?.userId === user.id);
-      if (isFollowing) {
-        following.push(project);
-      }
-    });
-
-    setFilteredProjects({
-      owned,
-      supported,
-      following,
-      all: projectsList,
-    });
-  };
+  }, [projects, user]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-  };
-
-  const handlePageChange = (
-    _event: React.ChangeEvent<unknown>,
-    page: number
-  ) => {
-    setFilters((prev) => ({ ...prev, page }));
   };
 
   const handleCloseSnackbar = () => {
@@ -222,66 +228,44 @@ const ProjectsMainPage: React.FC = () => {
     [createProject]
   );
 
-  const handleUpdateProject = useCallback(
-    async (projectId: string, data: Partial<CreateProjectInterface>) => {
-      try {
-        await updateProject(projectId, data);
-        setEditingProject(null);
-        setSnackbarOpen(true);
-      } catch (err) {
-        console.error('Failed to update project:', err);
-      }
-    },
-    [updateProject]
-  );
+  // const handleUpdateProject = useCallback(
+  //   async (projectId: string, data: Partial<CreateProjectInterface>) => {
+  //     try {
+  //       await updateProject(projectId, data);
+  //       setSnackbarOpen(true);
+  //       clearSpecificCache(projectId);
+  //     } catch (err) {
+  //       console.error('Failed to update project:', err);
+  //     }
+  //   },
+  //   [updateProject, clearSpecificCache]
+  // );
 
-  const handleDeleteProject = useCallback(
-    async (projectId: string) => {
-      if (window.confirm('Are you sure you want to delete this project?')) {
-        try {
-          await deleteProject(projectId);
-          setSnackbarOpen(true);
-        } catch (err) {
-          console.error('Failed to delete project:', err);
-        }
-      }
-    },
-    [deleteProject]
-  );
-
-  const handleViewProjectDetails = async (project: ProjectInterface) => {
+  const handleViewProjectDetails = async (
+    project: ProjectInterface,
+    forceRefresh = false
+  ) => {
     setSelectedProject(project);
     setSelectedProjectId(project.id);
-    setLoadingComments(true);
+
     try {
-      await getProjectById(project.id);
-      // Load comments only when needed
-      // const comments = await getProjectComments(project.id);
-      // setProjectComments(comments);
+      await getProjectById(project.id, forceRefresh);
     } catch (err) {
       console.error('Failed to load project details:', err);
-    } finally {
-      setLoadingComments(false);
     }
   };
 
-  const handleLoadComments = async (projectId: string) => {
-    setLoadingComments(true);
+  const handleCreateComment = async (projectId: string, comment: string) => {
     try {
-      const comments = await getProjectComments(projectId);
-      setProjectComments(comments);
+      await createComment(projectId, comment);
     } catch (err) {
-      console.error('Failed to load comments:', err);
-    } finally {
-      setLoadingComments(false);
+      console.error('Failed to create comment:', err);
     }
   };
 
   const handleCloseProjectDetails = () => {
     setSelectedProjectId(null);
     setSelectedProject(null);
-    setProjectDetails(null);
-    setProjectComments([]);
   };
 
   const handleSupport = useCallback(
@@ -335,24 +319,6 @@ const ProjectsMainPage: React.FC = () => {
     [user]
   );
 
-  if (
-    loading &&
-    (!projects || (Array.isArray(projects) && projects.length === 0))
-  ) {
-    return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '60vh',
-        }}
-      >
-        <CircularProgress size={60} thickness={4} />
-      </Box>
-    );
-  }
-
   const currentProjects =
     activeTab === 0
       ? filteredProjects.all
@@ -366,27 +332,6 @@ const ProjectsMainPage: React.FC = () => {
   const ownedCount = filteredProjects.owned?.length || 0;
   const supportedCount = filteredProjects.supported?.length || 0;
   const followingCount = filteredProjects.following?.length || 0;
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.5,
-      },
-    },
-  };
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -568,7 +513,9 @@ const ProjectsMainPage: React.FC = () => {
         <TabPanel value={activeTab} index={0}>
           <ProjectGrid
             projects={currentProjects}
-            user={user}
+            loading={loading}
+            error={error}
+            user={{ id: user?.id || null }}
             isProjectOwner={isProjectOwner}
             onSupport={handleSupport}
             onFollow={handleFollow}
@@ -593,7 +540,9 @@ const ProjectsMainPage: React.FC = () => {
           <TabPanel key={tabIndex} value={activeTab} index={tabIndex}>
             <ProjectGrid
               projects={currentProjects}
-              user={user}
+              loading={loading}
+              error={error}
+              user={{ id: user?.id || null }}
               isProjectOwner={isProjectOwner}
               onSupport={handleSupport}
               onFollow={handleFollow}
@@ -628,16 +577,38 @@ const ProjectsMainPage: React.FC = () => {
           </TabPanel>
         ))}
 
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-            <Pagination
-              count={pagination.totalPages}
-              page={pagination.page}
-              onChange={handlePageChange}
+        {/* Loading More Indicator and Load More Button */}
+        {pagination.hasNext && !isLoadingMore && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 4 }}>
+            <Button
+              variant="contained"
               color="primary"
               size="large"
-            />
+              onClick={loadMoreProjects}
+              disabled={isLoadingMore || loading}
+              sx={{ borderRadius: 3, px: 4, py: 1.5, fontWeight: 600 }}
+            >
+              Load More Projects
+            </Button>
+          </Box>
+        )}
+        {isLoadingMore && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <CircularProgress size={24} />
+              <Typography variant="body2" color="text.secondary">
+                Loading more projects...
+              </Typography>
+            </Box>
+          </Box>
+        )}
+
+        {/* End of Results */}
+        {!pagination.hasNext && projects.length > 0 && (
+          <Box sx={{ textAlign: 'center', mt: 4, mb: 4 }}>
+            <Typography variant="body2" color="text.secondary">
+              You've reached the end of the results
+            </Typography>
           </Box>
         )}
 
@@ -647,17 +618,6 @@ const ProjectsMainPage: React.FC = () => {
             <ProjectModal
               onClose={() => setShowCreateModal(false)}
               onSubmit={handleCreateProject}
-              loading={loading}
-            />
-          )}
-
-          {editingProject && (
-            <ProjectModal
-              project={editingProject}
-              onClose={() => setEditingProject(null)}
-              onSubmit={(data) =>
-                handleUpdateProject(editingProject?.id || '', data)
-              }
               loading={loading}
             />
           )}
@@ -679,26 +639,37 @@ const ProjectsMainPage: React.FC = () => {
           {selectedProjectId && (
             <ProjectDetailModal
               project={
-                projectById || selectedProject || ({} as ProjectInterface)
+                projectById || (selectedProject as ProjectDetailInterface)
               }
               open={!!selectedProjectId}
               onClose={handleCloseProjectDetails}
-              loading={projectLoading}
+              loading={actionLoading.projectDetails.has(selectedProjectId)}
               currentUserId={user?.id}
-              comments={projectComments}
-              loadingComments={loadingComments}
-              onLoadComments={() => handleLoadComments(selectedProjectId)}
-              onSupport={(isSupported) => {
-                handleSupport(selectedProjectId, isSupported);
-              }}
-              onFollow={(isFollowing) => {
-                handleFollow(selectedProjectId, isFollowing);
-              }}
+              comments={[]} // Will be loaded separately
+              loadingComments={actionLoading.comment.has(selectedProjectId)}
+              onLoadComments={(page, forceRefresh) =>
+                getComments(selectedProjectId, page, forceRefresh)
+              }
+              onCreateComment={(comment) =>
+                handleCreateComment(selectedProjectId, comment)
+              }
+              onSupport={(isSupported) =>
+                handleSupport(selectedProjectId, isSupported)
+              }
+              onFollow={(isFollowing) =>
+                handleFollow(selectedProjectId, isFollowing)
+              }
               onCollaborate={() => {
                 setSelectedProject(projectById || selectedProject);
                 setShowCollaborationModal(true);
                 handleCloseProjectDetails();
               }}
+              onRefresh={() =>
+                handleViewProjectDetails(
+                  selectedProject as ProjectInterface,
+                  true
+                )
+              }
             />
           )}
         </AnimatePresence>
@@ -722,121 +693,6 @@ const ProjectsMainPage: React.FC = () => {
         </Snackbar>
       </motion.div>
     </Container>
-  );
-};
-
-// Helper component for project grid
-const ProjectGrid: React.FC<{
-  projects: ProjectInterface[];
-  user: any;
-  isProjectOwner: (project: ProjectInterface | null) => boolean;
-  onSupport: (projectId: string, isSupported: boolean) => void;
-  onFollow: (projectId: string, isFollowing: boolean) => void;
-  onCollaborate: (project: ProjectInterface) => void;
-  onViewDetails: (project: ProjectInterface) => void;
-  emptyMessage: {
-    title: string;
-    description: string;
-    action: () => void;
-    actionText: string;
-  };
-}> = ({
-  projects,
-  user,
-  isProjectOwner,
-  onSupport,
-  onFollow,
-  onCollaborate,
-  onViewDetails,
-  emptyMessage,
-}) => {
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.5,
-      },
-    },
-  };
-
-  if (!projects || projects.length === 0) {
-    return (
-      <Box sx={{ textAlign: 'center', py: 8 }}>
-        <Typography
-          variant="h5"
-          color="text.secondary"
-          gutterBottom
-          sx={{ fontWeight: 600 }}
-        >
-          {emptyMessage.title}
-        </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-          {emptyMessage.description}
-        </Typography>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            variant="contained"
-            startIcon={
-              emptyMessage.actionText.includes('Create') ? <Add /> : undefined
-            }
-            onClick={emptyMessage.action}
-            size="large"
-            sx={{ borderRadius: 3, px: 3, fontWeight: 600 }}
-          >
-            {emptyMessage.actionText}
-          </Button>
-        </motion.div>
-      </Box>
-    );
-  }
-
-  return (
-    <>
-      <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
-        {emptyMessage.title.includes('own')
-          ? 'Projects You Own'
-          : emptyMessage.title.includes('support')
-            ? 'Projects You Support'
-            : emptyMessage.title.includes('follow')
-              ? "Projects You're Following"
-              : 'All Projects'}
-      </Typography>
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <Grid container spacing={3}>
-          {projects.map((project) => (
-            <Grid item xs={12} sm={6} md={4} key={project?.id || Math.random()}>
-              <motion.div variants={itemVariants}>
-                <ProjectCard
-                  project={project}
-                  currentUserId={user?.id}
-                  isOwner={isProjectOwner(project)}
-                  onSupport={onSupport}
-                  onFollow={onFollow}
-                  onCollaborate={() => onCollaborate(project)}
-                  onViewDetails={() => onViewDetails(project)}
-                />
-              </motion.div>
-            </Grid>
-          ))}
-        </Grid>
-      </motion.div>
-    </>
   );
 };
 

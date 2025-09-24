@@ -25,7 +25,7 @@ import { Role } from '@/types/profileType';
 
 interface ProjectCardProps {
   project: ProjectInterface;
-  currentUserId?: string;
+  currentUserId?: string | null;
   isOwner?: boolean | null;
   onSupport: (projectId: string, isSupported: boolean) => void;
   onFollow: (projectId: string, isFollowing: boolean) => void;
@@ -164,9 +164,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                   role: project.owner.role as Role,
                   profile: { avatarUrl: project.owner.profile?.avatarUrl },
                 }}
-                showAvatar={true}
-                avatarSize={28}
-                variant="caption"
+                avatarSize={30}
+                showRoleBadge={false}
+                showYouBadge={false}
+                showAvatar
               />
             </Box>
 
@@ -227,7 +228,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           {isHovered && (
             <motion.div
               initial={{ opacity: 0 }}
-              animate={{ opacity: 0.8 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
               style={{
@@ -236,7 +237,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 left: 0,
                 right: 0,
                 bottom: 0,
-                background: 'rgba(0, 0, 0, 0.85)',
+                background: 'rgba(0, 0, 0, 0.9)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -253,7 +254,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                   Technologies & Tags
                 </Typography>
                 <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {project.tags?.slice(0, 6).map((tag, idx) => (
+                  {project.tags?.slice(0, 4).map((tag, idx) => (
                     <Chip
                       key={idx}
                       label={tag}
@@ -269,9 +270,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                       }}
                     />
                   ))}
-                  {project.tags && project.tags.length > 6 && (
+                  {project.tags && project.tags.length > 4 && (
                     <Chip
-                      label={`+${project.tags.length - 6}`}
+                      label={`+${project.tags.length - 4}`}
                       size="small"
                       sx={{
                         backgroundColor: 'rgba(255,255,255,0.05)',
@@ -283,81 +284,108 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 </Stack>
               </Box>
 
+              {/* Owner Profile */}
+              <Box sx={{ mb: 2 }}>
+                <Typography
+                  variant="overline"
+                  sx={{ color: 'rgba(255,255,255,0.7)' }}
+                >
+                  Project Owner
+                </Typography>
+                <Box
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}
+                >
+                  <ProfileNameLink
+                    user={{
+                      id: project.owner.id,
+                      name: project.owner.name,
+                      role: project.owner.role as Role,
+                      profile: { avatarUrl: project.owner.profile?.avatarUrl },
+                    }}
+                    avatarSize={40}
+                    linkToProfile={false}
+                    showAvatar
+                  />
+                </Box>
+              </Box>
+
               {/* Action Buttons */}
-              <Stack direction="row" spacing={1} justifyContent="center">
-                <Tooltip title={isSupported ? 'Unsupport' : 'Support'}>
-                  <IconButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSupport(project.id, !!isSupported);
-                    }}
-                    sx={{
-                      background: isSupported
-                        ? 'rgba(255,107,107,0.2)'
-                        : 'rgba(255,255,255,0.1)',
-                      color: isSupported ? '#ff6b6b' : 'white',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      '&:hover': {
-                        background: isSupported
-                          ? 'rgba(255,107,107,0.3)'
-                          : 'rgba(255,255,255,0.2)',
-                        transform: 'scale(1.1)',
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {isSupported ? <Favorite /> : <FavoriteBorder />}
-                  </IconButton>
-                </Tooltip>
-
-                <Tooltip title={isFollowing ? 'Unfollow' : 'Follow'}>
-                  <IconButton
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onFollow(project.id, !!isFollowing);
-                    }}
-                    sx={{
-                      background: isFollowing
-                        ? 'rgba(116,185,255,0.2)'
-                        : 'rgba(255,255,255,0.1)',
-                      color: isFollowing ? '#74b9ff' : 'white',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      '&:hover': {
-                        background: isFollowing
-                          ? 'rgba(116,185,255,0.3)'
-                          : 'rgba(255,255,255,0.2)',
-                        transform: 'scale(1.1)',
-                      },
-                      transition: 'all 0.2s ease',
-                    }}
-                  >
-                    {isFollowing ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </Tooltip>
-
-                {!isOwner && onCollaborate && (
-                  <Tooltip title="Collaborate">
+              {!isOwner && (
+                <Stack direction="row" spacing={1} justifyContent="center">
+                  <Tooltip title={isSupported ? 'Unsupport' : 'Support'}>
                     <IconButton
                       onClick={(e) => {
                         e.stopPropagation();
-                        onCollaborate();
+                        onSupport(project.id, !!isSupported);
                       }}
                       sx={{
-                        background: 'rgba(255,255,255,0.1)',
-                        color: '#ffeaa7',
+                        background: isSupported
+                          ? 'rgba(255,107,107,0.2)'
+                          : 'rgba(255,255,255,0.1)',
+                        color: isSupported ? '#ff6b6b' : 'white',
                         border: '1px solid rgba(255,255,255,0.2)',
                         '&:hover': {
-                          background: 'rgba(255,255,255,0.2)',
+                          background: isSupported
+                            ? 'rgba(255,107,107,0.3)'
+                            : 'rgba(255,255,255,0.2)',
                           transform: 'scale(1.1)',
                         },
                         transition: 'all 0.2s ease',
                       }}
                     >
-                      <Handshake />
+                      {isSupported ? <Favorite /> : <FavoriteBorder />}
                     </IconButton>
                   </Tooltip>
-                )}
-              </Stack>
+
+                  <Tooltip title={isFollowing ? 'Unfollow' : 'Follow'}>
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFollow(project.id, !!isFollowing);
+                      }}
+                      sx={{
+                        background: isFollowing
+                          ? 'rgba(116,185,255,0.2)'
+                          : 'rgba(255,255,255,0.1)',
+                        color: isFollowing ? '#74b9ff' : 'white',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        '&:hover': {
+                          background: isFollowing
+                            ? 'rgba(116,185,255,0.3)'
+                            : 'rgba(255,255,255,0.2)',
+                          transform: 'scale(1.1)',
+                        },
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {isFollowing ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </Tooltip>
+
+                  {!isOwner && onCollaborate && (
+                    <Tooltip title="Collaborate">
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCollaborate();
+                        }}
+                        sx={{
+                          background: 'rgba(255,255,255,0.1)',
+                          color: '#ffeaa7',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          '&:hover': {
+                            background: 'rgba(255,255,255,0.2)',
+                            transform: 'scale(1.1)',
+                          },
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        <Handshake />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Stack>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

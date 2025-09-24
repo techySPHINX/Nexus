@@ -1,18 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { FilterProjectInterface, status, sortBy } from '@/types/ShowcaseType';
 import {
   Box,
   TextField,
   MenuItem,
   Chip,
-  FormControlLabel,
-  Checkbox,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Typography,
+  Button,
+  Stack,
 } from '@mui/material';
-import { ExpandMore, Close } from '@mui/icons-material';
+import { Close, Search, FilterList } from '@mui/icons-material';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface ProjectFilterProps {
   filters: FilterProjectInterface;
@@ -25,21 +23,39 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
 }) => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [expanded, setExpanded] = useState(false);
+  const [searchActive, setSearchActive] = useState(false);
 
-  // Update parent filters when local filters change (with debounce)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onFilterChange(localFilters);
-    }, 300);
+  // Only apply filters when user clicks the button (for dropdown fields)
+  const handleApplyFilters = () => {
+    onFilterChange({
+      ...filters,
+      status: localFilters.status,
+      sortBy: localFilters.sortBy,
+      tags: localFilters.tags,
+      // skills: localFilters.skills, // add if you have skills
+    });
+    setExpanded(false);
+  };
 
-    return () => clearTimeout(timer);
-  }, [localFilters, onFilterChange]);
+  // Search applies instantly, but can be cleared
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setLocalFilters((prev) => ({ ...prev, search: value, page: 1 }));
+    onFilterChange({ ...localFilters, search: value, page: 1 });
+    setSearchActive(!!value);
+  };
+
+  const handleClearSearch = () => {
+    setLocalFilters((prev) => ({ ...prev, search: '', page: 1 }));
+    onFilterChange({ ...localFilters, search: '', page: 1 });
+    setSearchActive(false);
+  };
 
   const updateLocalFilter = (
     key: keyof FilterProjectInterface,
     value: FilterProjectInterface[typeof key]
   ) => {
-    setLocalFilters((prev) => ({ ...prev, [key]: value }));
+    setLocalFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
   };
 
   const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -58,112 +74,261 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
     );
   };
 
+  const clearAllFilters = () => {
+    setLocalFilters({
+      page: 1,
+      pageSize: 15,
+      personalize: localFilters.personalize,
+    });
+    onFilterChange({
+      page: 1,
+      pageSize: 15,
+      personalize: localFilters.personalize,
+    });
+  };
+
+  // Removed unused hasActiveFilters
+
   return (
-    <Accordion
-      expanded={expanded}
-      onChange={() => setExpanded(!expanded)}
-      sx={{ mb: 3 }}
-    >
-      <AccordionSummary expandIcon={<ExpandMore />}>
-        <Typography variant="h6">Filter Projects</Typography>
-        {(localFilters.search ||
-          localFilters.tags?.length ||
-          localFilters.status) && (
-          <Chip label="Active" color="primary" size="small" sx={{ ml: 2 }} />
-        )}
-      </AccordionSummary>
+    <Box sx={{ mb: 3 }}>
+      {/* Personalize Toggle - outside dropdown, animated */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
+        <Button
+          variant={localFilters.personalize ? 'contained' : 'outlined'}
+          color={localFilters.personalize ? 'primary' : 'info'}
+          onClick={() => {
+            setLocalFilters((prev) => ({
+              ...prev,
+              personalize: !prev.personalize,
+            }));
+            onFilterChange({
+              ...localFilters,
+              personalize: !localFilters.personalize,
+            });
+          }}
+          sx={{
+            borderRadius: 3,
+            fontWeight: 700,
+            px: 2,
+            py: 1,
+            boxShadow: localFilters.personalize ? 2 : 0,
+            transition: 'all 0.3s',
+            background: localFilters.personalize
+              ? 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)'
+              : undefined,
+          }}
+        >
+          {localFilters.personalize ? 'Personalized' : 'Show All'}
+        </Button>
 
-      <AccordionDetails>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {/* Search */}
-          <TextField
-            label="Search Projects"
-            value={localFilters.search || ''}
-            onChange={(e) => updateLocalFilter('search', e.target.value)}
-            fullWidth
-            size="small"
-          />
+        {/* Quick Search Bar */}
+        <TextField
+          label="Search projects..."
+          value={localFilters.search || ''}
+          onChange={handleSearchChange}
+          fullWidth
+          size="small"
+          InputProps={{
+            startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
+            endAdornment: searchActive && (
+              <Button
+                size="small"
+                color="secondary"
+                onClick={handleClearSearch}
+                sx={{ minWidth: 0, px: 1 }}
+              >
+                <Close fontSize="small" />
+              </Button>
+            ),
+          }}
+          sx={{
+            maxWidth: 400,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+            },
+          }}
+        />
 
-          {/* Status and Sort */}
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <TextField
-              select
-              label="Status"
-              value={localFilters.status || ''}
-              onChange={(e) =>
-                updateLocalFilter('status', e.target.value || undefined)
-              }
-              sx={{ minWidth: 120 }}
+        <Button
+          variant={expanded ? 'contained' : 'outlined'}
+          startIcon={<FilterList />}
+          onClick={() => setExpanded(!expanded)}
+          sx={{ borderRadius: 2 }}
+        >
+          Filters
+          {(localFilters.status ||
+            localFilters.sortBy ||
+            localFilters.tags?.length) && (
+            <Chip
+              label="!"
               size="small"
-            >
-              <MenuItem value="">All Status</MenuItem>
-              {Object.values(status).map((s) => (
-                <MenuItem key={s} value={s}>
-                  {s.replace('_', ' ')}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <TextField
-              select
-              label="Sort By"
-              value={localFilters.sortBy || ''}
-              onChange={(e) =>
-                updateLocalFilter(
-                  'sortBy',
-                  (e.target.value as sortBy) || undefined
-                )
-              }
-              sx={{ minWidth: 120 }}
-              size="small"
-            >
-              <MenuItem value="">Default</MenuItem>
-              {Object.values(sortBy).map((s) => (
-                <MenuItem key={s} value={s}>
-                  {s.replace('_', ' ')}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-
-          {/* Tags */}
-          <Box>
-            <TextField
-              label="Add Tags"
-              onKeyDown={handleTagInput}
-              fullWidth
-              size="small"
-              helperText="Press Enter to add tags"
+              color="primary"
+              sx={{ ml: 1, minWidth: 20, height: 20 }}
             />
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
-              {localFilters.tags?.map((tag) => (
-                <Chip
-                  key={tag}
-                  label={tag}
-                  onDelete={() => removeTag(tag)}
-                  deleteIcon={<Close />}
-                  variant="outlined"
-                  size="small"
-                />
-              ))}
-            </Box>
-          </Box>
+          )}
+        </Button>
 
-          {/* Personalize */}
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={localFilters.personalize || false}
-                onChange={(e) =>
-                  updateLocalFilter('personalize', e.target.checked)
-                }
-              />
-            }
-            label="Show recommended projects"
-          />
+        {(localFilters.status ||
+          localFilters.sortBy ||
+          localFilters.tags?.length) && (
+          <Button
+            variant="text"
+            onClick={clearAllFilters}
+            sx={{ color: 'text.secondary' }}
+          >
+            Clear All
+          </Button>
+        )}
+      </Box>
+
+      {/* Expanded Filters */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Box
+              sx={{
+                p: 3,
+                border: 1,
+                borderColor: 'divider',
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+                mb: 2,
+              }}
+            >
+              <Stack spacing={3}>
+                {/* Status and Sort */}
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <TextField
+                    select
+                    label="Status"
+                    value={localFilters.status || ''}
+                    onChange={(e) =>
+                      updateLocalFilter('status', e.target.value || undefined)
+                    }
+                    sx={{ minWidth: 140 }}
+                    size="small"
+                  >
+                    <MenuItem value="">All Status</MenuItem>
+                    {Object.values(status).map((s) => (
+                      <MenuItem key={s} value={s}>
+                        {s.replace('_', ' ')}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  <TextField
+                    select
+                    label="Sort By"
+                    value={localFilters.sortBy || ''}
+                    onChange={(e) =>
+                      updateLocalFilter(
+                        'sortBy',
+                        (e.target.value as sortBy) || undefined
+                      )
+                    }
+                    sx={{ minWidth: 140 }}
+                    size="small"
+                  >
+                    <MenuItem value="">Most Recent</MenuItem>
+                    <MenuItem value={sortBy.SUPPORTERS}>
+                      Most Supported
+                    </MenuItem>
+                    <MenuItem value={sortBy.FOLLOWERS}>Most Followed</MenuItem>
+                    <MenuItem value={sortBy.CREATED_AT}>Date Created</MenuItem>
+                    <MenuItem value={sortBy.UPDATED_AT}>Last Updated</MenuItem>
+                  </TextField>
+                </Box>
+
+                {/* Tags */}
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Tags
+                  </Typography>
+                  <TextField
+                    label="Add tags (press Enter)"
+                    onKeyDown={handleTagInput}
+                    fullWidth
+                    size="small"
+                    sx={{ mb: 1 }}
+                  />
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {localFilters.tags?.map((tag) => (
+                      <Chip
+                        key={tag}
+                        label={tag}
+                        onDelete={() => removeTag(tag)}
+                        deleteIcon={<Close />}
+                        variant="outlined"
+                        size="small"
+                        color="primary"
+                      />
+                    ))}
+                  </Box>
+                </Box>
+
+                {/* Apply Filters Button */}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleApplyFilters}
+                    sx={{ borderRadius: 2, px: 4, py: 1.2, fontWeight: 600 }}
+                  >
+                    Apply Filters
+                  </Button>
+                </Box>
+              </Stack>
+            </Box>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Active Filters Display */}
+      {(localFilters.search ||
+        localFilters.status ||
+        localFilters.sortBy ||
+        localFilters.tags?.length) && (
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 1,
+            alignItems: 'center',
+          }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            Active filters:
+          </Typography>
+          {localFilters.search && (
+            <Chip
+              label={`Search: "${localFilters.search}"`}
+              size="small"
+              onDelete={handleClearSearch}
+            />
+          )}
+          {localFilters.status && (
+            <Chip
+              label={`Status: ${localFilters.status.replace('_', ' ')}`}
+              size="small"
+              onDelete={() => updateLocalFilter('status', undefined)}
+            />
+          )}
+          {localFilters.tags?.map((tag) => (
+            <Chip
+              key={tag}
+              label={tag}
+              size="small"
+              onDelete={() => removeTag(tag)}
+            />
+          ))}
         </Box>
-      </AccordionDetails>
-    </Accordion>
+      )}
+    </Box>
   );
 };
 
