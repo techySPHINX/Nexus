@@ -14,23 +14,19 @@ export interface CreateProjectInterface {
   skills: string[];
   tags: string[];
   status: status;
-  seeking?: string;
+  seeking?: string[];
 }
 
 export interface ProjectInterface {
   id: string;
   title: string;
-  description: string;
-  githubUrl?: string;
-  websiteUrl?: string;
   imageUrl?: string;
-  videoUrl?: string;
-  skills: string[];
+  githubUrl?: string;
   tags: string[];
   status: status;
-  seeking?: string[];
+  seeking: string[];
   createdAt: Date;
-  updatedAt: Date;
+  updatedAt?: Date;
   owner: {
     id: string;
     name: string;
@@ -42,30 +38,46 @@ export interface ProjectInterface {
   _count: {
     supporters: number;
     followers: number;
-    comments?: number;
-    teamMembers?: number;
-    updates?: number;
   };
-  supporters?: {
-    userId: string;
-  }[];
-  followers?: {
-    userId: string;
-  }[];
-  collaborationRequests?: {
-    userId: string;
-  }[];
-  teamMembers?: ProjectTeam[];
+  supporters?: { userId: string }[];
+  followers?: { userId: string }[];
+  collaborationRequests?: { userId: string }[];
+  teamMembers?: { userId: string }[];
 }
 
 export interface ProjectDetailInterface extends ProjectInterface {
-  updates?: ProjectUpdateInterface[];
-  comments?: ProjectComment[];
-  isSupported?: boolean;
-  isFollowing?: boolean;
-  isOwner?: boolean;
-  isTeamMember?: boolean;
-  userCollaborationRequest?: CollaborationRequestInterface | null;
+  description: string;
+  videoUrl?: string;
+  websiteUrl?: string;
+  skills: string[];
+  _count: {
+    supporters: number;
+    followers: number;
+    comments: number;
+    teamMembers: number;
+    updates: number;
+  };
+  teamMembers: ProjectTeam[];
+  updates: ProjectUpdateInterface[];
+}
+
+export interface ProjectComment {
+  id: string;
+  comment: string;
+  createdAt: Date;
+  user?: {
+    id: string;
+    name: string;
+    role?: string;
+    profile: {
+      avatarUrl?: string;
+    };
+  };
+}
+
+export interface ProjectCommentsResponse {
+  comments: ProjectComment[];
+  pagination: ProjectsPaginationResponse;
 }
 
 export enum sortBy {
@@ -119,25 +131,11 @@ export interface CollaborationRequestInterface
   updatedAt: Date;
 }
 
-export interface ProjectComment {
-  id: string;
-  comment: string;
-  createdAt: Date;
-  user?: {
-    id: string;
-    name: string;
-    role?: string;
-    profile: {
-      avatarUrl?: string;
-    };
-  };
-}
-
 export interface ProjectTeam {
   userId: string;
   role: string;
   user?: {
-    id: string;
+    id?: string;
     name: string;
     role?: string;
     profile: {
@@ -146,18 +144,11 @@ export interface ProjectTeam {
   };
 }
 
-export interface ProjectsResponse {
-  data: ProjectInterface[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
-
-export interface ProjectCommentsResponse {
-  comments: ProjectComment[];
+export interface ProjectsPaginationResponse {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }

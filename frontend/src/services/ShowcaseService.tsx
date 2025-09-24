@@ -5,14 +5,13 @@ import {
   CreateProjectUpdateInterface,
   FilterProjectInterface,
   ProjectTeam,
-  ProjectComment,
+  ProjectCommentsResponse,
 } from '@/types/ShowcaseType';
 import api from './api';
 
 export const ShowcaseService = {
   createProject: async (data: CreateProjectInterface) => {
     try {
-      console.log('API call - createProject with data:', data);
       const response = await api.post('/showcase/project', data);
       return response.data;
     } catch (error) {
@@ -55,20 +54,11 @@ export const ShowcaseService = {
 
   getProjectById: async (projectId: string) => {
     try {
+      console.log('API call - getProjectById with ID');
       const response = await api.get(`/showcase/project/${projectId}`);
       return response.data;
     } catch (error) {
       throw new Error('Failed to get project by ID with error: ' + error);
-    }
-  },
-
-  // Add this method to your ShowcaseService
-  async getProjectComments(projectId: string): Promise<ProjectComment> {
-    try {
-      const response = await api.get(`/showcase/project/${projectId}/comments`);
-      return response.data.comments;
-    } catch (error) {
-      throw new Error('Failed to get project comments with error: ' + error);
     }
   },
 
@@ -180,12 +170,18 @@ export const ShowcaseService = {
     }
   },
 
-  getComments: async (projectId: string) => {
+  // Add this method to your ShowcaseService
+  async getComments(
+    projectId: string,
+    page: number = 1
+  ): Promise<ProjectCommentsResponse> {
     try {
-      const response = await api.get(`/showcase/${projectId}/comments`);
+      const response = await api.get(`/showcase/${projectId}/comments`, {
+        params: { page },
+      });
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get comments with error: ' + error);
+      throw new Error('Failed to get project comments with error: ' + error);
     }
   },
 
