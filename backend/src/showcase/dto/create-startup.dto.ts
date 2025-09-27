@@ -14,6 +14,12 @@ export class CreateStartupDto {
   @IsUrl()
   websiteUrl: string;
 
+  /** startup status
+   * IDEA: "IDEA";
+   * PROTOTYPING: "PROTOTYPING";
+   * BETA: "BETA";
+   * LAUNCHED: "LAUNCHED";
+   */
   @IsOptional()
   @IsEnum(StartupStatus)
   status?: StartupStatus;

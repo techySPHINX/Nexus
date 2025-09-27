@@ -25,6 +25,7 @@ import { EngagementProvider } from './contexts/engagementContext';
 import { EngagementService } from './services/engagementService';
 import { PostProvider } from './contexts/PostContext';
 import { SubCommunityProvider } from './contexts/SubCommunityContext';
+import { ShowcaseProvider } from './contexts/ShowcaseContext';
 import { FeedPage } from './pages/Posts/FeedPage';
 import { PostDetailPage } from './pages/Posts/PostDetailPage';
 import { UserPostsPage } from './pages/Posts/UserPostsPage';
@@ -32,7 +33,8 @@ import { SubCommunitiesPage } from './pages/Posts/SubCommunityPage';
 import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
 import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
-import { MySubCommunitiesPage } from './pages/SubCommunity.tsx/MySubCommunityPage';
+import { MySubCommunitiesPage } from './pages/SubCommunity/MySubCommunityPage';
+import ProjectsMainPage from './pages/Project/ProjectMainPage';
 
 // Lazy load components for better performance
 // const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));
@@ -219,6 +221,16 @@ const Layout: React.FC = () => {
                   <Suspense fallback={<LoadingSpinner />}>
                     <MySubCommunitiesPage />
                   </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/projects"
+              element={
+                <ProtectedRoute>
+                  <ShowcaseProvider>
+                    <ProjectsMainPage />
+                  </ShowcaseProvider>
                 </ProtectedRoute>
               }
             />
