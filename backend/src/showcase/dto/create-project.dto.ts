@@ -10,24 +10,30 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsUrl()
+  githubUrl?: string;
+
+  @IsOptional()
+  @IsUrl()
+  websiteUrl?: string;
+
+  @IsOptional()
+  @IsUrl()
   imageUrl?: string;
 
+  @IsOptional()
   @IsUrl()
-  projectUrl: string;
+  videoUrl?: string;
 
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  skills?: string[];
+  skills: string[];
 
-  @IsOptional()
   @IsArray()
   @IsString({ each: true })
-  tags?: string[];
+  tags: string[];
 
-  @IsOptional()
   @IsEnum(ProjectStatus)
-  status?: ProjectStatus;
+  status: ProjectStatus;
 
   @IsOptional()
   @IsArray()

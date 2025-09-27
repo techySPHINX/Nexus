@@ -4,8 +4,10 @@ import {
   IsString,
   IsEnum,
   IsBoolean,
+  IsNumber,
 } from 'class-validator';
 import { ProjectStatus } from '@prisma/client';
+import { Type } from 'class-transformer';
 
 export class FilterProjectDto {
   @IsArray()
@@ -31,6 +33,17 @@ export class FilterProjectDto {
   seeking?: string[];
 
   @IsOptional()
+  @Type(() => Boolean)
   @IsBoolean()
   personalize?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  page: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  pageSize: number = 15;
 }
