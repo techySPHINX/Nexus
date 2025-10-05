@@ -8,10 +8,6 @@ import {
   Tab,
   CircularProgress,
   Alert,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   TextField,
   Paper,
   MenuItem,
@@ -45,14 +41,11 @@ import {
   PersonAdd as PersonAddIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 import useConnections from '../hooks/useConnections';
 
 const Connections: React.FC = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(0);
@@ -85,7 +78,7 @@ const Connections: React.FC = () => {
     fetchAll(filters);
   }, [page, rowsPerPage, roleFilter, searchTerm, fetchAll]);
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
     setPage(0); // Reset pagination when switching tabs
   };
@@ -136,7 +129,7 @@ const Connections: React.FC = () => {
     }
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
+  const handleChangePage = (_event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
@@ -175,7 +168,7 @@ const Connections: React.FC = () => {
     }
   };
 
-  if (loading || connectionsLoading) {
+  if (connectionsLoading) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Box

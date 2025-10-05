@@ -313,20 +313,18 @@ const Dashboard: React.FC = () => {
 
         // Fetch upcoming events
         try {
-          const eventsResponse = await apiService.events.getAll();
+          // TODO: Add events API to apiService
+          // const eventsResponse = await apiService.events.getAll();
           const events: UpcomingEvent[] = [];
           
-          if (eventsResponse.data?.events) {
-            eventsResponse.data.events.slice(0, 2).forEach((event: any) => {
-              events.push({
-                id: event.id,
-                title: event.title,
-                date: new Date(event.date).toLocaleDateString(),
-                location: event.location || 'TBA',
-                attendees: event.attendees || 0
-              });
-            });
-          }
+          // Mock events data for now
+          events.push({
+            id: '1',
+            title: 'Alumni Meet 2025',
+            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+            location: 'KIIT Campus',
+            attendees: 150
+          });
           
           setUpcomingEvents(events);
         } catch (err) {
