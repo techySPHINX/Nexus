@@ -112,7 +112,27 @@ const Dashboard: React.FC = () => {
     stats: connectionStats,
     loading: connectionsLoading,
     error: connectionsError,
+    fetchAll,
   } = useConnections();
+
+  // Fetch connections data when component mounts
+  useEffect(() => {
+    if (user?.id) {
+      fetchAll({ page: 1, limit: 20 });
+      
+      // Also test the API directly for debugging
+      const testPendingRequests = async () => {
+        try {
+          const response = await apiService.connections.getPendingReceived({ page: 1, limit: 10 });
+          console.log('🧪 Direct API test - Pending requests:', response.data);
+        } catch (error) {
+          console.error('🧪 Direct API test failed:', error);
+        }
+      };
+      
+      testPendingRequests();
+    }
+  }, [user?.id, fetchAll]);
 
   const calculateProfileCompletion = React.useCallback(
     (user: any): number => {
@@ -247,6 +267,12 @@ const Dashboard: React.FC = () => {
           pendingRequests: pendingReceived.length,
           profileCompletion: calculateProfileCompletion(user),
         }));
+
+        console.log('📊 Dashboard stats updated:', {
+          connections: connections.length,
+          pendingReceived: pendingReceived.length,
+          pendingReceivedData: pendingReceived,
+        });
 
         // Fetch recent activities from API
         try {
