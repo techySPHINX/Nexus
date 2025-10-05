@@ -30,6 +30,8 @@ import {
   Add as AddIcon,
   Search as SearchIcon,
   Close as CloseIcon,
+  Notifications as NotificationsIcon,
+  NotificationsActive as NotificationsActiveIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { improvedWebSocketService } from '../services/websocket.improved';
@@ -44,6 +46,7 @@ interface Message {
   receiverId: string;
   timestamp: string;
   createdAt: string;
+  isRead?: boolean;
 }
 
 interface Conversation {
@@ -72,7 +75,18 @@ const ChatPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
+  const [unreadMessages, setUnreadMessages] = useState<Set<string>>(new Set());
+  const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map());
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Request notification permission
+  useEffect(() => {
+    if (Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
 
   // Initialize WebSocket connection
   useEffect(() => {
@@ -94,7 +108,52 @@ const ChatPage: React.FC = () => {
         // Set up event listeners
         improvedWebSocketService.on('NEW_MESSAGE', (message: any) => {
           console.log('📨 New message received:', message);
-          setMessages(prev => [...prev, message.data]);
+          const newMessage = message.data;
+          
+          // Check if this is a message for the current user
+          if (newMessage.receiverId === user.id) {
+            // Add to unread messages
+            setUnreadMessages(prev => new Set([...prev, newMessage.id]));
+            
+            // Update unread count for this conversation
+            const conversationKey = `${user.id}-${newMessage.senderId}`;
+            console.log(`📨 New message from ${newMessage.senderId}, updating unread count for key: ${conversationKey}`);
+            setUnreadCounts(prev => {
+              const newMap = new Map(prev);
+              const currentCount = newMap.get(conversationKey) || 0;
+              newMap.set(conversationKey, currentCount + 1);
+              console.log(`📊 Updated unread count for ${conversationKey}: ${currentCount} -> ${currentCount + 1}`);
+              return newMap;
+            });
+            
+            // Add notification
+            const notification = {
+              id: newMessage.id,
+              type: 'message',
+              title: 'New Message',
+              message: `${newMessage.sender?.name || 'Someone'}: ${newMessage.content}`,
+              timestamp: new Date().toISOString(),
+              senderId: newMessage.senderId,
+              conversationId: conversationKey,
+            };
+            
+            setNotifications(prev => [notification, ...prev.slice(0, 9)]); // Keep last 10 notifications
+            
+            // Show browser notification if permission granted
+            if (Notification.permission === 'granted') {
+              new Notification('New Message', {
+                body: notification.message,
+                icon: '/favicon.ico',
+              });
+            }
+          }
+          
+          // Add to messages if it's for the current conversation
+          if (selectedConversation && 
+              (newMessage.senderId === selectedConversation.otherUser.id || 
+               newMessage.receiverId === selectedConversation.otherUser.id)) {
+            setMessages(prev => [...prev, newMessage]);
+          }
         });
 
         improvedWebSocketService.on('TYPING_START', (message: any) => {
@@ -196,6 +255,22 @@ const ChatPage: React.FC = () => {
     setSearchResults([]);
   }, []);
 
+  // Reload conversations when unreadCounts change to update UI
+  useEffect(() => {
+    if (user?.id && conversations.length > 0) {
+      // Update conversations with new unread counts
+      const updatedConversations = conversations.map(conv => {
+        const conversationKey = `${user?.id}-${conv.otherUser.id}`;
+        const unreadCount = unreadCounts.get(conversationKey) || 0;
+        return {
+          ...conv,
+          unreadCount,
+        };
+      });
+      setConversations(updatedConversations);
+    }
+  }, [unreadCounts, user?.id]);
+
   // Load conversations from API
   const loadConversations = useCallback(async () => {
     if (!user?.id) return;
@@ -244,7 +319,51 @@ const ChatPage: React.FC = () => {
         return acc;
       }, []);
 
-      setConversations(uniqueConversations);
+      // Calculate unread counts for each conversation
+      const conversationsWithUnreadCounts = uniqueConversations.map(conv => {
+        const conversationKey = `${user?.id}-${conv.otherUser.id}`;
+        const unreadCount = unreadCounts.get(conversationKey) || 0;
+        
+        console.log(`📊 Conversation ${conv.otherUser.name}: unreadCount = ${unreadCount}, key = ${conversationKey}`);
+        console.log(`📊 Available keys in unreadCounts:`, Array.from(unreadCounts.keys()));
+        
+        return {
+          ...conv,
+          unreadCount,
+        };
+      });
+
+      setConversations(conversationsWithUnreadCounts);
+      
+      console.log('📋 Loaded conversations:', conversationsWithUnreadCounts.map(c => ({
+        name: c.otherUser.name,
+        unreadCount: c.unreadCount,
+        lastMessage: c.lastMessage?.content
+      })));
+      
+      console.log('📊 Current unreadCounts Map:', Array.from(unreadCounts.entries()));
+      
+      // Initialize unread counts for conversations that might have unread messages
+      const initialUnreadCounts = new Map<string, number>();
+      conversationsWithUnreadCounts.forEach(conv => {
+        const conversationKey = `${user?.id}-${conv.otherUser.id}`;
+        // If we don't have a count for this conversation, initialize it to 0
+        if (!unreadCounts.has(conversationKey)) {
+          initialUnreadCounts.set(conversationKey, 0);
+        }
+      });
+      
+      if (initialUnreadCounts.size > 0) {
+        setUnreadCounts(prev => {
+          const newMap = new Map(prev);
+          initialUnreadCounts.forEach((count, key) => {
+            if (!newMap.has(key)) {
+              newMap.set(key, count);
+            }
+          });
+          return newMap;
+        });
+      }
     } catch (error) {
       console.error('❌ Error loading conversations:', error);
       setError('Failed to load conversations. Please try again.');
@@ -271,10 +390,31 @@ const ChatPage: React.FC = () => {
         receiverId: msg.receiverId,
         timestamp: msg.timestamp,
         createdAt: msg.createdAt,
+        isRead: msg.senderId === user?.id || !unreadMessages.has(msg.id), // Mark as read if sent by user or not in unread set
       }));
 
       // Reverse the order so oldest messages appear at bottom (normal chat order)
       setMessages(transformedMessages.reverse());
+      
+      // Mark all messages in this conversation as read
+      const conversationMessageIds = transformedMessages
+        .filter(msg => msg.receiverId === user?.id)
+        .map(msg => msg.id);
+      
+      setUnreadMessages(prev => {
+        const newSet = new Set(prev);
+        conversationMessageIds.forEach(id => newSet.delete(id));
+        return newSet;
+      });
+      
+      // Clear unread count for this conversation
+      const conversationKey = `${user?.id}-${conversation.otherUser.id}`;
+      setUnreadCounts(prev => {
+        const newMap = new Map(prev);
+        newMap.set(conversationKey, 0);
+        return newMap;
+      });
+      
     } catch (error) {
       console.error('❌ Error loading messages:', error);
       setError('Failed to load messages. Please try again.');
@@ -282,7 +422,7 @@ const ChatPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, unreadMessages]);
 
   // Handle sending messages
   const handleSendMessage = useCallback(async (content: string) => {
@@ -356,9 +496,36 @@ const ChatPage: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Messages
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h4" component="h1">
+            Messages
+          </Typography>
+          <IconButton
+            onClick={() => setShowNotifications(!showNotifications)}
+            sx={{ position: 'relative' }}
+          >
+            {notifications.length > 0 ? (
+              <NotificationsActiveIcon color="primary" />
+            ) : (
+              <NotificationsIcon />
+            )}
+            {notifications.length > 0 && (
+              <Chip
+                label={notifications.length}
+                size="small"
+                color="primary"
+                sx={{
+                  position: 'absolute',
+                  top: -8,
+                  right: -8,
+                  minWidth: 20,
+                  height: 20,
+                  fontSize: '0.75rem',
+                }}
+              />
+            )}
+          </IconButton>
+        </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Chip
             icon={<ChatIcon />}
@@ -386,14 +553,43 @@ const ChatPage: React.FC = () => {
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
                   Conversations
                 </Typography>
-                <IconButton 
-                  onClick={() => setNewConversationOpen(true)}
-                  size="small"
-                  color="primary"
-                  sx={{ ml: 1 }}
-                >
-                  <AddIcon />
-                </IconButton>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <IconButton 
+                    onClick={() => setNewConversationOpen(true)}
+                    size="small"
+                    color="primary"
+                    sx={{ ml: 1 }}
+                  >
+                    <AddIcon />
+                  </IconButton>
+                  {/* Debug button to test unread counts */}
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      if (conversations.length > 0) {
+                        const firstConv = conversations[0];
+                        const conversationKey = `${user?.id}-${firstConv.otherUser.id}`;
+                        console.log(`🧪 Debug button clicked for ${firstConv.otherUser.name}`);
+                        console.log(`🧪 Conversation key: ${conversationKey}`);
+                        console.log(`🧪 Current unreadCounts before:`, Array.from(unreadCounts.entries()));
+                        
+                        setUnreadCounts(prev => {
+                          const newMap = new Map(prev);
+                          const currentCount = newMap.get(conversationKey) || 0;
+                          newMap.set(conversationKey, currentCount + 1);
+                          console.log(`🧪 Debug: Added unread count for ${firstConv.otherUser.name}: ${currentCount} -> ${currentCount + 1}`);
+                          console.log(`🧪 New unreadCounts:`, Array.from(newMap.entries()));
+                          return newMap;
+                        });
+                      } else {
+                        console.log('🧪 No conversations available to test');
+                      }
+                    }}
+                    sx={{ ml: 1, fontSize: '0.7rem' }}
+                  >
+                    +1
+                  </Button>
+                </Box>
               </Box>
               
               <Box sx={{ flex: 1, overflow: 'auto' }}>
@@ -425,16 +621,20 @@ const ChatPage: React.FC = () => {
                         <ListItemText
                           primary={conversation.otherUser.name}
                           secondary={conversation.lastMessage?.content}
-                          primaryTypographyProps={{ fontWeight: 600 }}
+                          primaryTypographyProps={{ 
+                            fontWeight: conversation.unreadCount > 0 ? 700 : 600 
+                          }}
+                          secondaryTypographyProps={{
+                            fontWeight: conversation.unreadCount > 0 ? 600 : 400
+                          }}
                         />
-                        {conversation.unreadCount > 0 && (
-                          <Chip
-                            label={conversation.unreadCount}
-                            size="small"
-                            color="primary"
-                            sx={{ ml: 1 }}
-                          />
-                        )}
+                        {/* Always show unread count for debugging */}
+                        <Chip
+                          label={conversation.unreadCount || 0}
+                          size="small"
+                          color={conversation.unreadCount > 0 ? "primary" : "default"}
+                          sx={{ ml: 1 }}
+                        />
                       </ListItem>
                     ))}
                   </List>
@@ -540,6 +740,66 @@ const ChatPage: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setNewConversationOpen(false)}>
             Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Notifications Popup */}
+      <Dialog
+        open={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          Notifications
+          <IconButton onClick={() => setShowNotifications(false)} size="small">
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          {notifications.length === 0 ? (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <NotificationsIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="body1" color="text.secondary">
+                No notifications yet
+              </Typography>
+            </Box>
+          ) : (
+            <List>
+              {notifications.map((notification) => (
+                <ListItem
+                  key={notification.id}
+                  sx={{
+                    borderBottom: '1px solid',
+                    borderColor: 'divider',
+                    '&:last-child': { borderBottom: 'none' },
+                  }}
+                >
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: 'primary.main' }}>
+                      <ChatIcon />
+                    </Avatar>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={notification.title}
+                    secondary={notification.message}
+                    primaryTypographyProps={{ fontWeight: 600 }}
+                  />
+                  <Typography variant="caption" color="text.secondary">
+                    {new Date(notification.timestamp).toLocaleTimeString()}
+                  </Typography>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNotifications([])} disabled={notifications.length === 0}>
+            Clear All
+          </Button>
+          <Button onClick={() => setShowNotifications(false)}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>

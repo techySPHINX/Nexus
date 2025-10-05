@@ -20,6 +20,7 @@ interface Message {
   receiverId: string;
   timestamp: string;
   createdAt: string;
+  isRead?: boolean;
 }
 
 interface Conversation {

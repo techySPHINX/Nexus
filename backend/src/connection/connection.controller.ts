@@ -17,7 +17,7 @@ import {
   UpdateConnectionStatusDto,
   ConnectionQueryDto,
 } from './dto/connection.dto';
-import { MessagingGateway } from '../messaging/messaging.gateway';
+import { ImprovedMessagingGateway } from '../messaging/messaging.gateway.improved';
 
 /**
  * Controller for managing user connections (friend requests, accepted connections).
@@ -28,7 +28,7 @@ import { MessagingGateway } from '../messaging/messaging.gateway';
 export class ConnectionController {
   constructor(
     private readonly connectionService: ConnectionService,
-    private readonly messagingGateway: MessagingGateway,
+    private readonly messagingGateway: ImprovedMessagingGateway,
   ) {}
 
   /**

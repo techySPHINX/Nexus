@@ -16,6 +16,7 @@ interface Message {
   receiverId: string;
   timestamp: string;
   createdAt: string;
+  isRead?: boolean;
 }
 
 interface Conversation {
@@ -151,7 +152,13 @@ const MessageList: React.FC<MessageListProps> = ({
                     maxWidth: '100%',
                   }}
                 >
-                  <Typography variant="body1" sx={{ lineHeight: 1.4 }}>
+                  <Typography 
+                    variant="body1" 
+                    sx={{ 
+                      lineHeight: 1.4,
+                      fontWeight: message.isRead === false ? 'bold' : 'normal',
+                    }}
+                  >
                     {message.content}
                   </Typography>
                   

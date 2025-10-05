@@ -130,22 +130,24 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       },
     },
     shape: {
-      borderRadius: 12,
+      borderRadius: 4, // Minimal curves - more professional
     },
     components: {
       MuiButton: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 4,
             textTransform: 'none',
             fontWeight: 600,
             boxShadow: 'none',
             '&:hover': {
-              boxShadow: '0 4px 12px rgba(76, 175, 80, 0.3)',
+              boxShadow: '0 2px 8px rgba(76, 175, 80, 0.2)',
             },
           },
           contained: {
+            background: 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
             '&:hover': {
+              background: 'linear-gradient(135deg, #388e3c 0%, #689f38 100%)',
               transform: 'translateY(-1px)',
             },
           },
@@ -154,16 +156,17 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       MuiCard: {
         styleOverrides: {
           root: {
-            borderRadius: 16,
+            borderRadius: 6,
             boxShadow:
               mode === 'light'
-                ? '0 2px 8px rgba(76, 175, 80, 0.1)'
-                : '0 2px 8px rgba(0, 0, 0, 0.3)',
+                ? '0 1px 3px rgba(0, 0, 0, 0.1)'
+                : '0 1px 3px rgba(0, 0, 0, 0.3)',
+            border: mode === 'light' ? '1px solid #e1e5e9' : '1px solid #333',
             '&:hover': {
               boxShadow:
                 mode === 'light'
-                  ? '0 8px 24px rgba(76, 175, 80, 0.15)'
-                  : '0 8px 24px rgba(0, 0, 0, 0.4)',
+                  ? '0 4px 12px rgba(0, 0, 0, 0.15)'
+                  : '0 4px 12px rgba(0, 0, 0, 0.4)',
             },
           },
         },
@@ -171,21 +174,23 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       MuiPaper: {
         styleOverrides: {
           root: {
-            borderRadius: 12,
+            borderRadius: 4,
             boxShadow:
               mode === 'light'
-                ? '0 1px 4px rgba(76, 175, 80, 0.1)'
-                : '0 1px 4px rgba(0, 0, 0, 0.3)',
+                ? '0 1px 2px rgba(0, 0, 0, 0.1)'
+                : '0 1px 2px rgba(0, 0, 0, 0.3)',
+            border: mode === 'light' ? '1px solid #e1e5e9' : '1px solid #333',
           },
         },
       },
       MuiAppBar: {
         styleOverrides: {
           root: {
+            background: 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
             boxShadow:
               mode === 'light'
-                ? '0 2px 10px rgba(76, 175, 80, 0.15)'
-                : '0 2px 10px rgba(0, 0, 0, 0.3)',
+                ? '0 2px 8px rgba(76, 175, 80, 0.15)'
+                : '0 2px 8px rgba(0, 0, 0, 0.3)',
           },
         },
       },
@@ -194,8 +199,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           paper: {
             boxShadow:
               mode === 'light'
-                ? '2px 0 10px rgba(76, 175, 80, 0.1)'
-                : '2px 0 10px rgba(0, 0, 0, 0.3)',
+                ? '2px 0 8px rgba(0, 0, 0, 0.1)'
+                : '2px 0 8px rgba(0, 0, 0, 0.3)',
+            border: mode === 'light' ? '1px solid #e1e5e9' : '1px solid #333',
           },
         },
       },
@@ -203,6 +209,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         styleOverrides: {
           root: {
             '& .MuiOutlinedInput-root': {
+              borderRadius: 4,
               '&:hover fieldset': {
                 borderColor: '#81c784',
               },
@@ -216,7 +223,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       MuiChip: {
         styleOverrides: {
           root: {
-            borderRadius: 8,
+            borderRadius: 4,
             fontWeight: 500,
           },
         },
