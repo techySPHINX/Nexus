@@ -45,6 +45,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useConnections from '../hooks/useConnections';
 import { apiService } from '../services/api';
+import { improvedWebSocketService } from '../services/websocket.improved';
 
 interface DashboardStats {
   connections: number;
@@ -85,7 +86,7 @@ interface SuggestedConnection {
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     connections: 0,
@@ -100,6 +101,8 @@ const Dashboard: React.FC = () => {
   const [suggestedConnections, setSuggestedConnections] = useState<SuggestedConnection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   // Use the connections hook for real data
   const {
@@ -130,11 +133,112 @@ const Dashboard: React.FC = () => {
     []
   );
 
+  // Fetch real message count
+  const fetchMessageCount = async () => {
+    try {
+      const response = await apiService.messages.getAllConversations();
+      if (response.data) {
+        // Count total messages across all conversations
+        let totalMessages = 0;
+        response.data.forEach((conv: any) => {
+          if (conv.latestMessage) {
+            totalMessages++;
+          }
+        });
+        setUnreadMessages(totalMessages);
+        setStats(prev => ({
+          ...prev,
+          messages: totalMessages,
+        }));
+      }
+    } catch (err) {
+      console.log('Could not fetch message count');
+    }
+  };
+
+  // Initialize WebSocket for real-time updates
+  useEffect(() => {
+    if (!user?.id || !token) return;
+
+    const initializeWebSocket = async () => {
+      try {
+        await improvedWebSocketService.connect(user.id, token);
+        
+        // Listen for new messages
+        improvedWebSocketService.on('NEW_MESSAGE', (message: any) => {
+          const newMessage = message.data;
+          if (newMessage.receiverId === user.id) {
+            // Update message count
+            setStats(prev => ({
+              ...prev,
+              messages: prev.messages + 1,
+            }));
+            
+            // Add to notifications
+            const notification = {
+              id: newMessage.id,
+              type: 'message',
+              title: 'New Message',
+              description: `${newMessage.sender?.name || 'Someone'} sent you a message`,
+              timestamp: new Date().toISOString(),
+            };
+            
+            setNotifications(prev => [notification, ...prev.slice(0, 4)]); // Keep last 5 notifications
+            
+            // Add to recent activities
+            setRecentActivities(prev => [
+              {
+                id: newMessage.id,
+                type: 'message',
+                title: 'New Message',
+                description: `You received a message from ${newMessage.sender?.name || 'Someone'}`,
+                timestamp: new Date().toLocaleDateString(),
+                user: { name: newMessage.sender?.name || 'Unknown', avatar: '' }
+              },
+              ...prev.slice(0, 4) // Keep last 5 activities
+            ]);
+          }
+        });
+
+        // Listen for new connections
+        improvedWebSocketService.on('CONNECTION_REQUEST', (data: any) => {
+          const notification = {
+            id: data.id,
+            type: 'connection',
+            title: 'New Connection Request',
+            description: `${data.sender?.name || 'Someone'} wants to connect with you`,
+            timestamp: new Date().toISOString(),
+          };
+          
+          setNotifications(prev => [notification, ...prev.slice(0, 4)]);
+          
+          // Update pending requests count
+          setStats(prev => ({
+            ...prev,
+            pendingRequests: prev.pendingRequests + 1,
+          }));
+        });
+
+      } catch (error) {
+        console.error('Failed to initialize WebSocket for dashboard:', error);
+      }
+    };
+
+    initializeWebSocket();
+
+    return () => {
+      improvedWebSocketService.disconnect();
+    };
+  }, [user?.id, token]);
+
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        
+        // Fetch message count
+        await fetchMessageCount();
         
         // Update stats with real data from connections
         setStats(prev => ({
@@ -262,17 +366,34 @@ const Dashboard: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       {/* Professional Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            fontWeight: 600,
-            color: 'text.primary',
-            mb: 1,
-          }}
-        >
-          Welcome back, {user?.name?.split(' ')[0] || 'User'}
-        </Typography>
+        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: 600,
+              color: 'text.primary',
+            }}
+          >
+            Welcome back, {user?.name?.split(' ')[0] || 'User'}
+          </Typography>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Chip
+              icon={<Message />}
+              label={`${stats.messages} Messages`}
+              color="primary"
+              size="small"
+            />
+            {notifications.length > 0 && (
+              <Chip
+                icon={<Notifications />}
+                label={`${notifications.length} New`}
+                color="secondary"
+                size="small"
+              />
+            )}
+          </Box>
+        </Box>
         <Typography variant="body1" color="text.secondary">
           Here's what's happening in your professional network
         </Typography>
@@ -421,6 +542,89 @@ const Dashboard: React.FC = () => {
 
         {/* Right Column */}
         <Grid item xs={12} md={4}>
+          {/* Notifications */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Notifications
+              </Typography>
+              <Chip
+                label={notifications.length}
+                size="small"
+                color={notifications.length > 0 ? "primary" : "default"}
+              />
+            </Box>
+            <List>
+              {notifications.length === 0 ? (
+                <ListItem>
+                  <ListItemText
+                    primary="No notifications"
+                    secondary="You're all caught up!"
+                  />
+                </ListItem>
+              ) : (
+                notifications.map((notification, index) => (
+                  <React.Fragment key={notification.id}>
+                    <ListItem sx={{ px: 0 }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          {notification.type === 'message' && <Message />}
+                          {notification.type === 'connection' && <PersonAdd />}
+                          {notification.type === 'event' && <Event />}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={notification.title}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {notification.description}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {new Date(notification.timestamp).toLocaleTimeString()}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                    {index < notifications.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))
+              )}
+            </List>
+            {notifications.length > 0 && (
+              <Button
+                variant="text"
+                size="small"
+                fullWidth
+                onClick={() => setNotifications([])}
+                sx={{ mt: 1 }}
+              >
+                Clear All
+              </Button>
+            )}
+          </Paper>
+
+          {/* Recent Posts */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Recent Posts
+              </Typography>
+              <Button variant="text" size="small" onClick={() => navigate('/feed')}>
+                View All
+              </Button>
+            </Box>
+            <List>
+              <ListItem>
+                <ListItemText
+                  primary="No recent posts"
+                  secondary="Check the feed for latest updates"
+                />
+              </ListItem>
+            </List>
+          </Paper>
+
           {/* Profile Completion */}
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
