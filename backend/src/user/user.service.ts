@@ -31,6 +31,52 @@ export class UserService {
   }
 
   /**
+   * Searches for users by name or email.
+   * @param query - The search query string.
+   * @returns A promise that resolves to an array of matching users.
+   */
+  async searchUsers(query: string) {
+    if (!query || query.trim().length < 2) {
+      return [];
+    }
+
+    const searchTerm = query.trim().toLowerCase();
+    
+    return this.prisma.user.findMany({
+      where: {
+        OR: [
+          {
+            name: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+          {
+            email: {
+              contains: searchTerm,
+              mode: 'insensitive',
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        profile: {
+          select: {
+            bio: true,
+            location: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      take: 20, // Limit results to 20 users
+    });
+  }
+
+  /**
    * Retrieves a specific user by their ID, including their profile and skills.
    * @param id - The ID of the user to retrieve.
    * @returns A promise that resolves to the user object.

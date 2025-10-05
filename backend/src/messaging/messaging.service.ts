@@ -145,21 +145,31 @@ export class MessagingService {
    * @returns A promise that resolves to an array of conversation summary objects.
    */
   async getAllConversations(userId: string) {
-    // Get all unique conversations for the user
-    const conversations = await this.prisma.message.groupBy({
-      by: ['senderId', 'receiverId'],
+    // Get all messages for the user
+    const messages = await this.prisma.message.findMany({
       where: {
         OR: [{ senderId: userId }, { receiverId: userId }],
       },
+      select: {
+        senderId: true,
+        receiverId: true,
+      },
     });
 
-    // Get the latest message for each conversation
+    // Create unique conversation pairs
+    const uniqueConversations = new Set<string>();
+    messages.forEach((message) => {
+      const otherUserId = message.senderId === userId ? message.receiverId : message.senderId;
+      // Create a consistent key for the conversation pair
+      const conversationKey = [userId, otherUserId].sort().join('-');
+      uniqueConversations.add(conversationKey);
+    });
+
+    // Get the latest message for each unique conversation
     const conversationDetails = await Promise.all(
-      conversations.map(async (conversation) => {
-        const otherUserId =
-          conversation.senderId === userId
-            ? conversation.receiverId
-            : conversation.senderId;
+      Array.from(uniqueConversations).map(async (conversationKey) => {
+        const [user1Id, user2Id] = conversationKey.split('-');
+        const otherUserId = user1Id === userId ? user2Id : user1Id;
 
         const latestMessage = await this.prisma.message.findFirst({
           where: {

@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MessagingService } from './messaging.service';
 import { MessagingController } from './messaging.controller';
-import { MessagingGateway } from './messaging.gateway';
+import { ImprovedMessagingGateway } from './messaging.gateway.improved';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { AuthModule } from 'src/auth/auth.module';
 
@@ -16,7 +16,7 @@ import { AuthModule } from 'src/auth/auth.module';
     }),
   ],
   controllers: [MessagingController],
-  providers: [MessagingService, MessagingGateway],
-  exports: [MessagingGateway, MessagingService],
+  providers: [MessagingService, ImprovedMessagingGateway],
+  exports: [ImprovedMessagingGateway, MessagingService],
 })
 export class MessagingModule {}

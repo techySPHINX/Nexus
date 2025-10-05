@@ -12,7 +12,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Connections from './pages/Connections';
-import Messages from './pages/Messages';
+import ChatPage from './pages/ChatPage';
 import Profile from './pages/Profile';
 import Referrals from './pages/Referrals';
 import Files from './pages/Files';
@@ -116,11 +116,7 @@ const Layout: React.FC = () => {
             />
             <Route
               path="/messages"
-              element={
-                <ProtectedRoute>
-                  <Messages />
-                </ProtectedRoute>
-              }
+              element={<ChatPage />}
             />
             <Route
               path="/profile"
