@@ -8,6 +8,7 @@ import React, {
 import {
   fetchProfileDataService,
   endorseSkillService,
+  removeEndorsementService,
   awardBadgeService,
   updateProfileService,
   searchAllProfileDataService,
@@ -38,6 +39,7 @@ interface ProfileContextType {
   allSearchedProfile: () => Promise<void>;
   searchedProfile: (userId: string) => Promise<void>;
   endorseSkill: (skillId: string) => Promise<void>;
+  removeEndorsement: (endorsementId: string) => Promise<void>;
   awardBadge: (userId: string, badgeId: string) => Promise<void>;
   //   handleConnection: (userId: string, action: 'accept' | 'reject') => Promise<void>;
   fetchAllSkills: () => Promise<void>;
@@ -59,6 +61,7 @@ const ProfileContext = createContext<ProfileContextType>({
   allSearchedProfile: async () => {},
   searchedProfile: async () => {},
   endorseSkill: async () => {},
+  removeEndorsement: async () => {},
   awardBadge: async () => {},
   fetchAllSkills: async () => {},
   fetchAllBadges: async () => {},
@@ -186,6 +189,25 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
     [profile, refreshProfile]
   );
 
+  const removeEndorsement = useCallback(
+    async (endorsementId: string) => {
+      try {
+        await removeEndorsementService(endorsementId);
+        await refreshProfile();
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to remove endorsement');
+        } else {
+          setError('An unexpected error occurred.');
+          console.error('Unexpected error:', err);
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [refreshProfile]
+  );
+
   const awardBadge = useCallback(
     async (userId: string, badgeId: string) => {
       try {
@@ -248,6 +270,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       allSearchedProfile,
       searchedProfile,
       endorseSkill,
+      removeEndorsement,
       awardBadge,
       fetchAllSkills,
       fetchAllBadges,
@@ -268,6 +291,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       allSearchedProfile,
       searchedProfile,
       endorseSkill,
+      removeEndorsement,
       fetchAllSkills,
       fetchAllBadges,
       //   handleConnection,

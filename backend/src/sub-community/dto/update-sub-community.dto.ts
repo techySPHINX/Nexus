@@ -3,7 +3,25 @@ import { CreateSubCommunityDto } from './create-sub-community.dto';
 import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateSubCommunityDto extends PartialType(CreateSubCommunityDto) {
-  // All fields are optional for update
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  @IsOptional()
+  type?: string;
+
+  @IsOptional()
+  isPrivate?: boolean;
+
+  @IsString()
+  @IsOptional()
+  ownerId?: string;
+
   @IsString()
   @IsOptional()
   bannerUrl?: string;

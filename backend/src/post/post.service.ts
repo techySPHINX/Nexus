@@ -831,7 +831,7 @@ export class PostService {
       where: { id },
       data: {
         status: PostStatus.APPROVED,
-        updatedAt: post.updatedAt,
+        // Don't update updatedAt for approval - only when owner edits the post
       },
     });
   }
@@ -860,7 +860,7 @@ export class PostService {
       where: { id },
       data: {
         status: PostStatus.REJECTED,
-        updatedAt: post.updatedAt,
+        // Don't update updatedAt for rejection - only when owner edits the post
       },
     });
   }

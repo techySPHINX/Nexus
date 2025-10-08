@@ -229,8 +229,18 @@ export interface Skill {
 
 export interface Endorsement {
   id: string;
-  endorser: User;
-  skill: Skill;
+  endorser: {
+    id: string;
+    name: string;
+    role: Role;
+    profile?: {
+      avatarUrl?: string;
+    };
+  };
+  skill?: {
+    id: string;
+    name: string;
+  };
   createdAt: string;
 }
 
@@ -253,6 +263,10 @@ export interface Profile {
   location?: string | null;
   interests?: string | null;
   avatarUrl?: string | null;
+  dept?: string | null;
+  year?: string | null;
+  branch?: string | null;
+  course?: string | null;
   createdAt: string;
   updatedAt: string;
   skills: Skill[];
@@ -266,4 +280,8 @@ export interface UpdateProfileInput {
   interests: string;
   avatarUrl: string;
   skills: string[];
+  dept?: string;
+  year?: string;
+  branch?: string;
+  course?: string;
 }

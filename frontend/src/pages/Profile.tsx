@@ -66,6 +66,7 @@ const Profile: React.FC = () => {
     refreshProfile,
     searchedProfile,
     endorseSkill,
+    removeEndorsement,
     awardBadge,
     setError,
     updateProfile,
@@ -83,6 +84,10 @@ const Profile: React.FC = () => {
     location: '',
     interests: '',
     avatarUrl: '',
+    dept: '',
+    year: '',
+    branch: '',
+    course: '',
   });
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [success, setSuccess] = useState('');
@@ -104,6 +109,10 @@ const Profile: React.FC = () => {
         location: profile.location || '',
         interests: profile.interests || '',
         avatarUrl: profile.avatarUrl || '',
+        dept: profile.dept || '',
+        year: profile.year || '',
+        branch: profile.branch || '',
+        course: profile.course || '',
       });
       setSelectedSkills(profile.skills?.map((s) => s.name) || []);
       setAvatarPreview(profile.avatarUrl || '');
@@ -207,6 +216,20 @@ const Profile: React.FC = () => {
     } catch (err: unknown) {
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message || 'Failed to endorse skill');
+      } else {
+        setError('An unexpected error occurred');
+        console.error('Unexpected error:', err);
+      }
+    }
+  };
+
+  const handleRemoveEndorsement = async (endorsementId: string) => {
+    try {
+      await removeEndorsement(endorsementId);
+      setSuccess('Endorsement removed successfully!');
+    } catch (err: unknown) {
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || 'Failed to remove endorsement');
       } else {
         setError('An unexpected error occurred');
         console.error('Unexpected error:', err);
@@ -543,6 +566,82 @@ const Profile: React.FC = () => {
                       value={profile.location}
                     />
                   </Grid>
+
+                  {/* Academic Information */}
+                  {(profile.dept ||
+                    profile.year ||
+                    profile.branch ||
+                    profile.course) && (
+                    <>
+                      <Grid item xs={12}>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            mt: 2,
+                            mb: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Business
+                            color={getRoleColor(profile.user.role)}
+                            sx={{ mr: 1 }}
+                          />
+                          Academic Information
+                        </Typography>
+                      </Grid>
+                      {profile.dept && (
+                        <Grid item xs={12} sm={6}>
+                          <InfoCard
+                            icon={
+                              <Business
+                                color={getRoleColor(profile.user.role)}
+                              />
+                            }
+                            title="Department"
+                            value={profile.dept}
+                          />
+                        </Grid>
+                      )}
+                      {profile.year && (
+                        <Grid item xs={12} sm={6}>
+                          <InfoCard
+                            icon={
+                              <Star color={getRoleColor(profile.user.role)} />
+                            }
+                            title="Year"
+                            value={profile.year}
+                          />
+                        </Grid>
+                      )}
+                      {profile.branch && (
+                        <Grid item xs={12} sm={6}>
+                          <InfoCard
+                            icon={
+                              <EmojiEvents
+                                color={getRoleColor(profile.user.role)}
+                              />
+                            }
+                            title="Branch"
+                            value={profile.branch}
+                          />
+                        </Grid>
+                      )}
+                      {profile.course && (
+                        <Grid item xs={12} sm={6}>
+                          <InfoCard
+                            icon={
+                              <MilitaryTech
+                                color={getRoleColor(profile.user.role)}
+                              />
+                            }
+                            title="Course"
+                            value={profile.course}
+                          />
+                        </Grid>
+                      )}
+                    </>
+                  )}
                 </Grid>
               </Paper>
 
@@ -644,29 +743,126 @@ const Profile: React.FC = () => {
                     Skills
                   </Typography>
                   {profile.skills.length > 0 ? (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    <Box
+                      sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
+                    >
                       {profile.skills.map((skill) => (
-                        <Tooltip
-                          key={skill.id}
-                          title={
-                            skill.endorsements?.length > 0
-                              ? `Endorsed by ${skill.endorsements.map((e) => e.endorser.name).join(', ')}`
-                              : 'No endorsements yet'
-                          }
-                        >
-                          <Chip
-                            label={skill.name}
-                            variant="outlined"
-                            color="primary"
-                            onDelete={
-                              !isOwnProfile &&
-                              currentUser?.id !== profile.user.id
-                                ? () => handleEndorse(skill.id)
-                                : undefined
-                            }
-                            deleteIcon={<ThumbUp />}
-                          />
-                        </Tooltip>
+                        <Card key={skill.id} variant="outlined" sx={{ p: 2 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'flex-start',
+                              mb: 1,
+                            }}
+                          >
+                            <Typography variant="subtitle1" fontWeight="bold">
+                              {skill.name}
+                            </Typography>
+                            {!isOwnProfile &&
+                              currentUser?.id !== profile.user.id && (
+                                <Button
+                                  size="small"
+                                  startIcon={<ThumbUp />}
+                                  onClick={() => handleEndorse(skill.id)}
+                                  variant="outlined"
+                                  sx={{
+                                    minWidth: 'auto',
+                                    '&:hover': {
+                                      backgroundColor: 'primary.light',
+                                      color: 'white',
+                                    },
+                                  }}
+                                >
+                                  +
+                                </Button>
+                              )}
+                          </Box>
+
+                          {skill.endorsements &&
+                            skill.endorsements.length > 0 && (
+                              <Box>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                  sx={{ mb: 1 }}
+                                >
+                                  {skill.endorsements.length} endorsement
+                                  {skill.endorsements.length > 1 ? 's' : ''}
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: 1,
+                                  }}
+                                >
+                                  {skill.endorsements
+                                    .slice(0, 5)
+                                    .map((endorsement) => (
+                                      <Tooltip
+                                        key={endorsement.id}
+                                        title={`${endorsement.endorser.name} (${endorsement.endorser.role})`}
+                                      >
+                                        <Chip
+                                          avatar={
+                                            <Avatar
+                                              src={
+                                                endorsement.endorser.profile
+                                                  ?.avatarUrl
+                                              }
+                                              sx={{ width: 24, height: 24 }}
+                                            >
+                                              {endorsement.endorser.name.charAt(
+                                                0
+                                              )}
+                                            </Avatar>
+                                          }
+                                          label={endorsement.endorser.name}
+                                          size="small"
+                                          variant="filled"
+                                          color="primary"
+                                          sx={{
+                                            fontSize: '0.75rem',
+                                            height: 28,
+                                          }}
+                                          onDelete={
+                                            currentUser?.id ===
+                                            endorsement.endorser.id
+                                              ? () =>
+                                                  handleRemoveEndorsement(
+                                                    endorsement.id
+                                                  )
+                                              : undefined
+                                          }
+                                          deleteIcon={
+                                            currentUser?.id ===
+                                            endorsement.endorser.id ? (
+                                              <div>×</div>
+                                            ) : undefined
+                                          }
+                                        />
+                                      </Tooltip>
+                                    ))}
+                                  {skill.endorsements.length > 5 && (
+                                    <Chip
+                                      label={`+${skill.endorsements.length - 5} more`}
+                                      size="small"
+                                      variant="outlined"
+                                      sx={{ fontSize: '0.75rem', height: 28 }}
+                                    />
+                                  )}
+                                </Box>
+                              </Box>
+                            )}
+
+                          {(!skill.endorsements ||
+                            skill.endorsements.length === 0) && (
+                            <Typography variant="body2" color="text.secondary">
+                              No endorsements yet
+                            </Typography>
+                          )}
+                        </Card>
                       ))}
                     </Box>
                   ) : (
@@ -814,6 +1010,78 @@ const Profile: React.FC = () => {
                   ),
                 }}
               />
+
+              {/* Academic Information Section */}
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>
+                Academic Information
+              </Typography>
+
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Department"
+                    value={localProfile.dept}
+                    onChange={handleChange('dept')}
+                    placeholder="e.g., Computer Science"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Business color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Year"
+                    value={localProfile.year}
+                    onChange={handleChange('year')}
+                    placeholder="e.g., 3rd Year, Final Year"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Star color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Branch"
+                    value={localProfile.branch}
+                    onChange={handleChange('branch')}
+                    placeholder="e.g., B.Tech, M.Tech, MBA"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <EmojiEvents color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <TextField
+                    fullWidth
+                    label="Course"
+                    value={localProfile.course}
+                    onChange={handleChange('course')}
+                    placeholder="e.g., Software Engineering, Data Science"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <MilitaryTech color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Grid>
+              </Grid>
 
               <Autocomplete
                 multiple
