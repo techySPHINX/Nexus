@@ -97,6 +97,8 @@ export class ShowcaseService {
       throw new Error('Project not found');
     }
 
+    console.log('ProjectId to delete:', projectId);
+
     if (project.ownerId !== userId) {
       throw new Error('You are not the owner of this project');
     }

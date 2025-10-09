@@ -125,7 +125,7 @@ model ProjectTeamMember {
   userId    String
   role      ProjectRole @default(MEMBER)
   createdAt DateTime    @default(now())
-  project   Project     @relation(fields: [projectId], references: [id])
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User        @relation(fields: [userId], references: [id])
 
   @@unique([projectId, userId])
@@ -138,7 +138,7 @@ model ProjectComment {
   userId    String
   comment   String
   createdAt DateTime @default(now())
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
   @@map("project_comments")
@@ -149,7 +149,7 @@ model ProjectSupport {
   projectId String
   userId    String
   createdAt DateTime @default(now())
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([projectId, userId])
@@ -161,7 +161,7 @@ model ProjectFollower {
   projectId String
   userId    String
   createdAt DateTime @default(now())
-  project   Project  @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([projectId, userId])

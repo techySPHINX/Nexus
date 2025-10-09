@@ -22,6 +22,7 @@ import {
   Menu as MenuIcon,
   Dashboard,
   People,
+  Assignment,
   Message,
   Work,
   Folder,
@@ -70,6 +71,7 @@ const Navbar: React.FC = () => {
     { text: 'Messages', icon: <Message />, path: '/messages' },
     { text: 'Referrals', icon: <Work />, path: '/referrals' },
     { text: 'Community', icon: <People />, path: '/subcommunities' },
+    { text: 'Project', icon: <Assignment />, path: '/projects' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

@@ -70,6 +70,7 @@ interface ProjectDetailModalProps {
   onLoadComments: (page?: number, forceRefresh?: boolean) => void;
   onCreateComment: (comment: string) => Promise<void>;
   onRefresh: () => void;
+  onDelete: () => void;
 }
 
 interface TabPanelProps {
@@ -126,6 +127,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onLoadComments,
   onCreateComment,
   onRefresh,
+  onDelete,
 }) => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
@@ -1007,6 +1009,17 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               >
                 Refresh
               </Button>
+              {isOwner && (
+                <Button
+                  onClick={onDelete}
+                  variant="outlined"
+                  color="error"
+                  size="small"
+                  aria-label="Delete project"
+                >
+                  Delete
+                </Button>
+              )}
               <Button
                 onClick={onClose}
                 variant="outlined"
