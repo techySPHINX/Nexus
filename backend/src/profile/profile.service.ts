@@ -25,7 +25,29 @@ export class ProfileService {
     const profile = await this.prisma.profile.findUnique({
       where: { userId: userId },
       include: {
-        skills: true,
+        skills: {
+          include: {
+            endorsements: {
+              include: {
+                endorser: {
+                  select: {
+                    id: true,
+                    name: true,
+                    role: true,
+                    profile: {
+                      select: {
+                        avatarUrl: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+          },
+        },
         user: {
           select: {
             id: true,
@@ -289,14 +311,28 @@ export class ProfileService {
         },
         endorsements: {
           include: {
-            skill: true,
+            skill: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
             endorser: {
               select: {
                 id: true,
                 name: true,
                 email: true,
+                role: true,
+                profile: {
+                  select: {
+                    avatarUrl: true,
+                  },
+                },
               },
             },
+          },
+          orderBy: {
+            createdAt: 'desc',
           },
         },
       },
@@ -445,7 +481,55 @@ export class ProfileService {
         skills: skillConnections,
       },
       include: {
-        skills: true,
+        skills: {
+          include: {
+            endorsements: {
+              include: {
+                endorser: {
+                  select: {
+                    id: true,
+                    name: true,
+                    role: true,
+                    profile: {
+                      select: {
+                        avatarUrl: true,
+                      },
+                    },
+                  },
+                },
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+            },
+          },
+        },
+        endorsements: {
+          include: {
+            skill: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            endorser: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true,
+                profile: {
+                  select: {
+                    avatarUrl: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
         user: {
           select: {
             id: true,
@@ -499,6 +583,32 @@ export class ProfileService {
         skillId,
         endorserId,
       },
+    });
+  }
+
+  /**
+   * Removes an endorsement for a specific skill.
+   * @param endorserId - The ID of the user who made the endorsement.
+   * @param endorsementId - The ID of the endorsement to remove.
+   * @returns A promise that resolves when the endorsement is removed.
+   * @throws {NotFoundException} If the endorsement is not found.
+   * @throws {ForbiddenException} If the user is not the endorser.
+   */
+  async removeEndorsement(endorserId: string, endorsementId: string) {
+    const endorsement = await this.prisma.endorsement.findUnique({
+      where: { id: endorsementId },
+    });
+
+    if (!endorsement) {
+      throw new NotFoundException('Endorsement not found');
+    }
+
+    if (endorsement.endorserId !== endorserId) {
+      throw new ConflictException('You can only remove your own endorsements.');
+    }
+
+    return this.prisma.endorsement.delete({
+      where: { id: endorsementId },
     });
   }
 

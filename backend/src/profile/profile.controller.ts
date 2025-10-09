@@ -4,8 +4,9 @@ import {
   ForbiddenException,
   Get,
   Param,
-  Post, // Import Post
+  Post,
   Put,
+  Delete,
   UseGuards,
   Query,
 } from '@nestjs/common';
@@ -16,8 +17,9 @@ import { ProfileService } from './profile.service';
 import { FilterProfilesDto } from './dto/filter-profiles.dto';
 import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
 import { Role } from '@prisma/client';
-import { EndorseSkillDto } from './dto/endorse-skill.dto'; // Import EndorseSkillDto
-import { AwardBadgeDto } from './dto/award-badge.dto'; // Import AwardBadgeDto
+import { EndorseSkillDto } from './dto/endorse-skill.dto';
+import { AwardBadgeDto } from './dto/award-badge.dto';
+import { RemoveEndorsementDto } from './dto/remove-endorsement.dto';
 
 /**
  * Controller for handling profile-related requests.
@@ -95,6 +97,20 @@ export class ProfileController {
     @GetCurrentUser('userId') endorserId: string,
   ) {
     return this.profileService.endorseSkill(endorserId, profileId, dto.skillId);
+  }
+
+  /**
+   * Removes an endorsement for a specific skill.
+   * @param dto - DTO containing the endorsement ID to remove.
+   * @param endorserId - The ID of the user who made the endorsement.
+   * @returns A promise that resolves when the endorsement is removed.
+   */
+  @Delete('endorsement')
+  async removeEndorsement(
+    @Body() dto: RemoveEndorsementDto,
+    @GetCurrentUser('userId') endorserId: string,
+  ) {
+    return this.profileService.removeEndorsement(endorserId, dto.endorsementId);
   }
 
   /**

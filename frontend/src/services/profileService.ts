@@ -89,6 +89,21 @@ export async function endorseSkillService(profileId: string, skillId: string) {
   }
 }
 
+export async function removeEndorsementService(endorsementId: string) {
+  try {
+    await api.delete('/profile/endorsement', {
+      data: { endorsementId },
+    });
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to remove endorsement'
+      );
+    }
+    throw new Error('Failed to remove endorsement');
+  }
+}
+
 export async function awardBadgeService(userId: string, badgeId: string) {
   try {
     await api.post(`/profile/${userId}/award-badge`, { badgeId });
