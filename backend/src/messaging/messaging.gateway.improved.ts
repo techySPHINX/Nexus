@@ -361,6 +361,46 @@ export class ImprovedMessagingGateway
   }
 
   /**
+   * Broadcasts a message to the recipient and sender.
+   * Used when a message is sent via API to ensure real-time delivery.
+   * 
+   * @param message - The message object to broadcast
+   */
+  broadcastMessage(message: any) {
+    try {
+      // Generate a unique ID for deduplication
+      const messageId = `${message.id}_${message.senderId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Add unique ID to message for frontend deduplication
+      const messageWithId = {
+        ...message,
+        uniqueId: messageId,
+      };
+
+      // Broadcast to recipient
+      const recipientRoom = `user_${message.receiverId}`;
+      this.server.to(recipientRoom).emit('NEW_MESSAGE', messageWithId);
+
+      // Send confirmation to sender
+      const senderRoom = `user_${message.senderId}`;
+      this.server.to(senderRoom).emit('MESSAGE_SENT', {
+        ...messageWithId,
+        confirmation: true,
+      });
+
+      console.log('📨 Message broadcasted via API:', {
+        messageId,
+        from: message.senderId,
+        to: message.receiverId,
+        content: message.content,
+      });
+
+    } catch (error) {
+      console.error('❌ Error broadcasting message:', error);
+    }
+  }
+
+  /**
    * Cleanup processed messages periodically to prevent memory leaks.
    * This should be called periodically (e.g., every hour).
    */
