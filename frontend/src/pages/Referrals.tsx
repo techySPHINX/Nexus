@@ -21,6 +21,8 @@ import {
   Alert,
   CircularProgress,
   Stack,
+  CardActions,
+  DialogContentText,
 } from '@mui/material';
 import {
   Add,
@@ -99,6 +101,7 @@ const Referrals: React.FC = () => {
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(
     null
   );
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -290,12 +293,16 @@ const Referrals: React.FC = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ fontWeight: 700, mb: 0.5 }}
+        >
           Job Referrals
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Discover job opportunities and apply for positions
+        <Typography variant="body1" color="text.secondary">
+          Discover curated roles from KIIT alumni and apply directly
         </Typography>
       </Box>
 
@@ -307,23 +314,27 @@ const Referrals: React.FC = () => {
       )}
 
       {/* Actions Bar */}
-      <Box
-        sx={{
-          mb: 3,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        alignItems={{ xs: 'stretch', md: 'center' }}
+        justifyContent="space-between"
+        sx={{ mb: 3 }}
       >
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          sx={{ width: '100%' }}
+        >
           <TextField
-            placeholder="Search referrals..."
+            fullWidth
+            placeholder="Search referrals... (company, title, location)"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             size="small"
-            sx={{ minWidth: 300 }}
+            sx={{ maxWidth: { xs: '100%', sm: 420 } }}
           />
-          <FormControl size="small" sx={{ minWidth: 150 }}>
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
             <InputLabel>Status</InputLabel>
             <Select
               value={filterStatus}
@@ -343,31 +354,38 @@ const Referrals: React.FC = () => {
               console.log('🧪 Testing API call...');
               fetchReferrals();
             }}
-            sx={{ textTransform: 'none' }}
+            sx={{ textTransform: 'none', width: { xs: '100%', sm: 'auto' } }}
           >
-            Test API
+            Refresh
           </Button>
-        </Box>
+        </Stack>
 
         {user?.role === 'ALUM' && (
           <Button
             variant="contained"
             startIcon={<Add />}
             onClick={() => setCreateDialogOpen(true)}
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: 2, width: { xs: '100%', md: 'auto' } }}
           >
             Post Referral
           </Button>
         )}
-      </Box>
+      </Stack>
 
       {/* Referrals Grid */}
       <Grid container spacing={3}>
         {filteredReferrals.map((referral) => (
           <Grid item xs={12} md={6} lg={4} key={referral.id}>
             <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
-              <Card sx={{ height: '100%', borderRadius: 3 }}>
-                <CardContent>
+              <Card
+                sx={{
+                  height: '100%',
+                  borderRadius: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                }}
+              >
+                <CardContent sx={{ flexGrow: 1 }}>
                   <Box
                     sx={{
                       display: 'flex',
@@ -421,18 +439,22 @@ const Referrals: React.FC = () => {
                       : referral.description}
                   </Typography>
 
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
+                  <CardActions sx={{ pt: 1, justifyContent: 'space-between' }}>
                     <Typography variant="caption" color="text.secondary">
                       {new Date(referral.createdAt).toLocaleDateString()}
                     </Typography>
-
-                    <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Stack direction="row" spacing={1}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => {
+                          setSelectedReferral(referral);
+                          setDetailsDialogOpen(true);
+                        }}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        Details
+                      </Button>
                       {user?.role === 'STUDENT' && (
                         <Button
                           size="small"
@@ -451,7 +473,6 @@ const Referrals: React.FC = () => {
                           Apply
                         </Button>
                       )}
-
                       {user?.id === referral.alumniId && (
                         <>
                           <IconButton size="small" color="primary">
@@ -466,8 +487,8 @@ const Referrals: React.FC = () => {
                           </IconButton>
                         </>
                       )}
-                    </Box>
-                  </Box>
+                    </Stack>
+                  </CardActions>
                 </CardContent>
               </Card>
             </motion.div>
@@ -642,6 +663,80 @@ const Referrals: React.FC = () => {
           <Button onClick={handleApply} variant="contained">
             Submit Application
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Job Details</DialogTitle>
+        <DialogContent dividers>
+          {selectedReferral && (
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {selectedReferral.jobTitle}
+                </Typography>
+                <Typography variant="subtitle1" color="primary">
+                  {selectedReferral.company}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  <LocationOn
+                    sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }}
+                  />
+                  {selectedReferral.location}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 600, mb: 0.5 }}
+                >
+                  Description
+                </Typography>
+                <DialogContentText sx={{ whiteSpace: 'pre-wrap' }}>
+                  {selectedReferral.description}
+                </DialogContentText>
+              </Box>
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 600, mb: 0.5 }}
+                >
+                  Requirements
+                </Typography>
+                <DialogContentText sx={{ whiteSpace: 'pre-wrap' }}>
+                  {selectedReferral.requirements}
+                </DialogContentText>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                Posted on{' '}
+                {new Date(selectedReferral.createdAt).toLocaleDateString()}
+              </Typography>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+          {user?.role === 'STUDENT' && selectedReferral && (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setApplicationForm({
+                  ...applicationForm,
+                  referralId: selectedReferral.id,
+                });
+                setDetailsDialogOpen(false);
+                setApplyDialogOpen(true);
+              }}
+            >
+              Apply
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

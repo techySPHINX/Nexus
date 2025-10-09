@@ -8,6 +8,7 @@ import React, {
 import {
   ThemeProvider as MuiThemeProvider,
   createTheme,
+  responsiveFontSizes,
 } from '@mui/material/styles';
 import { CssBaseline } from '@mui/material';
 
@@ -56,7 +57,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     localStorage.setItem('theme', newMode);
   };
 
-  const theme = createTheme({
+  let theme = createTheme({
     palette: {
       mode,
       primary: {
@@ -229,6 +230,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         },
       },
     },
+  });
+
+  // Make typography scale down smoothly on smaller screens
+  theme = responsiveFontSizes(theme, {
+    factor: 2, // slightly stronger scaling for smaller devices
+    breakpoints: ['sm', 'md', 'lg'],
   });
 
   return (

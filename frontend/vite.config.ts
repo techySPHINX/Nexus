@@ -18,7 +18,9 @@ export default defineConfig(({ mode }) => {
         }),
     ].filter(Boolean),
     server: {
+      host: true, // expose to LAN for mobile testing
       port: 3001,
+      cors: true,
       proxy: {
         '/api': {
           target: 'http://localhost:3000',
@@ -33,17 +35,20 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: (id) => {
-            if (id.includes('node_modules')) {
+            if (id.indexOf('node_modules') !== -1) {
               // Group vendors into logical chunks
-              if (id.includes('@mui')) return 'vendor-mui';
-              if (id.includes('react')) return 'vendor-react';
-              if (id.includes('axios') || id.includes('date-fns'))
+              if (id.indexOf('@mui') !== -1) return 'vendor-mui';
+              if (id.indexOf('react') !== -1) return 'vendor-react';
+              if (id.indexOf('axios') !== -1 || id.indexOf('date-fns') !== -1)
                 return 'vendor-utils';
               return 'vendor-other';
             }
 
             // Group by feature
-            if (id.includes('/Admin/') || id.includes('Moderation')) {
+            if (
+              id.indexOf('/Admin/') !== -1 ||
+              id.indexOf('Moderation') !== -1
+            ) {
               return 'moderation-features';
             }
           },

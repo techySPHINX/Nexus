@@ -327,7 +327,11 @@ const Connections: React.FC = () => {
 
       {/* Search + Filters */}
       <Box component="form" onSubmit={handleSearch} sx={{ mb: 3 }}>
-        <Stack direction="row" spacing={2} alignItems="center">
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={2}
+          alignItems={{ xs: 'stretch', sm: 'center' }}
+        >
           <TextField
             fullWidth
             placeholder="Search connections..."
@@ -342,7 +346,7 @@ const Connections: React.FC = () => {
             }}
             sx={{ maxWidth: 400 }}
           />
-          <FormControl sx={{ minWidth: 120 }}>
+          <FormControl sx={{ minWidth: { xs: '100%', sm: 140 } }}>
             <InputLabel>Role</InputLabel>
             <Select
               value={roleFilter}
@@ -355,7 +359,11 @@ const Connections: React.FC = () => {
               <MenuItem value="ADMIN">Admin</MenuItem>
             </Select>
           </FormControl>
-          <Button type="submit" variant="contained" sx={{ minWidth: 100 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            sx={{ minWidth: { xs: '100%', sm: 100 } }}
+          >
             Search
           </Button>
         </Stack>
@@ -378,7 +386,7 @@ const Connections: React.FC = () => {
 
       {/* Table */}
       <Paper>
-        <TableContainer>
+        <TableContainer sx={{ overflowX: 'auto' }}>
           <Table>
             <TableHead>
               <TableRow>
