@@ -564,114 +564,110 @@ const Navbar: React.FC = () => {
           </MenuItem>
         </Menu>
       </AppBar>
-
-      {/* Mobile drawer */}
-      <Drawer
-        variant="temporary"
-        open={mobileOpen}
-        onClose={handleDrawerToggle}
-        ModalProps={{
-          keepMounted: true,
-        }}
-        sx={{
-          display: { xs: 'block', md: 'none' },
-          '& .MuiDrawer-paper': {
-            width: 280,
-            bgcolor: 'primary.main',
-            color: 'white',
-          },
-        }}
-      >
-        <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <Typography
-            variant="h5"
-            sx={{ fontWeight: 700, textAlign: 'center' }}
-          >
-            Nexus
-          </Typography>
-        </Box>
-
-        <List sx={{ px: 2 }}>
-          {navigationItems.map((item) => (
-            <ListItem
-              key={item.text}
-              component={Link}
-              to={item.path}
-              button
-              onClick={handleDrawerToggle}
-              sx={{
-                mb: 1,
-                borderRadius: 2,
-                bgcolor: isActive(item.path)
-                  ? 'rgba(255,255,255,0.1)'
-                  : 'transparent',
-                color: 'white',
-                '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                },
-              }}
-            >
-              <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItem>
-          ))}
-        </List>
-
-        {/* User Menu for Mobile Drawer */}
-        {user && (
-          <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                p: 2,
-                borderRadius: 2,
-                bgcolor: 'rgba(255,255,255,0.1)',
-                cursor: 'pointer',
-                '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                },
-              }}
-              onClick={() => {
-                handleUserMenuOpen({
-                  currentTarget: document.body,
-                } as React.MouseEvent<HTMLElement>);
-                handleDrawerToggle();
-              }}
-            >
-              <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.light' }}>
-                {user.name?.charAt(0) || 'U'}
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography
-                  variant="body2"
-                  sx={{ color: 'white', fontWeight: 600 }}
-                >
-                  {user.name || 'User'}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{ color: 'rgba(255,255,255,0.7)' }}
-                >
-                  {user.role || 'Member'}
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-        )}
-      </Drawer>
     </>
   );
 
-  // Render based on position
-  if (position === 'left') {
-    return <LeftSidebar />;
-  }
+  const MobileDrawer = () => (
+    <Drawer
+      variant="temporary"
+      open={mobileOpen}
+      onClose={handleDrawerToggle}
+      ModalProps={{ keepMounted: true }}
+      sx={{
+        display: { xs: 'block', md: 'none' },
+        '& .MuiDrawer-paper': {
+          width: 280,
+          bgcolor: 'primary.main',
+          color: 'white',
+        },
+      }}
+    >
+      <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <Typography variant="h5" sx={{ fontWeight: 700, textAlign: 'center' }}>
+          Nexus
+        </Typography>
+      </Box>
 
-  return <TopNavbar />;
+      <List sx={{ px: 2 }}>
+        {navigationItems.map((item) => (
+          <ListItem
+            key={item.text}
+            component={Link}
+            to={item.path}
+            button
+            onClick={handleDrawerToggle}
+            sx={{
+              mb: 1,
+              borderRadius: 2,
+              bgcolor: isActive(item.path)
+                ? 'rgba(255,255,255,0.1)'
+                : 'transparent',
+              color: 'white',
+              '&:hover': {
+                bgcolor: 'rgba(255,255,255,0.2)',
+              },
+            }}
+          >
+            <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.text} />
+          </ListItem>
+        ))}
+      </List>
+
+      {user && (
+        <Box sx={{ p: 2, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 2,
+              p: 2,
+              borderRadius: 2,
+              bgcolor: 'rgba(255,255,255,0.1)',
+              cursor: 'pointer',
+              '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' },
+            }}
+            onClick={() => {
+              handleUserMenuOpen({
+                currentTarget: document.body,
+              } as React.MouseEvent<HTMLElement>);
+              handleDrawerToggle();
+            }}
+          >
+            <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.light' }}>
+              {user.name?.charAt(0) || 'U'}
+            </Avatar>
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{ color: 'white', fontWeight: 600 }}
+              >
+                {user.name || 'User'}
+              </Typography>
+              <Typography
+                variant="caption"
+                sx={{ color: 'rgba(255,255,255,0.7)' }}
+              >
+                {user.role || 'Member'}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+      )}
+    </Drawer>
+  );
+
+  // Render based on position but always include the mobile drawer
+  // Use navbar position from context only
+  const NavbarUI = position === 'left' ? <LeftSidebar /> : <TopNavbar />;
+  return (
+    <>
+      {NavbarUI}
+      <MobileDrawer />
+    </>
+  );
 };
 
 export default Navbar;
