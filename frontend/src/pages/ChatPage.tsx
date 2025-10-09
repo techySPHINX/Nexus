@@ -111,253 +111,6 @@ const ChatPage: React.FC = () => {
     }
   }, []);
 
-  // Initialize WebSocket connection
-  useEffect(() => {
-    if (!user?.id || !token) return;
-
-    const initializeWebSocket = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        // Connect to WebSocket with proper URL
-        console.log('🔌 Attempting WebSocket connection with:', {
-          userId: user.id,
-          hasToken: !!token,
-          tokenLength: token?.length,
-        });
-        await improvedWebSocketService.connect(user.id, token);
-
-        // Set up event listeners
-        improvedWebSocketService.on(
-          'NEW_MESSAGE',
-          (message: WebSocketMessage) => {
-            console.log('📨 New message received:', message);
-            const newMessage = message.data as {
-              id: string;
-              content: string;
-              senderId: string;
-              receiverId: string;
-              timestamp: string;
-              createdAt: string;
-              sender?: { name?: string };
-            };
-
-            // Check if this is a message for the current user
-            if (newMessage.receiverId === user.id) {
-              // Add to unread messages
-              setUnreadMessages((prev) => new Set([...prev, newMessage.id]));
-
-              // Update unread count for this conversation
-              const conversationKey = `${user.id}-${newMessage.senderId}`;
-              console.log(
-                `📨 New message from ${newMessage.senderId}, updating unread count for key: ${conversationKey}`
-              );
-              setUnreadCounts((prev) => {
-                const newMap = new Map(prev);
-                const currentCount = newMap.get(conversationKey) || 0;
-                newMap.set(conversationKey, currentCount + 1);
-                console.log(
-                  `📊 Updated unread count for ${conversationKey}: ${currentCount} -> ${currentCount + 1}`
-                );
-                return newMap;
-              });
-
-              // Add notification
-              const notification = {
-                id: newMessage.id,
-                type: 'message',
-                title: 'New Message',
-                message: `${newMessage.sender?.name || 'Someone'}: ${newMessage.content}`,
-                timestamp: new Date().toISOString(),
-                senderId: newMessage.senderId,
-                conversationId: conversationKey,
-              };
-
-              setNotifications((prev) => [notification, ...prev.slice(0, 9)]); // Keep last 10 notifications
-
-              // Show browser notification if permission granted
-              if (Notification.permission === 'granted') {
-                new Notification('New Message', {
-                  body: notification.message,
-                  icon: '/favicon.ico',
-                });
-              }
-            }
-
-            // Add to messages if it's for the current conversation
-            if (
-              selectedConversation &&
-              (newMessage.senderId === selectedConversation.otherUser.id ||
-                newMessage.receiverId === selectedConversation.otherUser.id)
-            ) {
-              setMessages((prev) => [...prev, newMessage]);
-            }
-
-            // Also update the conversations list to show the latest message
-            setConversations((prev) =>
-              prev
-                .map((conv) => {
-                  const otherUserId = conv.otherUser.id;
-                  if (
-                    newMessage.senderId === otherUserId ||
-                    newMessage.receiverId === otherUserId
-                  ) {
-                    return {
-                      ...conv,
-                      lastMessage: {
-                        id: newMessage.id,
-                        content: newMessage.content,
-                        senderId: newMessage.senderId,
-                        receiverId: newMessage.receiverId,
-                        timestamp: newMessage.timestamp,
-                        read: false, // Mark as unread for the receiver
-                      },
-                      unreadCount:
-                        conv.unreadCount +
-                        (newMessage.receiverId === user.id ? 1 : 0),
-                    };
-                  }
-                  return conv;
-                })
-                .sort(
-                  (a, b) =>
-                    b.lastMessage.timestamp.getTime() -
-                    a.lastMessage.timestamp.getTime()
-                )
-            );
-          }
-        );
-
-        improvedWebSocketService.on(
-          'TYPING_START',
-          (message: WebSocketMessage) => {
-            console.log('⌨️ User started typing:', message);
-            const data = message.data as { userId: string };
-            setTypingUsers((prev) => new Set([...prev, data.userId]));
-          }
-        );
-
-        improvedWebSocketService.on(
-          'TYPING_STOP',
-          (message: WebSocketMessage) => {
-            console.log('⌨️ User stopped typing:', message);
-            setTypingUsers((prev) => {
-              const newSet = new Set(prev);
-              const data = message.data as { userId: string };
-              newSet.delete(data.userId);
-              return newSet;
-            });
-          }
-        );
-
-        improvedWebSocketService.on('CONNECTION_SUCCESS', () => {
-          console.log('✅ WebSocket connected successfully');
-          setConnectionStatus('connected');
-        });
-
-        improvedWebSocketService.on('CONNECTION_ERROR', () => {
-          console.error('❌ WebSocket connection error:', message);
-          setError('Connection error. Please try again.');
-          setConnectionStatus('disconnected');
-        });
-
-        // Set up connection status listener
-        improvedWebSocketService.addStatusListener((status) => {
-          setConnectionStatus(status);
-        });
-
-        // Load conversations (mock data for now)
-        loadConversations();
-      } catch (error) {
-        console.error('❌ Failed to initialize WebSocket:', error);
-        setError('WebSocket connection failed. Chat features may be limited.');
-        // Don't set loading to false here, let the user know there's an issue but still show the interface
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeWebSocket();
-
-    // Cleanup on unmount
-    return () => {
-      improvedWebSocketService.disconnect();
-    };
-  }, [user?.id, token, loadConversations, selectedConversation]);
-
-  // Search users for new conversations
-  const handleSearchUsers = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    setSearching(true);
-    try {
-      const response = await apiService.users.search(query);
-      type ApiUser = {
-        id: string;
-        name: string;
-        email: string;
-        profile?: { avatarUrl?: string; bio?: string; location?: string };
-        role?: string;
-      };
-      const apiUsers = response.data as ApiUser[];
-
-      // Transform API data to match our interface
-      const transformedUsers: SearchUser[] = apiUsers.map((u) => ({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        profilePicture: u.profile?.avatarUrl,
-        role: u.role,
-        bio: u.profile?.bio,
-        location: u.profile?.location,
-      }));
-
-      setSearchResults(transformedUsers);
-    } catch (error) {
-      console.error('❌ Error searching users:', error);
-      setError('Failed to search users. Please try again.');
-    } finally {
-      setSearching(false);
-    }
-  }, []);
-
-  // Start new conversation
-  const handleStartConversation = useCallback((selectedUser: SearchUser) => {
-    const newConversation: Conversation = {
-      id: `conv-${Date.now()}`,
-      otherUser: selectedUser,
-      lastMessage: undefined,
-      unreadCount: 0,
-    };
-
-    setConversations((prev) => [newConversation, ...prev]);
-    setSelectedConversation(newConversation);
-    setMessages([]);
-    setNewConversationOpen(false);
-    setSearchQuery('');
-    setSearchResults([]);
-  }, []);
-
-  // Reload conversations when unreadCounts change to update UI
-  useEffect(() => {
-    if (user?.id && conversations.length > 0) {
-      // Update conversations with new unread counts
-      const updatedConversations = conversations.map((conv) => {
-        const conversationKey = `${user?.id}-${conv.otherUser.id}`;
-        const unreadCount = unreadCounts.get(conversationKey) || 0;
-        return {
-          ...conv,
-          unreadCount,
-        };
-      });
-      setConversations(updatedConversations);
-    }
-  }, [unreadCounts, user?.id, conversations]);
-
   // Load conversations from API
   const loadConversations = useCallback(async () => {
     if (!user?.id) return;
@@ -499,6 +252,257 @@ const ChatPage: React.FC = () => {
       setLoading(false);
     }
   }, [user?.id, unreadCounts]);
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    if (!user?.id || !token) return;
+
+    const initializeWebSocket = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Connect to WebSocket with proper URL
+        console.log('🔌 Attempting WebSocket connection with:', {
+          userId: user.id,
+          hasToken: !!token,
+          tokenLength: token?.length,
+        });
+        await improvedWebSocketService.connect(user.id, token);
+
+        // Set up event listeners
+        improvedWebSocketService.on(
+          'NEW_MESSAGE',
+          (message: WebSocketMessage) => {
+            console.log('📨 New message received:', message);
+            const newMessage = message.data as {
+              id: string;
+              content: string;
+              senderId: string;
+              receiverId: string;
+              timestamp: string;
+              createdAt: string;
+              sender?: { name?: string };
+            };
+
+            // Check if this is a message for the current user
+            if (newMessage.receiverId === user.id) {
+              // Add to unread messages
+              setUnreadMessages((prev) => new Set([...prev, newMessage.id]));
+
+              // Update unread count for this conversation
+              const conversationKey = `${user.id}-${newMessage.senderId}`;
+              console.log(
+                `📨 New message from ${newMessage.senderId}, updating unread count for key: ${conversationKey}`
+              );
+              setUnreadCounts((prev) => {
+                const newMap = new Map(prev);
+                const currentCount = newMap.get(conversationKey) || 0;
+                newMap.set(conversationKey, currentCount + 1);
+                console.log(
+                  `📊 Updated unread count for ${conversationKey}: ${currentCount} -> ${currentCount + 1}`
+                );
+                return newMap;
+              });
+
+              // Add notification
+              const notification = {
+                id: newMessage.id,
+                type: 'message' as const,
+                title: 'New Message',
+                message: `${newMessage.sender?.name || 'Someone'}: ${newMessage.content}`,
+                timestamp: new Date().toISOString(),
+                senderId: newMessage.senderId,
+                conversationId: conversationKey,
+              };
+
+              setNotifications((prev) => [notification, ...prev.slice(0, 9)]); // Keep last 10 notifications
+
+              // Show browser notification if permission granted
+              if (Notification.permission === 'granted') {
+                new Notification('New Message', {
+                  body: notification.message,
+                  icon: '/favicon.ico',
+                });
+              }
+            }
+
+            // Add to messages if it's for the current conversation
+            if (
+              selectedConversation &&
+              (newMessage.senderId === selectedConversation.otherUser.id ||
+                newMessage.receiverId === selectedConversation.otherUser.id)
+            ) {
+              setMessages((prev) => [...prev, newMessage]);
+            }
+
+            // Also update the conversations list to show the latest message
+            setConversations((prev) =>
+              prev
+                .map((conv) => {
+                  const otherUserId = conv.otherUser.id;
+                  if (
+                    newMessage.senderId === otherUserId ||
+                    newMessage.receiverId === otherUserId
+                  ) {
+                    return {
+                      ...conv,
+                      lastMessage: {
+                        id: newMessage.id,
+                        content: newMessage.content,
+                        senderId: newMessage.senderId,
+                        receiverId: newMessage.receiverId,
+                        timestamp: newMessage.timestamp,
+                        createdAt: newMessage.createdAt,
+                        isRead: false, // Mark as unread for the receiver
+                      },
+                      unreadCount:
+                        conv.unreadCount +
+                        (newMessage.receiverId === user.id ? 1 : 0),
+                    };
+                  }
+                  return conv;
+                })
+                .sort(
+                  (a, b) => {
+                    if (!a.lastMessage || !b.lastMessage) return 0;
+                    return new Date(b.lastMessage.timestamp).getTime() -
+                      new Date(a.lastMessage.timestamp).getTime();
+                  }
+                )
+            );
+          }
+        );
+
+        improvedWebSocketService.on(
+          'TYPING_START',
+          (message: WebSocketMessage) => {
+            console.log('⌨️ User started typing:', message);
+            const data = message.data as { userId: string };
+            setTypingUsers((prev) => new Set([...prev, data.userId]));
+          }
+        );
+
+        improvedWebSocketService.on(
+          'TYPING_STOP',
+          (message: WebSocketMessage) => {
+            console.log('⌨️ User stopped typing:', message);
+            setTypingUsers((prev) => {
+              const newSet = new Set(prev);
+              const data = message.data as { userId: string };
+              newSet.delete(data.userId);
+              return newSet;
+            });
+          }
+        );
+
+        improvedWebSocketService.on('CONNECTION_SUCCESS', () => {
+          console.log('✅ WebSocket connected successfully');
+          setConnectionStatus('connected');
+        });
+
+        improvedWebSocketService.on('CONNECTION_ERROR', () => {
+          console.error('❌ WebSocket connection error');
+          setError('Connection error. Please try again.');
+          setConnectionStatus('disconnected');
+        });
+
+        // Set up connection status listener
+        improvedWebSocketService.addStatusListener((status) => {
+          setConnectionStatus(status);
+        });
+
+        // Load conversations (mock data for now)
+        loadConversations();
+      } catch (error) {
+        console.error('❌ Failed to initialize WebSocket:', error);
+        setError('WebSocket connection failed. Chat features may be limited.');
+        // Don't set loading to false here, let the user know there's an issue but still show the interface
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeWebSocket();
+
+    // Cleanup on unmount
+    return () => {
+      improvedWebSocketService.disconnect();
+    };
+  }, [user?.id, token, loadConversations, selectedConversation]);
+
+  // Search users for new conversations
+  const handleSearchUsers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearching(true);
+    try {
+      const response = await apiService.users.search(query);
+      type ApiUser = {
+        id: string;
+        name: string;
+        email: string;
+        profile?: { avatarUrl?: string; bio?: string; location?: string };
+        role?: string;
+      };
+      const apiUsers = response.data as ApiUser[];
+
+      // Transform API data to match our interface
+      const transformedUsers: SearchUser[] = apiUsers.map((u) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        profilePicture: u.profile?.avatarUrl,
+        role: u.role,
+        bio: u.profile?.bio,
+        location: u.profile?.location,
+      }));
+
+      setSearchResults(transformedUsers);
+    } catch (error) {
+      console.error('❌ Error searching users:', error);
+      setError('Failed to search users. Please try again.');
+    } finally {
+      setSearching(false);
+    }
+  }, []);
+
+  // Start new conversation
+  const handleStartConversation = useCallback((selectedUser: SearchUser) => {
+    const newConversation: Conversation = {
+      id: `conv-${Date.now()}`,
+      otherUser: selectedUser,
+      lastMessage: undefined,
+      unreadCount: 0,
+    };
+
+    setConversations((prev) => [newConversation, ...prev]);
+    setSelectedConversation(newConversation);
+    setMessages([]);
+    setNewConversationOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  }, []);
+
+  // Reload conversations when unreadCounts change to update UI
+  useEffect(() => {
+    if (user?.id && conversations.length > 0) {
+      // Update conversations with new unread counts
+      const updatedConversations = conversations.map((conv) => {
+        const conversationKey = `${user?.id}-${conv.otherUser.id}`;
+        const unreadCount = unreadCounts.get(conversationKey) || 0;
+        return {
+          ...conv,
+          unreadCount,
+        };
+      });
+      setConversations(updatedConversations);
+    }
+  }, [unreadCounts, user?.id, conversations]);
+
 
   // Handle conversation selection
   const handleConversationSelect = useCallback(

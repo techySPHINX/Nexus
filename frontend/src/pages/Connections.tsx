@@ -406,8 +406,9 @@ const Connections: React.FC = () => {
                 paginatedData.map((item: Row) => {
                   if (tabValue === 0) {
                     // Connections tab
+                    const connection = item as Connection;
                     return (
-                      <TableRow key={item.id} hover>
+                      <TableRow key={connection.id} hover>
                         <TableCell>
                           <Box
                             sx={{
@@ -417,44 +418,44 @@ const Connections: React.FC = () => {
                             }}
                           >
                             <Avatar sx={{ bgcolor: 'primary.main' }}>
-                              {item.user?.name?.charAt(0) || '?'}
+                              {connection.user?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
                               <Typography
                                 variant="subtitle2"
                                 sx={{ fontWeight: 600 }}
                               >
-                                {item.user?.name || 'Unknown User'}
+                                {connection.user?.name || 'Unknown User'}
                               </Typography>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                               >
-                                {item.user?.email || 'No email'}
+                                {connection.user?.email || 'No email'}
                               </Typography>
                             </Box>
                           </Box>
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={item.user?.role || 'Unknown'}
-                            color={getRoleColor(item.user?.role || '')}
+                            label={connection.user?.role || 'Unknown'}
+                            color={getRoleColor(connection.user?.role || '')}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={item.status}
+                            label={connection.status}
                             color={
-                              item.status === 'ACCEPTED' ? 'success' : 'default'
+                              connection.status === 'ACCEPTED' ? 'success' : 'default'
                             }
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {item.createdAt
-                              ? new Date(item.createdAt).toLocaleDateString()
+                            {connection.createdAt
+                              ? new Date(connection.createdAt).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
                         </TableCell>
@@ -463,7 +464,7 @@ const Connections: React.FC = () => {
                             <Tooltip title="Send Message">
                               <IconButton
                                 size="small"
-                                onClick={() => handleSendMessage(item.user?.id)}
+                                onClick={() => handleSendMessage(connection.user?.id)}
                                 sx={{ color: 'primary.main' }}
                               >
                                 <MessageIcon />
@@ -472,7 +473,7 @@ const Connections: React.FC = () => {
                             <Tooltip title="Remove Connection">
                               <IconButton
                                 size="small"
-                                onClick={() => handleRemoveConnection(item.id)}
+                                onClick={() => handleRemoveConnection(connection.id)}
                                 sx={{ color: 'error.main' }}
                               >
                                 <CloseIcon />
@@ -484,8 +485,9 @@ const Connections: React.FC = () => {
                     );
                   } else if (tabValue === 1) {
                     // Pending Received tab
+                    const pendingRequest = item as PendingRequest;
                     return (
-                      <TableRow key={item.id} hover>
+                      <TableRow key={pendingRequest.id} hover>
                         <TableCell>
                           <Box
                             sx={{
@@ -495,35 +497,35 @@ const Connections: React.FC = () => {
                             }}
                           >
                             <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                              {item.requester?.name?.charAt(0) || '?'}
+                              {pendingRequest.requester?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
                               <Typography
                                 variant="subtitle2"
                                 sx={{ fontWeight: 600 }}
                               >
-                                {item.requester?.name || 'Unknown User'}
+                                {pendingRequest.requester?.name || 'Unknown User'}
                               </Typography>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                               >
-                                {item.requester?.email || 'No email'}
+                                {pendingRequest.requester?.email || 'No email'}
                               </Typography>
                             </Box>
                           </Box>
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={item.requester?.role || 'Unknown'}
-                            color={getRoleColor(item.requester?.role || '')}
+                            label={pendingRequest.requester?.role || 'Unknown'}
+                            color={getRoleColor(pendingRequest.requester?.role || '')}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {item.createdAt
-                              ? new Date(item.createdAt).toLocaleDateString()
+                            {pendingRequest.createdAt
+                              ? new Date(pendingRequest.createdAt).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
                         </TableCell>
@@ -532,7 +534,7 @@ const Connections: React.FC = () => {
                             <Button
                               size="small"
                               startIcon={<CheckIcon />}
-                              onClick={() => handleAcceptRequest(item.id)}
+                              onClick={() => handleAcceptRequest(pendingRequest.id)}
                               variant="contained"
                               color="success"
                               sx={{
@@ -548,7 +550,7 @@ const Connections: React.FC = () => {
                             <Button
                               size="small"
                               startIcon={<CloseIcon />}
-                              onClick={() => handleRejectRequest(item.id)}
+                              onClick={() => handleRejectRequest(pendingRequest.id)}
                               variant="outlined"
                               color="error"
                               sx={{
@@ -567,8 +569,9 @@ const Connections: React.FC = () => {
                     );
                   } else if (tabValue === 2) {
                     // Pending Sent tab
+                    const pendingSent = item as PendingRequest;
                     return (
-                      <TableRow key={item.id} hover>
+                      <TableRow key={pendingSent.id} hover>
                         <TableCell>
                           <Box
                             sx={{
@@ -578,35 +581,35 @@ const Connections: React.FC = () => {
                             }}
                           >
                             <Avatar sx={{ bgcolor: 'info.main' }}>
-                              {item.recipient?.name?.charAt(0) || '?'}
+                              {pendingSent.recipient?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
                               <Typography
                                 variant="subtitle2"
                                 sx={{ fontWeight: 600 }}
                               >
-                                {item.recipient?.name || 'Unknown User'}
+                                {pendingSent.recipient?.name || 'Unknown User'}
                               </Typography>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                               >
-                                {item.recipient?.email || 'No email'}
+                                {pendingSent.recipient?.email || 'No email'}
                               </Typography>
                             </Box>
                           </Box>
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={item.recipient?.role || 'Unknown'}
-                            color={getRoleColor(item.recipient?.role || '')}
+                            label={pendingSent.recipient?.role || 'Unknown'}
+                            color={getRoleColor(pendingSent.recipient?.role || '')}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {item.createdAt
-                              ? new Date(item.createdAt).toLocaleDateString()
+                            {pendingSent.createdAt
+                              ? new Date(pendingSent.createdAt).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
                         </TableCell>
@@ -617,7 +620,7 @@ const Connections: React.FC = () => {
                           <Tooltip title="Cancel Request">
                             <IconButton
                               size="small"
-                              onClick={() => handleRejectRequest(item.id)}
+                              onClick={() => handleRejectRequest(pendingSent.id)}
                               sx={{ color: 'error.main' }}
                             >
                               <CloseIcon />
@@ -628,8 +631,9 @@ const Connections: React.FC = () => {
                     );
                   } else if (tabValue === 3) {
                     // Suggestions tab
+                    const suggestion = item as ConnectionSuggestion;
                     return (
-                      <TableRow key={item.user.id} hover>
+                      <TableRow key={suggestion.user.id} hover>
                         <TableCell>
                           <Box
                             sx={{
@@ -639,46 +643,46 @@ const Connections: React.FC = () => {
                             }}
                           >
                             <Avatar sx={{ bgcolor: 'success.main' }}>
-                              {item.user?.name?.charAt(0) || '?'}
+                              {suggestion.user?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
                               <Typography
                                 variant="subtitle2"
                                 sx={{ fontWeight: 600 }}
                               >
-                                {item.user?.name || 'Unknown User'}
+                                {suggestion.user?.name || 'Unknown User'}
                               </Typography>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
                               >
-                                {item.user?.email || 'No email'}
+                                {suggestion.user?.email || 'No email'}
                               </Typography>
                             </Box>
                           </Box>
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={item.user?.role || 'Unknown'}
-                            color={getRoleColor(item.user?.role || '')}
+                            label={suggestion.user?.role || 'Unknown'}
+                            color={getRoleColor(suggestion.user?.role || '')}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {item.reason}
+                            {suggestion.reasons.join(', ')}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {item.mutualConnections} mutual connections
+                            Match Score: {suggestion.matchScore}%
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Button
                             size="small"
                             startIcon={<PersonAddIcon />}
-                            onClick={() => handleConnect(item.user.id)}
+                            onClick={() => handleConnect(suggestion.user.id)}
                             variant="contained"
                             color="primary"
                             sx={{

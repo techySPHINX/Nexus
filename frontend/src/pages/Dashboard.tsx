@@ -222,7 +222,7 @@ const Dashboard: React.FC = () => {
               // Add to notifications
               const notification = {
                 id: newMessage.id,
-                type: 'message',
+                type: 'message' as const,
                 title: 'New Message',
                 description: `${newMessage.sender?.name || 'Someone'} sent you a message`,
                 timestamp: new Date().toISOString(),
