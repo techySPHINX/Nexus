@@ -24,7 +24,7 @@ interface AuthenticatedSocket extends Socket {
 
 /**
  * Improved WebSocket Gateway for real-time messaging functionality.
- * 
+ *
  * Key improvements:
  * - Prevents message duplication by only broadcasting to recipients
  * - Proper connection management with user tracking
@@ -46,7 +46,7 @@ export class ImprovedMessagingGateway
 
   // Track connected users to prevent duplicate connections
   private connectedUsers = new Map<string, AuthenticatedSocket>();
-  
+
   // Track message IDs to prevent duplicates
   private processedMessages = new Set<string>();
 
@@ -68,7 +68,7 @@ export class ImprovedMessagingGateway
    * Handles new WebSocket connections.
    * Authenticates the user and joins them to their personal room.
    * Prevents duplicate connections for the same user.
-   * 
+   *
    * @param client - The WebSocket client socket
    */
   async handleConnection(client: AuthenticatedSocket) {
@@ -77,7 +77,7 @@ export class ImprovedMessagingGateway
 
       // Extract user info from query parameters
       const { userId, token } = client.handshake.query;
-      
+
       if (!userId || !token) {
         console.log('❌ Missing userId or token in connection query');
         client.emit('CONNECTION_ERROR', {
@@ -106,7 +106,9 @@ export class ImprovedMessagingGateway
       // Check if user is already connected and disconnect old connection
       const existingConnection = this.connectedUsers.get(client.userId);
       if (existingConnection && existingConnection.id !== client.id) {
-        console.log(`🔄 Disconnecting existing connection for user ${client.userId}`);
+        console.log(
+          `🔄 Disconnecting existing connection for user ${client.userId}`,
+        );
         existingConnection.emit('FORCE_DISCONNECT', {
           reason: 'New connection established',
           timestamp: new Date().toISOString(),
@@ -133,7 +135,6 @@ export class ImprovedMessagingGateway
 
       // Notify other users that this user is online
       this.broadcastUserStatus(client.userId, 'ONLINE');
-
     } catch (error) {
       console.error('❌ Error handling connection:', error);
       client.emit('CONNECTION_ERROR', {
@@ -147,32 +148,32 @@ export class ImprovedMessagingGateway
   /**
    * Handles WebSocket disconnections.
    * Removes user from connected users and notifies others of offline status.
-   * 
+   *
    * @param client - The WebSocket client socket
    */
   handleDisconnect(client: AuthenticatedSocket) {
     if (client.userId) {
       console.log(`🔌 User ${client.userId} disconnected`);
-      
+
       // Remove from connected users
       this.connectedUsers.delete(client.userId);
-      
+
       // Notify other users that this user is offline
       this.broadcastUserStatus(client.userId, 'OFFLINE');
-      
+
       console.log(`📊 Total connected users: ${this.connectedUsers.size}`);
     }
   }
 
   /**
    * Handles incoming 'NEW_MESSAGE' events.
-   * 
+   *
    * Key improvements:
    * - Prevents duplicate message processing using message IDs
    * - Only broadcasts to recipient (not sender) to prevent duplicates
    * - Sends confirmation to sender separately
    * - Proper error handling and logging
-   * 
+   *
    * @param data - The message data (receiverId, content)
    * @param client - The authenticated WebSocket client socket
    * @returns An object indicating success or error
@@ -189,7 +190,7 @@ export class ImprovedMessagingGateway
 
       // Generate unique message ID for deduplication
       const messageId = `${client.userId}_${data.receiverId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Check if this message was already processed
       if (this.processedMessages.has(messageId)) {
         console.log(`⚠️ Duplicate message detected, ignoring: ${messageId}`);
@@ -230,7 +231,6 @@ export class ImprovedMessagingGateway
 
       console.log('✅ Message sent successfully via WebSocket');
       return { success: true, message: messageWithId };
-
     } catch (error) {
       console.error('❌ Error handling new message:', error);
       client.emit('MESSAGE_ERROR', {
@@ -245,7 +245,7 @@ export class ImprovedMessagingGateway
   /**
    * Handles typing indicators.
    * Broadcasts typing status to the recipient.
-   * 
+   *
    * @param data - Contains receiverId and typing status
    * @param client - The authenticated WebSocket client socket
    */
@@ -284,7 +284,7 @@ export class ImprovedMessagingGateway
   /**
    * Handles read receipts.
    * Notifies the sender that their message was read.
-   * 
+   *
    * @param data - Contains messageId and senderId
    * @param client - The authenticated WebSocket client socket
    */
@@ -305,7 +305,7 @@ export class ImprovedMessagingGateway
 
   /**
    * Handles ping/pong for connection health checks.
-   * 
+   *
    * @param client - The authenticated WebSocket client socket
    */
   @SubscribeMessage('PING')
@@ -317,7 +317,7 @@ export class ImprovedMessagingGateway
 
   /**
    * Broadcasts user online/offline status to all connected users.
-   * 
+   *
    * @param userId - The user ID
    * @param status - 'ONLINE' or 'OFFLINE'
    */
@@ -332,7 +332,7 @@ export class ImprovedMessagingGateway
   /**
    * Sends a message to a specific user.
    * Used by other services to send notifications.
-   * 
+   *
    * @param userId - The target user ID
    * @param event - The event name
    * @param data - The data to send
@@ -344,7 +344,7 @@ export class ImprovedMessagingGateway
 
   /**
    * Gets the number of connected users.
-   * 
+   *
    * @returns The number of connected users
    */
   getConnectedUsersCount(): number {
@@ -353,7 +353,7 @@ export class ImprovedMessagingGateway
 
   /**
    * Gets a list of connected user IDs.
-   * 
+   *
    * @returns Array of connected user IDs
    */
   getConnectedUserIds(): string[] {
@@ -363,14 +363,14 @@ export class ImprovedMessagingGateway
   /**
    * Broadcasts a message to the recipient and sender.
    * Used when a message is sent via API to ensure real-time delivery.
-   * 
+   *
    * @param message - The message object to broadcast
    */
   broadcastMessage(message: any) {
     try {
       // Generate a unique ID for deduplication
       const messageId = `${message.id}_${message.senderId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
+
       // Add unique ID to message for frontend deduplication
       const messageWithId = {
         ...message,
@@ -394,7 +394,6 @@ export class ImprovedMessagingGateway
         to: message.receiverId,
         content: message.content,
       });
-
     } catch (error) {
       console.error('❌ Error broadcasting message:', error);
     }
@@ -406,17 +405,19 @@ export class ImprovedMessagingGateway
    */
   cleanupProcessedMessages() {
     // Keep only messages from the last hour
-    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
     const messagesToKeep = new Set<string>();
-    
+
     for (const messageId of this.processedMessages) {
       const timestamp = parseInt(messageId.split('_')[2]);
       if (timestamp > oneHourAgo) {
         messagesToKeep.add(messageId);
       }
     }
-    
+
     this.processedMessages = messagesToKeep;
-    console.log(`🧹 Cleaned up processed messages. Remaining: ${this.processedMessages.size}`);
+    console.log(
+      `🧹 Cleaned up processed messages. Remaining: ${this.processedMessages.size}`,
+    );
   }
 }

@@ -206,11 +206,13 @@ export class MessagingService {
 
     // Group messages by conversation partner
     const conversationMap = new Map<string, any>();
-    
+
     messages.forEach((message) => {
-      const otherUserId = message.senderId === userId ? message.receiverId : message.senderId;
-      const otherUser = message.senderId === userId ? message.receiver : message.sender;
-      
+      const otherUserId =
+        message.senderId === userId ? message.receiverId : message.senderId;
+      const otherUser =
+        message.senderId === userId ? message.receiver : message.sender;
+
       if (!conversationMap.has(otherUserId)) {
         conversationMap.set(otherUserId, {
           conversationId: `${userId}-${otherUserId}`,

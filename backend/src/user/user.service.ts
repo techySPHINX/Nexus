@@ -41,7 +41,7 @@ export class UserService {
     }
 
     const searchTerm = query.trim().toLowerCase();
-    
+
     return this.prisma.user.findMany({
       where: {
         OR: [
