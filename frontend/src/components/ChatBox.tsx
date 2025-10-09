@@ -48,7 +48,7 @@ interface ChatBoxProps {
 
 /**
  * ChatBox Component
- * 
+ *
  * Features:
  * - Displays selected conversation
  * - Shows message list and input
@@ -78,7 +78,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             backgroundColor: 'grey.50',
           }}
         >
-          <PersonIcon sx={{ fontSize: 64, mb: 2, opacity: 0.5, color: 'text.secondary' }} />
+          <PersonIcon
+            sx={{ fontSize: 64, mb: 2, opacity: 0.5, color: 'text.secondary' }}
+          />
           <Typography variant="h6" gutterBottom color="text.secondary">
             Select a conversation
           </Typography>
@@ -92,7 +94,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({
 
   return (
     <Card sx={{ height: '70vh', overflow: 'hidden' }}>
-      <CardContent sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <CardContent
+        sx={{ p: 0, height: '100%', display: 'flex', flexDirection: 'column' }}
+      >
         {/* Chat Header */}
         <Box
           sx={{
@@ -120,7 +124,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               {conversation.otherUser.email}
             </Typography>
           </Box>
-          
+
           {/* Typing Indicator */}
           {isTyping && typingUsers.size > 0 && (
             <motion.div
@@ -128,10 +132,19 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
             >
-              <Typography variant="body2" color="primary.main" sx={{ fontStyle: 'italic' }}>
-                {Array.from(typingUsers).map(userId => 
-                  conversation.otherUser.id === userId ? conversation.otherUser.name : userId
-                ).join(', ')} typing...
+              <Typography
+                variant="body2"
+                color="primary.main"
+                sx={{ fontStyle: 'italic' }}
+              >
+                {Array.from(typingUsers)
+                  .map((userId) =>
+                    conversation.otherUser.id === userId
+                      ? conversation.otherUser.name
+                      : userId
+                  )
+                  .join(', ')}{' '}
+                typing...
               </Typography>
             </motion.div>
           )}

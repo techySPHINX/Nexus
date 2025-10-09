@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Container,
   Grid,
-  Card,
-  CardContent,
   Typography,
   Box,
   Avatar,
@@ -15,37 +13,32 @@ import {
   ListItemAvatar,
   Divider,
   LinearProgress,
-  Stack,
   CircularProgress,
   Alert,
   Paper,
   IconButton,
 } from '@mui/material';
 import {
-  People,
   Message,
-  TrendingUp,
   Notifications,
-  CalendarToday,
   LocationOn,
   Event,
   Forum,
   PersonAdd,
   Assignment,
   Groups,
-  CheckCircle,
   Schedule,
   Business,
-  School,
-  Work,
   MoreVert,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { motion } from 'framer-motion';
+// import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useConnections from '../hooks/useConnections';
 import { apiService } from '../services/api';
 import { improvedWebSocketService } from '../services/websocket.improved';
+import type { WebSocketMessage } from '../services/websocket.improved';
+// import type { Connection, ConnectionSuggestion } from '../types/connections';
 
 interface DashboardStats {
   connections: number;
@@ -96,20 +89,31 @@ const Dashboard: React.FC = () => {
     upcomingEvents: 0,
     newAlumni: 0,
   });
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
+    []
+  );
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [suggestedConnections, setSuggestedConnections] = useState<SuggestedConnection[]>([]);
+  const [suggestedConnections, setSuggestedConnections] = useState<
+    SuggestedConnection[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [unreadMessages, setUnreadMessages] = useState<number>(0);
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<
+    Array<{
+      id: string;
+      type: 'message' | 'connection' | 'event';
+      title: string;
+      description: string;
+      timestamp: string;
+    }>
+  >([]);
 
   // Use the connections hook for real data
   const {
     connections,
     pendingReceived,
     suggestions,
-    stats: connectionStats,
+    // stats: connectionStats,
     loading: connectionsLoading,
     error: connectionsError,
     fetchAll,
@@ -119,23 +123,37 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (user?.id) {
       fetchAll({ page: 1, limit: 20 });
-      
+
       // Also test the API directly for debugging
       const testPendingRequests = async () => {
         try {
-          const response = await apiService.connections.getPendingReceived({ page: 1, limit: 10 });
+          const response = await apiService.connections.getPendingReceived({
+            page: 1,
+            limit: 10,
+          });
           console.log('🧪 Direct API test - Pending requests:', response.data);
         } catch (error) {
           console.error('🧪 Direct API test failed:', error);
         }
       };
-      
+
       testPendingRequests();
     }
   }, [user?.id, fetchAll]);
 
+  interface AppUserProfile {
+    bio?: string;
+    location?: string;
+    skills?: unknown[];
+  }
+  interface AppUser {
+    name?: string;
+    email?: string;
+    role?: string;
+    profile?: AppUserProfile;
+  }
   const calculateProfileCompletion = React.useCallback(
-    (user: any): number => {
+    (user: AppUser | null): number => {
       if (!user) return 0;
 
       let completed = 0;
@@ -160,18 +178,19 @@ const Dashboard: React.FC = () => {
       if (response.data) {
         // Count total messages across all conversations
         let totalMessages = 0;
-        response.data.forEach((conv: any) => {
-          if (conv.latestMessage) {
-            totalMessages++;
+        (response.data as Array<{ latestMessage?: unknown }>).forEach(
+          (conv) => {
+            if (conv.latestMessage) {
+              totalMessages++;
+            }
           }
-        });
-        setUnreadMessages(totalMessages);
-        setStats(prev => ({
+        );
+        setStats((prev) => ({
           ...prev,
           messages: totalMessages,
         }));
       }
-    } catch (err) {
+    } catch {
       console.log('Could not fetch message count');
     }
   };
@@ -183,62 +202,78 @@ const Dashboard: React.FC = () => {
     const initializeWebSocket = async () => {
       try {
         await improvedWebSocketService.connect(user.id, token);
-        
+
         // Listen for new messages
-        improvedWebSocketService.on('NEW_MESSAGE', (message: any) => {
-          const newMessage = message.data;
-          if (newMessage.receiverId === user.id) {
-            // Update message count
-            setStats(prev => ({
-              ...prev,
-              messages: prev.messages + 1,
-            }));
-            
-            // Add to notifications
-            const notification = {
-              id: newMessage.id,
-              type: 'message',
-              title: 'New Message',
-              description: `${newMessage.sender?.name || 'Someone'} sent you a message`,
-              timestamp: new Date().toISOString(),
+        improvedWebSocketService.on(
+          'NEW_MESSAGE',
+          (message: WebSocketMessage) => {
+            const newMessage = message.data as {
+              id: string;
+              sender?: { name?: string };
+              receiverId: string;
             };
-            
-            setNotifications(prev => [notification, ...prev.slice(0, 4)]); // Keep last 5 notifications
-            
-            // Add to recent activities
-            setRecentActivities(prev => [
-              {
+            if (newMessage.receiverId === user.id) {
+              // Update message count
+              setStats((prev) => ({
+                ...prev,
+                messages: prev.messages + 1,
+              }));
+
+              // Add to notifications
+              const notification = {
                 id: newMessage.id,
                 type: 'message',
                 title: 'New Message',
-                description: `You received a message from ${newMessage.sender?.name || 'Someone'}`,
-                timestamp: new Date().toLocaleDateString(),
-                user: { name: newMessage.sender?.name || 'Unknown', avatar: '' }
-              },
-              ...prev.slice(0, 4) // Keep last 5 activities
-            ]);
+                description: `${newMessage.sender?.name || 'Someone'} sent you a message`,
+                timestamp: new Date().toISOString(),
+              };
+
+              setNotifications((prev) => [notification, ...prev.slice(0, 4)]); // Keep last 5 notifications
+
+              // Add to recent activities
+              setRecentActivities((prev) => [
+                {
+                  id: newMessage.id,
+                  type: 'message',
+                  title: 'New Message',
+                  description: `You received a message from ${newMessage.sender?.name || 'Someone'}`,
+                  timestamp: new Date().toLocaleDateString(),
+                  user: {
+                    name: newMessage.sender?.name || 'Unknown',
+                    avatar: '',
+                  },
+                },
+                ...prev.slice(0, 4), // Keep last 5 activities
+              ]);
+            }
           }
-        });
+        );
 
         // Listen for new connections
-        improvedWebSocketService.on('CONNECTION_REQUEST', (data: any) => {
-          const notification = {
-            id: data.id,
-            type: 'connection',
-            title: 'New Connection Request',
-            description: `${data.sender?.name || 'Someone'} wants to connect with you`,
-            timestamp: new Date().toISOString(),
-          };
-          
-          setNotifications(prev => [notification, ...prev.slice(0, 4)]);
-          
-          // Update pending requests count
-          setStats(prev => ({
-            ...prev,
-            pendingRequests: prev.pendingRequests + 1,
-          }));
-        });
+        improvedWebSocketService.on(
+          'CONNECTION_REQUEST',
+          (message: WebSocketMessage) => {
+            const data = message.data as {
+              id: string;
+              sender?: { name?: string };
+            };
+            const notification = {
+              id: data.id,
+              type: 'connection' as const,
+              title: 'New Connection Request',
+              description: `${data.sender?.name || 'Someone'} wants to connect with you`,
+              timestamp: new Date().toISOString(),
+            };
 
+            setNotifications((prev) => [notification, ...prev.slice(0, 4)]);
+
+            // Update pending requests count
+            setStats((prev) => ({
+              ...prev,
+              pendingRequests: prev.pendingRequests + 1,
+            }));
+          }
+        );
       } catch (error) {
         console.error('Failed to initialize WebSocket for dashboard:', error);
       }
@@ -256,12 +291,12 @@ const Dashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch message count
         await fetchMessageCount();
-        
+
         // Update stats with real data from connections
-        setStats(prev => ({
+        setStats((prev) => ({
           ...prev,
           connections: connections.length,
           pendingRequests: pendingReceived.length,
@@ -276,38 +311,58 @@ const Dashboard: React.FC = () => {
 
         // Fetch recent activities from API
         try {
-          const activitiesResponse = await apiService.messages.getAllConversations();
+          const activitiesResponse =
+            await apiService.messages.getAllConversations();
           const activities: RecentActivity[] = [];
-          
+
           if (activitiesResponse.data?.conversations) {
-            activitiesResponse.data.conversations.slice(0, 3).forEach((conv: any) => {
-              activities.push({
-                id: conv.id,
-                type: 'message',
-                title: 'New Message',
-                description: `You have a conversation with ${conv.participant?.name || 'Unknown'}`,
-                timestamp: new Date(conv.updatedAt).toLocaleDateString(),
-                user: { name: conv.participant?.name || 'Unknown', avatar: '' }
-              });
-            });
+            activitiesResponse.data.conversations
+              .slice(0, 3)
+              .forEach(
+                (conv: {
+                  id: string;
+                  participant?: { name?: string };
+                  updatedAt: string;
+                }) => {
+                  activities.push({
+                    id: conv.id,
+                    type: 'message',
+                    title: 'New Message',
+                    description: `You have a conversation with ${conv.participant?.name || 'Unknown'}`,
+                    timestamp: new Date(conv.updatedAt).toLocaleDateString(),
+                    user: {
+                      name: conv.participant?.name || 'Unknown',
+                      avatar: '',
+                    },
+                  });
+                }
+              );
           }
-          
+
           // Add connection activities
           if (connections.length > 0) {
-            connections.slice(0, 2).forEach((conn: any) => {
-              activities.push({
-                id: conn.id,
-                type: 'connection',
-                title: 'New Connection',
-                description: `Connected with ${conn.user?.name || 'Unknown User'}`,
-                timestamp: new Date(conn.createdAt).toLocaleDateString(),
-                user: { name: conn.user?.name || 'Unknown', avatar: '' }
-              });
-            });
+            connections
+              .slice(0, 2)
+              .forEach(
+                (conn: {
+                  id: string;
+                  user?: { name?: string };
+                  createdAt: string;
+                }) => {
+                  activities.push({
+                    id: conn.id,
+                    type: 'connection',
+                    title: 'New Connection',
+                    description: `Connected with ${conn.user?.name || 'Unknown User'}`,
+                    timestamp: new Date(conn.createdAt).toLocaleDateString(),
+                    user: { name: conn.user?.name || 'Unknown', avatar: '' },
+                  });
+                }
+              );
           }
-          
+
           setRecentActivities(activities);
-        } catch (err) {
+        } catch {
           console.log('No recent activities available');
         }
 
@@ -316,49 +371,90 @@ const Dashboard: React.FC = () => {
           // TODO: Add events API to apiService
           // const eventsResponse = await apiService.events.getAll();
           const events: UpcomingEvent[] = [];
-          
+
           // Mock events data for now
           events.push({
             id: '1',
             title: 'Alumni Meet 2025',
-            date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString(),
+            date: new Date(
+              Date.now() + 7 * 24 * 60 * 60 * 1000
+            ).toLocaleDateString(),
             location: 'KIIT Campus',
-            attendees: 150
+            attendees: 150,
           });
-          
+
           setUpcomingEvents(events);
-        } catch (err) {
+        } catch {
           console.log('No events available');
         }
 
         // Transform suggestions to dashboard format
-        const dashboardSuggestions: SuggestedConnection[] = suggestions.slice(0, 3).map((suggestion: any) => ({
-          id: suggestion.user.id,
-          name: suggestion.user.name,
-          title: suggestion.user.profile?.bio || 'Professional',
-          company: suggestion.user.profile?.location || 'KIIT University',
-          avatar: suggestion.user.profile?.avatarUrl || '',
-          matchScore: Math.floor(Math.random() * 20) + 80 // Mock match score
-        }));
-        
-        setSuggestedConnections(dashboardSuggestions);
+        const dashboardSuggestions: SuggestedConnection[] = suggestions
+          .slice(0, 3)
+          .map(
+            (suggestion: {
+              user: {
+                id: string;
+                name: string;
+                profile?: {
+                  bio?: string;
+                  location?: string;
+                  avatarUrl?: string;
+                };
+              };
+            }) => ({
+              id: suggestion.user.id,
+              name: suggestion.user.name,
+              title: suggestion.user.profile?.bio || 'Professional',
+              company: suggestion.user.profile?.location || 'KIIT University',
+              avatar: suggestion.user.profile?.avatarUrl || '',
+              matchScore: Math.floor(Math.random() * 20) + 80, // Mock match score
+            })
+          );
 
-      } catch (err) {
+        setSuggestedConnections(dashboardSuggestions);
+      } catch {
         setError('Failed to load dashboard data');
-        console.error('Dashboard error:', err);
+        console.error('Dashboard error');
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, [connections, pendingReceived, suggestions, user, calculateProfileCompletion]);
+  }, [
+    connections,
+    pendingReceived,
+    suggestions,
+    user,
+    calculateProfileCompletion,
+  ]);
 
   const quickActions = [
-    { title: 'Post Update', icon: <Forum />, color: 'primary', action: () => navigate('/feed') },
-    { title: 'Find People', icon: <PersonAdd />, color: 'secondary', action: () => navigate('/connections') },
-    { title: 'Join Community', icon: <Groups />, color: 'info', action: () => navigate('/community') },
-    { title: 'Resources', icon: <Assignment />, color: 'success', action: () => navigate('/resources') },
+    {
+      title: 'Post Update',
+      icon: <Forum />,
+      color: 'primary',
+      action: () => navigate('/feed'),
+    },
+    {
+      title: 'Find People',
+      icon: <PersonAdd />,
+      color: 'secondary',
+      action: () => navigate('/connections'),
+    },
+    {
+      title: 'Join Community',
+      icon: <Groups />,
+      color: 'info',
+      action: () => navigate('/community'),
+    },
+    {
+      title: 'Resources',
+      icon: <Assignment />,
+      color: 'success',
+      action: () => navigate('/resources'),
+    },
   ];
 
   if (loading || connectionsLoading) {
@@ -390,7 +486,12 @@ const Dashboard: React.FC = () => {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       {/* Professional Header */}
       <Box sx={{ mb: 4 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
+        >
           <Typography
             variant="h4"
             component="h1"
@@ -427,14 +528,23 @@ const Dashboard: React.FC = () => {
         {/* Left Column */}
         <Grid item xs={12} md={8}>
           {/* Stats Overview */}
-          <Paper sx={{ p: 3, mb: 3, background: 'linear-gradient(135deg, #f8faf8 0%, #ffffff 100%)' }}>
+          <Paper
+            sx={{
+              p: 3,
+              mb: 3,
+              background: 'linear-gradient(135deg, #f8faf8 0%, #ffffff 100%)',
+            }}
+          >
             <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
               Network Overview
             </Typography>
             <Grid container spacing={2}>
               <Grid item xs={6} sm={3}>
                 <Box textAlign="center">
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'primary.main' }}
+                  >
                     {stats.connections}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -444,7 +554,10 @@ const Dashboard: React.FC = () => {
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Box textAlign="center">
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'secondary.main' }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'secondary.main' }}
+                  >
                     {stats.messages}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -454,7 +567,10 @@ const Dashboard: React.FC = () => {
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Box textAlign="center">
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'warning.main' }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'warning.main' }}
+                  >
                     {stats.pendingRequests}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -464,7 +580,10 @@ const Dashboard: React.FC = () => {
               </Grid>
               <Grid item xs={6} sm={3}>
                 <Box textAlign="center">
-                  <Typography variant="h4" sx={{ fontWeight: 700, color: 'success.main' }}>
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'success.main' }}
+                  >
                     {stats.profileCompletion}%
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
@@ -514,11 +633,20 @@ const Dashboard: React.FC = () => {
 
           {/* Recent Activity */}
           <Paper sx={{ p: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Recent Activity
               </Typography>
-              <Button variant="text" size="small" onClick={() => navigate('/messages')}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/messages')}
+              >
                 View All
               </Button>
             </Box>
@@ -549,7 +677,10 @@ const Dashboard: React.FC = () => {
                             <Typography variant="body2" color="text.secondary">
                               {activity.description}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {activity.timestamp}
                             </Typography>
                           </Box>
@@ -568,14 +699,19 @@ const Dashboard: React.FC = () => {
         <Grid item xs={12} md={4}>
           {/* Notifications */}
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Notifications
               </Typography>
               <Chip
                 label={notifications.length}
                 size="small"
-                color={notifications.length > 0 ? "primary" : "default"}
+                color={notifications.length > 0 ? 'primary' : 'default'}
               />
             </Box>
             <List>
@@ -604,8 +740,13 @@ const Dashboard: React.FC = () => {
                             <Typography variant="body2" color="text.secondary">
                               {notification.description}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
-                              {new Date(notification.timestamp).toLocaleTimeString()}
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {new Date(
+                                notification.timestamp
+                              ).toLocaleTimeString()}
                             </Typography>
                           </Box>
                         }
@@ -631,11 +772,20 @@ const Dashboard: React.FC = () => {
 
           {/* Recent Posts */}
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Recent Posts
               </Typography>
-              <Button variant="text" size="small" onClick={() => navigate('/feed')}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/feed')}
+              >
                 View All
               </Button>
             </Box>
@@ -655,7 +805,12 @@ const Dashboard: React.FC = () => {
               Profile Strength
             </Typography>
             <Box sx={{ mb: 2 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={1}
+              >
                 <Typography variant="body2" color="text.secondary">
                   {stats.profileCompletion}% Complete
                 </Typography>
@@ -681,7 +836,12 @@ const Dashboard: React.FC = () => {
 
           {/* Upcoming Events */}
           <Paper sx={{ p: 3, mb: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 Upcoming Events
               </Typography>
@@ -711,14 +871,29 @@ const Dashboard: React.FC = () => {
                         secondary={
                           <Box>
                             <Typography variant="body2" color="text.secondary">
-                              <Schedule sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
+                              <Schedule
+                                sx={{
+                                  fontSize: 14,
+                                  mr: 0.5,
+                                  verticalAlign: 'middle',
+                                }}
+                              />
                               {event.date}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              <LocationOn sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
+                              <LocationOn
+                                sx={{
+                                  fontSize: 14,
+                                  mr: 0.5,
+                                  verticalAlign: 'middle',
+                                }}
+                              />
                               {event.location}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
                               {event.attendees} attendees
                             </Typography>
                           </Box>
@@ -734,11 +909,20 @@ const Dashboard: React.FC = () => {
 
           {/* Suggested Connections */}
           <Paper sx={{ p: 3 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 People You May Know
               </Typography>
-              <Button variant="text" size="small" onClick={() => navigate('/connections')}>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/connections')}
+              >
                 View All
               </Button>
             </Box>
@@ -767,7 +951,13 @@ const Dashboard: React.FC = () => {
                               {person.title}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
-                              <Business sx={{ fontSize: 14, mr: 0.5, verticalAlign: 'middle' }} />
+                              <Business
+                                sx={{
+                                  fontSize: 14,
+                                  mr: 0.5,
+                                  verticalAlign: 'middle',
+                                }}
+                              />
                               {person.company}
                             </Typography>
                             {person.matchScore && (

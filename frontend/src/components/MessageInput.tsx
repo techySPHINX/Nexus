@@ -21,7 +21,7 @@ interface MessageInputProps {
 
 /**
  * MessageInput Component
- * 
+ *
  * Features:
  * - Text input with emoji support
  * - Send button with loading state
@@ -44,32 +44,35 @@ const MessageInput: React.FC<MessageInputProps> = ({
   /**
    * Handle message input change
    */
-  const handleMessageChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const value = event.target.value;
-    setMessage(value);
+  const handleMessageChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const value = event.target.value;
+      setMessage(value);
 
-    // Handle typing indicator
-    if (value.trim() && !isTyping) {
-      setIsTyping(true);
-      onTyping(true);
-    } else if (!value.trim() && isTyping) {
-      setIsTyping(false);
-      onTyping(false);
-    }
-
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Set timeout to stop typing indicator
-    if (value.trim()) {
-      typingTimeoutRef.current = window.setTimeout(() => {
+      // Handle typing indicator
+      if (value.trim() && !isTyping) {
+        setIsTyping(true);
+        onTyping(true);
+      } else if (!value.trim() && isTyping) {
         setIsTyping(false);
         onTyping(false);
-      }, 2000);
-    }
-  }, [isTyping, onTyping]);
+      }
+
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // Set timeout to stop typing indicator
+      if (value.trim()) {
+        typingTimeoutRef.current = window.setTimeout(() => {
+          setIsTyping(false);
+          onTyping(false);
+        }, 2000);
+      }
+    },
+    [isTyping, onTyping]
+  );
 
   /**
    * Handle sending message
@@ -102,12 +105,15 @@ const MessageInput: React.FC<MessageInputProps> = ({
   /**
    * Handle keyboard events
    */
-  const handleKeyPress = useCallback((event: React.KeyboardEvent) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      handleSendMessage();
-    }
-  }, [handleSendMessage]);
+  const handleKeyPress = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        handleSendMessage();
+      }
+    },
+    [handleSendMessage]
+  );
 
   /**
    * Handle emoji button click
@@ -117,10 +123,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
     if (textFieldRef.current) {
       textFieldRef.current.focus();
     }
-    
+
     // Add emoji placeholder (in a real app, you'd open an emoji picker)
     const emoji = '😊';
-    setMessage(prev => prev + emoji);
+    setMessage((prev) => prev + emoji);
   }, []);
 
   /**
@@ -210,10 +216,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
       </Tooltip>
 
       {/* Send Button */}
-      <motion.div
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-      >
+      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
         <Tooltip title="Send message">
           <IconButton
             onClick={handleSendMessage}

@@ -33,11 +33,15 @@ export interface ChatMessage {
   confirmation?: boolean; // For sender confirmation
 }
 
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+export type ConnectionStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting';
 
 /**
  * Improved WebSocket Service with proper cleanup and deduplication
- * 
+ *
  * Key improvements:
  * - Proper event listener cleanup to prevent duplicates
  * - Message deduplication using unique IDs
@@ -50,17 +54,18 @@ export class ImprovedWebSocketService {
   private maxReconnectAttempts = 5;
   private reconnectDelay = 1000;
   private heartbeatInterval: number | null = null;
-  private messageHandlers: Map<string, (message: WebSocketMessage) => void> = new Map();
+  private messageHandlers: Map<string, (message: WebSocketMessage) => void> =
+    new Map();
   private connectionStatus: ConnectionStatus = 'disconnected';
   private url: string;
   private currentUserId: string | null = null;
   private currentToken: string | null = null;
   private reconnectAttempts = 0;
   private isManualDisconnect = false;
-  
+
   // Track processed messages to prevent duplicates
   private processedMessages = new Set<string>();
-  
+
   // Connection status listeners
   private statusListeners: Set<(status: ConnectionStatus) => void> = new Set();
 
@@ -70,7 +75,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Connects to the WebSocket server with proper authentication
-   * 
+   *
    * @param userId - The user ID
    * @param token - The JWT token
    * @returns Promise that resolves when connected
@@ -91,7 +96,7 @@ export class ImprovedWebSocketService {
 
       this.connectionStatus = 'connecting';
       this.updateStatusListeners();
-      
+
       console.log('🔌 Attempting to connect to WebSocket...', {
         userId,
         hasToken: !!token,
@@ -116,7 +121,6 @@ export class ImprovedWebSocketService {
 
         // Set up event listeners
         this.setupSocketListeners(resolve, reject);
-
       } catch (error) {
         console.error('❌ Error creating Socket.IO connection:', error);
         this.connectionStatus = 'disconnected';
@@ -142,12 +146,14 @@ export class ImprovedWebSocketService {
 
   /**
    * Attempts to reconnect to the WebSocket server
-   * 
+   *
    * @returns Promise that resolves when reconnected
    */
   reconnect(): Promise<void> {
     if (!this.currentUserId || !this.currentToken) {
-      return Promise.reject(new Error('No credentials stored for reconnection'));
+      return Promise.reject(
+        new Error('No credentials stored for reconnection')
+      );
     }
 
     if (this.isManualDisconnect) {
@@ -164,9 +170,11 @@ export class ImprovedWebSocketService {
     this.reconnectAttempts++;
     this.connectionStatus = 'reconnecting';
     this.updateStatusListeners();
-    
-    console.log(`🔄 Attempting to reconnect... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-    
+
+    console.log(
+      `🔄 Attempting to reconnect... (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`
+    );
+
     // Wait before reconnecting
     return new Promise((resolve, reject) => {
       setTimeout(() => {
@@ -185,7 +193,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Sends a message via WebSocket
-   * 
+   *
    * @param type - The message type
    * @param data - The message data
    */
@@ -195,7 +203,7 @@ export class ImprovedWebSocketService {
       console.log('📤 Socket.IO message sent:', { type, data });
     } else {
       console.warn('⚠️ Socket.IO is not connected. Cannot send message.');
-      
+
       // Try to reconnect if we have credentials and it's not a manual disconnect
       if (this.currentUserId && this.currentToken && !this.isManualDisconnect) {
         console.log('🔄 Attempting to reconnect before sending message...');
@@ -212,16 +220,18 @@ export class ImprovedWebSocketService {
 
   /**
    * Sends a chat message
-   * 
+   *
    * @param message - The message to send
    */
-  sendChatMessage(message: Omit<ChatMessage, 'id' | 'timestamp' | 'createdAt'>): void {
+  sendChatMessage(
+    message: Omit<ChatMessage, 'id' | 'timestamp' | 'createdAt'>
+  ): void {
     this.send('NEW_MESSAGE', message);
   }
 
   /**
    * Sends typing indicator
-   * 
+   *
    * @param receiverId - The receiver's user ID
    * @param isTyping - Whether the user is typing
    */
@@ -231,7 +241,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Sends read receipt
-   * 
+   *
    * @param messageId - The message ID
    * @param senderId - The sender's user ID
    */
@@ -241,14 +251,14 @@ export class ImprovedWebSocketService {
 
   /**
    * Registers a message handler
-   * 
+   *
    * @param type - The message type to handle
    * @param handler - The handler function
    */
   on(type: string, handler: (message: WebSocketMessage) => void): void {
     // Remove existing handler to prevent duplicates
     this.messageHandlers.delete(type);
-    
+
     // Add new handler
     this.messageHandlers.set(type, handler);
     console.log(`📝 Socket.IO handler registered for type: ${type}`);
@@ -256,7 +266,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Removes a message handler
-   * 
+   *
    * @param type - The message type to remove handler for
    */
   off(type: string): void {
@@ -266,7 +276,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Adds a connection status listener
-   * 
+   *
    * @param listener - The status change listener
    */
   addStatusListener(listener: (status: ConnectionStatus) => void): void {
@@ -275,7 +285,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Removes a connection status listener
-   * 
+   *
    * @param listener - The status change listener to remove
    */
   removeStatusListener(listener: (status: ConnectionStatus) => void): void {
@@ -284,7 +294,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Gets the current connection status
-   * 
+   *
    * @returns The current connection status
    */
   getConnectionStatus(): ConnectionStatus {
@@ -293,7 +303,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Checks if the socket is connected
-   * 
+   *
    * @returns True if connected, false otherwise
    */
   isConnected(): boolean {
@@ -302,7 +312,7 @@ export class ImprovedWebSocketService {
 
   /**
    * Gets the current user ID
-   * 
+   *
    * @returns The current user ID or null
    */
   getCurrentUserId(): string | null {
@@ -311,11 +321,14 @@ export class ImprovedWebSocketService {
 
   /**
    * Sets up socket event listeners
-   * 
+   *
    * @param resolve - Promise resolve function
    * @param reject - Promise reject function
    */
-  private setupSocketListeners(resolve: () => void, reject: (error: Error) => void): void {
+  private setupSocketListeners(
+    resolve: () => void,
+    reject: (error: Error) => void
+  ): void {
     if (!this.socket) return;
 
     // Connection success
@@ -389,14 +402,18 @@ export class ImprovedWebSocketService {
 
   /**
    * Checks if a message should be processed (deduplication)
-   * 
+   *
    * @param message - The message to check
    * @returns True if message should be processed, false otherwise
    */
   private shouldProcessMessage(message: WebSocketMessage): boolean {
     // For NEW_MESSAGE, check uniqueId
-    if (message.type === 'NEW_MESSAGE' && message.data && typeof message.data === 'object') {
-      const data = message.data as any;
+    if (
+      message.type === 'NEW_MESSAGE' &&
+      message.data &&
+      typeof message.data === 'object'
+    ) {
+      const data = message.data as { uniqueId?: string };
       if (data.uniqueId) {
         if (this.processedMessages.has(data.uniqueId)) {
           return false;
@@ -406,8 +423,12 @@ export class ImprovedWebSocketService {
     }
 
     // For MESSAGE_SENT, check uniqueId
-    if (message.type === 'MESSAGE_SENT' && message.data && typeof message.data === 'object') {
-      const data = message.data as any;
+    if (
+      message.type === 'MESSAGE_SENT' &&
+      message.data &&
+      typeof message.data === 'object'
+    ) {
+      const data = message.data as { uniqueId?: string };
       if (data.uniqueId) {
         if (this.processedMessages.has(data.uniqueId)) {
           return false;
@@ -458,7 +479,7 @@ export class ImprovedWebSocketService {
    * Updates all status listeners
    */
   private updateStatusListeners(): void {
-    this.statusListeners.forEach(listener => {
+    this.statusListeners.forEach((listener) => {
       try {
         listener(this.connectionStatus);
       } catch (error) {
@@ -473,18 +494,20 @@ export class ImprovedWebSocketService {
    */
   cleanupProcessedMessages(): void {
     // Keep only messages from the last hour
-    const oneHourAgo = Date.now() - (60 * 60 * 1000);
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
     const messagesToKeep = new Set<string>();
-    
+
     for (const messageId of this.processedMessages) {
       const timestamp = parseInt(messageId.split('_')[2]);
       if (timestamp > oneHourAgo) {
         messagesToKeep.add(messageId);
       }
     }
-    
+
     this.processedMessages = messagesToKeep;
-    console.log(`🧹 Cleaned up processed messages. Remaining: ${this.processedMessages.size}`);
+    console.log(
+      `🧹 Cleaned up processed messages. Remaining: ${this.processedMessages.size}`
+    );
   }
 }
 

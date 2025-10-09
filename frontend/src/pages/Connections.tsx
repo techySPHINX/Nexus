@@ -29,6 +29,7 @@ import {
   Tooltip,
   TablePagination,
 } from '@mui/material';
+import type { SelectChangeEvent } from '@mui/material/Select';
 import {
   Search as SearchIcon,
   People as PeopleIcon,
@@ -42,6 +43,11 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import useConnections from '../hooks/useConnections';
+import type {
+  Connection,
+  PendingRequest,
+  ConnectionSuggestion,
+} from '../types/connections';
 
 const Connections: React.FC = () => {
   const navigate = useNavigate();
@@ -71,10 +77,13 @@ const Connections: React.FC = () => {
     const filters = {
       page: page + 1,
       limit: rowsPerPage,
-      role: roleFilter && roleFilter !== '' ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN') : undefined,
+      role:
+        roleFilter && roleFilter !== ''
+          ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+          : undefined,
       search: searchTerm || undefined,
     };
-    
+
     fetchAll(filters);
   }, [page, rowsPerPage, roleFilter, searchTerm, fetchAll]);
 
@@ -88,7 +97,7 @@ const Connections: React.FC = () => {
     setPage(0); // Reset to first page when searching
   };
 
-  const handleRoleFilterChange = (event: any) => {
+  const handleRoleFilterChange = (event: SelectChangeEvent<string>) => {
     setRoleFilter(event.target.value);
     setPage(0);
   };
@@ -133,7 +142,9 @@ const Connections: React.FC = () => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -194,7 +205,11 @@ const Connections: React.FC = () => {
   }
 
   const currentData = getCurrentData();
-  const paginatedData = currentData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  type Row = Connection | PendingRequest | ConnectionSuggestion;
+  const paginatedData = currentData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  ) as Row[];
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -224,16 +239,18 @@ const Connections: React.FC = () => {
         {/* Stats Cards */}
         {stats && (
           <Stack direction="row" spacing={1} alignItems="center">
-            <Paper sx={{ 
-              p: 2, 
-              textAlign: 'center', 
-              minWidth: 80,
-              minHeight: '100px', // Fixed height for uniform appearance
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
+            <Paper
+              sx={{
+                p: 2,
+                textAlign: 'center',
+                minWidth: 80,
+                minHeight: '100px', // Fixed height for uniform appearance
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
               <PeopleIcon color="primary" sx={{ mb: 1 }} />
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {stats.total}
@@ -242,16 +259,18 @@ const Connections: React.FC = () => {
                 Total
               </Typography>
             </Paper>
-            <Paper sx={{ 
-              p: 2, 
-              textAlign: 'center', 
-              minWidth: 80,
-              minHeight: '100px', // Fixed height for uniform appearance
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
+            <Paper
+              sx={{
+                p: 2,
+                textAlign: 'center',
+                minWidth: 80,
+                minHeight: '100px', // Fixed height for uniform appearance
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
               <SchoolIcon color="info" sx={{ mb: 1 }} />
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {stats.byRole.students}
@@ -260,16 +279,18 @@ const Connections: React.FC = () => {
                 Students
               </Typography>
             </Paper>
-            <Paper sx={{ 
-              p: 2, 
-              textAlign: 'center', 
-              minWidth: 80,
-              minHeight: '100px', // Fixed height for uniform appearance
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
+            <Paper
+              sx={{
+                p: 2,
+                textAlign: 'center',
+                minWidth: 80,
+                minHeight: '100px', // Fixed height for uniform appearance
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
               <WorkIcon color="secondary" sx={{ mb: 1 }} />
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {stats.byRole.alumni}
@@ -278,16 +299,18 @@ const Connections: React.FC = () => {
                 Alumni
               </Typography>
             </Paper>
-            <Paper sx={{ 
-              p: 2, 
-              textAlign: 'center', 
-              minWidth: 80,
-              minHeight: '100px', // Fixed height for uniform appearance
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}>
+            <Paper
+              sx={{
+                p: 2,
+                textAlign: 'center',
+                minWidth: 80,
+                minHeight: '100px', // Fixed height for uniform appearance
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
               <BlockIcon color="warning" sx={{ mb: 1 }} />
               <Typography variant="h6" sx={{ fontWeight: 600 }}>
                 {stats.pendingReceived}
@@ -332,11 +355,7 @@ const Connections: React.FC = () => {
               <MenuItem value="ADMIN">Admin</MenuItem>
             </Select>
           </FormControl>
-          <Button
-            type="submit"
-            variant="contained"
-            sx={{ minWidth: 100 }}
-          >
+          <Button type="submit" variant="contained" sx={{ minWidth: 100 }}>
             Search
           </Button>
         </Stack>
@@ -373,28 +392,44 @@ const Connections: React.FC = () => {
             <TableBody>
               {paginatedData.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={getTableHeaders().length} align="center" sx={{ py: 4 }}>
+                  <TableCell
+                    colSpan={getTableHeaders().length}
+                    align="center"
+                    sx={{ py: 4 }}
+                  >
                     <Typography variant="body1" color="text.secondary">
                       No data available
                     </Typography>
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedData.map((item: any) => {
+                paginatedData.map((item: Row) => {
                   if (tabValue === 0) {
                     // Connections tab
                     return (
                       <TableRow key={item.id} hover>
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                            }}
+                          >
                             <Avatar sx={{ bgcolor: 'primary.main' }}>
                               {item.user?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 600 }}
+                              >
                                 {item.user?.name || 'Unknown User'}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {item.user?.email || 'No email'}
                               </Typography>
                             </Box>
@@ -410,13 +445,17 @@ const Connections: React.FC = () => {
                         <TableCell>
                           <Chip
                             label={item.status}
-                            color={item.status === 'ACCEPTED' ? 'success' : 'default'}
+                            color={
+                              item.status === 'ACCEPTED' ? 'success' : 'default'
+                            }
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                            {item.createdAt
+                              ? new Date(item.createdAt).toLocaleDateString()
+                              : 'N/A'}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -448,15 +487,27 @@ const Connections: React.FC = () => {
                     return (
                       <TableRow key={item.id} hover>
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                            }}
+                          >
                             <Avatar sx={{ bgcolor: 'secondary.main' }}>
                               {item.requester?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 600 }}
+                              >
                                 {item.requester?.name || 'Unknown User'}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {item.requester?.email || 'No email'}
                               </Typography>
                             </Box>
@@ -471,7 +522,9 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                            {item.createdAt
+                              ? new Date(item.createdAt).toLocaleDateString()
+                              : 'N/A'}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -482,12 +535,12 @@ const Connections: React.FC = () => {
                               onClick={() => handleAcceptRequest(item.id)}
                               variant="contained"
                               color="success"
-                              sx={{ 
+                              sx={{
                                 minWidth: 'auto',
                                 minHeight: '32px', // Fixed height for uniform appearance
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
                               }}
                             >
                               Accept
@@ -498,12 +551,12 @@ const Connections: React.FC = () => {
                               onClick={() => handleRejectRequest(item.id)}
                               variant="outlined"
                               color="error"
-                              sx={{ 
+                              sx={{
                                 minWidth: 'auto',
                                 minHeight: '32px', // Fixed height for uniform appearance
                                 display: 'flex',
                                 alignItems: 'center',
-                                justifyContent: 'center'
+                                justifyContent: 'center',
                               }}
                             >
                               Reject
@@ -517,15 +570,27 @@ const Connections: React.FC = () => {
                     return (
                       <TableRow key={item.id} hover>
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                            }}
+                          >
                             <Avatar sx={{ bgcolor: 'info.main' }}>
                               {item.recipient?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 600 }}
+                              >
                                 {item.recipient?.name || 'Unknown User'}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {item.recipient?.email || 'No email'}
                               </Typography>
                             </Box>
@@ -540,7 +605,9 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}
+                            {item.createdAt
+                              ? new Date(item.createdAt).toLocaleDateString()
+                              : 'N/A'}
                           </Typography>
                         </TableCell>
                         <TableCell>
@@ -564,15 +631,27 @@ const Connections: React.FC = () => {
                     return (
                       <TableRow key={item.user.id} hover>
                         <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 2,
+                            }}
+                          >
                             <Avatar sx={{ bgcolor: 'success.main' }}>
                               {item.user?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
-                              <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                              <Typography
+                                variant="subtitle2"
+                                sx={{ fontWeight: 600 }}
+                              >
                                 {item.user?.name || 'Unknown User'}
                               </Typography>
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {item.user?.email || 'No email'}
                               </Typography>
                             </Box>
@@ -602,11 +681,11 @@ const Connections: React.FC = () => {
                             onClick={() => handleConnect(item.user.id)}
                             variant="contained"
                             color="primary"
-                            sx={{ 
+                            sx={{
                               minHeight: '32px', // Fixed height for uniform appearance
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'center'
+                              justifyContent: 'center',
                             }}
                           >
                             Connect

@@ -114,10 +114,7 @@ const Layout: React.FC = () => {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/messages"
-              element={<ChatPage />}
-            />
+            <Route path="/messages" element={<ChatPage />} />
             <Route
               path="/profile"
               element={

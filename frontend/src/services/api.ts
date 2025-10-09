@@ -56,7 +56,8 @@ export const apiService = {
     getById: (id: string) => api.get(`/users/${id}`),
     update: (id: string, data: unknown) => api.patch(`/users/${id}`, data),
     delete: (id: string) => api.delete(`/users/${id}`),
-    search: (query: string) => api.get(`/users/search?q=${encodeURIComponent(query)}`),
+    search: (query: string) =>
+      api.get(`/users/search?q=${encodeURIComponent(query)}`),
   },
 
   // Profile endpoints
@@ -101,8 +102,13 @@ export const apiService = {
   messages: {
     send: (content: string, receiverId: string) =>
       api.post('/messages', { content, receiverId }),
-    getConversation: (otherUserId: string, params?: { skip?: number; take?: number }) => {
-      const queryParams = params ? `?skip=${params.skip || 0}&take=${params.take || 20}` : '';
+    getConversation: (
+      otherUserId: string,
+      params?: { skip?: number; take?: number }
+    ) => {
+      const queryParams = params
+        ? `?skip=${params.skip || 0}&take=${params.take || 20}`
+        : '';
       return api.get(`/messages/conversation/${otherUserId}${queryParams}`);
     },
     getAllConversations: () => api.get('/messages/conversations/all'),

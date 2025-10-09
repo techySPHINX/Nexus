@@ -1,11 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Avatar,
-  Paper,
-  Chip,
-} from '@mui/material';
+import { Box, Typography, Avatar, Paper, Chip } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -39,7 +33,7 @@ interface MessageListProps {
 
 /**
  * MessageList Component
- * 
+ *
  * Features:
  * - Displays messages in chronological order
  * - Shows sender/receiver distinction
@@ -96,9 +90,13 @@ const MessageList: React.FC<MessageListProps> = ({
       <AnimatePresence>
         {messages.map((message, index) => {
           const isOwnMessage = message.senderId !== conversation.otherUser.id;
-          const showAvatar = index === 0 || messages[index - 1].senderId !== message.senderId;
-          const showTimestamp = index === messages.length - 1 || 
-            new Date(message.timestamp).getTime() - new Date(messages[index + 1].timestamp).getTime() > 300000; // 5 minutes
+          const showAvatar =
+            index === 0 || messages[index - 1].senderId !== message.senderId;
+          const showTimestamp =
+            index === messages.length - 1 ||
+            new Date(message.timestamp).getTime() -
+              new Date(messages[index + 1].timestamp).getTime() >
+              300000; // 5 minutes
 
           return (
             <motion.div
@@ -145,23 +143,25 @@ const MessageList: React.FC<MessageListProps> = ({
                   sx={{
                     p: 1.5,
                     backgroundColor: isOwnMessage ? 'primary.main' : 'grey.100',
-                    color: isOwnMessage ? 'primary.contrastText' : 'text.primary',
+                    color: isOwnMessage
+                      ? 'primary.contrastText'
+                      : 'text.primary',
                     borderRadius: 2,
                     position: 'relative',
                     wordBreak: 'break-word',
                     maxWidth: '100%',
                   }}
                 >
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
+                  <Typography
+                    variant="body1"
+                    sx={{
                       lineHeight: 1.4,
                       fontWeight: message.isRead === false ? 'bold' : 'normal',
                     }}
                   >
                     {message.content}
                   </Typography>
-                  
+
                   {/* Timestamp */}
                   {showTimestamp && (
                     <Typography
@@ -174,14 +174,18 @@ const MessageList: React.FC<MessageListProps> = ({
                         textAlign: isOwnMessage ? 'right' : 'left',
                       }}
                     >
-                      {formatDistanceToNow(new Date(message.timestamp), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(message.timestamp), {
+                        addSuffix: true,
+                      })}
                     </Typography>
                   )}
                 </Paper>
 
                 {/* Delivery Status (for own messages) */}
                 {isOwnMessage && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 20 }}>
+                  <Box
+                    sx={{ display: 'flex', alignItems: 'center', minWidth: 20 }}
+                  >
                     <Chip
                       label="✓"
                       size="small"
@@ -199,7 +203,7 @@ const MessageList: React.FC<MessageListProps> = ({
           );
         })}
       </AnimatePresence>
-      
+
       {/* Scroll anchor */}
       <div ref={messagesEndRef} />
     </Box>
