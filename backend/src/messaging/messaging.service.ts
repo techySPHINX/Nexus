@@ -2,10 +2,13 @@ import {
   Injectable,
   ForbiddenException,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { FilterMessagesDto } from './dto/filter-messages.dto';
+import { ImprovedMessagingGateway } from './messaging.gateway.improved';
 
 /**
  * Service for handling messaging operations.
@@ -13,7 +16,11 @@ import { FilterMessagesDto } from './dto/filter-messages.dto';
  */
 @Injectable()
 export class MessagingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(forwardRef(() => ImprovedMessagingGateway))
+    private messagingGateway: ImprovedMessagingGateway,
+  ) {}
 
   /**
    * Sends a new message from a sender to a receiver.
@@ -51,7 +58,7 @@ export class MessagingService {
       );
     }
 
-    return this.prisma.message.create({
+    const message = await this.prisma.message.create({
       data: {
         content,
         senderId,
@@ -74,6 +81,20 @@ export class MessagingService {
         },
       },
     });
+
+    // Broadcast the message via WebSocket for real-time delivery
+    this.messagingGateway.broadcastMessage({
+      id: message.id,
+      content: message.content,
+      senderId: message.senderId,
+      receiverId: message.receiverId,
+      timestamp: message.timestamp.toISOString(),
+      createdAt: message.timestamp.toISOString(),
+      sender: message.sender,
+      receiver: message.receiver,
+    });
+
+    return message;
   }
 
   /**
@@ -145,50 +166,14 @@ export class MessagingService {
    * @returns A promise that resolves to an array of conversation summary objects.
    */
   async getAllConversations(userId: string) {
-    // Get all unique conversations for the user
-    const conversations = await this.prisma.message.groupBy({
-      by: ['senderId', 'receiverId'],
+    // Get all messages for the user with full details
+    const messages = await this.prisma.message.findMany({
       where: {
         OR: [{ senderId: userId }, { receiverId: userId }],
       },
-    });
-
-    // Get the latest message for each conversation
-    const conversationDetails = await Promise.all(
-      conversations.map(async (conversation) => {
-        const otherUserId =
-          conversation.senderId === userId
-            ? conversation.receiverId
-            : conversation.senderId;
-
-        const latestMessage = await this.prisma.message.findFirst({
-          where: {
-            OR: [
-              { senderId: userId, receiverId: otherUserId },
-              { senderId: otherUserId, receiverId: userId },
-            ],
-          },
-          orderBy: { timestamp: 'desc' },
-          include: {
-            sender: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-            receiver: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-              },
-            },
-          },
-        });
-
-        const otherUser = await this.prisma.user.findUnique({
-          where: { id: otherUserId },
+      orderBy: { timestamp: 'desc' },
+      include: {
+        sender: {
           select: {
             id: true,
             name: true,
@@ -197,19 +182,58 @@ export class MessagingService {
               select: {
                 bio: true,
                 location: true,
+                avatarUrl: true,
               },
             },
           },
-        });
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            profile: {
+              select: {
+                bio: true,
+                location: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
-        return {
+    // Group messages by conversation partner
+    const conversationMap = new Map<string, any>();
+
+    messages.forEach((message) => {
+      const otherUserId =
+        message.senderId === userId ? message.receiverId : message.senderId;
+      const otherUser =
+        message.senderId === userId ? message.receiver : message.sender;
+
+      if (!conversationMap.has(otherUserId)) {
+        conversationMap.set(otherUserId, {
           conversationId: `${userId}-${otherUserId}`,
-          otherUser,
-          latestMessage,
-        };
-      }),
-    );
+          otherUser: {
+            id: otherUser.id,
+            name: otherUser.name,
+            email: otherUser.email,
+            profile: otherUser.profile,
+          },
+          latestMessage: message,
+        });
+      }
+    });
 
-    return conversationDetails;
+    // Convert map to array and sort by latest message timestamp
+    const conversations = Array.from(conversationMap.values()).sort((a, b) => {
+      const aTime = new Date(a.latestMessage.timestamp).getTime();
+      const bTime = new Date(b.latestMessage.timestamp).getTime();
+      return bTime - aTime;
+    });
+
+    return conversations;
   }
 }

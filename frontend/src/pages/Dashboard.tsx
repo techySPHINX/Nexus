@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Container,
   Grid,
-  Card,
-  CardContent,
   Typography,
   Box,
   Avatar,
@@ -15,30 +13,32 @@ import {
   ListItemAvatar,
   Divider,
   LinearProgress,
-  Stack,
   CircularProgress,
   Alert,
+  Paper,
+  IconButton,
 } from '@mui/material';
 import {
-  People,
   Message,
-  TrendingUp,
   Notifications,
-  CalendarToday,
   LocationOn,
   Event,
   Forum,
   PersonAdd,
   Assignment,
   Groups,
-  CheckCircle,
   Schedule,
+  Business,
+  MoreVert,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { motion } from 'framer-motion';
+// import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useConnections from '../hooks/useConnections';
 import { apiService } from '../services/api';
+import { improvedWebSocketService } from '../services/websocket.improved';
+import type { WebSocketMessage } from '../services/websocket.improved';
+// import type { Connection, ConnectionSuggestion } from '../types/connections';
 
 interface DashboardStats {
   connections: number;
@@ -51,11 +51,14 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string;
-  type: 'connection' | 'message' | 'event' | 'network';
-  message: string;
-  time: string;
-  avatar: string;
-  userId?: string;
+  type: 'connection' | 'message' | 'event' | 'post';
+  title: string;
+  description: string;
+  timestamp: string;
+  user?: {
+    name: string;
+    avatar: string;
+  };
 }
 
 interface UpcomingEvent {
@@ -63,19 +66,20 @@ interface UpcomingEvent {
   title: string;
   date: string;
   location: string;
-  description?: string;
+  attendees: number;
 }
 
 interface SuggestedConnection {
   id: string;
   name: string;
-  role: string;
+  title: string;
+  company: string;
   avatar: string;
   matchScore?: number;
 }
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     connections: 0,
@@ -94,6 +98,15 @@ const Dashboard: React.FC = () => {
   >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<
+    Array<{
+      id: string;
+      type: 'message' | 'connection' | 'event';
+      title: string;
+      description: string;
+      timestamp: string;
+    }>
+  >([]);
 
   // Use the connections hook for real data
   const {
@@ -101,261 +114,350 @@ const Dashboard: React.FC = () => {
     pendingReceived,
     suggestions,
     // stats: connectionStats,
+    loading: connectionsLoading,
+    error: connectionsError,
+    fetchAll,
   } = useConnections();
 
+  // Fetch connections data when component mounts
+  useEffect(() => {
+    if (user?.id) {
+      fetchAll({ page: 1, limit: 20 });
+
+      // Also test the API directly for debugging
+      const testPendingRequests = async () => {
+        try {
+          const response = await apiService.connections.getPendingReceived({
+            page: 1,
+            limit: 10,
+          });
+          console.log('🧪 Direct API test - Pending requests:', response.data);
+        } catch (error) {
+          console.error('🧪 Direct API test failed:', error);
+        }
+      };
+
+      testPendingRequests();
+    }
+  }, [user?.id, fetchAll]);
+
+  interface AppUserProfile {
+    bio?: string;
+    location?: string;
+    skills?: unknown[];
+  }
+  interface AppUser {
+    name?: string;
+    email?: string;
+    role?: string;
+    profile?: AppUserProfile;
+  }
   const calculateProfileCompletion = React.useCallback(
-    (user: DashboardUser | null | undefined): number => {
+    (user: AppUser | null): number => {
       if (!user) return 0;
 
       let completed = 0;
-      const total = 4; // Basic profile fields
+      const total = 6; // Profile completion fields
 
       if (user.name) completed++;
       if (user.email) completed++;
       if (user.role) completed++;
-      if (user.profile?.bio || user.profile?.location || user.profile?.skills)
-        completed++;
+      if (user.profile?.bio) completed++;
+      if (user.profile?.location) completed++;
+      if (user.profile?.skills && user.profile.skills.length > 0) completed++;
 
       return Math.round((completed / total) * 100);
     },
     []
   );
 
+  // Fetch real message count
+  const fetchMessageCount = async () => {
+    try {
+      const response = await apiService.messages.getAllConversations();
+      if (response.data) {
+        // Count total messages across all conversations
+        let totalMessages = 0;
+        (response.data as Array<{ latestMessage?: unknown }>).forEach(
+          (conv) => {
+            if (conv.latestMessage) {
+              totalMessages++;
+            }
+          }
+        );
+        setStats((prev) => ({
+          ...prev,
+          messages: totalMessages,
+        }));
+      }
+    } catch {
+      console.log('Could not fetch message count');
+    }
+  };
+
+  // Initialize WebSocket for real-time updates
+  useEffect(() => {
+    if (!user?.id || !token) return;
+
+    const initializeWebSocket = async () => {
+      try {
+        await improvedWebSocketService.connect(user.id, token);
+
+        // Listen for new messages
+        improvedWebSocketService.on(
+          'NEW_MESSAGE',
+          (message: WebSocketMessage) => {
+            const newMessage = message.data as {
+              id: string;
+              sender?: { name?: string };
+              receiverId: string;
+            };
+            if (newMessage.receiverId === user.id) {
+              // Update message count
+              setStats((prev) => ({
+                ...prev,
+                messages: prev.messages + 1,
+              }));
+
+              // Add to notifications
+              const notification = {
+                id: newMessage.id,
+                type: 'message' as const,
+                title: 'New Message',
+                description: `${newMessage.sender?.name || 'Someone'} sent you a message`,
+                timestamp: new Date().toISOString(),
+              };
+
+              setNotifications((prev) => [notification, ...prev.slice(0, 4)]); // Keep last 5 notifications
+
+              // Add to recent activities
+              setRecentActivities((prev) => [
+                {
+                  id: newMessage.id,
+                  type: 'message',
+                  title: 'New Message',
+                  description: `You received a message from ${newMessage.sender?.name || 'Someone'}`,
+                  timestamp: new Date().toLocaleDateString(),
+                  user: {
+                    name: newMessage.sender?.name || 'Unknown',
+                    avatar: '',
+                  },
+                },
+                ...prev.slice(0, 4), // Keep last 5 activities
+              ]);
+            }
+          }
+        );
+
+        // Listen for new connections
+        improvedWebSocketService.on(
+          'CONNECTION_REQUEST',
+          (message: WebSocketMessage) => {
+            const data = message.data as {
+              id: string;
+              sender?: { name?: string };
+            };
+            const notification = {
+              id: data.id,
+              type: 'connection' as const,
+              title: 'New Connection Request',
+              description: `${data.sender?.name || 'Someone'} wants to connect with you`,
+              timestamp: new Date().toISOString(),
+            };
+
+            setNotifications((prev) => [notification, ...prev.slice(0, 4)]);
+
+            // Update pending requests count
+            setStats((prev) => ({
+              ...prev,
+              pendingRequests: prev.pendingRequests + 1,
+            }));
+          }
+        );
+      } catch (error) {
+        console.error('Failed to initialize WebSocket for dashboard:', error);
+      }
+    };
+
+    initializeWebSocket();
+
+    return () => {
+      improvedWebSocketService.disconnect();
+    };
+  }, [user?.id, token]);
+
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        console.log('🔄 Dashboard: Fetching dashboard data...');
         setLoading(true);
-        setError(null);
 
-        // Fetch messages count
-        const messagesResponse =
-          await apiService.messages.getAllConversations();
-        const messagesCount = messagesResponse.data?.conversations?.length || 0;
-        console.log('📊 Dashboard: Messages count:', messagesCount);
+        // Fetch message count
+        await fetchMessageCount();
 
-        // Calculate profile completion based on user data
-        const profileCompletion = calculateProfileCompletion(user);
-        console.log('👤 Dashboard: Profile completion:', profileCompletion);
-
-        // Update stats with real data
-        const newStats = {
+        // Update stats with real data from connections
+        setStats((prev) => ({
+          ...prev,
           connections: connections.length,
-          messages: messagesCount,
           pendingRequests: pendingReceived.length,
-          profileCompletion,
-          upcomingEvents: upcomingEvents.length,
-          newAlumni: 0, // This would come from a separate API
-        };
-        setStats(newStats);
-        console.log('📈 Dashboard: Stats updated:', newStats);
+          profileCompletion: calculateProfileCompletion(user),
+        }));
 
-        // Generate recent activities from real data
-        const activities = generateRecentActivities(
-          connections,
-          pendingReceived,
-          messagesResponse.data?.conversations || []
-        );
-        setRecentActivities(activities);
-        console.log(
-          '📝 Dashboard: Recent activities generated:',
-          activities.length
-        );
+        console.log('📊 Dashboard stats updated:', {
+          connections: connections.length,
+          pendingReceived: pendingReceived.length,
+          pendingReceivedData: pendingReceived,
+        });
 
-        // Convert suggestions to dashboard format
-        const dashboardSuggestions = suggestions
-          .slice(0, 3)
-          .map((suggestion) => ({
-            id: suggestion.user.id,
-            name: suggestion.user.name,
-            role: suggestion.user.role,
-            avatar: suggestion.user.name.charAt(0).toUpperCase(),
-            matchScore: suggestion.matchScore,
-          }));
-        setSuggestedConnections(dashboardSuggestions);
-        console.log(
-          '🔗 Dashboard: Suggested connections:',
-          dashboardSuggestions.length
-        );
+        // Fetch recent activities from API
+        try {
+          const activitiesResponse =
+            await apiService.messages.getAllConversations();
+          const activities: RecentActivity[] = [];
 
-        // Mock upcoming events (in real app, this would come from events API)
-        setUpcomingEvents([
-          {
+          if (activitiesResponse.data?.conversations) {
+            activitiesResponse.data.conversations
+              .slice(0, 3)
+              .forEach(
+                (conv: {
+                  id: string;
+                  participant?: { name?: string };
+                  updatedAt: string;
+                }) => {
+                  activities.push({
+                    id: conv.id,
+                    type: 'message',
+                    title: 'New Message',
+                    description: `You have a conversation with ${conv.participant?.name || 'Unknown'}`,
+                    timestamp: new Date(conv.updatedAt).toLocaleDateString(),
+                    user: {
+                      name: conv.participant?.name || 'Unknown',
+                      avatar: '',
+                    },
+                  });
+                }
+              );
+          }
+
+          // Add connection activities
+          if (connections.length > 0) {
+            connections
+              .slice(0, 2)
+              .forEach(
+                (conn: {
+                  id: string;
+                  user?: { name?: string };
+                  createdAt: string;
+                }) => {
+                  activities.push({
+                    id: conn.id,
+                    type: 'connection',
+                    title: 'New Connection',
+                    description: `Connected with ${conn.user?.name || 'Unknown User'}`,
+                    timestamp: new Date(conn.createdAt).toLocaleDateString(),
+                    user: { name: conn.user?.name || 'Unknown', avatar: '' },
+                  });
+                }
+              );
+          }
+
+          setRecentActivities(activities);
+        } catch {
+          console.log('No recent activities available');
+        }
+
+        // Fetch upcoming events
+        try {
+          // TODO: Add events API to apiService
+          // const eventsResponse = await apiService.events.getAll();
+          const events: UpcomingEvent[] = [];
+
+          // Mock events data for now
+          events.push({
             id: '1',
-            title: 'Alumni Meet 2024',
-            date: 'Dec 15',
-            location: 'College Campus',
-            description: 'Annual alumni networking event',
-          },
-          {
-            id: '2',
-            title: 'Career Workshop',
-            date: 'Dec 20',
-            location: 'Online',
-            description: 'Professional development session',
-          },
-        ]);
+            title: 'Alumni Meet 2025',
+            date: new Date(
+              Date.now() + 7 * 24 * 60 * 60 * 1000
+            ).toLocaleDateString(),
+            location: 'KIIT Campus',
+            attendees: 150,
+          });
 
-        console.log('✅ Dashboard: All data loaded successfully');
-      } catch (err) {
-        console.error('❌ Dashboard: Error fetching data:', err);
+          setUpcomingEvents(events);
+        } catch {
+          console.log('No events available');
+        }
+
+        // Transform suggestions to dashboard format
+        const dashboardSuggestions: SuggestedConnection[] = suggestions
+          .slice(0, 3)
+          .map(
+            (suggestion: {
+              user: {
+                id: string;
+                name: string;
+                profile?: {
+                  bio?: string;
+                  location?: string;
+                  avatarUrl?: string;
+                };
+              };
+            }) => ({
+              id: suggestion.user.id,
+              name: suggestion.user.name,
+              title: suggestion.user.profile?.bio || 'Professional',
+              company: suggestion.user.profile?.location || 'KIIT University',
+              avatar: suggestion.user.profile?.avatarUrl || '',
+              matchScore: Math.floor(Math.random() * 20) + 80, // Mock match score
+            })
+          );
+
+        setSuggestedConnections(dashboardSuggestions);
+      } catch {
         setError('Failed to load dashboard data');
+        console.error('Dashboard error');
       } finally {
         setLoading(false);
-        console.log('🏁 Dashboard: Data fetching completed');
       }
     };
 
-    if (user) {
-      fetchDashboardData();
-    }
+    fetchDashboardData();
   }, [
-    user,
     connections,
     pendingReceived,
     suggestions,
-    upcomingEvents.length,
+    user,
     calculateProfileCompletion,
   ]);
 
-  interface UserProfile {
-    bio?: string;
-    location?: string;
-    skills?: string[];
-  }
-
-  interface DashboardUser {
-    name?: string;
-    email?: string;
-    role?: string;
-    profile?: UserProfile;
-  }
-
-  const generateRecentActivities = (
-    connections: { id: string; user: { id: string; name: string } }[],
-    pendingRequests: {
-      id: string;
-      requester?: { id: string; name?: string };
-    }[],
-    conversations: { id: string; participant?: { id: string; name?: string } }[]
-  ): RecentActivity[] => {
-    const activities: RecentActivity[] = [];
-
-    // Add recent connection activities
-    if (connections.length > 0) {
-      const recentConnection = connections[0];
-      activities.push({
-        id: `conn-${recentConnection.id}`,
-        type: 'connection',
-        message: `Connected with ${recentConnection.user.name}`,
-        time: '2h ago',
-        avatar: recentConnection.user.name.charAt(0).toUpperCase(),
-        userId: recentConnection.user.id,
-      });
-    }
-
-    // Add pending request activities
-    if (pendingRequests.length > 0) {
-      const pendingRequest = pendingRequests[0];
-      activities.push({
-        id: `req-${pendingRequest.id}`,
-        type: 'network',
-        message: `New connection request from ${pendingRequest.requester?.name || 'Unknown'}`,
-        time: '4h ago',
-        avatar: pendingRequest.requester?.name?.charAt(0).toUpperCase() || '?',
-        userId: pendingRequest.requester?.id,
-      });
-    }
-
-    // Add message activities
-    if (conversations && conversations.length > 0) {
-      const recentMessage = conversations[0];
-      activities.push({
-        id: `msg-${recentMessage.id}`,
-        type: 'message',
-        message: `New message from ${recentMessage.participant?.name || 'Unknown'}`,
-        time: '6h ago',
-        avatar: recentMessage.participant?.name?.charAt(0).toUpperCase() || '?',
-        userId: recentMessage.participant?.id,
-      });
-    }
-
-    // Add default activities if none exist
-    if (activities.length === 0) {
-      activities.push(
-        {
-          id: 'default-1',
-          type: 'network',
-          message: 'Welcome to Nexus! Start building your network',
-          time: 'Just now',
-          avatar: 'N',
-        },
-        {
-          id: 'default-2',
-          type: 'event',
-          message: 'Check out upcoming events and workshops',
-          time: '1d ago',
-          avatar: 'E',
-        }
-      );
-    }
-
-    return activities.slice(0, 4); // Limit to 4 activities
-  };
-
-  const handleQuickAction = (action: string) => {
-    switch (action) {
-      case 'Connect':
-        navigate('/connections');
-        break;
-      case 'Message':
-        navigate('/messages');
-        break;
-      case 'Events':
-        // Navigate to events page when created
-        break;
-      case 'Resources':
-        // Navigate to resources page when created
-        break;
-    }
-  };
-
-  const handleViewAll = (section: string) => {
-    switch (section) {
-      case 'activity':
-        navigate('/connections');
-        break;
-      case 'events':
-        // Navigate to events page when created
-        break;
-      case 'suggestions':
-        navigate('/connections');
-        break;
-    }
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'STUDENT':
-        return 'primary';
-      case 'ALUM':
-        return 'secondary';
-      case 'ADMIN':
-        return 'error';
-      default:
-        return 'default';
-    }
-  };
-
   const quickActions = [
-    { title: 'Connect', icon: <PersonAdd />, color: 'primary' },
-    { title: 'Message', icon: <Forum />, color: 'secondary' },
-    { title: 'Events', icon: <Event />, color: 'warning' },
-    { title: 'Resources', icon: <Assignment />, color: 'info' },
+    {
+      title: 'Post Update',
+      icon: <Forum />,
+      color: 'primary',
+      action: () => navigate('/feed'),
+    },
+    {
+      title: 'Find People',
+      icon: <PersonAdd />,
+      color: 'secondary',
+      action: () => navigate('/connections'),
+    },
+    {
+      title: 'Join Community',
+      icon: <Groups />,
+      color: 'info',
+      action: () => navigate('/community'),
+    },
+    {
+      title: 'Resources',
+      icon: <Assignment />,
+      color: 'success',
+      action: () => navigate('/resources'),
+    },
   ];
 
-  if (loading) {
+  if (loading || connectionsLoading) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Box
@@ -370,11 +472,11 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (error || connectionsError) {
     return (
       <Container maxWidth="xl" sx={{ py: 3 }}>
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          {error || connectionsError}
         </Alert>
       </Container>
     );
@@ -382,432 +484,508 @@ const Dashboard: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Header Section */}
+      {/* Professional Header */}
       <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{
-            fontWeight: 700,
-            background: 'linear-gradient(45deg, #1976d2 30%, #4dabf5 90%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            display: 'inline-block',
-          }}
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb={2}
         >
-          Welcome back, {user?.name?.split(' ')[0] || 'User'}!
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary" sx={{ mt: 1 }}>
-          Here&apos;s what&apos;s happening in your network today
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: 600,
+              color: 'text.primary',
+            }}
+          >
+            Welcome back, {user?.name?.split(' ')[0] || 'User'}
+          </Typography>
+          <Box display="flex" alignItems="center" gap={2}>
+            <Chip
+              icon={<Message />}
+              label={`${stats.messages} Messages`}
+              color="primary"
+              size="small"
+            />
+            {notifications.length > 0 && (
+              <Chip
+                icon={<Notifications />}
+                label={`${notifications.length} New`}
+                color="secondary"
+                size="small"
+              />
+            )}
+          </Box>
+        </Box>
+        <Typography variant="body1" color="text.secondary">
+          Here's what's happening in your professional network
         </Typography>
       </Box>
 
-      {/* Stats Grid */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {[
-          {
-            icon: <People />,
-            value: stats.connections,
-            label: 'Connections',
-            color: 'primary',
-            progress: 70,
-          },
-          {
-            icon: <Message />,
-            value: stats.messages,
-            label: 'Messages',
-            color: 'secondary',
-            progress: 45,
-          },
-          {
-            icon: <Notifications />,
-            value: stats.pendingRequests,
-            label: 'Requests',
-            color: 'warning',
-            progress: 30,
-          },
-          {
-            icon: <TrendingUp />,
-            value: `${stats.profileCompletion}%`,
-            label: 'Profile',
-            color: 'success',
-            progress: stats.profileCompletion,
-          },
-          {
-            icon: <Event />,
-            value: stats.upcomingEvents,
-            label: 'Events',
-            color: 'info',
-            progress: 50,
-          },
-          {
-            icon: <Groups />,
-            value: stats.newAlumni,
-            label: 'New Alumni',
-            color: 'secondary',
-            progress: 60,
-          },
-        ].map((stat, index) => (
-          <Grid item xs={12} sm={6} md={4} lg={2} key={index}>
-            <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
-              <Card
-                sx={{
-                  height: '100%',
-                  borderLeft: `4px solid`,
-                  borderColor: `${stat.color}.main`,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-                }}
-              >
-                <CardContent>
-                  <Stack direction="row" alignItems="center" spacing={2}>
-                    <Avatar
-                      sx={{
-                        bgcolor: `${stat.color}.light`,
-                        color: `${stat.color}.dark`,
-                        width: 48,
-                        height: 48,
-                      }}
-                    >
-                      {stat.icon}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="h5" sx={{ fontWeight: 700 }}>
-                        {stat.value}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {stat.label}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
-        ))}
-      </Grid>
-
-      {/* Main Content */}
       <Grid container spacing={3}>
         {/* Left Column */}
         <Grid item xs={12} md={8}>
-          {/* Quick Actions */}
-          <Card sx={{ mb: 3, borderRadius: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                Quick Actions
-              </Typography>
-              <Grid container spacing={2}>
-                {quickActions.map((action, index) => (
-                  <Grid item xs={6} sm={3} key={index}>
-                    <motion.div
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <Button
-                        fullWidth
-                        variant="contained"
-                        startIcon={action.icon}
-                        onClick={() => handleQuickAction(action.title)}
-                        sx={{
-                          py: 2,
-                          borderRadius: 2,
-                          bgcolor: `${action.color}.main`,
-                          '&:hover': { bgcolor: `${action.color}.dark` },
-                        }}
-                      >
-                        {action.title}
-                      </Button>
-                    </motion.div>
-                  </Grid>
-                ))}
+          {/* Stats Overview */}
+          <Paper
+            sx={{
+              p: 3,
+              mb: 3,
+              background: 'linear-gradient(135deg, #f8faf8 0%, #ffffff 100%)',
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              Network Overview
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={6} sm={3}>
+                <Box textAlign="center">
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'primary.main' }}
+                  >
+                    {stats.connections}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Connections
+                  </Typography>
+                </Box>
               </Grid>
-            </CardContent>
-          </Card>
+              <Grid item xs={6} sm={3}>
+                <Box textAlign="center">
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'secondary.main' }}
+                  >
+                    {stats.messages}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Messages
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Box textAlign="center">
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'warning.main' }}
+                  >
+                    {stats.pendingRequests}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Pending
+                  </Typography>
+                </Box>
+              </Grid>
+              <Grid item xs={6} sm={3}>
+                <Box textAlign="center">
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'success.main' }}
+                  >
+                    {stats.profileCompletion}%
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Profile Complete
+                  </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+          </Paper>
+
+          {/* Quick Actions */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              Quick Actions
+            </Typography>
+            <Grid container spacing={2}>
+              {quickActions.map((action, index) => (
+                <Grid item xs={6} sm={3} key={index}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={action.icon}
+                    onClick={action.action}
+                    sx={{
+                      py: 2,
+                      minHeight: '64px', // Fixed height for all buttons
+                      borderColor: 'divider',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      textAlign: 'center',
+                      whiteSpace: 'normal', // Allow text wrapping
+                      lineHeight: 1.2,
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        backgroundColor: 'rgba(76, 175, 80, 0.04)',
+                      },
+                    }}
+                  >
+                    {action.title}
+                  </Button>
+                </Grid>
+              ))}
+            </Grid>
+          </Paper>
 
           {/* Recent Activity */}
-          <Card sx={{ mb: 3, borderRadius: 3 }}>
-            <CardContent>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 2,
-                }}
+          <Paper sx={{ p: 3 }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Recent Activity
+              </Typography>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/messages')}
               >
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Recent Activity
-                </Typography>
-                <Button
-                  size="small"
-                  onClick={() => handleViewAll('activity')}
-                  sx={{ textTransform: 'none' }}
-                >
-                  View All
-                </Button>
-              </Box>
-              <List>
-                {recentActivities.map((activity, index) => (
+                View All
+              </Button>
+            </Box>
+            <List>
+              {recentActivities.length === 0 ? (
+                <ListItem>
+                  <ListItemText
+                    primary="No recent activity"
+                    secondary="Start connecting with people to see activity here"
+                  />
+                </ListItem>
+              ) : (
+                recentActivities.map((activity, index) => (
                   <React.Fragment key={activity.id}>
-                    <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+                    <ListItem sx={{ px: 0 }}>
                       <ListItemAvatar>
                         <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          {activity.avatar}
+                          {activity.type === 'connection' && <PersonAdd />}
+                          {activity.type === 'message' && <Message />}
+                          {activity.type === 'event' && <Event />}
+                          {activity.type === 'post' && <Forum />}
                         </Avatar>
                       </ListItemAvatar>
                       <ListItemText
-                        primary={activity.message}
-                        secondary={activity.time}
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                          fontWeight: 500,
-                        }}
-                        secondaryTypographyProps={{ variant: 'caption' }}
+                        primary={activity.title}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {activity.description}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {activity.timestamp}
+                            </Typography>
+                          </Box>
+                        }
                       />
-                      {activity.type === 'connection' && (
-                        <CheckCircle color="success" />
-                      )}
-                      {activity.type === 'message' && (
-                        <Message color="primary" />
-                      )}
-                      {activity.type === 'event' && (
-                        <Schedule color="warning" />
-                      )}
-                      {activity.type === 'network' && (
-                        <Notifications color="info" />
-                      )}
                     </ListItem>
-                    {index < recentActivities.length - 1 && (
-                      <Divider variant="inset" component="li" />
-                    )}
+                    {index < recentActivities.length - 1 && <Divider />}
                   </React.Fragment>
-                ))}
-              </List>
-            </CardContent>
-          </Card>
+                ))
+              )}
+            </List>
+          </Paper>
+        </Grid>
+
+        {/* Right Column */}
+        <Grid item xs={12} md={4}>
+          {/* Notifications */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Notifications
+              </Typography>
+              <Chip
+                label={notifications.length}
+                size="small"
+                color={notifications.length > 0 ? 'primary' : 'default'}
+              />
+            </Box>
+            <List>
+              {notifications.length === 0 ? (
+                <ListItem>
+                  <ListItemText
+                    primary="No notifications"
+                    secondary="You're all caught up!"
+                  />
+                </ListItem>
+              ) : (
+                notifications.map((notification, index) => (
+                  <React.Fragment key={notification.id}>
+                    <ListItem sx={{ px: 0 }}>
+                      <ListItemAvatar>
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          {notification.type === 'message' && <Message />}
+                          {notification.type === 'connection' && <PersonAdd />}
+                          {notification.type === 'event' && <Event />}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={notification.title}
+                        secondary={
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {notification.description}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {new Date(
+                                notification.timestamp
+                              ).toLocaleTimeString()}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                    {index < notifications.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))
+              )}
+            </List>
+            {notifications.length > 0 && (
+              <Button
+                variant="text"
+                size="small"
+                fullWidth
+                onClick={() => setNotifications([])}
+                sx={{ mt: 1 }}
+              >
+                Clear All
+              </Button>
+            )}
+          </Paper>
+
+          {/* Recent Posts */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Recent Posts
+              </Typography>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/feed')}
+              >
+                View All
+              </Button>
+            </Box>
+            <List>
+              <ListItem>
+                <ListItemText
+                  primary="No recent posts"
+                  secondary="Check the feed for latest updates"
+                />
+              </ListItem>
+            </List>
+          </Paper>
+
+          {/* Profile Completion */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              Profile Strength
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+              <Box
+                display="flex"
+                justifyContent="space-between"
+                alignItems="center"
+                mb={1}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  {stats.profileCompletion}% Complete
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {stats.profileCompletion}/100
+                </Typography>
+              </Box>
+              <LinearProgress
+                variant="determinate"
+                value={stats.profileCompletion}
+                sx={{ height: 6, borderRadius: 3 }}
+              />
+            </Box>
+            <Button
+              variant="contained"
+              fullWidth
+              onClick={() => navigate('/profile')}
+              sx={{ mt: 2 }}
+            >
+              Complete Profile
+            </Button>
+          </Paper>
 
           {/* Upcoming Events */}
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Upcoming Events
-                </Typography>
-                <Button
-                  size="small"
-                  onClick={() => handleViewAll('events')}
-                  sx={{ textTransform: 'none' }}
-                >
-                  Create
-                </Button>
-              </Box>
-              <List>
-                {upcomingEvents.map((event, index) => (
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Upcoming Events
+              </Typography>
+              <IconButton size="small">
+                <MoreVert />
+              </IconButton>
+            </Box>
+            <List>
+              {upcomingEvents.length === 0 ? (
+                <ListItem>
+                  <ListItemText
+                    primary="No upcoming events"
+                    secondary="Check back later for new events"
+                  />
+                </ListItem>
+              ) : (
+                upcomingEvents.map((event, index) => (
                   <React.Fragment key={event.id}>
-                    <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+                    <ListItem sx={{ px: 0 }}>
                       <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'warning.main' }}>
-                          <CalendarToday />
+                        <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                          <Event />
                         </Avatar>
                       </ListItemAvatar>
                       <ListItemText
                         primary={event.title}
                         secondary={
-                          <React.Fragment>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                mb: 0.5,
-                              }}
-                            >
-                              <CalendarToday sx={{ fontSize: 16 }} />
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              <Schedule
+                                sx={{
+                                  fontSize: 14,
+                                  mr: 0.5,
+                                  verticalAlign: 'middle',
+                                }}
+                              />
                               {event.date}
-                            </Box>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                              }}
-                            >
-                              <LocationOn sx={{ fontSize: 16 }} />
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              <LocationOn
+                                sx={{
+                                  fontSize: 14,
+                                  mr: 0.5,
+                                  verticalAlign: 'middle',
+                                }}
+                              />
                               {event.location}
-                            </Box>
-                          </React.Fragment>
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {event.attendees} attendees
+                            </Typography>
+                          </Box>
                         }
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                          fontWeight: 500,
-                        }}
-                        secondaryTypographyProps={{ variant: 'caption' }}
                       />
                     </ListItem>
-                    {index < upcomingEvents.length - 1 && (
-                      <Divider variant="inset" component="li" />
-                    )}
+                    {index < upcomingEvents.length - 1 && <Divider />}
                   </React.Fragment>
-                ))}
-              </List>
-              <Box sx={{ mt: 2 }}>
-                <Button
-                  variant="outlined"
-                  startIcon={<PersonAdd />}
-                  fullWidth
-                  sx={{ borderRadius: 2 }}
-                >
-                  + Add New Event
-                </Button>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
+                ))
+              )}
+            </List>
+          </Paper>
 
-        {/* Right Column */}
-        <Grid item xs={12} md={4}>
           {/* Suggested Connections */}
-          <Card sx={{ borderRadius: 3, mb: 3 }}>
-            <CardContent>
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  mb: 2,
-                }}
+          <Paper sx={{ p: 3 }}>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={3}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                People You May Know
+              </Typography>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => navigate('/connections')}
               >
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Suggested Connections
-                </Typography>
-                <Button
-                  size="small"
-                  onClick={() => handleViewAll('suggestions')}
-                  sx={{ textTransform: 'none' }}
-                >
-                  View All
-                </Button>
-              </Box>
-              <List>
-                {suggestedConnections.map((connection, index) => (
-                  <React.Fragment key={connection.id}>
-                    <ListItem alignItems="flex-start" sx={{ px: 0 }}>
+                View All
+              </Button>
+            </Box>
+            <List>
+              {suggestedConnections.length === 0 ? (
+                <ListItem>
+                  <ListItemText
+                    primary="No suggestions available"
+                    secondary="Complete your profile to get better suggestions"
+                  />
+                </ListItem>
+              ) : (
+                suggestedConnections.map((person, index) => (
+                  <React.Fragment key={person.id}>
+                    <ListItem sx={{ px: 0 }}>
                       <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'success.main' }}>
-                          {connection.avatar}
+                        <Avatar sx={{ bgcolor: 'primary.main' }}>
+                          {person.name.charAt(0)}
                         </Avatar>
                       </ListItemAvatar>
                       <ListItemText
-                        primary={connection.name}
+                        primary={person.name}
                         secondary={
-                          <React.Fragment>
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1,
-                                mb: 0.5,
-                              }}
-                            >
-                              <Chip
-                                label={connection.role}
-                                size="small"
-                                color={getRoleColor(connection.role)}
-                                variant="outlined"
+                          <Box>
+                            <Typography variant="body2" color="text.secondary">
+                              {person.title}
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              <Business
+                                sx={{
+                                  fontSize: 14,
+                                  mr: 0.5,
+                                  verticalAlign: 'middle',
+                                }}
                               />
-                            </Box>
-                            {connection.matchScore && (
-                              <Typography
-                                variant="caption"
-                                color="text.secondary"
-                              >
-                                Match Score: {connection.matchScore}%
-                              </Typography>
+                              {person.company}
+                            </Typography>
+                            {person.matchScore && (
+                              <Chip
+                                label={`${person.matchScore}% match`}
+                                size="small"
+                                color="primary"
+                                sx={{ mt: 0.5 }}
+                              />
                             )}
-                          </React.Fragment>
+                          </Box>
                         }
-                        primaryTypographyProps={{
-                          variant: 'body2',
-                          fontWeight: 500,
-                        }}
-                        secondaryTypographyProps={{ variant: 'caption' }}
                       />
                       <Button
+                        variant="outlined"
                         size="small"
-                        variant="contained"
-                        startIcon={<PersonAdd />}
+                        sx={{ ml: 1 }}
                         onClick={() => navigate('/connections')}
-                        sx={{ borderRadius: 2, textTransform: 'none' }}
                       >
                         Connect
                       </Button>
                     </ListItem>
-                    {index < suggestedConnections.length - 1 && (
-                      <Divider variant="inset" component="li" />
-                    )}
+                    {index < suggestedConnections.length - 1 && <Divider />}
                   </React.Fragment>
-                ))}
-              </List>
-              {suggestedConnections.length === 0 && (
-                <Box sx={{ textAlign: 'center', py: 3 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No suggestions available
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    onClick={() => navigate('/connections')}
-                    sx={{ mt: 2, borderRadius: 2 }}
-                  >
-                    Browse Connections
-                  </Button>
-                </Box>
+                ))
               )}
-            </CardContent>
-          </Card>
-
-          {/* Profile Completion */}
-          <Card sx={{ borderRadius: 3 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                Profile Completion
-              </Typography>
-              <Box
-                sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}
-              >
-                <Avatar sx={{ bgcolor: 'success.main', width: 48, height: 48 }}>
-                  <TrendingUp />
-                </Avatar>
-                <Box>
-                  <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                    {stats.profileCompletion}%
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Complete
-                  </Typography>
-                </Box>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={stats.profileCompletion}
-                sx={{ height: 8, borderRadius: 4 }}
-              />
-              <Button
-                variant="outlined"
-                fullWidth
-                onClick={() => navigate('/profile')}
-                sx={{ mt: 2, borderRadius: 2, textTransform: 'none' }}
-              >
-                Complete Profile
-              </Button>
-            </CardContent>
-          </Card>
+            </List>
+          </Paper>
         </Grid>
       </Grid>
     </Container>

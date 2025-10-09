@@ -726,7 +726,14 @@ export const SubCommunityFeedPage: React.FC = () => {
                     disabled={hasPendingRequest}
                     size="large"
                     startIcon={<People />}
-                    sx={{ borderRadius: 2, fontWeight: 600 }}
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      minHeight: '48px', // Fixed height for uniform appearance
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     Join Community
                   </Button>
@@ -739,7 +746,14 @@ export const SubCommunityFeedPage: React.FC = () => {
                     onClick={() => setOpenForm(true)}
                     size="large"
                     startIcon={<Add />}
-                    sx={{ borderRadius: 2, fontWeight: 600 }}
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      minHeight: '48px', // Fixed height for uniform appearance
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     Create Post
                   </Button>
@@ -752,7 +766,15 @@ export const SubCommunityFeedPage: React.FC = () => {
                     onClick={handleLeaveCommunity}
                     size="small"
                     startIcon={<ExitToApp />}
-                    sx={{ borderRadius: 2, fontWeight: 600, mt: 1 }}
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      mt: 1,
+                      minHeight: '48px', // Fixed height for uniform appearance
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
                     Leave Community
                   </Button>

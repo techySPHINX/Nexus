@@ -6,6 +6,7 @@ import {
   Body,
   Delete,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -31,6 +32,16 @@ export class UserController {
   @Roles(Role.ADMIN)
   findAll() {
     return this.userService.findAll();
+  }
+
+  /**
+   * Searches for users by name or email.
+   * @param query - The search query string.
+   * @returns A promise that resolves to an array of matching users.
+   */
+  @Get('search')
+  searchUsers(@Query('q') query: string) {
+    return this.userService.searchUsers(query);
   }
 
   /**

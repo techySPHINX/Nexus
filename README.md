@@ -1,252 +1,404 @@
 # Nexus - Student & Alumni Networking Platform
 
-Nexus is a comprehensive social networking platform designed specifically for students and alumni of KIIT University. It provides a secure, feature-rich environment for networking, messaging, and professional development. The platform includes user authentication, profile management, connection handling, and real-time messaging capabilities.
+[![License: UNLICENSED](https://img.shields.io/badge/License-UNLICENSED-red.svg)](https://opensource.org/licenses/Unlicense)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://reactjs.org/)
+[![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![Prisma](https://img.shields.io/badge/Prisma-3982CE?logo=prisma&logoColor=white)](https://www.prisma.io/)
 
-## Features
+Nexus is a comprehensive social networking platform designed specifically for students and alumni of KIIT University. It provides a secure, feature-rich environment for networking, messaging, professional development, mentorship, and community building.
 
-- **Secure Authentication:** JWT-based authentication with domain-specific email validation (@kiit.ac.in)
-- **User Management:** Complete user profiles with skills, interests, and location
-- **Connection System:** Send, accept, reject, and manage connection requests
-- **Messaging:** Real-time messaging between connected users
-- **Role-based Access:** Support for Students, Alumni, and Administrators
-- **Modern UI:** Beautiful, responsive interface built with Material-UI and Framer Motion
-- **Type Safety:** Full TypeScript implementation for both frontend and backend
+## 🚀 Features
 
-## Tech Stack
+### 🔐 Authentication & User Management
+- **JWT-based Authentication** with domain-specific email validation (@kiit.ac.in)
+- **Role-based Access Control** (Student, Alumni, Administrator)
+- **Secure Password Hashing** using bcrypt
+- **Profile Management** with skills, interests, location, and bio
+- **File Upload System** with Google Drive integration
 
-### Backend
+### 🤝 Connection & Networking
+- **Connection System** - Send, accept, reject, and manage connection requests
+- **User Search & Discovery** with advanced filtering
+- **Connection Suggestions** based on mutual connections and interests
+- **Professional Networking** tools for career development
 
-- **[NestJS](https://nestjs.com/):** Progressive Node.js framework
-- **[TypeScript](https://www.typescriptlang.org/):** Type-safe JavaScript
-- **[Prisma](https://www.prisma.io/):** Next-generation ORM
-- **[PostgreSQL](https://www.postgresql.org/):** Robust database
-- **[JWT](https://jwt.io/):** Secure authentication
-- **[Bcrypt](https://www.npmjs.com/package/bcrypt):** Password hashing
+### 💬 Real-time Communication
+- **WebSocket-based Messaging** with Socket.IO
+- **Real-time Chat** with typing indicators
+- **Message Notifications** with browser notifications
+- **Unread Message Tracking** with visual indicators
+- **Message History** with pagination
 
-### Frontend
+### 📝 Content & Community
+- **Post System** with likes, comments, and voting
+- **Sub-communities** for specialized groups
+- **Event Management** and RSVP system
+- **Showcase/Portfolio** system for projects and achievements
+- **File Sharing** and collaboration tools
 
-- **[React](https://reactjs.org/):** User interface library
-- **[TypeScript](https://www.typescriptlang.org/):** Type safety
-- **[Material-UI](https://mui.com/):** Component library
-- **[Framer Motion](https://www.framer.com/motion/):** Animations
-- **[React Router](https://reactrouter.com/):** Client-side routing
-- **[Axios](https://axios-http.com/):** HTTP client
+### 🎓 Mentorship & Learning
+- **Mentorship System** with mentor-mentee matching
+- **Mentorship Applications** and request management
+- **Goal Setting** and progress tracking
+- **Meeting Scheduling** and management
+- **Feedback System** for mentorship quality
 
-## Quick Start
+### 🏆 Gamification & Engagement
+- **Badge System** for achievements
+- **Points and Rewards** for platform engagement
+- **Leaderboards** and ranking system
+- **Engagement Tracking** and analytics
 
-### Prerequisites
+### 📧 Notifications & Communication
+- **Email Notifications** via SendGrid
+- **In-app Notifications** system
+- **Real-time Updates** for all platform activities
+- **Notification Preferences** and settings
+
+## 🛠️ Tech Stack
+
+### Backend Technologies
+- **[NestJS](https://nestjs.com/)** - Progressive Node.js framework with TypeScript
+- **[Prisma](https://www.prisma.io/)** - Next-generation ORM with PostgreSQL
+- **[PostgreSQL](https://www.postgresql.org/)** - Robust relational database
+- **[Socket.IO](https://socket.io/)** - Real-time bidirectional communication
+- **[JWT](https://jwt.io/)** - Secure token-based authentication
+- **[Bcrypt](https://www.npmjs.com/package/bcrypt)** - Password hashing
+- **[SendGrid](https://sendgrid.com/)** - Email service integration
+- **[Google APIs](https://developers.google.com/)** - Google Drive integration
+- **[Multer](https://www.npmjs.com/package/multer)** - File upload handling
+- **[Swagger](https://swagger.io/)** - API documentation
+
+### Frontend Technologies
+- **[React 18](https://reactjs.org/)** - Modern UI library with hooks
+- **[TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript
+- **[Material-UI (MUI)](https://mui.com/)** - React component library
+- **[Framer Motion](https://www.framer.com/motion/)** - Animation library
+- **[React Router](https://reactrouter.com/)** - Client-side routing
+- **[Axios](https://axios-http.com/)** - HTTP client for API calls
+- **[Socket.IO Client](https://socket.io/docs/v4/client-api/)** - Real-time communication
+- **[Vite](https://vitejs.dev/)** - Fast build tool and dev server
+- **[Date-fns](https://date-fns.org/)** - Date utility library
+- **[JWT Decode](https://www.npmjs.com/package/jwt-decode)** - JWT token handling
+
+### Development Tools
+- **[ESLint](https://eslint.org/)** - Code linting and quality
+- **[Prettier](https://prettier.io/)** - Code formatting
+- **[Jest](https://jestjs.io/)** - Testing framework
+- **[Husky](https://typicode.github.io/husky/)** - Git hooks
+- **[Commitlint](https://commitlint.js.org/)** - Commit message linting
+
+## 📋 Prerequisites
 
 - **Node.js** (v16 or higher)
 - **npm** or **yarn**
-- **PostgreSQL** database
+- **PostgreSQL** (v12 or higher)
 - **Git**
 
-### Installation
+## 🚀 Quick Start
 
-1. **Clone the repository:**
+### 1. Clone the Repository
 
-   ```bash
-   git clone <repository-url>
-   cd Nexus
-   ```
+```bash
+git clone https://github.com/techySPHINX/Nexus.git
+cd Nexus
+```
 
-2. **Install backend dependencies:**
+### 2. Install Dependencies
 
-   ```bash
-   cd backend
-   npm install
-   cd ..
-   ```
+```bash
+# Install backend dependencies
+cd backend
+npm install
 
-3. **Install frontend dependencies:**
+# Install frontend dependencies
+cd ../frontend
+npm install
+```
 
-   ```bash
-   cd frontend
-   npm install
-   cd ..
-   ```
+### 3. Environment Setup
 
-### Environment Setup
+Create environment files for both backend and frontend:
 
-1.  **Create environment file for the backend:**
+```bash
+# Backend environment
+cd backend
+cp .env.example .env
+```
 
-    ```bash
-    cd backend
-    cp .env.example .env
-    ```
+Configure `backend/.env`:
 
-2.  **Configure backend environment variables in `backend/.env`:**
+```env
+# Database Configuration
+DATABASE_URL="postgresql://username:password@localhost:5432/nexus_db"
 
-    ```env
-    # Database Configuration
-    DATABASE_URL="postgresql://username:password@localhost:5432/nexus_db"
+# JWT Configuration
+JWT_SECRET="your-super-secret-and-long-string-here"
+JWT_EXPIRES_IN="7d"
 
-    # JWT Configuration
-    JWT_SECRET="your-super-secret-and-long-string-here"
+# Application Configuration
+PORT=3000
+NODE_ENV=development
 
-    # Application Configuration
-    PORT=3000
-    NODE_ENV=development
-    ```
+# Email Configuration (SendGrid)
+SENDGRID_API_KEY="your-sendgrid-api-key"
+FROM_EMAIL="noreply@nexus.kiit.ac.in"
 
-### Database Setup
+# Google Drive Configuration
+GOOGLE_DRIVE_CLIENT_ID="your-google-client-id"
+GOOGLE_DRIVE_CLIENT_SECRET="your-google-client-secret"
+GOOGLE_DRIVE_REDIRECT_URI="http://localhost:3000/auth/google/callback"
+```
 
-1.  **Create PostgreSQL database:**
+### 4. Database Setup
 
-    ```sql
-    CREATE DATABASE nexus_db;
-    ```
+```bash
+# Create PostgreSQL database
+createdb nexus_db
 
-2.  **Run Prisma migrations:**
+# Run Prisma migrations
+cd backend
+npx prisma migrate dev --name init
 
-    ```bash
-    cd backend
-    npx prisma migrate dev --name init
-    ```
+# Generate Prisma client
+npx prisma generate
 
-3.  **Generate Prisma client:**
+# Seed the database (optional)
+npm run seed
+```
 
-    ```bash
-    npx prisma generate
-    ```
+### 5. Start the Application
 
-### Running the Application
+```bash
+# Start backend server (Terminal 1)
+cd backend
+npm run start:dev
 
-1.  **Start the backend server:**
-
-    ```bash
-    cd backend
-    # Development mode
-    npm run start:dev
-
-    # Production mode
-    npm run build
-    npm run start:prod
-    ```
-
-2.  **Start the frontend application:**
-
-    ```bash
-    cd frontend
-    npm start
-    ```
+# Start frontend application (Terminal 2)
+cd frontend
+npm run dev
+```
 
 The application will be available at:
-
-- **Frontend:** http://localhost:3001
+- **Frontend:** http://localhost:3002
 - **Backend API:** http://localhost:3000
+- **API Documentation:** http://localhost:3000/api
 
-## Development Workflow
-
-This project uses a professional development workflow to ensure code quality and consistency. The following tools are used:
-
-- **Prettier**: For consistent code formatting.
-- **ESLint**: for identifying and fixing code quality issues.
-- **Husky**: For running pre-commit and pre-push hooks.
-- **lint-staged**: For running checks on staged files before they are committed.
-- **Commitlint**: For enforcing conventional commit messages.
-
-### Committing Changes
-
-When you commit changes, the following will happen:
-
-1.  **Pre-commit hook**: `lint-staged` will run Prettier to format your staged files.
-2.  **Commit message hook**: `commitlint` will check your commit message to ensure it follows the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
-
-This ensures that all code is formatted correctly and that commit messages are consistent and readable.
-
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 Nexus/
-├── backend/                  # NestJS backend
-│   ├── src/                  # Backend source code
-│   │   ├── auth/             # Authentication module (JWT, guards, DTOs)
-│   │   ├── user/             # User management
-│   │   ├── connection/       # Connection handling
-│   │   ├── messaging/        # Messaging system (real-time, gateway)
-│   │   ├── engagement/       # Engagement features
-│   │   ├── events/           # Event management
-│   │   ├── gamification/     # Gamification logic
-│   │   ├── referral/         # Referral system
-│   │   ├── showcase/         # Showcases/portfolios
-│   │   ├── sub-community/    # Sub-community logic
-│   │   ├── sub-community-request/ # Sub-community requests
-│   │   ├── email/            # Email integration
-│   │   ├── files/            # File uploads, Google Drive integration
-│   │   ├── notification/     # Notifications
-│   │   ├── prisma/           # Prisma service
-│   │   ├── common/           # Shared decorators, guards, utils
-│   │   └── app.module.ts     # Main app module
-│   ├── prisma/               # Database schema (schema.prisma)
-│   ├── data/                 # Seed scripts
-│   ├── test/                 # Backend tests
-│   └── uploads/              # Uploaded files
-├── frontend/                 # React frontend
+├── backend/                          # NestJS Backend
 │   ├── src/
-│   │   ├── components/       # Reusable components
-│   │   ├── pages/            # Page components
-│   │   ├── contexts/         # React contexts (auth, user, etc.)
-│   │   ├── hooks/            # Custom hooks
-│   │   ├── route/            # Routing logic
-│   │   ├── services/         # API services (Axios)
-│   │   ├── types/            # TypeScript types
-│   │   ├── utils/            # Utility functions
-│   │   └── App.tsx           # Main app component
-│   ├── public/               # Static assets
-│   └── index.html            # HTML entry point
-├── .github/                  # GitHub workflows & Copilot instructions
-└── README.md                 # This file
+│   │   ├── auth/                     # Authentication module
+│   │   │   ├── auth.controller.ts     # Auth endpoints
+│   │   │   ├── auth.service.ts       # Auth business logic
+│   │   │   ├── guards/               # JWT guards
+│   │   │   ├── strategies/            # Passport strategies
+│   │   │   └── dto/                  # Auth DTOs
+│   │   ├── user/                     # User management
+│   │   ├── connection/               # Connection system
+│   │   ├── messaging/                # Real-time messaging
+│   │   │   ├── messaging.controller.ts
+│   │   │   ├── messaging.service.ts
+│   │   │   └── messaging.gateway.improved.ts  # WebSocket gateway
+│   │   ├── post/                     # Post system
+│   │   ├── sub-community/            # Sub-community management
+│   │   ├── mentorship/               # Mentorship system
+│   │   ├── showcase/                 # Project showcase
+│   │   ├── gamification/            # Badges and points
+│   │   ├── notification/            # Notification system
+│   │   ├── email/                    # Email service
+│   │   ├── files/                    # File upload/management
+│   │   ├── events/                   # Event management
+│   │   ├── engagement/               # Engagement tracking
+│   │   ├── referral/                 # Referral system
+│   │   ├── prisma/                   # Prisma service
+│   │   └── common/                   # Shared utilities
+│   ├── prisma/
+│   │   └── schema.prisma             # Database schema
+│   ├── data/                         # Seed scripts
+│   └── uploads/                      # Uploaded files
+├── frontend/                         # React Frontend
+│   ├── src/
+│   │   ├── components/               # Reusable components
+│   │   │   ├── ChatBox.tsx           # Chat interface
+│   │   │   ├── MessageList.tsx       # Message display
+│   │   │   ├── MessageInput.tsx      # Message input
+│   │   │   └── Navbar.tsx            # Navigation
+│   │   ├── pages/                    # Page components
+│   │   │   ├── Dashboard.tsx         # Main dashboard
+│   │   │   ├── ChatPage.tsx          # Chat page
+│   │   │   ├── Connections.tsx       # Connections page
+│   │   │   ├── Profile.tsx           # User profile
+│   │   │   └── Posts/                # Post-related pages
+│   │   ├── contexts/                 # React contexts
+│   │   │   ├── AuthContext.tsx       # Authentication
+│   │   │   ├── ThemeContext.tsx      # Theme management
+│   │   │   └── NotificationContext.tsx
+│   │   ├── hooks/                     # Custom hooks
+│   │   │   └── useConnections.ts     # Connections logic
+│   │   ├── services/                 # API services
+│   │   │   ├── api.ts                # Axios configuration
+│   │   │   └── websocket.improved.ts # WebSocket service
+│   │   ├── types/                    # TypeScript types
+│   │   ├── utils/                    # Utility functions
+│   │   └── App.tsx                   # Main app component
+│   └── public/                       # Static assets
+└── README.md                         # This file
 ```
 
-### Backend Conventions
-- Modular NestJS structure: each domain in its own folder
-- DTOs for request/response validation (`src/*/dto/`)
-- Role-based guards and decorators in `src/common/`
-- Service/controller separation
-- Prisma ORM for database access
-- JWT authentication, role-based access
+## 🔧 Development Workflow
 
-### Frontend Conventions
-- React functional components, hooks, and context
-- Material-UI for design, Framer Motion for animation
-- API calls via `services/`, types in `types/`
-- Role-based UI logic (Student, Alumni, Admin)
+### Code Quality Tools
+- **Prettier** - Consistent code formatting
+- **ESLint** - Code quality and style enforcement
+- **Husky** - Git hooks for pre-commit checks
+- **lint-staged** - Run linters on staged files
+- **Commitlint** - Conventional commit message enforcement
 
-### Integration
-- API base URL: `http://localhost:3000` (backend), `http://localhost:3001` (frontend)
-- JWT sent in `Authorization` header for protected endpoints
-- File uploads handled via backend `/files` endpoints, stored in `uploads/`
+### Git Workflow
+```bash
+# Create feature branch
+git checkout -b feature/your-feature-name
 
-### References
-- See `.github/copilot-instructions.md` for code conventions and architecture
-- Backend: `backend/README.md`
-- Frontend: `frontend/README.md`
-- DB schema: `backend/prisma/schema.prisma`
+# Make changes and commit
+git add .
+git commit -m "feat: add new feature"
 
+# Push and create PR
+git push origin feature/your-feature-name
+```
 
-## Security Features
+### Commit Message Format
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat:` - New features
+- `fix:` - Bug fixes
+- `docs:` - Documentation changes
+- `style:` - Code style changes
+- `refactor:` - Code refactoring
+- `test:` - Test additions/changes
+- `chore:` - Build/tooling changes
 
-- **JWT Authentication:** Secure token-based authentication
-- **Password Hashing:** Bcrypt for password security
-- **Domain Validation:** Email domain restriction (@kiit.ac.in)
-- **CORS Protection:** Cross-origin request handling
-- **Input Validation:** DTO-based request validation
-- **Role-based Access:** Granular permission control via guards
+## 🧪 Testing
 
-## Contributing
+```bash
+# Backend tests
+cd backend
+npm run test              # Unit tests
+npm run test:e2e         # End-to-end tests
+npm run test:cov         # Coverage report
 
-1.  Fork the repository
-2.  Create a feature branch
-3.  Make your changes
-4.  Add tests if applicable
-5.  Submit a pull request
+# Frontend tests
+cd frontend
+npm run test             # Run tests
+npm run test:coverage    # Coverage report
+```
 
-## License
+## 📊 API Documentation
 
-This project is licensed under the UNLICENSED license.
+The API is documented using Swagger/OpenAPI. Access the interactive documentation at:
+- **Development:** http://localhost:3000/api
+- **Production:** https://your-domain.com/api
 
-## Support
+### Key API Endpoints
 
-For support and questions, please open an issue in the repository.
+#### Authentication
+- `POST /auth/login` - User login
+- `POST /auth/register` - User registration
+- `POST /auth/refresh` - Refresh JWT token
+
+#### Users
+- `GET /users` - Get all users (paginated)
+- `GET /users/:id` - Get user by ID
+- `PUT /users/:id` - Update user profile
+- `GET /users/search` - Search users
+
+#### Connections
+- `GET /connection` - Get user connections
+- `POST /connection/send` - Send connection request
+- `PATCH /connection/status` - Accept/reject connection
+- `GET /connection/suggestions` - Get connection suggestions
+
+#### Messaging
+- `GET /messages/conversations/all` - Get all conversations
+- `GET /messages/conversation/:userId` - Get conversation with user
+- `POST /messages` - Send message
+- `WebSocket /ws` - Real-time messaging
+
+## 🔒 Security Features
+
+- **JWT Authentication** with secure token handling
+- **Password Hashing** using bcrypt with salt rounds
+- **Domain Validation** restricting emails to @kiit.ac.in
+- **CORS Protection** with configurable origins
+- **Input Validation** using class-validator DTOs
+- **Role-based Access Control** with guards and decorators
+- **SQL Injection Prevention** via Prisma ORM
+- **XSS Protection** with proper input sanitization
+
+## 🚀 Deployment
+
+### Backend Deployment
+```bash
+# Build for production
+cd backend
+npm run build
+
+# Start production server
+npm run start:prod
+```
+
+### Frontend Deployment
+```bash
+# Build for production
+cd frontend
+npm run build
+
+# Serve static files
+npm run preview
+```
+
+### Environment Variables for Production
+Ensure all environment variables are properly configured for production:
+- Database connection strings
+- JWT secrets
+- Email service credentials
+- Google API credentials
+- CORS origins
+
+## 🤝 Contributing
+
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Commit your changes** (`git commit -m 'feat: add amazing feature'`)
+4. **Push to the branch** (`git push origin feature/amazing-feature`)
+5. **Open a Pull Request**
+
+### Development Guidelines
+- Follow TypeScript best practices
+- Write meaningful commit messages
+- Add tests for new features
+- Update documentation as needed
+- Follow the existing code style
+
+## 📝 License
+
+This project is licensed under the UNLICENSED license - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- **Documentation:** Check this README and inline code comments
+- **Issues:** Open an issue on GitHub for bugs or feature requests
+- **Discussions:** Use GitHub Discussions for questions and ideas
+
+## 🙏 Acknowledgments
+
+- KIIT University for providing the platform requirements
+- All contributors who have helped build this platform
+- Open source libraries and frameworks used in this project
+
+---
+
+**Built with ❤️ for the KIIT Community**
