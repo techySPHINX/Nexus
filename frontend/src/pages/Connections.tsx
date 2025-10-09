@@ -447,7 +447,9 @@ const Connections: React.FC = () => {
                           <Chip
                             label={connection.status}
                             color={
-                              connection.status === 'ACCEPTED' ? 'success' : 'default'
+                              connection.status === 'ACCEPTED'
+                                ? 'success'
+                                : 'default'
                             }
                             size="small"
                           />
@@ -455,7 +457,9 @@ const Connections: React.FC = () => {
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
                             {connection.createdAt
-                              ? new Date(connection.createdAt).toLocaleDateString()
+                              ? new Date(
+                                  connection.createdAt
+                                ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
                         </TableCell>
@@ -464,7 +468,9 @@ const Connections: React.FC = () => {
                             <Tooltip title="Send Message">
                               <IconButton
                                 size="small"
-                                onClick={() => handleSendMessage(connection.user?.id)}
+                                onClick={() =>
+                                  handleSendMessage(connection.user?.id)
+                                }
                                 sx={{ color: 'primary.main' }}
                               >
                                 <MessageIcon />
@@ -473,7 +479,9 @@ const Connections: React.FC = () => {
                             <Tooltip title="Remove Connection">
                               <IconButton
                                 size="small"
-                                onClick={() => handleRemoveConnection(connection.id)}
+                                onClick={() =>
+                                  handleRemoveConnection(connection.id)
+                                }
                                 sx={{ color: 'error.main' }}
                               >
                                 <CloseIcon />
@@ -504,7 +512,8 @@ const Connections: React.FC = () => {
                                 variant="subtitle2"
                                 sx={{ fontWeight: 600 }}
                               >
-                                {pendingRequest.requester?.name || 'Unknown User'}
+                                {pendingRequest.requester?.name ||
+                                  'Unknown User'}
                               </Typography>
                               <Typography
                                 variant="caption"
@@ -518,14 +527,18 @@ const Connections: React.FC = () => {
                         <TableCell>
                           <Chip
                             label={pendingRequest.requester?.role || 'Unknown'}
-                            color={getRoleColor(pendingRequest.requester?.role || '')}
+                            color={getRoleColor(
+                              pendingRequest.requester?.role || ''
+                            )}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
                             {pendingRequest.createdAt
-                              ? new Date(pendingRequest.createdAt).toLocaleDateString()
+                              ? new Date(
+                                  pendingRequest.createdAt
+                                ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
                         </TableCell>
@@ -534,7 +547,9 @@ const Connections: React.FC = () => {
                             <Button
                               size="small"
                               startIcon={<CheckIcon />}
-                              onClick={() => handleAcceptRequest(pendingRequest.id)}
+                              onClick={() =>
+                                handleAcceptRequest(pendingRequest.id)
+                              }
                               variant="contained"
                               color="success"
                               sx={{
@@ -550,7 +565,9 @@ const Connections: React.FC = () => {
                             <Button
                               size="small"
                               startIcon={<CloseIcon />}
-                              onClick={() => handleRejectRequest(pendingRequest.id)}
+                              onClick={() =>
+                                handleRejectRequest(pendingRequest.id)
+                              }
                               variant="outlined"
                               color="error"
                               sx={{
@@ -602,14 +619,18 @@ const Connections: React.FC = () => {
                         <TableCell>
                           <Chip
                             label={pendingSent.recipient?.role || 'Unknown'}
-                            color={getRoleColor(pendingSent.recipient?.role || '')}
+                            color={getRoleColor(
+                              pendingSent.recipient?.role || ''
+                            )}
                             size="small"
                           />
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
                             {pendingSent.createdAt
-                              ? new Date(pendingSent.createdAt).toLocaleDateString()
+                              ? new Date(
+                                  pendingSent.createdAt
+                                ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
                         </TableCell>
@@ -620,7 +641,9 @@ const Connections: React.FC = () => {
                           <Tooltip title="Cancel Request">
                             <IconButton
                               size="small"
-                              onClick={() => handleRejectRequest(pendingSent.id)}
+                              onClick={() =>
+                                handleRejectRequest(pendingSent.id)
+                              }
                               sx={{ color: 'error.main' }}
                             >
                               <CloseIcon />

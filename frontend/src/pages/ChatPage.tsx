@@ -363,13 +363,13 @@ const ChatPage: React.FC = () => {
                   }
                   return conv;
                 })
-                .sort(
-                  (a, b) => {
-                    if (!a.lastMessage || !b.lastMessage) return 0;
-                    return new Date(b.lastMessage.timestamp).getTime() -
-                      new Date(a.lastMessage.timestamp).getTime();
-                  }
-                )
+                .sort((a, b) => {
+                  if (!a.lastMessage || !b.lastMessage) return 0;
+                  return (
+                    new Date(b.lastMessage.timestamp).getTime() -
+                    new Date(a.lastMessage.timestamp).getTime()
+                  );
+                })
             );
           }
         );
@@ -502,7 +502,6 @@ const ChatPage: React.FC = () => {
       setConversations(updatedConversations);
     }
   }, [unreadCounts, user?.id, conversations]);
-
 
   // Handle conversation selection
   const handleConversationSelect = useCallback(
