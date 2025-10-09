@@ -154,6 +154,26 @@ const ChatPage: React.FC = () => {
                newMessage.receiverId === selectedConversation.otherUser.id)) {
             setMessages(prev => [...prev, newMessage]);
           }
+
+          // Also update the conversations list to show the latest message
+          setConversations(prev => prev.map(conv => {
+            const otherUserId = conv.otherUser.id;
+            if (newMessage.senderId === otherUserId || newMessage.receiverId === otherUserId) {
+              return {
+                ...conv,
+                lastMessage: {
+                  id: newMessage.id,
+                  content: newMessage.content,
+                  senderId: newMessage.senderId,
+                  receiverId: newMessage.receiverId,
+                  timestamp: newMessage.timestamp,
+                  read: false, // Mark as unread for the receiver
+                },
+                unreadCount: conv.unreadCount + (newMessage.receiverId === user.id ? 1 : 0),
+              };
+            }
+            return conv;
+          }).sort((a, b) => b.lastMessage.timestamp.getTime() - a.lastMessage.timestamp.getTime()));
         });
 
         improvedWebSocketService.on('TYPING_START', (message: any) => {
@@ -443,15 +463,7 @@ const ChatPage: React.FC = () => {
         createdAt: sentMessage.createdAt,
       };
 
-      // Send via WebSocket for real-time delivery
-      improvedWebSocketService.sendChatMessage({
-        content: message.content,
-        senderId: message.senderId,
-        receiverId: message.receiverId,
-        uniqueId: `msg_${Date.now()}_${Math.random()}`,
-      });
-
-      // Add to local messages
+      // Add message to local state immediately for optimistic UI
       setMessages(prev => [...prev, message]);
 
       // Update conversation list with latest message
