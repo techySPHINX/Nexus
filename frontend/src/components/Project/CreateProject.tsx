@@ -30,6 +30,7 @@ import {
   CardContent,
   Skeleton,
   Avatar,
+  Tooltip,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import {
@@ -37,7 +38,7 @@ import {
   ProjectDetailInterface,
   status,
 } from '@/types/ShowcaseType';
-import { Close } from '@mui/icons-material';
+import { Close, ImageSearch } from '@mui/icons-material';
 
 /**
  * MotionPaper defined outside component so it doesn't recreate on every render.
@@ -110,17 +111,17 @@ const PREDEFINED_TAGS = [
   'Finance',
 ];
 
-const EMPTY_FORM = {
+const EMPTY_FORM: CreateProjectInterface = {
   title: '',
   description: '',
   githubUrl: '',
   websiteUrl: '',
   imageUrl: '',
   videoUrl: '',
-  skills: [] as string[],
-  tags: [] as string[],
+  skills: [],
+  tags: [],
   status: status.IDEA,
-  seeking: [] as string[] | string,
+  seeking: undefined, // Change from [] to undefined
 };
 
 const ProjectModal: React.FC<ProjectModalProps> = ({
@@ -144,6 +145,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   // Image preview state
   const [imageLoading, setImageLoading] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [fetchingImage, setFetchingImage] = useState(false);
 
   // Keep a stable mounted flag
   const mountedRef = useRef(true);
@@ -167,11 +169,11 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
         skills: project.skills ?? [],
         tags: project.tags ?? [],
         status: project.status ?? status.IDEA,
-        seeking: project.seeking ?? [],
+        seeking: project.seeking ?? undefined, // Change from [] to undefined
       } as CreateProjectInterface);
       setSeekingCollaboration(!!project.seeking && project.seeking.length > 0);
     } else {
-      setFormData(Object.assign({}, EMPTY_FORM));
+      setFormData(EMPTY_FORM); // Use EMPTY_FORM directly since it's now properly typed
       setSeekingCollaboration(false);
     }
   }, [project]);
@@ -192,6 +194,154 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
 
     return () => clearTimeout(t);
   }, [pending]);
+
+  // Function to extract image from URL
+  const extractImageFromUrl = useCallback(
+    async (url: string, type: 'github' | 'website'): Promise<string | null> => {
+      if (!url) return null;
+
+      try {
+        setFetchingImage(true);
+
+        if (type === 'github') {
+          // Extract owner and repo from GitHub URL
+          const githubMatch = url.match(/github\.com\/([^/]+)\/([^/]+)/);
+          if (githubMatch) {
+            const [, owner, repo] = githubMatch;
+            // Multiple GitHub image options
+            const imageOptions = [
+              `https://opengraph.githubassets.com/1/${owner}/${repo}`,
+              `https://api.github.com/repos/${owner}/${repo}`,
+            ];
+
+            // Try each option
+            for (const imageUrl of imageOptions) {
+              try {
+                const response = await fetch(imageUrl, { method: 'HEAD' });
+                if (response.ok) {
+                  return imageUrl;
+                }
+              } catch {
+                continue;
+              }
+            }
+          }
+        } else if (type === 'website') {
+          const domain = new URL(url).hostname;
+
+          // Multiple favicon services
+          const faviconServices = [
+            `https://www.google.com/s2/favicons?domain=${domain}&sz=128`,
+            `https://icons.duckduckgo.com/ip3/${domain}.ico`,
+            `https://favicon.splitbee.io/?url=${url}`,
+            `https://api.faviconkit.com/${domain}/144`,
+          ];
+
+          // Try each favicon service
+          for (const faviconUrl of faviconServices) {
+            try {
+              const response = await fetch(faviconUrl, { method: 'HEAD' });
+              if (response.ok) {
+                return faviconUrl;
+              }
+            } catch {
+              continue;
+            }
+          }
+
+          // If favicons fail, try screenshot services
+          const screenshotServices = [
+            `https://s0.wp.com/mshots/v1/${encodeURIComponent(url)}?w=800&h=400`,
+            `https://image.thum.io/get/width/400/crop/600/${encodeURIComponent(url)}`,
+          ];
+
+          for (const screenshotUrl of screenshotServices) {
+            try {
+              const response = await fetch(screenshotUrl, { method: 'HEAD' });
+              if (response.ok) {
+                return screenshotUrl;
+              }
+            } catch {
+              continue;
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to extract image from URL:', error);
+
+        // Fallback: Generate a placeholder based on domain
+        if (type === 'website') {
+          try {
+            const domain = new URL(url).hostname;
+            const initial = domain.charAt(0).toUpperCase();
+            const colors = [
+              '0f9d58',
+              '4285f4',
+              'db4437',
+              'f4b400',
+              '0f9d58',
+              '4285f4',
+            ];
+            const color = colors[domain.length % colors.length];
+            return `https://via.placeholder.com/400x200/${color}/ffffff?text=${initial}`;
+          } catch {
+            // Final fallback
+            return `https://via.placeholder.com/400x200/0f9d58/ffffff?text=🌐`;
+          }
+        }
+      } finally {
+        if (mountedRef.current) {
+          setFetchingImage(false);
+        }
+      }
+
+      return null;
+    },
+    []
+  );
+
+  // Auto-fetch image when GitHub or Website URL is entered
+  useEffect(() => {
+    const autoFetchImage = async () => {
+      // Don't auto-fetch if there's already an image URL
+      if (formData.imageUrl || (!formData.githubUrl && !formData.websiteUrl)) {
+        return;
+      }
+
+      let imageUrl: string | null = null;
+
+      // Prefer GitHub over website for image extraction
+      if (formData.githubUrl) {
+        imageUrl = await extractImageFromUrl(formData.githubUrl, 'github');
+      } else if (formData.websiteUrl) {
+        imageUrl = await extractImageFromUrl(formData.websiteUrl, 'website');
+      }
+
+      if (imageUrl && mountedRef.current) {
+        setFormData((prev) => ({ ...prev, imageUrl }));
+      }
+    };
+
+    autoFetchImage();
+  }, [
+    formData.githubUrl,
+    formData.websiteUrl,
+    formData.imageUrl,
+    extractImageFromUrl,
+  ]);
+
+  // Manual image fetch function
+  const handleFetchImage = useCallback(async () => {
+    const urlToUse = formData.githubUrl || formData.websiteUrl;
+    if (!urlToUse) return;
+
+    const type = formData.githubUrl ? 'github' : 'website';
+    const imageUrl = await extractImageFromUrl(urlToUse, type);
+
+    if (imageUrl && mountedRef.current) {
+      setFormData((prev) => ({ ...prev, imageUrl }));
+    }
+  }, [formData.githubUrl, formData.websiteUrl, extractImageFromUrl]);
 
   // Input handlers memoized to keep stable identity (helps with re-renders)
   const handleInputChange = useCallback(
@@ -221,6 +371,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
         setFormData((prev) => ({ ...prev, ...pendingRef.current }));
         setPending({});
       }
+
       // Build cleaned payload
       const cleanedData: CreateProjectInterface = {
         title: (formData.title || '').trim(),
@@ -234,46 +385,105 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           : {}),
         ...(formData.imageUrl ? { imageUrl: formData.imageUrl.trim() } : {}),
         ...(formData.videoUrl ? { videoUrl: formData.videoUrl.trim() } : {}),
-        ...(seekingCollaboration &&
-        formData.seeking &&
-        (Array.isArray(formData.seeking)
-          ? formData.seeking.length > 0
-          : (formData.seeking as string).trim().length > 0)
-          ? { seeking: formData.seeking }
-          : {}),
+        ...(seekingCollaboration && formData.seeking
+          ? {
+              seeking: Array.isArray(formData.seeking)
+                ? formData.seeking
+                : (formData.seeking as string).trim().length > 0
+                  ? [(formData.seeking as string).trim()]
+                  : undefined,
+            }
+          : { seeking: undefined }),
       };
       onSubmit(cleanedData);
     },
     [formData, onSubmit, seekingCollaboration]
   );
 
+  // First, make sure you have the getProxiedImageUrl function defined:
+  const getProxiedImageUrl = (url: string): string => {
+    if (!url) return '';
+
+    // Don't proxy placeholder images or already proxied URLs
+    if (url.includes('via.placeholder.com') || url.includes('corsproxy.io')) {
+      return url;
+    }
+
+    // Proxy external URLs to avoid CORS issues
+    return `https://corsproxy.io/?${encodeURIComponent(url)}`;
+  };
+
   // image preview helpers
   useEffect(() => {
+    console.log('Image URL changed:', formData.imageUrl);
+
     if (!formData.imageUrl) {
+      console.log('No image URL, hiding preview');
       setImageLoading(false);
       setImageError(false);
       return;
     }
+
     setImageLoading(true);
     setImageError(false);
+
     const img = new Image();
-    img.src = formData.imageUrl;
+    const proxiedUrl = getProxiedImageUrl(formData.imageUrl);
+    console.log('Loading image with proxied URL:', proxiedUrl);
+
+    img.src = proxiedUrl;
     img.loading = 'lazy';
+
     img.onload = () => {
+      console.log('Image loaded successfully with proxy');
       if (!mountedRef.current) return;
       setImageLoading(false);
       setImageError(false);
     };
+
     img.onerror = () => {
+      console.log('Image failed to load with proxy, trying direct URL');
       if (!mountedRef.current) return;
-      setImageLoading(false);
-      setImageError(true);
+
+      // If proxy failed, try the original URL directly
+      if (proxiedUrl !== formData.imageUrl) {
+        const fallbackImg = new Image();
+        fallbackImg.src = formData.imageUrl ?? '';
+        console.log('Trying direct URL:', formData.imageUrl);
+
+        fallbackImg.onload = () => {
+          console.log('Direct URL loaded successfully - updating form data');
+          if (!mountedRef.current) return;
+          setImageLoading(false);
+          setImageError(false);
+          // UPDATE THE FORM DATA TO USE THE DIRECT URL THAT WORKS
+          setFormData((prev) => ({
+            ...prev,
+            imageUrl: formData.imageUrl ?? '',
+          }));
+        };
+        fallbackImg.onerror = () => {
+          console.log('Direct URL also failed');
+          if (!mountedRef.current) return;
+          setImageLoading(false);
+          setImageError(true);
+        };
+      } else {
+        setImageLoading(false);
+        setImageError(true);
+      }
     };
 
     return () => {
-      // no-op
+      // Cleanup
+      img.onload = null;
+      img.onerror = null;
     };
   }, [formData.imageUrl]);
+
+  // Check if we can fetch an image from URLs
+  const canFetchImage =
+    !formData.imageUrl && (formData.githubUrl || formData.websiteUrl);
 
   // small utility to compute modal title
   const modalTitle = project ? 'Edit Project' : 'Create Project';
@@ -327,8 +537,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
               {modalTitle}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Create or edit your project — keep it short, 20–50 words in
-              description for clarity.
+              Create your project and showcase it to the community.
             </Typography>
           </Box>
         </Box>
@@ -426,6 +635,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                         overflow: 'hidden',
                         border: '1px solid rgba(14, 70, 37, 0.06)',
                         bgcolor: 'rgba(245,255,250,0.6)',
+                        position: 'relative',
                       }}
                       aria-hidden={!formData.imageUrl}
                     >
@@ -438,31 +648,57 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                               animation="wave"
                             />
                           )}
-                          {!imageError ? (
+                          {!imageError && !imageLoading ? (
                             <img
-                              src={formData.imageUrl}
+                              src={getProxiedImageUrl(formData.imageUrl)}
                               alt="Project preview"
                               loading="lazy"
                               style={{
                                 width: '100%',
-                                height: imageLoading ? 0 : 140,
+                                height: 140,
                                 objectFit: 'cover',
-                                display: imageLoading ? 'none' : 'block',
-                                transition: 'opacity 220ms ease-in-out',
+                                display: 'block',
+                                border: '2px solid green', // Debug border
                               }}
-                              onLoad={() => setImageLoading(false)}
-                              onError={() => setImageError(true)}
+                              onLoad={() => {
+                                console.log('IMG element onLoad fired');
+                                setImageLoading(false);
+                                setImageError(false);
+                              }}
+                              onError={() => {
+                                console.log('IMG element onError fired');
+                                // Try direct URL as fallback
+                                if (
+                                  formData.imageUrl &&
+                                  !formData.imageUrl.includes('corsproxy.io')
+                                ) {
+                                  const directUrl = formData.imageUrl;
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    imageUrl: directUrl,
+                                  }));
+                                } else {
+                                  setImageError(true);
+                                }
+                              }}
                             />
-                          ) : (
-                            <Box sx={{ p: 2 }}>
+                          ) : imageError ? (
+                            <Box sx={{ p: 2, textAlign: 'center' }}>
                               <Typography
                                 variant="body2"
                                 color="text.secondary"
                               >
                                 Couldn't load preview
                               </Typography>
+                              <Typography
+                                variant="caption"
+                                color="error"
+                                sx={{ display: 'block', mt: 1 }}
+                              >
+                                URL: {formData.imageUrl}
+                              </Typography>
                             </Box>
-                          )}
+                          ) : null}
                         </>
                       ) : (
                         <Box
@@ -471,23 +707,51 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                             display: 'flex',
                             alignItems: 'center',
                             gap: 1,
+                            minHeight: 140,
                           }}
                         >
                           <Skeleton variant="circular" width={40} height={40} />
                           <Box>
                             <Typography variant="body2">
-                              Add an image URL
+                              {canFetchImage
+                                ? 'Auto-image available'
+                                : 'Add an image URL'}
                             </Typography>
                             <Typography
                               variant="caption"
                               color="text.secondary"
                             >
-                              Optional — shows on project card.
+                              {canFetchImage
+                                ? 'Enter GitHub or website URL above'
+                                : 'Optional — shows on project card.'}
                             </Typography>
                           </Box>
                         </Box>
                       )}
                     </Box>
+
+                    {/* Fetch image button */}
+                    {canFetchImage && (
+                      <Box
+                        sx={{
+                          mt: 1,
+                          display: 'flex',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Tooltip title="Fetch image from URL">
+                          <Button
+                            size="small"
+                            startIcon={<ImageSearch />}
+                            onClick={handleFetchImage}
+                            disabled={fetchingImage}
+                            variant="outlined"
+                          >
+                            {fetchingImage ? 'Fetching...' : 'Auto-fetch Image'}
+                          </Button>
+                        </Tooltip>
+                      </Box>
+                    )}
                   </Grid>
 
                   {/* Right column: URLs */}
@@ -542,6 +806,20 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                         />
                       </Grid>
                     </Grid>
+
+                    {/* Auto-image hint */}
+                    {(formData.githubUrl || formData.websiteUrl) &&
+                      !formData.imageUrl && (
+                        <Typography
+                          variant="caption"
+                          color="info.main"
+                          sx={{ mt: 1, display: 'block' }}
+                        >
+                          💡 We can automatically fetch an image from your{' '}
+                          {formData.githubUrl ? 'GitHub repository' : 'website'}
+                          . Use the "Auto-fetch Image" button.
+                        </Typography>
+                      )}
                   </Grid>
 
                   {/* Seeking collaboration */}
