@@ -5,6 +5,8 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 
 type NavbarPosition = 'top' | 'left';
 
@@ -30,6 +32,8 @@ interface NavbarProviderProps {
 
 export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
   const [position, setPosition] = useState<NavbarPosition>('top');
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   useEffect(() => {
     // Load navbar position from localStorage
@@ -43,6 +47,16 @@ export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
       setPosition(savedPosition);
     }
   }, []);
+
+  // Auto-switch based on breakpoint: top on mobile/tablet, left on desktop
+  useEffect(() => {
+    const desired: NavbarPosition = isDesktop ? 'left' : 'top';
+    if (position !== desired) {
+      setPosition(desired);
+    }
+    // Intentionally do not persist this auto-change to avoid flipping stored prefs across devices
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDesktop]);
 
   const togglePosition = () => {
     const newPosition = position === 'top' ? 'left' : 'top';

@@ -27,6 +27,8 @@ import {
   DialogContent,
   DialogContentText,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import {
   Notifications as NotificationsIcon,
   Check as CheckIcon,
@@ -55,6 +57,8 @@ import { NotificationType, NotificationCategory } from '@/types/notification';
 import { formatDistanceToNow } from 'date-fns';
 
 const Notification: React.FC = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const {
     notifications,
     pagination,
@@ -298,17 +302,30 @@ const Notification: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ maxWidth: 1000, mx: 'auto', p: 3 }}>
-      <Paper elevation={3} sx={{ p: 3 }}>
+    <Box
+      sx={{
+        maxWidth: { xs: '100%', md: 1000 },
+        mx: 'auto',
+        px: { xs: 1.5, sm: 2, md: 3 },
+        py: { xs: 2, md: 3 },
+      }}
+    >
+      <Paper elevation={3} sx={{ p: { xs: 2, md: 3 } }}>
         <Box
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
             mb: 3,
           }}
         >
-          <Typography variant="h4" component="h1">
+          <Typography
+            variant={isMobile ? 'h5' : 'h4'}
+            component="h1"
+            sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}
+          >
             <NotificationsIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
             Notifications
             {unreadCount > 0 && (
@@ -325,8 +342,10 @@ const Notification: React.FC = () => {
             sx={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1, // Adds consistent spacing between all items
-              flexWrap: 'wrap', // Allows wrapping on smaller screens
+              gap: 1,
+              flexWrap: 'wrap',
+              width: { xs: '100%', sm: 'auto' },
+              justifyContent: { xs: 'flex-start', sm: 'flex-end' },
             }}
           >
             {unreadCount > 0 && (
@@ -385,6 +404,9 @@ const Notification: React.FC = () => {
           onChange={handleTabChange}
           variant="scrollable"
           scrollButtons="auto"
+          sx={{
+            '& .MuiTab-root': { minHeight: 44 },
+          }}
         >
           {tabConfig.map(({ category, label, icon }) => (
             <Tab
@@ -408,7 +430,15 @@ const Notification: React.FC = () => {
           ))}
         </Tabs>
 
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', my: 2 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: { xs: 'flex-start', sm: 'space-between' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1.5, sm: 0 },
+            my: 2,
+          }}
+        >
           <Button
             variant="outlined"
             startIcon={<CheckIcon />}
@@ -459,14 +489,19 @@ const Notification: React.FC = () => {
                         : 'action.hover',
                       borderRadius: 1,
                       mb: 1,
+                      alignContent: 'stretch',
+                      px: { xs: 1, sm: 2 },
+                      py: { xs: 1, sm: 1.25 },
                     }}
                     secondaryAction={
-                      <IconButton
-                        edge="end"
-                        onClick={(e) => openMenu(e, notification.id)}
-                      >
-                        <MoreVertIcon />
-                      </IconButton>
+                      !isMobile ? (
+                        <IconButton
+                          edge="end"
+                          onClick={(e) => openMenu(e, notification.id)}
+                        >
+                          <MoreVertIcon />
+                        </IconButton>
+                      ) : undefined
                     }
                   >
                     <ListItemAvatar>
@@ -480,43 +515,53 @@ const Notification: React.FC = () => {
                         </Avatar>
                       </Badge>
                     </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Typography
-                          component="span"
-                          variant="body1"
-                          color="text.primary"
-                          sx={{
-                            fontWeight: notification.read ? 'normal' : 'bold',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            maxWidth: '60ch',
-                          }}
-                        >
-                          {notification.message.length > 100
-                            ? `${notification.message.substring(0, 100)}...`
-                            : notification.message}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography
-                          component="span"
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{
-                            display: 'block',
-                          }}
-                        >
-                          {formatDistanceToNow(
-                            new Date(notification.createdAt),
-                            {
-                              addSuffix: true,
-                            }
-                          )}
-                        </Typography>
-                      }
-                    />
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <ListItemText
+                        primary={
+                          <Typography
+                            component="span"
+                            variant="body1"
+                            color="text.primary"
+                            sx={{
+                              fontWeight: notification.read ? 'normal' : 'bold',
+                              overflow: 'hidden',
+                              textOverflow: { xs: 'clip', sm: 'ellipsis' },
+                              whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                              wordBreak: 'break-word',
+                              maxWidth: { xs: '100%', sm: '60ch' },
+                            }}
+                          >
+                            {notification.message.length > 120
+                              ? `${notification.message.substring(0, 120)}...`
+                              : notification.message}
+                          </Typography>
+                        }
+                        secondary={
+                          <Typography
+                            component="span"
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ display: 'block' }}
+                          >
+                            {formatDistanceToNow(
+                              new Date(notification.createdAt),
+                              { addSuffix: true }
+                            )}
+                          </Typography>
+                        }
+                      />
+
+                      {isMobile && (
+                        <Box sx={{ mt: 0.5 }}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => openMenu(e, notification.id)}
+                          >
+                            <MoreVertIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      )}
+                    </Box>
                   </ListItem>
                   <Divider variant="inset" component="li" />
                 </React.Fragment>
@@ -588,7 +633,10 @@ const Notification: React.FC = () => {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: isMobile ? 'center' : 'right',
+        }}
       >
         <Alert
           onClose={() => setSnackbarOpen(false)}

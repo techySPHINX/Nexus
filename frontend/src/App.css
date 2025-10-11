@@ -186,6 +186,7 @@
 }
 
 /* Responsive adjustments */
+/* Tablet and down */
 @media (max-width: 960px) {
   .content-left-navbar {
     padding-left: 0;
@@ -193,6 +194,27 @@
   
   .content-top-navbar {
     padding-top: 56px;
+  }
+}
+
+/* Mobile optimizations (iPhone widths) */
+@media (max-width: 430px) {
+  .App {
+    font-size: 15px;
+  }
+
+  .content-top-navbar {
+    padding-top: 56px;
+  }
+
+  .form-container {
+    padding: 20px;
+    border-radius: 12px;
+  }
+
+  .fab {
+    bottom: 16px;
+    right: 16px;
   }
 }
 
