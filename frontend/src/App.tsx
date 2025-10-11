@@ -47,19 +47,6 @@ import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { MySubCommunitiesPage } from './pages/SubCommunity/MySubCommunityPage';
 import ProjectsMainPage from './pages/Project/ProjectMainPage';
 
-// Lazy load components for better performance
-// const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));
-// const PostDetailPage = lazy(() => import('./pages/Posts/PostDetailPage'));
-// const UserPostsPage = lazy(() => import('./pages/Posts/UserPostsPage'));
-// const SubCommunitiesPage = lazy(() => import('./pages/Posts/SubCommunityPage'));
-// const SearchResultsPage = lazy(() => import('./pages/Posts/SearchResultsPage'));
-// const SubCommunityFeedPage = lazy(
-//   () => import('./pages/Posts/SubCommunityFeedPage')
-// );
-// const AdminModerationPage = lazy(
-//   () => import('./pages/Posts/AdminModerationPage')
-// );
-
 const AdminSubCommunityModerationPage = lazy(
   () => import('./pages/Posts/AdminSubCommunityModerationPage')
 );
