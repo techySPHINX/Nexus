@@ -30,6 +30,7 @@ import {
   ToggleButtonGroup,
   CardActions,
   Fab,
+  DialogContentText,
 } from '@mui/material';
 import {
   Add,
@@ -114,6 +115,7 @@ const Referrals: React.FC = () => {
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(
     null
   );
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -1142,6 +1144,80 @@ const Referrals: React.FC = () => {
           <Button onClick={handleApply} variant="contained">
             Submit Application
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Details Dialog */}
+      <Dialog
+        open={detailsDialogOpen}
+        onClose={() => setDetailsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Job Details</DialogTitle>
+        <DialogContent dividers>
+          {selectedReferral && (
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  {selectedReferral.jobTitle}
+                </Typography>
+                <Typography variant="subtitle1" color="primary">
+                  {selectedReferral.company}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  <LocationOn
+                    sx={{ fontSize: 16, mr: 0.5, verticalAlign: 'middle' }}
+                  />
+                  {selectedReferral.location}
+                </Typography>
+              </Box>
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 600, mb: 0.5 }}
+                >
+                  Description
+                </Typography>
+                <DialogContentText sx={{ whiteSpace: 'pre-wrap' }}>
+                  {selectedReferral.description}
+                </DialogContentText>
+              </Box>
+              <Box>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 600, mb: 0.5 }}
+                >
+                  Requirements
+                </Typography>
+                <DialogContentText sx={{ whiteSpace: 'pre-wrap' }}>
+                  {selectedReferral.requirements}
+                </DialogContentText>
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                Posted on{' '}
+                {new Date(selectedReferral.createdAt).toLocaleDateString()}
+              </Typography>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+          {user?.role === 'STUDENT' && selectedReferral && (
+            <Button
+              variant="contained"
+              onClick={() => {
+                setApplicationForm({
+                  ...applicationForm,
+                  referralId: selectedReferral.id,
+                });
+                setDetailsDialogOpen(false);
+                setApplyDialogOpen(true);
+              }}
+            >
+              Apply
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

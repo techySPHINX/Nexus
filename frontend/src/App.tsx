@@ -78,8 +78,8 @@ const Layout: React.FC = () => {
       <Navbar />
       <Box
         sx={{
-          pt: position === 'top' ? 8 : 0,
-          pl: position === 'left' ? '280px' : 0,
+          pt: position === 'top' ? { xs: 7, sm: 8 } : 0,
+          pl: position === 'left' ? { xs: 0, md: '280px' } : 0,
           minHeight: '100vh',
           bgcolor: 'background.default',
           position: 'relative',

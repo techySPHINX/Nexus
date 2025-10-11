@@ -491,6 +491,7 @@ const Dashboard: React.FC = () => {
           justifyContent="space-between"
           alignItems="center"
           mb={2}
+          sx={{ flexWrap: 'wrap', gap: 1 }}
         >
           <Typography
             variant="h4"
@@ -502,7 +503,12 @@ const Dashboard: React.FC = () => {
           >
             Welcome back, {user?.name?.split(' ')[0] || 'User'}
           </Typography>
-          <Box display="flex" alignItems="center" gap={2}>
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1.5}
+            sx={{ flexWrap: 'wrap', mt: { xs: 1, md: 0 } }}
+          >
             <Chip
               icon={<Message />}
               label={`${stats.messages} Messages`}
