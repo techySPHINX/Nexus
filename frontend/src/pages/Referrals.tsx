@@ -21,10 +21,18 @@ import {
   Alert,
   CircularProgress,
   Stack,
+  Avatar,
+  Badge,
+  Tooltip,
+  Paper,
+  InputAdornment,
+  ToggleButton,
+  ToggleButtonGroup,
+  CardActions,
+  Fab,
 } from '@mui/material';
 import {
   Add,
-  Work,
   LocationOn,
   Description,
   Person,
@@ -33,9 +41,16 @@ import {
   Delete,
   Visibility,
   Send,
+  Search as SearchIcon,
+  Schedule as TimeIcon,
+  ViewModule as GridViewIcon,
+  ViewList as ListViewIcon,
+  BusinessCenter as WorkIcon,
+  People as PeopleIcon,
+  Assessment as StatsIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { apiService } from '../services/api';
 
 interface Referral {
@@ -101,6 +116,8 @@ const Referrals: React.FC = () => {
   );
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'date' | 'company' | 'title'>('date');
 
   // Form states
   const [createForm, setCreateForm] = useState<CreateReferralDto>({
@@ -288,16 +305,187 @@ const Referrals: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
-          Job Referrals
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Discover job opportunities and apply for positions
-        </Typography>
-      </Box>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Modern Hero Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <Box
+          sx={{
+            background: 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
+            borderRadius: 4,
+            p: 4,
+            mb: 4,
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              right: 0,
+              width: '200px',
+              height: '200px',
+              background: 'rgba(255,255,255,0.1)',
+              borderRadius: '50%',
+              transform: 'translate(50%, -50%)',
+            },
+          }}
+        >
+          <Grid container alignItems="center" spacing={3}>
+            <Grid item xs={12} md={8}>
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+                  Job Referrals
+                </Typography>
+                <Typography variant="h6" sx={{ opacity: 0.9, mb: 2 }}>
+                  Connect with opportunities through our alumni network
+                </Typography>
+                <Typography variant="body1" sx={{ opacity: 0.8 }}>
+                  Discover exclusive job openings and get referred by
+                  experienced alumni
+                </Typography>
+              </motion.div>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.4 }}
+                style={{ textAlign: 'center' }}
+              >
+                <WorkIcon sx={{ fontSize: 80, opacity: 0.3 }} />
+              </motion.div>
+            </Grid>
+          </Grid>
+        </Box>
+      </motion.div>
+
+      {/* Enhanced Stats Cards */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.4 }}
+      >
+        <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+              <Card
+                sx={{
+                  background:
+                    'linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%)',
+                  border: '1px solid',
+                  borderColor: 'success.light',
+                  borderRadius: 3,
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <WorkIcon
+                    sx={{ fontSize: 40, color: 'success.main', mb: 1 }}
+                  />
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'success.dark' }}
+                  >
+                    {referrals.length}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Total Referrals
+                  </Typography>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+              <Card
+                sx={{
+                  background:
+                    'linear-gradient(135deg, #e3f2fd 0%, #f0f8ff 100%)',
+                  border: '1px solid',
+                  borderColor: 'info.light',
+                  borderRadius: 3,
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <StatsIcon sx={{ fontSize: 40, color: 'info.main', mb: 1 }} />
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'info.dark' }}
+                  >
+                    {referrals.filter((r) => r.status === 'APPROVED').length}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Approved
+                  </Typography>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+              <Card
+                sx={{
+                  background:
+                    'linear-gradient(135deg, #fff3e0 0%, #fdf4e3 100%)',
+                  border: '1px solid',
+                  borderColor: 'warning.light',
+                  borderRadius: 3,
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <TimeIcon
+                    sx={{ fontSize: 40, color: 'warning.main', mb: 1 }}
+                  />
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'warning.dark' }}
+                  >
+                    {referrals.filter((r) => r.status === 'PENDING').length}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Pending
+                  </Typography>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+          <Grid item xs={12} sm={6} md={3}>
+            <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
+              <Card
+                sx={{
+                  background:
+                    'linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%)',
+                  border: '1px solid',
+                  borderColor: 'secondary.light',
+                  borderRadius: 3,
+                }}
+              >
+                <CardContent sx={{ textAlign: 'center', py: 3 }}>
+                  <PeopleIcon
+                    sx={{ fontSize: 40, color: 'secondary.main', mb: 1 }}
+                  />
+                  <Typography
+                    variant="h4"
+                    sx={{ fontWeight: 700, color: 'secondary.dark' }}
+                  >
+                    {applications.length}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    My Applications
+                  </Typography>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </Grid>
+        </Grid>
+      </motion.div>
 
       {/* Error Alert */}
       {error && (
@@ -306,201 +494,513 @@ const Referrals: React.FC = () => {
         </Alert>
       )}
 
-      {/* Actions Bar */}
-      <Box
-        sx={{
-          mb: 3,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
+      {/* Enhanced Search and Filter Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.6 }}
       >
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <TextField
-            placeholder="Search referrals..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            size="small"
-            sx={{ minWidth: 300 }}
-          />
-          <FormControl size="small" sx={{ minWidth: 150 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              label="Status"
-            >
-              <MenuItem value="ALL">All Status</MenuItem>
-              <MenuItem value="PENDING">Pending</MenuItem>
-              <MenuItem value="APPROVED">Approved</MenuItem>
-              <MenuItem value="REJECTED">Rejected</MenuItem>
-            </Select>
-          </FormControl>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => {
-              console.log('🧪 Testing API call...');
-              fetchReferrals();
-            }}
-            sx={{ textTransform: 'none' }}
-          >
-            Test API
-          </Button>
-        </Box>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 3,
+            mb: 4,
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            background: 'rgba(255,255,255,0.8)',
+            backdropFilter: 'blur(10px)',
+          }}
+        >
+          <Grid container spacing={3} alignItems="center">
+            {/* Search */}
+            <Grid item xs={12} md={4}>
+              <TextField
+                fullWidth
+                placeholder="Search by company, title, or location..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                size="medium"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 3,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.main',
+                    },
+                  },
+                }}
+              />
+            </Grid>
 
-        {user?.role === 'ALUM' && (
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setCreateDialogOpen(true)}
-            sx={{ borderRadius: 2 }}
-          >
-            Post Referral
-          </Button>
-        )}
-      </Box>
+            {/* Status Filter */}
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl fullWidth size="medium">
+                <InputLabel>Status</InputLabel>
+                <Select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  label="Status"
+                  sx={{
+                    borderRadius: 3,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <MenuItem value="ALL">All Status</MenuItem>
+                  <MenuItem value="PENDING">Pending</MenuItem>
+                  <MenuItem value="APPROVED">Approved</MenuItem>
+                  <MenuItem value="REJECTED">Rejected</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-      {/* Referrals Grid */}
-      <Grid container spacing={3}>
-        {filteredReferrals.map((referral) => (
-          <Grid item xs={12} md={6} lg={4} key={referral.id}>
-            <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
-              <Card sx={{ height: '100%', borderRadius: 3 }}>
-                <CardContent>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      mb: 2,
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                        {referral.jobTitle}
-                      </Typography>
-                      <Typography
-                        variant="subtitle1"
-                        color="primary"
-                        sx={{ fontWeight: 500 }}
-                      >
-                        {referral.company}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={referral.status}
-                      color={getStatusColor(referral.status)}
-                      size="small"
-                    />
-                  </Box>
+            {/* Sort Filter */}
+            <Grid item xs={12} sm={6} md={2}>
+              <FormControl fullWidth size="medium">
+                <InputLabel>Sort By</InputLabel>
+                <Select
+                  value={sortBy}
+                  onChange={(e) =>
+                    setSortBy(e.target.value as 'date' | 'company' | 'title')
+                  }
+                  label="Sort By"
+                  sx={{
+                    borderRadius: 3,
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: 'primary.main',
+                    },
+                  }}
+                >
+                  <MenuItem value="date">Latest First</MenuItem>
+                  <MenuItem value="company">Company</MenuItem>
+                  <MenuItem value="title">Job Title</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
 
-                  <Stack spacing={1} sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LocationOn
-                        sx={{ fontSize: 16, color: 'text.secondary' }}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        {referral.location}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        Posted by {referral.postedBy.name}
-                      </Typography>
-                    </Box>
-                  </Stack>
+            {/* View Mode Toggle */}
+            <Grid item xs={12} sm={6} md={2}>
+              <ToggleButtonGroup
+                value={viewMode}
+                exclusive
+                onChange={(_, newMode) => newMode && setViewMode(newMode)}
+                size="medium"
+                sx={{
+                  '& .MuiToggleButton-root': {
+                    borderRadius: 2,
+                    border: '1px solid',
+                    borderColor: 'divider',
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      },
+                    },
+                  },
+                }}
+              >
+                <ToggleButton value="grid" aria-label="grid view">
+                  <Tooltip title="Grid View">
+                    <GridViewIcon />
+                  </Tooltip>
+                </ToggleButton>
+                <ToggleButton value="list" aria-label="list view">
+                  <Tooltip title="List View">
+                    <ListViewIcon />
+                  </Tooltip>
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Grid>
 
-                  <Typography
-                    variant="body2"
-                    sx={{ mb: 2, color: 'text.secondary' }}
-                  >
-                    {referral.description.length > 100
-                      ? `${referral.description.substring(0, 100)}...`
-                      : referral.description}
-                  </Typography>
-
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Typography variant="caption" color="text.secondary">
-                      {new Date(referral.createdAt).toLocaleDateString()}
-                    </Typography>
-
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      {user?.role === 'STUDENT' && (
-                        <Button
-                          size="small"
-                          variant="contained"
-                          startIcon={<Send />}
-                          onClick={() => {
-                            setSelectedReferral(referral);
-                            setApplicationForm({
-                              ...applicationForm,
-                              referralId: referral.id,
-                            });
-                            setApplyDialogOpen(true);
-                          }}
-                          sx={{ borderRadius: 2, textTransform: 'none' }}
-                        >
-                          Apply
-                        </Button>
-                      )}
-
-                      {user?.id === referral.alumniId && (
-                        <>
-                          <IconButton size="small" color="primary">
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteReferral(referral.id)}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </>
-                      )}
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            </motion.div>
+            {/* Create Button */}
+            <Grid item xs={12} sm={6} md={2}>
+              {user?.role === 'ALUM' && (
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => setCreateDialogOpen(true)}
+                  sx={{
+                    borderRadius: 3,
+                    background:
+                      'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
+                    boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)',
+                    '&:hover': {
+                      background:
+                        'linear-gradient(135deg, #45a049 0%, #7cb342 100%)',
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 6px 20px rgba(76, 175, 80, 0.4)',
+                    },
+                    transition: 'all 0.3s ease',
+                  }}
+                >
+                  Post Referral
+                </Button>
+              )}
+            </Grid>
           </Grid>
-        ))}
-      </Grid>
+        </Paper>
+      </motion.div>
 
-      {filteredReferrals.length === 0 && !loading && (
-        <Box sx={{ textAlign: 'center', py: 6 }}>
-          <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-            {user?.role === 'ALUM'
-              ? 'No referrals posted yet'
-              : 'No referrals available'}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {user?.role === 'ALUM'
-              ? 'Be the first to post a job referral and help students find opportunities!'
-              : searchQuery || filterStatus !== 'ALL'
-                ? 'Try adjusting your search or filters'
-                : 'Check back later for new job opportunities'}
-          </Typography>
-          {user?.role === 'ALUM' && (
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setCreateDialogOpen(true)}
-              sx={{ borderRadius: 2, textTransform: 'none' }}
+      {/* Enhanced Referrals Display */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.8 }}
+      >
+        <AnimatePresence mode="wait">
+          {filteredReferrals.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
             >
-              Post First Referral
-            </Button>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 6,
+                  textAlign: 'center',
+                  borderRadius: 3,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <WorkIcon
+                  sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }}
+                />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  No referrals found
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {user?.role === 'ALUM'
+                    ? 'Start by posting your first job referral.'
+                    : 'Check back later for new opportunities.'}
+                </Typography>
+              </Paper>
+            </motion.div>
+          ) : (
+            <Grid container spacing={3}>
+              {filteredReferrals.map((referral, index) => (
+                <Grid
+                  item
+                  xs={12}
+                  sm={viewMode === 'grid' ? 6 : 12}
+                  md={viewMode === 'grid' ? 4 : 12}
+                  lg={viewMode === 'grid' ? 4 : 12}
+                  key={referral.id}
+                >
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: index * 0.1 }}
+                    whileHover={{ y: -8 }}
+                  >
+                    <Card
+                      sx={{
+                        height: '100%',
+                        borderRadius: 3,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                          boxShadow: 6,
+                          borderColor: 'primary.main',
+                        },
+                        display: 'flex',
+                        flexDirection: viewMode === 'list' ? 'row' : 'column',
+                      }}
+                    >
+                      <CardContent sx={{ flex: 1, p: 3 }}>
+                        {/* Header */}
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            mb: 2,
+                          }}
+                        >
+                          <Box sx={{ flex: 1 }}>
+                            <Typography
+                              variant={viewMode === 'list' ? 'h6' : 'h6'}
+                              sx={{ fontWeight: 600, mb: 0.5 }}
+                            >
+                              {referral.jobTitle}
+                            </Typography>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                mb: 1,
+                              }}
+                            >
+                              <Avatar
+                                sx={{
+                                  width: 24,
+                                  height: 24,
+                                  fontSize: '0.75rem',
+                                  background:
+                                    'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
+                                }}
+                              >
+                                {referral.company[0]}
+                              </Avatar>
+                              <Typography
+                                variant="subtitle1"
+                                color="primary"
+                                sx={{ fontWeight: 500 }}
+                              >
+                                {referral.company}
+                              </Typography>
+                            </Box>
+                          </Box>
+                          <Chip
+                            label={referral.status}
+                            color={getStatusColor(referral.status)}
+                            size="small"
+                            sx={{ borderRadius: 2 }}
+                          />
+                        </Box>
+
+                        {/* Details */}
+                        <Stack spacing={1.5} sx={{ mb: 2 }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <LocationOn
+                              sx={{ fontSize: 16, color: 'text.secondary' }}
+                            />
+                            <Typography variant="body2" color="text.secondary">
+                              {referral.location}
+                            </Typography>
+                          </Box>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <Person
+                              sx={{ fontSize: 16, color: 'text.secondary' }}
+                            />
+                            <Typography variant="body2" color="text.secondary">
+                              Posted by {referral.postedBy.name}
+                            </Typography>
+                          </Box>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <TimeIcon
+                              sx={{ fontSize: 16, color: 'text.secondary' }}
+                            />
+                            <Typography variant="body2" color="text.secondary">
+                              {new Date(
+                                referral.createdAt
+                              ).toLocaleDateString()}
+                            </Typography>
+                          </Box>
+                        </Stack>
+
+                        {/* Description */}
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            mb: 2,
+                            color: 'text.secondary',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: viewMode === 'list' ? 2 : 3,
+                            WebkitBoxOrient: 'vertical',
+                          }}
+                        >
+                          {referral.description}
+                        </Typography>
+
+                        {/* Applications Count (if any) */}
+                        {referral.applications &&
+                          referral.applications.length > 0 && (
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                                mb: 2,
+                              }}
+                            >
+                              <Badge
+                                badgeContent={referral.applications.length}
+                                color="primary"
+                                sx={{
+                                  '& .MuiBadge-badge': {
+                                    backgroundColor: 'success.main',
+                                    color: 'white',
+                                  },
+                                }}
+                              >
+                                <PeopleIcon
+                                  sx={{ fontSize: 16, color: 'text.secondary' }}
+                                />
+                              </Badge>
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
+                                {referral.applications.length} application
+                                {referral.applications.length !== 1 ? 's' : ''}
+                              </Typography>
+                            </Box>
+                          )}
+                      </CardContent>
+
+                      {/* Actions */}
+                      <CardActions
+                        sx={{
+                          p: 2,
+                          pt: 0,
+                          flexDirection: viewMode === 'list' ? 'column' : 'row',
+                          justifyContent: 'space-between',
+                          alignItems:
+                            viewMode === 'list' ? 'stretch' : 'center',
+                          gap: 1,
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', gap: 1, flex: 1 }}>
+                          {user?.role === 'STUDENT' && (
+                            <Button
+                              fullWidth={viewMode === 'list'}
+                              size="small"
+                              variant="contained"
+                              startIcon={<Send />}
+                              onClick={() => {
+                                setSelectedReferral(referral);
+                                setApplicationForm({
+                                  ...applicationForm,
+                                  referralId: referral.id,
+                                });
+                                setApplyDialogOpen(true);
+                              }}
+                              sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                background:
+                                  'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
+                                '&:hover': {
+                                  background:
+                                    'linear-gradient(135deg, #45a049 0%, #7cb342 100%)',
+                                },
+                              }}
+                            >
+                              Apply Now
+                            </Button>
+                          )}
+
+                          <Tooltip title="View Details">
+                            <IconButton
+                              size="small"
+                              onClick={() => {
+                                setSelectedReferral(referral);
+                                // Could open a details dialog here
+                              }}
+                              sx={{
+                                color: 'primary.main',
+                                backgroundColor: 'primary.light',
+                                '&:hover': {
+                                  backgroundColor: 'primary.main',
+                                  color: 'white',
+                                },
+                              }}
+                            >
+                              <Visibility />
+                            </IconButton>
+                          </Tooltip>
+
+                          {user?.id === referral.postedBy.id && (
+                            <>
+                              <Tooltip title="Edit">
+                                <IconButton
+                                  size="small"
+                                  sx={{
+                                    color: 'info.main',
+                                    backgroundColor: 'info.light',
+                                    '&:hover': {
+                                      backgroundColor: 'info.main',
+                                      color: 'white',
+                                    },
+                                  }}
+                                >
+                                  <Edit />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete">
+                                <IconButton
+                                  size="small"
+                                  onClick={() =>
+                                    handleDeleteReferral(referral.id)
+                                  }
+                                  sx={{
+                                    color: 'error.main',
+                                    backgroundColor: 'error.light',
+                                    '&:hover': {
+                                      backgroundColor: 'error.main',
+                                      color: 'white',
+                                    },
+                                  }}
+                                >
+                                  <Delete />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                        </Box>
+                      </CardActions>
+                    </Card>
+                  </motion.div>
+                </Grid>
+              ))}
+            </Grid>
           )}
-        </Box>
+        </AnimatePresence>
+      </motion.div>
+
+      {/* Floating Action Button for Mobile */}
+      {user?.role === 'ALUM' && (
+        <Fab
+          color="primary"
+          onClick={() => setCreateDialogOpen(true)}
+          sx={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            background: 'linear-gradient(135deg, #4caf50 0%, #8bc34a 100%)',
+            '&:hover': {
+              background: 'linear-gradient(135deg, #45a049 0%, #7cb342 100%)',
+            },
+            display: { xs: 'flex', md: 'none' },
+          }}
+        >
+          <Add />
+        </Fab>
       )}
 
       {/* Create Referral Dialog */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Paper,
@@ -18,7 +18,7 @@ import {
   Delete,
   Description,
   CheckCircle,
-  Error,
+  Error as ErrorIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
@@ -63,13 +63,14 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
 
     Array.from(files).forEach((file) => {
       if (file.size > 10 * 1024 * 1024) {
-        // 10MB limit
         alert(`File ${file.name} is too large. Maximum size is 10MB.`);
         return;
       }
 
       if (
-        !['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'].includes(file.type)
+        !['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'].includes(
+          file.type
+        )
       ) {
         alert(
           `File ${file.name} has an unsupported format. Please use PDF, JPG, or PNG.`
@@ -107,12 +108,10 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
     );
 
     try {
-      // Simulate file upload - replace with actual file upload logic
       const formData = new FormData();
       formData.append('file', document.file);
       formData.append('documentType', document.documentType);
 
-      // Replace with your actual upload endpoint
       const response = await fetch('/api/upload-document', {
         method: 'POST',
         body: formData,
@@ -125,9 +124,7 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
           i === index ? { ...doc, status: 'success', url: result.url } : doc
         )
       );
-
-      // Parent will be updated via useEffect
-    } catch (error) {
+    } catch {
       setDocuments((prev) =>
         prev.map((doc, i) =>
           i === index
@@ -147,8 +144,8 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
       prev.map((doc, i) => (i === index ? { ...doc, documentType } : doc))
     );
   };
-  // Sync parent when documents change
-  React.useEffect(() => {
+
+  useEffect(() => {
     const validDocuments = documents
       .filter((doc) => doc.status === 'success' && doc.url)
       .map((doc) => ({
@@ -163,7 +160,7 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
       case 'success':
         return <CheckCircle color="success" />;
       case 'error':
-        return <Error color="error" />;
+        return <ErrorIcon color="error" />;
       case 'uploading':
         return (
           <Box sx={{ width: 20 }}>
@@ -250,7 +247,7 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
           </Typography>
           {documents.map((document, index) => (
             <motion.div
-              key={index}
+              key={document.file.name + index}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
@@ -303,7 +300,6 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
                       Upload
                     </Button>
                   )}
-
                   <IconButton
                     onClick={() => removeDocument(index)}
                     disabled={document.status === 'uploading'}
@@ -327,18 +323,24 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
           <Box display="flex" gap={1} flexWrap="wrap">
             <Chip label={`Total: ${documents.length}`} variant="outlined" />
             <Chip
-              label={`Uploaded: ${documents.filter((d) => d.status === 'success').length}`}
+              label={`Uploaded: ${
+                documents.filter((d) => d.status === 'success').length
+              }`}
               color="success"
               variant="outlined"
             />
             <Chip
-              label={`Pending: ${documents.filter((d) => d.status === 'pending').length}`}
+              label={`Pending: ${
+                documents.filter((d) => d.status === 'pending').length
+              }`}
               color="warning"
               variant="outlined"
             />
             {documents.some((d) => d.status === 'error') && (
               <Chip
-                label={`Failed: ${documents.filter((d) => d.status === 'error').length}`}
+                label={`Failed: ${
+                  documents.filter((d) => d.status === 'error').length
+                }`}
                 color="error"
                 variant="outlined"
               />
