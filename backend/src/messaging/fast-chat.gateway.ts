@@ -29,7 +29,7 @@ interface TypingData {
 
 /**
  * Fast Chat Gateway for real-time messaging
- * 
+ *
  * Features:
  * - Message deduplication
  * - User presence tracking
@@ -39,7 +39,10 @@ interface TypingData {
  */
 @WebSocketGateway({
   cors: {
-    origin: process.env.FRONTEND_URLS?.split(',') || ['http://localhost:3001', 'http://localhost:3000'],
+    origin: process.env.FRONTEND_URLS?.split(',') || [
+      'http://localhost:3001',
+      'http://localhost:3000',
+    ],
     credentials: true,
   },
   namespace: '/ws',
@@ -83,9 +86,9 @@ export class FastChatGateway
     });
   }
 
-  afterInit(server: Server) {
+  afterInit() {
     this.logger.log('🚀 Fast Chat Gateway initialized');
-    
+
     // Set up periodic cleanup
     setInterval(() => {
       this.cleanupInactiveConnections();
@@ -94,7 +97,7 @@ export class FastChatGateway
 
   async handleConnection(client: AuthenticatedSocket) {
     this.logger.log(`🔌 New connection attempt: ${client.id}`);
-    
+
     // Set connection timeout
     const connectionTimeout = setTimeout(() => {
       if (!client.userId) {
@@ -106,9 +109,9 @@ export class FastChatGateway
     client.on('authenticate', async (data) => {
       try {
         clearTimeout(connectionTimeout);
-        
+
         const { userId, token } = data;
-        
+
         if (!userId || !token) {
           client.emit('CONNECTION_ERROR', {
             error: 'Missing authentication credentials',
@@ -120,16 +123,18 @@ export class FastChatGateway
 
         // Verify JWT token
         const payload = this.jwtService.verify(token);
-        
+
         // Store user info
         client.userId = payload.userId || userId;
         client.userEmail = payload.email;
         client.lastActivity = Date.now();
-        
+
         // Check for existing connection and disconnect if found
         const existingConnection = this.connectedUsers.get(client.userId);
         if (existingConnection && existingConnection.id !== client.id) {
-          this.logger.log(`🔄 Disconnecting existing connection for user ${client.userId}`);
+          this.logger.log(
+            `🔄 Disconnecting existing connection for user ${client.userId}`,
+          );
           existingConnection.emit('FORCE_DISCONNECT', {
             reason: 'New connection established',
             timestamp: new Date().toISOString(),
@@ -139,15 +144,17 @@ export class FastChatGateway
 
         // Store new connection
         this.connectedUsers.set(client.userId, client);
-        
+
         // Join user to their personal room
         await client.join(`user_${client.userId}`);
-        
+
         // Update presence status
         await this.updateUserPresence(client.userId, 'online');
-        
+
         this.logger.log(`✅ User ${client.userId} connected successfully`);
-        this.logger.log(`📊 Total connected users: ${this.connectedUsers.size}`);
+        this.logger.log(
+          `📊 Total connected users: ${this.connectedUsers.size}`,
+        );
 
         // Send connection confirmation
         client.emit('CONNECTION_SUCCESS', {
@@ -158,7 +165,6 @@ export class FastChatGateway
 
         // Send recent conversations (simplified for now)
         client.emit('CONVERSATIONS_UPDATE', []);
-
       } catch (error) {
         this.logger.error(`❌ Authentication failed for ${client.id}:`, error);
         client.emit('CONNECTION_ERROR', {
@@ -173,16 +179,16 @@ export class FastChatGateway
   async handleDisconnect(client: AuthenticatedSocket) {
     if (client.userId) {
       this.logger.log(`👋 User ${client.userId} disconnected`);
-      
+
       // Remove from connected users
       this.connectedUsers.delete(client.userId);
-      
+
       // Update presence status
       await this.updateUserPresence(client.userId, 'offline');
-      
+
       // Clean up typing indicators
       this.typingUsers.delete(client.userId);
-      
+
       this.logger.log(`📊 Total connected users: ${this.connectedUsers.size}`);
     }
   }
@@ -200,15 +206,20 @@ export class FastChatGateway
       // Rate limiting using Redis
       const rateLimitKey = `rate_limit:${client.userId}`;
       const currentCount = await this.redis.incr(rateLimitKey);
-      
+
       if (currentCount === 1) {
         // Set expiration for 1 minute
         await this.redis.expire(rateLimitKey, 60);
       }
-      
-      const maxMessagesPerMinute = this.configService.get('RATE_LIMIT_MESSAGES_PER_MINUTE', 100);
+
+      const maxMessagesPerMinute = this.configService.get(
+        'RATE_LIMIT_MESSAGES_PER_MINUTE',
+        100,
+      );
       if (currentCount > maxMessagesPerMinute) {
-        this.logger.warn(`🚫 Rate limit exceeded for user ${client.userId}: ${currentCount}/${maxMessagesPerMinute}`);
+        this.logger.warn(
+          `🚫 Rate limit exceeded for user ${client.userId}: ${currentCount}/${maxMessagesPerMinute}`,
+        );
         client.emit('RATE_LIMIT_EXCEEDED', {
           error: 'Too many messages sent. Please slow down.',
           retryAfter: 60,
@@ -222,9 +233,11 @@ export class FastChatGateway
       // Check if this message was already processed using Redis
       const messageKey = `message:${messageId}`;
       const exists = await this.redis.exists(messageKey);
-      
+
       if (exists) {
-        this.logger.log(`⚠️ Duplicate message detected, ignoring: ${messageId}`);
+        this.logger.log(
+          `⚠️ Duplicate message detected, ignoring: ${messageId}`,
+        );
         return { error: 'Duplicate message' };
       }
 
@@ -265,7 +278,6 @@ export class FastChatGateway
       client.lastActivity = Date.now();
 
       return { success: true, messageId };
-
     } catch (error) {
       this.logger.error('❌ Error handling new message:', error);
       client.emit('MESSAGE_ERROR', {
@@ -284,7 +296,7 @@ export class FastChatGateway
     if (!client.userId) return;
 
     const { receiverId } = data;
-    
+
     // Add to typing users
     if (!this.typingUsers.has(receiverId)) {
       this.typingUsers.set(receiverId, new Set());
@@ -311,7 +323,7 @@ export class FastChatGateway
     if (!client.userId) return;
 
     const { receiverId } = data;
-    
+
     // Remove from typing users
     const typingSet = this.typingUsers.get(receiverId);
     if (typingSet) {
@@ -335,10 +347,12 @@ export class FastChatGateway
     try {
       // Get all online users from Redis
       const onlineUserIds = await this.redis.smembers('online_users');
-      
+
       // Filter out current user
-      const onlineUsers = onlineUserIds.filter(userId => userId !== client.userId);
-      
+      const onlineUsers = onlineUserIds.filter(
+        (userId) => userId !== client.userId,
+      );
+
       client.emit('ONLINE_USERS', onlineUsers);
     } catch (error) {
       this.logger.error('Error getting online users:', error);
@@ -346,7 +360,10 @@ export class FastChatGateway
     }
   }
 
-  private async updateUserPresence(userId: string, status: 'online' | 'offline') {
+  private async updateUserPresence(
+    userId: string,
+    status: 'online' | 'offline',
+  ) {
     try {
       const presenceData = {
         userId,
@@ -357,16 +374,28 @@ export class FastChatGateway
       if (status === 'online') {
         // Add user to online set
         await this.redis.sadd('online_users', userId);
-        await this.redis.hset(`user:${userId}`, 'status', 'online', 'lastSeen', presenceData.lastSeen);
+        await this.redis.hset(
+          `user:${userId}`,
+          'status',
+          'online',
+          'lastSeen',
+          presenceData.lastSeen,
+        );
       } else {
         // Remove user from online set
         await this.redis.srem('online_users', userId);
-        await this.redis.hset(`user:${userId}`, 'status', 'offline', 'lastSeen', presenceData.lastSeen);
+        await this.redis.hset(
+          `user:${userId}`,
+          'status',
+          'offline',
+          'lastSeen',
+          presenceData.lastSeen,
+        );
       }
 
       // Broadcast presence update to all connected users
       this.server.emit('USER_PRESENCE_UPDATE', presenceData);
-      
+
       this.logger.log(`👤 User ${userId} is now ${status}`);
     } catch (error) {
       this.logger.error('Error updating user presence:', error);
@@ -378,8 +407,13 @@ export class FastChatGateway
     const inactiveThreshold = 5 * 60 * 1000; // 5 minutes
 
     for (const [userId, socket] of this.connectedUsers.entries()) {
-      if (socket.lastActivity && now - socket.lastActivity > inactiveThreshold) {
-        this.logger.log(`🧹 Cleaning up inactive connection for user ${userId}`);
+      if (
+        socket.lastActivity &&
+        now - socket.lastActivity > inactiveThreshold
+      ) {
+        this.logger.log(
+          `🧹 Cleaning up inactive connection for user ${userId}`,
+        );
         socket.disconnect();
         this.connectedUsers.delete(userId);
       }
@@ -393,7 +427,7 @@ export class FastChatGateway
       // Check Redis connection
       const redisStatus = await this.redis.ping();
       const onlineUsersCount = await this.redis.scard('online_users');
-      
+
       client.emit('HEALTH_RESPONSE', {
         status: 'healthy',
         timestamp: new Date().toISOString(),
