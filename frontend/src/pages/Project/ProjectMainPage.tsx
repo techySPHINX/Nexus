@@ -60,6 +60,7 @@ const ProjectsMainPage: React.FC = () => {
   const {
     projects,
     pagination,
+    comments,
     projectById,
     loading,
     actionLoading,
@@ -698,7 +699,7 @@ const ProjectsMainPage: React.FC = () => {
               onClose={handleCloseProjectDetails}
               loading={actionLoading.projectDetails.has(selectedProjectId)}
               currentUserId={user?.id}
-              comments={[]} // Will be loaded separately
+              comments={comments[selectedProjectId] || []} // Will be loaded separately
               loadingComments={actionLoading.comment.has(selectedProjectId)}
               onLoadComments={(page, forceRefresh) =>
                 getComments(selectedProjectId, page, forceRefresh)

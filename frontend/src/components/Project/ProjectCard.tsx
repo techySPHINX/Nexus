@@ -311,7 +311,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
               {/* Action Buttons */}
               {!isOwner && (
-                <Stack direction="row" spacing={1} justifyContent="center">
+                <Stack direction="row" spacing={1} justifyContent="end">
                   <Tooltip title={isSupported ? 'Unsupport' : 'Support'}>
                     <IconButton
                       onClick={(e) => {

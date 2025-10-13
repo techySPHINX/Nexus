@@ -875,17 +875,28 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                     <Autocomplete
                       multiple
                       options={PREDEFINED_TAGS}
-                      value={formData.tags}
+                      value={Array.isArray(formData.tags) ? formData.tags : []}
                       onChange={(_e, value) =>
                         handleAutocompleteChange('tags', value)
                       }
-                      freeSolo
+                      freeSolo={false}
                       size="small"
+                      disableCloseOnSelect
                       renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          placeholder="Select or type tags"
-                        />
+                        <TextField {...params} placeholder="Select tags" />
+                      )}
+                      getOptionLabel={(option) => option}
+                      renderOption={(props, option, { selected }) => (
+                        <li {...props} key={option}>
+                          <Chip
+                            label={option}
+                            color={selected ? 'success' : 'default'}
+                            variant={selected ? 'filled' : 'outlined'}
+                            size="small"
+                            sx={{ mr: 1 }}
+                          />
+                          <Typography variant="body2">{option}</Typography>
+                        </li>
                       )}
                       renderTags={(value, getTagProps) =>
                         value.map((option, index) => (

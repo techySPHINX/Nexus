@@ -55,6 +55,7 @@ import {
   ProjectUpdateInterface,
   ProjectDetailInterface,
 } from '@/types/ShowcaseType';
+import { ProfileNameLink } from '@/utils/ProfileNameLink';
 
 interface ProjectDetailModalProps {
   project: ProjectDetailInterface;
@@ -644,19 +645,6 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     initial="hidden"
                     animate="visible"
                   >
-                    <motion.div variants={listItemVariants} custom={0}>
-                      <ListItem>
-                        <ListItemAvatar>
-                          <Avatar src={project.owner?.profile?.avatarUrl}>
-                            <Person />
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText
-                          primary={project.owner?.name || 'Owner'}
-                          secondary="Owner"
-                        />
-                      </ListItem>
-                    </motion.div>
                     {(project.teamMembers ?? []).length ? (
                       (project.teamMembers ?? []).map(
                         (member: ProjectTeam, i: number) => (
@@ -754,61 +742,78 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       animate="visible"
                       exit="hidden"
                     >
-                      {(comments ?? []).length ? (
-                        (comments ?? []).map(
-                          (comment: ProjectComment, idx: number) => (
-                            <motion.li
-                              key={comment.id ?? idx}
-                              variants={listItemVariants}
-                              custom={idx}
+                      {comments.length ? (
+                        comments.map((comment: ProjectComment, idx: number) => (
+                          <motion.li
+                            key={comment.id ?? idx}
+                            variants={listItemVariants}
+                            custom={idx}
+                          >
+                            <ListItem
+                              alignItems="flex-start"
+                              sx={{ alignItems: 'flex-start' }}
                             >
-                              <ListItem
-                                alignItems="flex-start"
-                                sx={{ alignItems: 'flex-start' }}
-                              >
-                                <ListItemAvatar>
+                              <ListItemAvatar>
+                                <Tooltip
+                                  title={`View ${comment.user?.name}'s profile`}
+                                >
                                   <Avatar
                                     src={comment.user?.profile?.avatarUrl}
+                                    sx={{ cursor: 'pointer' }}
+                                    onClick={() =>
+                                      window.open(
+                                        `/profile/${comment.user?.id}`,
+                                        '_blank'
+                                      )
+                                    }
                                   >
                                     <Person />
                                   </Avatar>
-                                </ListItemAvatar>
-                                <ListItemText
-                                  primary={
-                                    <Box
-                                      sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'baseline',
-                                      }}
+                                </Tooltip>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  <Box
+                                    sx={{
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'baseline',
+                                    }}
+                                  >
+                                    <ProfileNameLink
+                                      user={
+                                        comment.user ?? {
+                                          id: 'unknown',
+                                          name: 'Unknown User',
+                                          role: undefined,
+                                          profile: { avatarUrl: '' },
+                                        }
+                                      }
+                                      avatarSize={20}
+                                    />
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
                                     >
-                                      <Typography variant="subtitle2">
-                                        {comment.user?.name || 'Anonymous'}
-                                      </Typography>
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
-                                      >
-                                        {format(
-                                          new Date(comment.createdAt),
-                                          'MMM d, yyyy • h:mm a'
-                                        )}
-                                      </Typography>
-                                    </Box>
-                                  }
-                                  secondary={
-                                    <Typography variant="body1" sx={{ mt: 1 }}>
-                                      {comment.comment}
+                                      {format(
+                                        new Date(comment.createdAt),
+                                        'MMM d, yyyy • h:mm a'
+                                      )}
                                     </Typography>
-                                  }
-                                />
-                              </ListItem>
-                              {idx < (comments?.length ?? 0) - 1 && (
-                                <Divider variant="inset" component="li" />
-                              )}
-                            </motion.li>
-                          )
-                        )
+                                  </Box>
+                                }
+                                secondary={
+                                  <Typography variant="body1" sx={{ mt: 1 }}>
+                                    {comment.comment}
+                                  </Typography>
+                                }
+                              />
+                            </ListItem>
+                            {idx < comments.length - 1 && (
+                              <Divider variant="inset" component="li" />
+                            )}
+                          </motion.li>
+                        ))
                       ) : (
                         <Typography
                           variant="body2"
