@@ -1,3 +1,5 @@
+import { Role } from './profileType';
+
 export enum status {
   IDEA = 'IDEA',
   IN_PROGRESS = 'IN_PROGRESS',
@@ -68,7 +70,7 @@ export interface ProjectComment {
   user?: {
     id: string;
     name: string;
-    role?: string;
+    role?: Role;
     profile: {
       avatarUrl?: string;
     };

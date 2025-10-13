@@ -29,9 +29,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Custom Components
 import ProjectFilter from '@/components/Project/ProjectFilter';
-import ProjectModal from '@/components/Project/ProjectModal';
+import ProjectModal from '@/components/Project/CreateProject';
 import CollaborationModal from '@/components/Project/CollaborationModal';
-import ProjectDetailModal from '@/components/Project/ProjectDetailModal';
+import ProjectDetailModal from '@/components/Project/ProjectDetailsCard';
 import ProjectGrid from '@/components/Project/ProjectGrid';
 
 interface TabPanelProps {
@@ -60,6 +60,7 @@ const ProjectsMainPage: React.FC = () => {
   const {
     projects,
     pagination,
+    comments,
     projectById,
     loading,
     actionLoading,
@@ -67,6 +68,7 @@ const ProjectsMainPage: React.FC = () => {
     getAllProjects,
     getProjectById,
     createProject,
+    deleteProject,
     // updateProject,
     supportProject,
     unsupportProject,
@@ -92,7 +94,11 @@ const ProjectsMainPage: React.FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
   );
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({ open: false, message: '', severity: 'info' });
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   const [filteredProjects, setFilteredProjects] = useState<{
@@ -135,7 +141,7 @@ const ProjectsMainPage: React.FC = () => {
 
   useEffect(() => {
     if (error) {
-      setSnackbarOpen(true);
+      setSnackbar({ open: true, message: error, severity: 'error' });
     }
   }, [error]);
 
@@ -211,7 +217,7 @@ const ProjectsMainPage: React.FC = () => {
   };
 
   const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
+    setSnackbar((prev) => ({ ...prev, open: false }));
     clearError();
   };
 
@@ -220,8 +226,17 @@ const ProjectsMainPage: React.FC = () => {
       try {
         await createProject(data);
         setShowCreateModal(false);
-        setSnackbarOpen(true);
+        setSnackbar({
+          open: true,
+          message: 'Created project!',
+          severity: 'success',
+        });
       } catch (err) {
+        setSnackbar({
+          open: true,
+          message: 'Failed to create project',
+          severity: 'error',
+        });
         console.error('Failed to create project:', err);
       }
     },
@@ -255,10 +270,40 @@ const ProjectsMainPage: React.FC = () => {
     }
   };
 
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      await deleteProject(projectId);
+      setSelectedProjectId(null);
+      setSelectedProject(null);
+      setSnackbar({
+        open: true,
+        message: 'Deleted project!',
+        severity: 'success',
+      });
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to delete project',
+        severity: 'error',
+      });
+      console.error('Failed to delete project:', err);
+    }
+  };
+
   const handleCreateComment = async (projectId: string, comment: string) => {
     try {
       await createComment(projectId, comment);
+      setSnackbar({
+        open: true,
+        message: 'Comment added!',
+        severity: 'success',
+      });
     } catch (err) {
+      setSnackbar({
+        open: true,
+        message: 'Failed to add comment',
+        severity: 'error',
+      });
       console.error('Failed to create comment:', err);
     }
   };
@@ -304,8 +349,17 @@ const ProjectsMainPage: React.FC = () => {
         await requestCollaboration(projectId, data);
         setShowCollaborationModal(false);
         setSelectedProject(null);
-        setSnackbarOpen(true);
+        setSnackbar({
+          open: true,
+          message: 'Collaboration request sent!',
+          severity: 'success',
+        });
       } catch (err) {
+        setSnackbar({
+          open: true,
+          message: 'Failed to send collaboration request',
+          severity: 'error',
+        });
         console.error('Failed to send collaboration request:', err);
       }
     },
@@ -645,7 +699,7 @@ const ProjectsMainPage: React.FC = () => {
               onClose={handleCloseProjectDetails}
               loading={actionLoading.projectDetails.has(selectedProjectId)}
               currentUserId={user?.id}
-              comments={[]} // Will be loaded separately
+              comments={comments[selectedProjectId] || []} // Will be loaded separately
               loadingComments={actionLoading.comment.has(selectedProjectId)}
               onLoadComments={(page, forceRefresh) =>
                 getComments(selectedProjectId, page, forceRefresh)
@@ -670,25 +724,26 @@ const ProjectsMainPage: React.FC = () => {
                   true
                 )
               }
+              onDelete={() => handleDeleteProject(selectedProjectId)}
             />
           )}
         </AnimatePresence>
 
-        {/* Snackbar for error messages */}
+        {/* Snackbar for messages */}
         <Snackbar
-          open={snackbarOpen}
+          open={snackbar.open}
           autoHideDuration={6000}
           onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
           TransitionComponent={Fade}
         >
           <Alert
             onClose={handleCloseSnackbar}
-            severity="error"
+            severity={snackbar.severity}
             variant="filled"
             sx={{ width: '100%' }}
           >
-            {error}
+            {snackbar.message}
           </Alert>
         </Snackbar>
       </motion.div>

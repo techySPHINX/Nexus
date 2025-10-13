@@ -97,6 +97,8 @@ export class ShowcaseService {
       throw new Error('Project not found');
     }
 
+    console.log('ProjectId to delete:', projectId);
+
     if (project.ownerId !== userId) {
       throw new Error('You are not the owner of this project');
     }
@@ -553,7 +555,21 @@ export class ShowcaseService {
     }
     return this.prisma.projectCollaborationRequest.findMany({
       where: { projectId },
-      include: { user: true },
+      select: {
+        id: true,
+        message: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+      },
     });
   }
 
@@ -642,7 +658,7 @@ export class ShowcaseService {
       where: { projectId },
     });
     return {
-      data: comments,
+      comments: comments,
       pagination: {
         page: pageNum,
         pageSize,
