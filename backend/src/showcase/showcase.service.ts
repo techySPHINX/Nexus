@@ -105,6 +105,38 @@ export class ShowcaseService {
     return this.prisma.project.delete({ where: { id: projectId } });
   }
 
+  /**
+   * optimized to fetch all counts in a single query
+   * only 1 lookup to project table and 2 lookups to projectSupport and projectFollower tables
+   */
+  async getProjectCounts(userId: string) {
+    const [projectCounts, supportedCount, followedCount] = await Promise.all([
+      this.prisma.project.groupBy({
+        by: ['ownerId'],
+        _count: { _all: true },
+      }),
+      this.prisma.projectSupport.count({ where: { userId } }),
+      this.prisma.projectFollower.count({ where: { userId } }),
+    ]);
+
+    // totalProjects = all rows in project table
+    const totalProjects = projectCounts.reduce(
+      (sum, row) => sum + row._count._all,
+      0,
+    );
+
+    // myProjects = count where ownerId = userId
+    const myProjects =
+      projectCounts.find((row) => row.ownerId === userId)?._count._all ?? 0;
+
+    return {
+      totalProjects,
+      myProjects,
+      supportedProjects: supportedCount,
+      followedProjects: followedCount,
+    };
+  }
+
   async getProjects(userId: string, filterProjectDto: FilterProjectDto) {
     const {
       tags,

@@ -57,6 +57,11 @@ export class ShowcaseController {
     return this.showcaseService.deleteProject(userId, projectId);
   }
 
+  @Get('project/count')
+  getProjectCounts(@GetCurrentUser('userId') userId: string) {
+    return this.showcaseService.getProjectCounts(userId);
+  }
+
   @Get('project')
   getProjects(
     @GetCurrentUser('userId') userId: string,

@@ -40,6 +40,16 @@ export const ShowcaseService = {
     }
   },
 
+  getProjectCounts: async () => {
+    try {
+      console.log('Fetching project counts');
+      const response = await api.get('/showcase/project/count');
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get project counts with error: ' + error);
+    }
+  },
+
   getAllProjects: async (filterProjectDto?: FilterProjectInterface) => {
     try {
       console.log('Fetching all projects with filter:', filterProjectDto);

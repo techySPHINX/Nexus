@@ -39,6 +39,12 @@ const CACHE_CONFIG = {
 
 export interface ShowcaseContextType {
   // States
+  projectCounts: {
+    total: number;
+    owned: number;
+    supported: number;
+    followed: number;
+  };
   projects: PaginatedProjectsInterface;
   projectsByUserId: PaginatedProjectsInterface;
   supportedProjects: PaginatedProjectsInterface;
@@ -76,6 +82,7 @@ export interface ShowcaseContextType {
     data: Partial<CreateProjectInterface>
   ) => Promise<void>;
   deleteProject: (projectId: string) => Promise<void>;
+  getProjectCounts: () => Promise<void>;
   getAllProjects: (
     filterProjectDto?: FilterProjectInterface | undefined,
     loadMore?: boolean
@@ -136,6 +143,8 @@ export interface ShowcaseContextType {
 }
 
 const ShowcaseContext = React.createContext<ShowcaseContextType>({
+  // Initial states
+  projectCounts: { total: 0, owned: 0, supported: 0, followed: 0 },
   projects: {
     data: [],
     pagination: { nextCursor: undefined, hasNext: false },
@@ -177,6 +186,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   createProject: async () => {},
   updateProject: async () => {},
   deleteProject: async () => {},
+  getProjectCounts: async () => {},
   getAllProjects: async () => {},
   getProjectById: async () => {},
   getProjectsByUserId: async () => {},
@@ -214,6 +224,17 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const { user } = useAuth();
 
   // States
+  const [projectCounts, setProjectCounts] = useState<{
+    total: number;
+    owned: number;
+    supported: number;
+    followed: number;
+  }>({
+    total: 0,
+    owned: 0,
+    supported: 0,
+    followed: 0,
+  });
   const [projects, setProjects] = useState<PaginatedProjectsInterface>({
     data: [],
     pagination: {
@@ -402,6 +423,11 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           data: [response, ...prev.data],
           pagination: response.pagination,
         }));
+        setProjectCounts((prev) => ({
+          ...prev,
+          total: prev.total + 1,
+          owned: prev.owned + 1,
+        }));
       } catch (err) {
         setError(
           `Failed to create project: ${err instanceof Error ? err.message : String(err)}`
@@ -491,6 +517,30 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [user, projectById]
   );
+
+  const getProjectCounts = useCallback(async () => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const counts = await ShowcaseService.getProjectCounts();
+      setProjectCounts({
+        total: counts.totalProjects || 0,
+        owned: counts.myProjects || 0,
+        supported: counts.supportedProjects || 0,
+        followed: counts.followedProjects || 0,
+      });
+    } catch (err) {
+      setError(
+        `Failed to get project counts: ${err instanceof Error ? err.message : String(err)}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   const getAllProjects = useCallback(
     async (
@@ -912,6 +962,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
               : prev
           );
         }
+        setProjectCounts((prev) => ({
+          ...prev,
+          supported: prev.supported + 1,
+        }));
       } catch (err) {
         setError(
           `Failed to support project: ${err instanceof Error ? err.message : String(err)}`
@@ -974,6 +1028,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
               : prev
           );
         }
+        setProjectCounts((prev) => ({
+          ...prev,
+          supported: Math.max(prev.supported - 1, 0),
+        }));
       } catch (err) {
         setError(
           `Failed to unsupport project: ${err instanceof Error ? err.message : String(err)}`
@@ -1036,6 +1094,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
               : prev
           );
         }
+        setProjectCounts((prev) => ({ ...prev, followed: prev.followed + 1 }));
       } catch (err) {
         setError(
           `Failed to follow project: ${err instanceof Error ? err.message : String(err)}`
@@ -1098,6 +1157,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
               : prev
           );
         }
+        setProjectCounts((prev) => ({
+          ...prev,
+          followed: Math.max(prev.followed - 1, 0),
+        }));
       } catch (err) {
         setError(
           `Failed to unfollow project: ${err instanceof Error ? err.message : String(err)}`
@@ -1455,6 +1518,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const state: ShowcaseContextType = useMemo(
     () => ({
+      projectCounts,
       projects,
       projectsByUserId,
       supportedProjects,
@@ -1481,6 +1545,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       createProject,
       updateProject,
       deleteProject,
+      getProjectCounts,
       getAllProjects,
       getProjectById,
       getProjectsByUserId,
@@ -1505,6 +1570,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       fetchAllTypes,
     }),
     [
+      projectCounts,
       projects,
       projectsByUserId,
       supportedProjects,
@@ -1526,6 +1592,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       createProject,
       updateProject,
       deleteProject,
+      getProjectCounts,
       getAllProjects,
       getProjectById,
       getProjectsByUserId,
