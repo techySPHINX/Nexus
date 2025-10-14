@@ -415,11 +415,13 @@ const ProjectsMainPage: React.FC = () => {
         } else {
           await supportProject(projectId);
         }
+        // Refresh supported projects tab
+        await getSupportedProjects(filters);
       } catch (err) {
         console.error('Failed to toggle support:', err);
       }
     },
-    [supportProject, unsupportProject]
+    [supportProject, unsupportProject, getSupportedProjects, filters]
   );
 
   const handleFollow = useCallback(
@@ -430,11 +432,13 @@ const ProjectsMainPage: React.FC = () => {
         } else {
           await followProject(projectId);
         }
+        // Refresh followed projects tab
+        await getFollowedProjects(filters);
       } catch (err) {
         console.error('Failed to toggle follow:', err);
       }
     },
-    [followProject, unfollowProject]
+    [followProject, unfollowProject, getFollowedProjects, filters]
   );
 
   const handleCollaborationRequest = useCallback(
