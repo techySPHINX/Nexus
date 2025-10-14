@@ -213,4 +213,13 @@ export const ShowcaseService = {
       throw new Error('Failed to remove team member with error: ' + error);
     }
   },
+
+  getAllProjectTypes: async () => {
+    try {
+      const response = await api.get('/showcase/tags');
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get project types with error: ' + error);
+    }
+  },
 };

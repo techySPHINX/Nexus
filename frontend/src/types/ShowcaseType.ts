@@ -154,3 +154,8 @@ export interface ProjectsPaginationResponse {
   hasNext: boolean;
   hasPrev: boolean;
 }
+
+export interface Tags {
+  id: string;
+  name: string;
+}

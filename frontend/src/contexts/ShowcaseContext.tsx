@@ -12,6 +12,7 @@ import {
   ProjectsPaginationResponse,
   ProjectTeam,
   ProjectUpdateInterface,
+  Tags,
 } from '@/types/ShowcaseType';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from './AuthContext';
@@ -39,6 +40,7 @@ const CACHE_CONFIG = {
 export interface ShowcaseContextType {
   // States
   projects: ProjectInterface[];
+  projectsCache: Map<string, ProjectCache>;
   pagination: ProjectsPaginationResponse;
   projectById: ProjectDetailInterface | null;
   projectByIdUpdates: ProjectUpdateInterface[];
@@ -61,6 +63,9 @@ export interface ShowcaseContextType {
     projects: number;
     comments: number;
   };
+
+  allTypes: Tags[];
+  typeLoading: boolean;
 
   // Actions
   createProject: (data: CreateProjectInterface) => Promise<void>;
@@ -112,10 +117,12 @@ export interface ShowcaseContextType {
   removeProjectTeamMember: (projectId: string, userId: string) => Promise<void>;
   clearProjectsCache: () => void;
   clearSpecificCache: (projectId: string) => void; // New method to clear specific cache
+  fetchAllTypes: () => Promise<void>;
 }
 
 const ShowcaseContext = React.createContext<ShowcaseContextType>({
   projects: [],
+  projectsCache: new Map(),
   pagination: {
     page: 1,
     pageSize: 15,
@@ -138,7 +145,9 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   commentsPagination: {},
   cacheInfo: { projects: 0, comments: 0 },
   teamMembers: [],
+  allTypes: [],
   error: null,
+  typeLoading: false,
   clearError: () => {},
   clearSpecificCache: () => {},
 
@@ -164,6 +173,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   getProjectTeamMembers: async () => {},
   removeProjectTeamMember: async () => {},
   clearProjectsCache: () => {},
+  fetchAllTypes: async () => {},
 });
 
 export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -215,6 +225,9 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const [commentsPagination, setCommentsPagination] = useState<
     Record<string, ProjectsPaginationResponse>
   >({});
+
+  const [allTypes, setAllTypes] = useState<Tags[]>([]);
+  const [typeLoading, setTypeLoading] = useState<boolean>(false);
 
   // Refs for better performance
   const paginationRef = React.useRef(pagination);
@@ -1164,6 +1177,25 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     [user]
   );
 
+  const [typesLastFetched, setTypesLastFetched] = useState<number>(0);
+
+  const fetchAllTypes = useCallback(async (): Promise<void> => {
+    if (Date.now() - typesLastFetched < 10 * 60 * 1000) {
+      return; // Skip fetching if last fetched within 10 minutes
+    }
+    setTypeLoading(true);
+    try {
+      console.log('Fetching project types from API...');
+      const types = await ShowcaseService.getAllProjectTypes();
+      setAllTypes(types);
+      setTypesLastFetched(Date.now());
+    } catch (err) {
+      console.error('Failed to fetch project types:', err);
+    } finally {
+      setTypeLoading(false);
+    }
+  }, [typesLastFetched]);
+
   // New method to clear specific project cache
   const clearSpecificCache = useCallback((projectId: string) => {
     setProjectsCache((prev) => {
@@ -1238,6 +1270,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const state: ShowcaseContextType = useMemo(
     () => ({
       projects,
+      projectsCache,
       pagination,
       projectById,
       projectByIdUpdates,
@@ -1249,6 +1282,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       commentsPagination,
       teamMembers,
       cacheInfo,
+      allTypes,
+      typeLoading,
+
+      // Cache management
       clearError,
       clearSpecificCache,
 
@@ -1274,9 +1311,11 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       getProjectTeamMembers,
       removeProjectTeamMember,
       clearProjectsCache,
+      fetchAllTypes,
     }),
     [
       projects,
+      projectsCache,
       pagination,
       projectById,
       projectByIdUpdates,
@@ -1288,6 +1327,8 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       comments,
       commentsPagination,
       teamMembers,
+      allTypes,
+      typeLoading,
       clearError,
       createProject,
       updateProject,
@@ -1311,6 +1352,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       removeProjectTeamMember,
       clearProjectsCache,
       clearSpecificCache,
+      fetchAllTypes,
     ]
   );
 
