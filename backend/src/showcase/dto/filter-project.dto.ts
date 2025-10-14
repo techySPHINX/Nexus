@@ -46,4 +46,8 @@ export class FilterProjectDto {
   @Type(() => Number)
   @IsNumber()
   pageSize: number = 15;
+
+  @IsOptional()
+  @IsString()
+  cursor?: string;
 }
