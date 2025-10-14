@@ -17,7 +17,7 @@ import {
   CircularProgress,
   Tabs,
   Tab,
-  Chip,
+  // Chip,
   Button,
   Snackbar,
   Alert,
@@ -59,17 +59,21 @@ function TabPanel(props: TabPanelProps) {
 const ProjectsMainPage: React.FC = () => {
   const {
     projects,
-    pagination,
+    projectsByUserId,
+    supportedProjects,
+    followedProjects,
     comments,
     projectById,
     loading,
     actionLoading,
     error,
     getAllProjects,
+    getProjectsByUserId,
+    getSupportedProjects,
+    getFollowedProjects,
     getProjectById,
     createProject,
     deleteProject,
-    // updateProject,
     supportProject,
     unsupportProject,
     followProject,
@@ -78,7 +82,6 @@ const ProjectsMainPage: React.FC = () => {
     clearError,
     getComments,
     createComment,
-    // clearSpecificCache,
   } = useShowcase();
 
   const { user } = useAuth();
@@ -99,45 +102,143 @@ const ProjectsMainPage: React.FC = () => {
     message: string;
     severity: 'success' | 'error' | 'info' | 'warning';
   }>({ open: false, message: '', severity: 'info' });
+
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [tabLoading, setTabLoading] = useState(false);
 
-  const [filteredProjects, setFilteredProjects] = useState<{
-    owned: ProjectInterface[];
-    supported: ProjectInterface[];
-    following: ProjectInterface[];
-    all: ProjectInterface[];
-  }>({ owned: [], supported: [], following: [], all: [] });
-
-  // Load projects initially
+  // Load projects based on active tab
   useEffect(() => {
-    getAllProjects(filters);
-  }, [getAllProjects, filters]);
+    if (!user) return;
+
+    const loadTabData = async () => {
+      setTabLoading(true);
+      try {
+        switch (activeTab) {
+          case 0: // All Projects
+            await getAllProjects(filters);
+            break;
+          case 1: // My Projects
+            await getProjectsByUserId(user.id, filters);
+            break;
+          case 2: // Supported Projects
+            await getSupportedProjects(filters);
+            break;
+          case 3: // Followed Projects
+            await getFollowedProjects(filters);
+            break;
+        }
+      } catch (err) {
+        console.error('Failed to load tab data:', err);
+      } finally {
+        setTabLoading(false);
+      }
+    };
+
+    loadTabData();
+  }, [
+    activeTab,
+    filters,
+    user,
+    getAllProjects,
+    getProjectsByUserId,
+    getSupportedProjects,
+    getFollowedProjects,
+  ]);
+
+  // Get current pagination based on active tab
+  const getCurrentPagination = useCallback(() => {
+    switch (activeTab) {
+      case 0:
+        return projects.pagination;
+      case 1:
+        return projectsByUserId.pagination;
+      case 2:
+        return supportedProjects.pagination;
+      case 3:
+        return followedProjects.pagination;
+      default:
+        return projects.pagination;
+    }
+  }, [
+    activeTab,
+    followedProjects.pagination,
+    projects.pagination,
+    projectsByUserId.pagination,
+    supportedProjects.pagination,
+  ]);
 
   const loadMoreProjects = useCallback(async () => {
-    if (loading || isLoadingMore || !pagination.hasNext) return;
+    if (loading || isLoadingMore) return;
+
+    const currentPagination = getCurrentPagination();
+    if (!currentPagination.hasNext) return;
 
     setIsLoadingMore(true);
     try {
-      await getAllProjects(
-        {
-          ...filters,
-          page: pagination.page + 1,
-        },
-        true
-      );
+      const nextFilters = {
+        ...filters,
+        cursor: currentPagination.nextCursor,
+      };
+
+      switch (activeTab) {
+        case 0:
+          await getAllProjects(nextFilters, true);
+          break;
+        case 1:
+          await getProjectsByUserId(user?.id, nextFilters, true);
+          break;
+        case 2:
+          await getSupportedProjects(nextFilters, true);
+          break;
+        case 3:
+          await getFollowedProjects(nextFilters, true);
+          break;
+      }
     } catch (err) {
       console.error('Failed to load more projects:', err);
     } finally {
       setIsLoadingMore(false);
     }
   }, [
-    filters,
-    getAllProjects,
-    isLoadingMore,
     loading,
-    pagination.hasNext,
-    pagination.page,
+    isLoadingMore,
+    getCurrentPagination,
+    filters,
+    activeTab,
+    getAllProjects,
+    getProjectsByUserId,
+    user?.id,
+    getSupportedProjects,
+    getFollowedProjects,
   ]);
+
+  // Get current projects based on active tab
+  const getCurrentProjects = (): ProjectInterface[] => {
+    switch (activeTab) {
+      case 0:
+        return projects.data;
+      case 1:
+        return projectsByUserId.data;
+      case 2:
+        return supportedProjects.data;
+      case 3:
+        return followedProjects.data;
+      default:
+        return projects.data;
+    }
+  };
+
+  // // Get counts for each tab
+  // const getTabCounts = () => {
+  //   return {
+  //     all: projects.pagination.total || projects.data.length,
+  //     owned: projectsByUserId.pagination.total || projectsByUserId.data.length,
+  //     supported:
+  //       supportedProjects.pagination.total || supportedProjects.data.length,
+  //     following:
+  //       followedProjects.pagination.total || followedProjects.data.length,
+  //   };
+  // };
 
   useEffect(() => {
     if (error) {
@@ -148,69 +249,21 @@ const ProjectsMainPage: React.FC = () => {
   // Handle scroll for infinite loading
   useEffect(() => {
     const handleScroll = () => {
-      if (loading || isLoadingMore || !pagination.hasNext) return;
+      if (loading || isLoadingMore || !getCurrentPagination().hasNext) return;
 
       const scrollTop = document.documentElement.scrollTop;
       const scrollHeight = document.documentElement.scrollHeight;
       const clientHeight = document.documentElement.clientHeight;
 
       // Load more when 100px from bottom
-      if (scrollTop + clientHeight >= scrollHeight) {
+      if (scrollTop + clientHeight >= scrollHeight - 100) {
         loadMoreProjects();
       }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [loading, isLoadingMore, pagination.hasNext, loadMoreProjects]);
-
-  // Filter projects based on user relationship
-  useEffect(() => {
-    if (projects && user) {
-      const owned: ProjectInterface[] = [];
-      const supported: ProjectInterface[] = [];
-      const following: ProjectInterface[] = [];
-
-      projects.forEach((project) => {
-        if (!project) return;
-
-        // Check if user owns this project
-        if (project.owner?.id === user.id) {
-          owned.push(project);
-        }
-
-        // Check if user supports this project
-        const isSupported = project.supporters?.some(
-          (s) => s?.userId === user.id
-        );
-        if (isSupported) {
-          supported.push(project);
-        }
-
-        // Check if user follows this project
-        const isFollowing = project.followers?.some(
-          (f) => f?.userId === user.id
-        );
-        if (isFollowing) {
-          following.push(project);
-        }
-      });
-
-      setFilteredProjects({
-        owned,
-        supported,
-        following,
-        all: projects,
-      });
-    } else if (projects) {
-      setFilteredProjects({
-        owned: [],
-        supported: [],
-        following: [],
-        all: projects,
-      });
-    }
-  }, [projects, user]);
+  }, [loading, isLoadingMore, loadMoreProjects, getCurrentPagination]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -231,6 +284,10 @@ const ProjectsMainPage: React.FC = () => {
           message: 'Created project!',
           severity: 'success',
         });
+        // Refresh my projects tab
+        if (user) {
+          await getProjectsByUserId(user.id, filters);
+        }
       } catch (err) {
         setSnackbar({
           open: true,
@@ -240,21 +297,8 @@ const ProjectsMainPage: React.FC = () => {
         console.error('Failed to create project:', err);
       }
     },
-    [createProject]
+    [createProject, user, getProjectsByUserId, filters]
   );
-
-  // const handleUpdateProject = useCallback(
-  //   async (projectId: string, data: Partial<CreateProjectInterface>) => {
-  //     try {
-  //       await updateProject(projectId, data);
-  //       setSnackbarOpen(true);
-  //       clearSpecificCache(projectId);
-  //     } catch (err) {
-  //       console.error('Failed to update project:', err);
-  //     }
-  //   },
-  //   [updateProject, clearSpecificCache]
-  // );
 
   const handleViewProjectDetails = async (
     project: ProjectInterface,
@@ -280,6 +324,12 @@ const ProjectsMainPage: React.FC = () => {
         message: 'Deleted project!',
         severity: 'success',
       });
+      // Refresh all relevant tabs
+      if (user) {
+        await getProjectsByUserId(user.id, filters);
+        await getSupportedProjects(filters);
+        await getFollowedProjects(filters);
+      }
     } catch (err) {
       setSnackbar({
         open: true,
@@ -321,11 +371,13 @@ const ProjectsMainPage: React.FC = () => {
         } else {
           await supportProject(projectId);
         }
+        // Refresh supported projects tab
+        await getSupportedProjects(filters);
       } catch (err) {
         console.error('Failed to toggle support:', err);
       }
     },
-    [supportProject, unsupportProject]
+    [supportProject, unsupportProject, getSupportedProjects, filters]
   );
 
   const handleFollow = useCallback(
@@ -336,11 +388,13 @@ const ProjectsMainPage: React.FC = () => {
         } else {
           await followProject(projectId);
         }
+        // Refresh followed projects tab
+        await getFollowedProjects(filters);
       } catch (err) {
         console.error('Failed to toggle follow:', err);
       }
     },
-    [followProject, unfollowProject]
+    [followProject, unfollowProject, getFollowedProjects, filters]
   );
 
   const handleCollaborationRequest = useCallback(
@@ -373,19 +427,9 @@ const ProjectsMainPage: React.FC = () => {
     [user]
   );
 
-  const currentProjects =
-    activeTab === 0
-      ? filteredProjects.all
-      : activeTab === 1
-        ? filteredProjects.owned
-        : activeTab === 2
-          ? filteredProjects.supported
-          : filteredProjects.following;
-
-  const totalProjects = filteredProjects.all?.length || 0;
-  const ownedCount = filteredProjects.owned?.length || 0;
-  const supportedCount = filteredProjects.supported?.length || 0;
-  const followingCount = filteredProjects.following?.length || 0;
+  const currentProjects = getCurrentProjects();
+  const currentPagination = getCurrentPagination();
+  // const counts = getTabCounts();
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -448,7 +492,7 @@ const ProjectsMainPage: React.FC = () => {
         </motion.div>
 
         {/* Summary Stats */}
-        {totalProjects > 0 && user && (
+        {/* {user && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -456,32 +500,32 @@ const ProjectsMainPage: React.FC = () => {
           >
             <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
               <Chip
-                label={`${totalProjects} Total Projects`}
+                label={`${counts.all} Total Projects`}
                 color="primary"
                 variant="filled"
                 sx={{ fontWeight: 600, px: 1 }}
               />
               <Chip
-                label={`${ownedCount} Owned`}
+                label={`${counts.owned} Owned`}
                 color="secondary"
                 variant="filled"
                 sx={{ fontWeight: 600, px: 1 }}
               />
               <Chip
-                label={`${supportedCount} Supported`}
+                label={`${counts.supported} Supported`}
                 color="success"
                 variant="filled"
                 sx={{ fontWeight: 600, px: 1 }}
               />
               <Chip
-                label={`${followingCount} Following`}
+                label={`${counts.following} Following`}
                 color="info"
                 variant="filled"
                 sx={{ fontWeight: 600, px: 1 }}
               />
             </Box>
           </motion.div>
-        )}
+        )} */}
 
         {/* Filter Section */}
         <motion.div
@@ -510,13 +554,9 @@ const ProjectsMainPage: React.FC = () => {
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       All Projects
-                      {totalProjects > 0 && (
-                        <Chip
-                          label={totalProjects}
-                          size="small"
-                          sx={{ ml: 1 }}
-                        />
-                      )}
+                      {/* {counts.all > 0 && (
+                        <Chip label={counts.all} size="small" sx={{ ml: 1 }} />
+                      )} */}
                     </Box>
                   }
                 />
@@ -524,9 +564,13 @@ const ProjectsMainPage: React.FC = () => {
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       My Projects
-                      {ownedCount > 0 && (
-                        <Chip label={ownedCount} size="small" sx={{ ml: 1 }} />
-                      )}
+                      {/* {counts.owned > 0 && (
+                        <Chip
+                          label={counts.owned}
+                          size="small"
+                          sx={{ ml: 1 }}
+                        />
+                      )} */}
                     </Box>
                   }
                 />
@@ -534,13 +578,13 @@ const ProjectsMainPage: React.FC = () => {
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       Supported
-                      {supportedCount > 0 && (
+                      {/* {counts.supported > 0 && (
                         <Chip
-                          label={supportedCount}
+                          label={counts.supported}
                           size="small"
                           sx={{ ml: 1 }}
                         />
-                      )}
+                      )} */}
                     </Box>
                   }
                 />
@@ -548,13 +592,13 @@ const ProjectsMainPage: React.FC = () => {
                   label={
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                       Following
-                      {followingCount > 0 && (
+                      {/* {counts.following > 0 && (
                         <Chip
-                          label={followingCount}
+                          label={counts.following}
                           size="small"
                           sx={{ ml: 1 }}
                         />
-                      )}
+                      )} */}
                     </Box>
                   }
                 />
@@ -567,7 +611,7 @@ const ProjectsMainPage: React.FC = () => {
         <TabPanel value={activeTab} index={0}>
           <ProjectGrid
             projects={currentProjects}
-            loading={loading}
+            loading={loading || tabLoading}
             error={error}
             user={{ id: user?.id || null }}
             isProjectOwner={isProjectOwner}
@@ -594,7 +638,7 @@ const ProjectsMainPage: React.FC = () => {
           <TabPanel key={tabIndex} value={activeTab} index={tabIndex}>
             <ProjectGrid
               projects={currentProjects}
-              loading={loading}
+              loading={loading || tabLoading}
               error={error}
               user={{ id: user?.id || null }}
               isProjectOwner={isProjectOwner}
@@ -632,7 +676,7 @@ const ProjectsMainPage: React.FC = () => {
         ))}
 
         {/* Loading More Indicator and Load More Button */}
-        {pagination.hasNext && !isLoadingMore && (
+        {currentPagination.hasNext && !isLoadingMore && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 4 }}>
             <Button
               variant="contained"
@@ -646,7 +690,7 @@ const ProjectsMainPage: React.FC = () => {
             </Button>
           </Box>
         )}
-        {isLoadingMore && (
+        {(isLoadingMore || tabLoading) && (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, mb: 4 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <CircularProgress size={24} />
@@ -658,7 +702,7 @@ const ProjectsMainPage: React.FC = () => {
         )}
 
         {/* End of Results */}
-        {!pagination.hasNext && projects.length > 0 && (
+        {!currentPagination.hasNext && currentProjects.length > 0 && (
           <Box sx={{ textAlign: 'center', mt: 4, mb: 4 }}>
             <Typography variant="body2" color="text.secondary">
               You've reached the end of the results
@@ -699,7 +743,7 @@ const ProjectsMainPage: React.FC = () => {
               onClose={handleCloseProjectDetails}
               loading={actionLoading.projectDetails.has(selectedProjectId)}
               currentUserId={user?.id}
-              comments={comments[selectedProjectId] || []} // Will be loaded separately
+              comments={comments[selectedProjectId] || []}
               loadingComments={actionLoading.comment.has(selectedProjectId)}
               onLoadComments={(page, forceRefresh) =>
                 getComments(selectedProjectId, page, forceRefresh)

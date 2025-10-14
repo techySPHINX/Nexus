@@ -19,6 +19,11 @@ export interface CreateProjectInterface {
   seeking?: string[];
 }
 
+export interface PaginatedProjectsInterface {
+  data: ProjectInterface[];
+  pagination: ProjectPaginationResponse;
+}
+
 export interface ProjectInterface {
   id: string;
   title: string;
@@ -40,6 +45,7 @@ export interface ProjectInterface {
   _count: {
     supporters: number;
     followers: number;
+    collaborationRequests?: number;
   };
   supporters?: { userId: string }[];
   followers?: { userId: string }[];
@@ -79,7 +85,7 @@ export interface ProjectComment {
 
 export interface ProjectCommentsResponse {
   comments: ProjectComment[];
-  pagination: ProjectsPaginationResponse;
+  pagination: CommentPaginationResponse;
 }
 
 export enum sortBy {
@@ -99,6 +105,7 @@ export interface FilterProjectInterface {
   personalize?: boolean;
   page?: number;
   pageSize?: number;
+  cursor?: string;
 }
 
 export interface CreateProjectUpdateInterface {
@@ -146,13 +153,18 @@ export interface ProjectTeam {
   };
 }
 
-export interface ProjectsPaginationResponse {
+export interface CommentPaginationResponse {
   page: number;
   pageSize: number;
   total: number;
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
+}
+
+export interface ProjectPaginationResponse {
+  nextCursor?: string;
+  hasNext: boolean;
 }
 
 export interface Tags {

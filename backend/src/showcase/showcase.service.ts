@@ -113,8 +113,8 @@ export class ShowcaseService {
       personalize,
       status,
       seeking,
-      page,
       pageSize,
+      cursor,
     } = filterProjectDto;
     const where: any = {};
     let orderBy: any = {};
@@ -194,84 +194,72 @@ export class ShowcaseService {
       };
     }
 
-    const skip = (page - 1) * pageSize;
-
-    const [projects, total] = await Promise.all([
-      this.prisma.project.findMany({
-        where,
-        orderBy,
-        skip,
-        select: {
-          id: true,
-          title: true,
-          imageUrl: true,
-          githubUrl: true,
-          tags: true,
-          status: true,
-          seeking: true,
-          createdAt: true,
-          updatedAt: true,
-          owner: {
-            select: {
-              id: true,
-              name: true,
-              role: true,
-              profile: { select: { avatarUrl: true } },
-            },
+    const projects = await this.prisma.project.findMany({
+      where,
+      orderBy,
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0, // skip the cursor itself
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        githubUrl: true,
+        tags: true,
+        status: true,
+        seeking: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
           },
-          _count: {
-            select: {
-              supporters: true,
-              followers: true,
-            },
-          },
-          supporters:
-            userId !== undefined
-              ? {
-                  where: { userId },
-                  select: { userId: true },
-                }
-              : false,
-          followers:
-            userId !== undefined
-              ? {
-                  where: { userId },
-                  select: { userId: true },
-                }
-              : false,
-          collaborationRequests:
-            userId !== undefined
-              ? {
-                  where: { userId, status: 'PENDING' },
-                  select: { userId: true },
-                }
-              : false,
-          teamMembers:
-            userId !== undefined
-              ? {
-                  where: { userId },
-                  select: { userId: true },
-                }
-              : false,
         },
-        take: pageSize,
-      }),
-      this.prisma.project.count({ where }),
-    ]);
-
-    const totalPages = Math.ceil(total / pageSize);
-    const hasNext = page < totalPages;
-    const hasPrev = page > 1;
+        _count: {
+          select: {
+            supporters: true,
+            followers: true,
+          },
+        },
+        supporters:
+          userId !== undefined
+            ? {
+                where: { userId },
+                select: { userId: true },
+              }
+            : false,
+        followers:
+          userId !== undefined
+            ? {
+                where: { userId },
+                select: { userId: true },
+              }
+            : false,
+        collaborationRequests:
+          userId !== undefined
+            ? {
+                where: { userId, status: 'PENDING' },
+                select: { userId: true },
+              }
+            : false,
+        teamMembers:
+          userId !== undefined
+            ? {
+                where: { userId },
+                select: { userId: true },
+              }
+            : false,
+      },
+    });
 
     return {
       data: projects,
       pagination: {
-        page,
-        pageSize,
-        total,
-        totalPages,
-        hasNext,
-        hasPrev,
+        nextCursor: projects.length ? projects[projects.length - 1].id : null,
+        hasNext: projects.length === pageSize,
       },
     };
   }
@@ -368,7 +356,6 @@ export class ShowcaseService {
             supporters: true,
             followers: true,
             collaborationRequests: true,
-            teamMembers: true,
           },
         },
       },

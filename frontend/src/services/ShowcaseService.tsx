@@ -42,7 +42,7 @@ export const ShowcaseService = {
 
   getAllProjects: async (filterProjectDto?: FilterProjectInterface) => {
     try {
-      console.log('API call - getAllProjects with filters:', filterProjectDto);
+      console.log('Fetching all projects with filter:', filterProjectDto);
       const response = await api.get('/showcase/project', {
         params: filterProjectDto,
       });
@@ -54,11 +54,61 @@ export const ShowcaseService = {
 
   getProjectById: async (projectId: string) => {
     try {
-      console.log('API call - getProjectById with ID');
       const response = await api.get(`/showcase/project/${projectId}`);
       return response.data;
     } catch (error) {
       throw new Error('Failed to get project by ID with error: ' + error);
+    }
+  },
+
+  getMyProjects: async (filterProjectDto?: FilterProjectInterface) => {
+    try {
+      console.log('Fetching my projects with filter:', filterProjectDto);
+      const response = await api.get('/showcase/project/my/projects', {
+        params: filterProjectDto,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get my projects with error: ' + error);
+    }
+  },
+
+  getProjectsByOwner: async (
+    ownerId: string,
+    filterProjectDto?: FilterProjectInterface
+  ) => {
+    try {
+      console.log('getting projects for ownerId:', ownerId);
+      const response = await api.get(`/showcase/project/owner/${ownerId}`, {
+        params: filterProjectDto,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get projects by owner with error: ' + error);
+    }
+  },
+
+  getSupportedProjects: async (filterProjectDto?: FilterProjectInterface) => {
+    try {
+      console.log('Fetching supported projects with filter:', filterProjectDto);
+      const response = await api.get('/showcase/project/my/supported', {
+        params: filterProjectDto,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get supported projects with error: ' + error);
+    }
+  },
+
+  getFollowedProjects: async (filterProjectDto?: FilterProjectInterface) => {
+    try {
+      console.log('Fetching followed projects with filter:', filterProjectDto);
+      const response = await api.get('/showcase/project/my/followed', {
+        params: filterProjectDto,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get followed projects with error: ' + error);
     }
   },
 
