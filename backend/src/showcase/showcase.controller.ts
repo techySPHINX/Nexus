@@ -70,6 +70,39 @@ export class ShowcaseController {
     return this.showcaseService.getProjectById(projectId);
   }
 
+  @Get('project/my/projects')
+  getMyProjects(
+    @GetCurrentUser('userId') userId: string,
+    @Query() filterProjectDto: FilterProjectDto,
+  ) {
+    console.log('UserId in getMyProjects controller:', userId);
+    return this.showcaseService.getMyProjects(userId, filterProjectDto);
+  }
+
+  @Get('project/owner/:ownerId')
+  getProjectsByOwner(
+    @Param('ownerId') ownerId: string,
+    @Query() filterProjectDto: FilterProjectDto,
+  ) {
+    return this.showcaseService.getProjectsByOwner(ownerId, filterProjectDto);
+  }
+
+  @Get('project/my/supported')
+  getSupportedProjects(
+    @GetCurrentUser('userId') userId: string,
+    @Query() filterProjectDto: FilterProjectDto,
+  ) {
+    return this.showcaseService.getSupportedProjects(userId, filterProjectDto);
+  }
+
+  @Get('project/my/followed')
+  getFollowedProjects(
+    @GetCurrentUser('userId') userId: string,
+    @Query() filterProjectDto: FilterProjectDto,
+  ) {
+    return this.showcaseService.getFollowedProjects(userId, filterProjectDto);
+  }
+
   @Post('project/:id/update')
   createProjectUpdate(
     @GetCurrentUser('userId') userId: string,
@@ -236,5 +269,10 @@ export class ShowcaseController {
   @Get(':id/team')
   getTeamMembers(@Param('id') projectId: string) {
     return this.showcaseService.getTeamMembers(projectId);
+  }
+
+  @Get('tags')
+  async getAllTags() {
+    return this.showcaseService.getAllTags();
   }
 }
