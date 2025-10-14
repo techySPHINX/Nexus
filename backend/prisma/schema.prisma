@@ -13,21 +13,12 @@ model User {
   password                              String?                       @db.VarChar(255)
   name                                  String?
   role                                  Role                          @default(STUDENT)
-  description         String?
-  iconUrl             String?
-  bannerUrl           String?
-  isEmailVerified     Boolean           @default(false)
-  isAccountActive     Boolean           @default(false)
-  accountStatus       AccountStatus     @default(PENDING_VERIFICATION)
-  emailVerificationToken String?
-  passwordResetToken String?
-  passwordResetExpires DateTime?
-  lastLoginAt         DateTime?
-  failedLoginAttempts Int               @default(0)
-  lockedUntil         DateTime?
-  twoFactorEnabled    Boolean           @default(false)
-  twoFactorSecret     String?
-  createdAt           DateTime              @default(now())
+  description                           String?
+  iconUrl                               String?
+  bannerUrl                             String?
+  createdAt                             DateTime                      @default(now())
+  reportsHandled                        ContentReport[]               @relation("ReportsHandled")
+  reportsMade                           ContentReport[]               @relation("ReportsMade")
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
@@ -674,7 +665,6 @@ model Event {
   location         String?
   author           User          @relation(fields: [authorId], references: [id])
 
-
   @@map("events")
 }
 
@@ -687,7 +677,6 @@ model Flair {
 
   @@unique([name, subCommunityId])
 }
-
 
 enum ProjectStatus {
   IDEA
@@ -842,6 +831,7 @@ enum EventCategory {
   NETWORKING
   COMMUNITY
 }
+<<<<<<< HEAD
 
 // Enhanced Authentication Models
 model RefreshToken {
@@ -961,3 +951,5 @@ enum SecurityEventType {
   DOCUMENT_APPROVED
   DOCUMENT_REJECTED
 }
+=======
+>>>>>>> 7b4eaf9 (added indexing in projects and tags model)
