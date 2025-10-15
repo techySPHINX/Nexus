@@ -105,6 +105,38 @@ export class ShowcaseService {
     return this.prisma.project.delete({ where: { id: projectId } });
   }
 
+  /**
+   * optimized to fetch all counts in a single query
+   * only 1 lookup to project table and 2 lookups to projectSupport and projectFollower tables
+   */
+  async getProjectCounts(userId: string) {
+    const [projectCounts, supportedCount, followedCount] = await Promise.all([
+      this.prisma.project.groupBy({
+        by: ['ownerId'],
+        _count: { _all: true },
+      }),
+      this.prisma.projectSupport.count({ where: { userId } }),
+      this.prisma.projectFollower.count({ where: { userId } }),
+    ]);
+
+    // totalProjects = all rows in project table
+    const totalProjects = projectCounts.reduce(
+      (sum, row) => sum + row._count._all,
+      0,
+    );
+
+    // myProjects = count where ownerId = userId
+    const myProjects =
+      projectCounts.find((row) => row.ownerId === userId)?._count._all ?? 0;
+
+    return {
+      totalProjects,
+      myProjects,
+      supportedProjects: supportedCount,
+      followedProjects: followedCount,
+    };
+  }
+
   async getProjects(userId: string, filterProjectDto: FilterProjectDto) {
     const {
       tags,
@@ -113,8 +145,8 @@ export class ShowcaseService {
       personalize,
       status,
       seeking,
-      page,
       pageSize,
+      cursor,
     } = filterProjectDto;
     const where: any = {};
     let orderBy: any = {};
@@ -194,84 +226,72 @@ export class ShowcaseService {
       };
     }
 
-    const skip = (page - 1) * pageSize;
-
-    const [projects, total] = await Promise.all([
-      this.prisma.project.findMany({
-        where,
-        orderBy,
-        skip,
-        select: {
-          id: true,
-          title: true,
-          imageUrl: true,
-          githubUrl: true,
-          tags: true,
-          status: true,
-          seeking: true,
-          createdAt: true,
-          updatedAt: true,
-          owner: {
-            select: {
-              id: true,
-              name: true,
-              role: true,
-              profile: { select: { avatarUrl: true } },
-            },
+    const projects = await this.prisma.project.findMany({
+      where,
+      orderBy,
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0, // skip the cursor itself
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        githubUrl: true,
+        tags: true,
+        status: true,
+        seeking: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
           },
-          _count: {
-            select: {
-              supporters: true,
-              followers: true,
-            },
-          },
-          supporters:
-            userId !== undefined
-              ? {
-                  where: { userId },
-                  select: { userId: true },
-                }
-              : false,
-          followers:
-            userId !== undefined
-              ? {
-                  where: { userId },
-                  select: { userId: true },
-                }
-              : false,
-          collaborationRequests:
-            userId !== undefined
-              ? {
-                  where: { userId, status: 'PENDING' },
-                  select: { userId: true },
-                }
-              : false,
-          teamMembers:
-            userId !== undefined
-              ? {
-                  where: { userId },
-                  select: { userId: true },
-                }
-              : false,
         },
-        take: pageSize,
-      }),
-      this.prisma.project.count({ where }),
-    ]);
-
-    const totalPages = Math.ceil(total / pageSize);
-    const hasNext = page < totalPages;
-    const hasPrev = page > 1;
+        _count: {
+          select: {
+            supporters: true,
+            followers: true,
+          },
+        },
+        supporters:
+          userId !== undefined
+            ? {
+                where: { userId },
+                select: { userId: true },
+              }
+            : false,
+        followers:
+          userId !== undefined
+            ? {
+                where: { userId },
+                select: { userId: true },
+              }
+            : false,
+        collaborationRequests:
+          userId !== undefined
+            ? {
+                where: { userId, status: 'PENDING' },
+                select: { userId: true },
+              }
+            : false,
+        teamMembers:
+          userId !== undefined
+            ? {
+                where: { userId },
+                select: { userId: true },
+              }
+            : false,
+      },
+    });
 
     return {
       data: projects,
       pagination: {
-        page,
-        pageSize,
-        total,
-        totalPages,
-        hasNext,
-        hasPrev,
+        nextCursor: projects.length ? projects[projects.length - 1].id : null,
+        hasNext: projects.length === pageSize,
       },
     };
   }
@@ -313,6 +333,305 @@ export class ShowcaseService {
         },
       },
     });
+  }
+
+  async getMyProjects(userId: string, filterProjectDto: FilterProjectDto) {
+    const { tags, sortBy, search, status, seeking, pageSize, cursor } =
+      filterProjectDto;
+
+    const where: any = { ownerId: userId };
+    console.log('UserId in getMyProjects:', userId);
+
+    if (tags) where.tags = { hasSome: tags };
+    if (status) where.status = status;
+    if (seeking) where.seeking = { hasSome: seeking };
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    let orderBy: any = {};
+    if (sortBy === 'supporters') orderBy = { supporters: { _count: 'desc' } };
+    else if (sortBy === 'followers')
+      orderBy = { followers: { _count: 'desc' } };
+    else if (sortBy === 'updatedAt') orderBy = { updatedAt: 'desc' };
+    else orderBy = { createdAt: 'desc' };
+
+    const projects = await this.prisma.project.findMany({
+      where,
+      orderBy,
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0, // skip the cursor itself
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        githubUrl: true,
+        tags: true,
+        status: true,
+        seeking: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+        _count: {
+          select: {
+            supporters: true,
+            followers: true,
+            collaborationRequests: true,
+          },
+        },
+      },
+    });
+
+    return {
+      data: projects,
+      pagination: {
+        nextCursor: projects.length ? projects[projects.length - 1].id : null,
+        hasNext: projects.length === pageSize,
+      },
+    };
+  }
+
+  async getProjectsByOwner(
+    ownerId: string,
+    filterProjectDto: FilterProjectDto,
+  ) {
+    const { tags, sortBy, search, status, seeking, pageSize, cursor } =
+      filterProjectDto;
+
+    const where: any = { ownerId };
+    console.log('OwnerId in getProjectsByOwner:', ownerId);
+
+    if (tags) where.tags = { hasSome: tags };
+    if (status) where.status = status;
+    if (seeking) where.seeking = { hasSome: seeking };
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    let orderBy: any = {};
+    if (sortBy === 'supporters') orderBy = { supporters: { _count: 'desc' } };
+    else if (sortBy === 'followers')
+      orderBy = { followers: { _count: 'desc' } };
+    else if (sortBy === 'updatedAt') orderBy = { updatedAt: 'desc' };
+    else orderBy = { createdAt: 'desc' };
+
+    const projects = await this.prisma.project.findMany({
+      where,
+      orderBy,
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        githubUrl: true,
+        tags: true,
+        status: true,
+        seeking: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+        _count: { select: { supporters: true, followers: true } },
+      },
+    });
+
+    return {
+      data: projects,
+      pagination: {
+        nextCursor: projects.length ? projects[projects.length - 1].id : null,
+        hasNext: projects.length === pageSize,
+      },
+    };
+  }
+
+  async getSupportedProjects(
+    userId: string,
+    filterProjectDto: FilterProjectDto,
+  ) {
+    const { tags, sortBy, search, status, seeking, pageSize, cursor } =
+      filterProjectDto;
+
+    // Find supported project IDs using projectSupport table
+    const supportedProjects = await this.prisma.projectSupport.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+
+    const projectIds = supportedProjects.map((p) => p.projectId);
+    if (projectIds.length === 0) {
+      return {
+        data: [],
+        pagination: {
+          pageSize,
+          nextCursor: null,
+        },
+      };
+    }
+
+    const where: any = { id: { in: projectIds } };
+
+    if (tags) where.tags = { hasSome: tags };
+    if (status) where.status = status;
+    if (seeking) where.seeking = { hasSome: seeking };
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (sortBy === 'supporters') orderBy = { supporters: { _count: 'desc' } };
+    else if (sortBy === 'followers')
+      orderBy = { followers: { _count: 'desc' } };
+    else if (sortBy === 'updatedAt') orderBy = { updatedAt: 'desc' };
+
+    const projects = await this.prisma.project.findMany({
+      where,
+      orderBy,
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0, // skip the cursor itself
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        githubUrl: true,
+        tags: true,
+        status: true,
+        seeking: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+        _count: {
+          select: {
+            supporters: true,
+            followers: true,
+          },
+        },
+      },
+    });
+
+    return {
+      data: projects,
+      pagination: {
+        pageSize,
+        nextCursor: projects.length ? projects[projects.length - 1].id : null,
+      },
+    };
+  }
+
+  async getFollowedProjects(
+    userId: string,
+    filterProjectDto: FilterProjectDto,
+  ) {
+    const { tags, sortBy, search, status, seeking, pageSize, cursor } =
+      filterProjectDto;
+
+    // Find followed project IDs using projectFollower table
+    const followedProjects = await this.prisma.projectFollower.findMany({
+      where: { userId },
+      select: { projectId: true },
+    });
+
+    const projectIds = followedProjects.map((p) => p.projectId);
+    if (projectIds.length === 0) {
+      return {
+        data: [],
+        pagination: {
+          pageSize,
+          nextCursor: null,
+        },
+      };
+    }
+
+    const where: any = { id: { in: projectIds } };
+
+    if (tags) where.tags = { hasSome: tags };
+    if (status) where.status = status;
+    if (seeking) where.seeking = { hasSome: seeking };
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    let orderBy: any = { createdAt: 'desc' };
+    if (sortBy === 'supporters') orderBy = { supporters: { _count: 'desc' } };
+    else if (sortBy === 'followers')
+      orderBy = { followers: { _count: 'desc' } };
+    else if (sortBy === 'updatedAt') orderBy = { updatedAt: 'desc' };
+
+    const projects = await this.prisma.project.findMany({
+      where,
+      orderBy,
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0, // skip the cursor itself
+      select: {
+        id: true,
+        title: true,
+        imageUrl: true,
+        githubUrl: true,
+        tags: true,
+        status: true,
+        seeking: true,
+        createdAt: true,
+        updatedAt: true,
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+        _count: {
+          select: {
+            supporters: true,
+            followers: true,
+          },
+        },
+      },
+    });
+
+    return {
+      data: projects,
+      pagination: {
+        pageSize,
+        nextCursor: projects.length ? projects[projects.length - 1].id : null,
+      },
+    };
   }
 
   async createProjectUpdate(
@@ -709,6 +1028,12 @@ export class ShowcaseService {
     return this.prisma.projectTeamMember.findMany({
       where: { projectId },
       include: { user: true },
+    });
+  }
+
+  async getAllTags() {
+    return this.prisma.tag.findMany({
+      orderBy: { name: 'asc' },
     });
   }
 }

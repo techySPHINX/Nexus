@@ -33,6 +33,7 @@ interface ProfileContextType {
   allSkills: Skill[];
   allBadges: Badge[];
   loading: boolean;
+  skillsLoading: boolean;
   error: string;
   fetchProfileData: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -55,6 +56,7 @@ const ProfileContext = createContext<ProfileContextType>({
   allSkills: [],
   allBadges: [],
   loading: false,
+  skillsLoading: false,
   error: '',
   fetchProfileData: async () => {},
   refreshProfile: async () => {},
@@ -80,6 +82,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
   const [allBadges, setAllBadges] = useState<Badge[]>([]);
   //   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(false);
+  const [skillsLoading, setSkillsLoading] = useState(false);
   const [error, setError] = useState('');
 
   const fetchProfileData = useCallback(async () => {
@@ -227,10 +230,19 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
     [refreshProfile]
   );
 
+  const [skillsLastFetched, setSkillsLastFetched] = useState<number>(0);
+
   const fetchAllSkills = useCallback(async () => {
+    if (Date.now() - skillsLastFetched < 10 * 60 * 1000) {
+      return; // Skip fetching if last fetched within 10 minutes
+    }
+    setSkillsLoading(true);
     try {
+      console.log('Fetching all skills...');
       const skills = await getAllSkillsService();
       setAllSkills(skills);
+      setSkillsLastFetched(Date.now());
+      console.log('Fetched skills:', skills);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message || 'Failed to fetch skills');
@@ -238,8 +250,10 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
         setError('An unexpected error occurred.');
         console.error('Unexpected error:', err);
       }
+    } finally {
+      setSkillsLoading(false);
     }
-  }, []);
+  }, [skillsLastFetched]);
 
   const fetchAllBadges = useCallback(async () => {
     try {
@@ -264,6 +278,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       allBadges,
       //   connections,
       loading,
+      skillsLoading,
       error,
       fetchProfileData,
       refreshProfile,
@@ -285,6 +300,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       allBadges,
       //   connections,
       loading,
+      skillsLoading,
       error,
       fetchProfileData,
       refreshProfile,

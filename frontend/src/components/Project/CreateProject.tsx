@@ -31,14 +31,19 @@ import {
   Skeleton,
   Avatar,
   Tooltip,
+  InputAdornment,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import {
   CreateProjectInterface,
   ProjectDetailInterface,
   status,
+  Tags,
 } from '@/types/ShowcaseType';
-import { Close, ImageSearch } from '@mui/icons-material';
+import { Close, ImageSearch, Work } from '@mui/icons-material';
+import { useProfile } from '@/contexts/ProfileContext';
+import { Skill } from '@/types/profileType';
+import { useShowcase } from '@/contexts/ShowcaseContext';
 
 /**
  * MotionPaper defined outside component so it doesn't recreate on every render.
@@ -82,35 +87,6 @@ interface ProjectModalProps {
   loading?: boolean;
 }
 
-// Predefined options
-const PREDEFINED_SKILLS = [
-  'JavaScript',
-  'TypeScript',
-  'React',
-  'Node.js',
-  'Python',
-  'Java',
-  'HTML/CSS',
-  'UI/UX Design',
-  'GraphQL',
-  'AWS',
-  'Docker',
-  'Git',
-];
-
-const PREDEFINED_TAGS = [
-  'Web Development',
-  'Mobile App',
-  'AI/ML',
-  'Blockchain',
-  'IoT',
-  'Open Source',
-  'E-commerce',
-  'Education',
-  'Healthcare',
-  'Finance',
-];
-
 const EMPTY_FORM: CreateProjectInterface = {
   title: '',
   description: '',
@@ -134,6 +110,13 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   const [formData, setFormData] = useState<CreateProjectInterface>(() =>
     Object.assign({}, EMPTY_FORM)
   );
+
+  // To get all skills for filling them
+  const { allSkills, fetchAllSkills, skillsLoading } = useProfile();
+  const { allTypes, fetchAllTypes, typeLoading } = useShowcase();
+  // State for selected skill names (for display in Autocomplete)
+  const [SelectedSkill, setSelectedSkill] = useState<string[]>([]);
+  const [SelectedType, setSelectedType] = useState<string[]>([]);
 
   // To reduce rapid re-renders (and caret jump) we apply a micro-debounce for text fields.
   // Input is still responsive for user but we avoid too-frequent state churn.
@@ -166,17 +149,49 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
         websiteUrl: project.websiteUrl ?? '',
         imageUrl: project.imageUrl ?? '',
         videoUrl: project.videoUrl ?? '',
-        skills: project.skills ?? [],
         tags: project.tags ?? [],
+        skills: project.skills ?? [],
         status: project.status ?? status.IDEA,
         seeking: project.seeking ?? undefined, // Change from [] to undefined
       } as CreateProjectInterface);
+      setSelectedSkill(project.skills || []);
+      setSelectedType(project.tags || []);
       setSeekingCollaboration(!!project.seeking && project.seeking.length > 0);
     } else {
       setFormData(EMPTY_FORM); // Use EMPTY_FORM directly since it's now properly typed
+      setSelectedSkill([]);
+      setSelectedType([]);
       setSeekingCollaboration(false);
     }
   }, [project]);
+
+  // Update formData when selectedSkills changes
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, skills: SelectedSkill }));
+  }, [SelectedSkill]);
+
+  // Update formData when selectedTypes changes
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, tags: SelectedType }));
+  }, [SelectedType]);
+
+  // Function to handle skill selection changes
+  const handleSkillsChange = useCallback((_event: any, newSkills: string[]) => {
+    setSelectedSkill(newSkills);
+  }, []);
+
+  const handleTypesChange = useCallback((_event: any, newTypes: string[]) => {
+    setSelectedType(newTypes);
+  }, []);
+
+  // Get available skill names for Autocomplete
+  const availableSkillNames = useMemo(() => {
+    return allSkills.map((skill: Skill) => skill.name);
+  }, [allSkills]);
+
+  const availableTypeNames = useMemo(() => {
+    return allTypes.map((type: Tags) => type.name);
+  }, [allTypes]);
 
   // Update pendingRef whenever pending changes (for stable access)
   useEffect(() => {
@@ -559,6 +574,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           overflowY: 'auto',
           background:
             'linear-gradient(180deg, rgba(255,255,255,0.6), rgba(240,255,245,0.5))',
+          // Add this to ensure Autocomplete dropdowns can overflow
+          position: 'relative', // This helps with z-index context
         }}
       >
         <motion.div
@@ -868,79 +885,134 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                   </Grid>
 
                   {/* Tags & Skills */}
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={8}>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                       Project Tags
                     </Typography>
                     <Autocomplete
                       multiple
-                      options={PREDEFINED_TAGS}
-                      value={Array.isArray(formData.tags) ? formData.tags : []}
-                      onChange={(_e, value) =>
-                        handleAutocompleteChange('tags', value)
-                      }
-                      freeSolo={false}
-                      size="small"
-                      disableCloseOnSelect
+                      options={availableTypeNames}
+                      value={SelectedType}
+                      onChange={handleTypesChange}
+                      onOpen={() => fetchAllTypes()}
+                      loading={typeLoading}
+                      componentsProps={{
+                        popper: {
+                          style: {
+                            zIndex: 1401, // Higher than Dialog zIndex
+                          },
+                        },
+                      }}
+                      freeSolo
                       renderInput={(params) => (
-                        <TextField {...params} placeholder="Select tags" />
-                      )}
-                      getOptionLabel={(option) => option}
-                      renderOption={(props, option, { selected }) => (
-                        <li {...props} key={option}>
-                          <Chip
-                            label={option}
-                            color={selected ? 'success' : 'default'}
-                            variant={selected ? 'filled' : 'outlined'}
-                            size="small"
-                            sx={{ mr: 1 }}
-                          />
-                          <Typography variant="body2">{option}</Typography>
-                        </li>
+                        <TextField
+                          {...params}
+                          helperText="Select from predefined tags or type to add your own"
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <InputAdornment position="start">
+                                  <Chip label="Tag" color="info" size="small" />
+                                </InputAdornment>
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
+                          placeholder="Add or select tags"
+                        />
                       )}
                       renderTags={(value, getTagProps) =>
-                        value.map((option, index) => (
-                          <Chip
-                            {...getTagProps({ index })}
-                            key={option}
-                            label={option}
-                            size="small"
-                          />
-                        ))
+                        value.map((option, index) => {
+                          const { key, ...tagProps } = getTagProps({ index });
+                          return (
+                            <Chip
+                              key={key}
+                              label={option}
+                              {...tagProps}
+                              onDelete={() => {
+                                const newTags = formData.tags.filter(
+                                  (_: string, i: number) => i !== index
+                                );
+                                handleAutocompleteChange('tags', newTags);
+                              }}
+                            />
+                          );
+                        })
                       }
                     />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 1, display: 'block' }}
+                    >
+                      💡 Using relevant tags helps your project get discovered
+                    </Typography>
                   </Grid>
 
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={8}>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                       Required Skills
                     </Typography>
                     <Autocomplete
                       multiple
-                      options={PREDEFINED_SKILLS}
-                      value={formData.skills}
-                      onChange={(_e, value) =>
-                        handleAutocompleteChange('skills', value)
-                      }
-                      freeSolo
-                      size="small"
+                      options={availableSkillNames}
+                      value={SelectedSkill}
+                      onChange={handleSkillsChange}
+                      onOpen={() => fetchAllSkills()}
+                      loading={skillsLoading}
+                      componentsProps={{
+                        popper: {
+                          style: {
+                            zIndex: 1401, // Higher than Dialog zIndex
+                          },
+                        },
+                      }}
                       renderInput={(params) => (
                         <TextField
                           {...params}
-                          placeholder="Select or type skills"
+                          helperText="Select from existing skills or type to add new ones"
+                          InputProps={{
+                            ...params.InputProps,
+                            startAdornment: (
+                              <>
+                                <InputAdornment position="start">
+                                  <Work color="action" />
+                                </InputAdornment>
+                                {params.InputProps.startAdornment}
+                              </>
+                            ),
+                          }}
                         />
                       )}
+                      freeSolo
                       renderTags={(value, getTagProps) =>
-                        value.map((option, index) => (
-                          <Chip
-                            {...getTagProps({ index })}
-                            key={option}
-                            label={option}
-                            size="small"
-                          />
-                        ))
+                        value.map((option, index) => {
+                          const { key, ...tagProps } = getTagProps({ index });
+                          return (
+                            <Chip
+                              key={key}
+                              label={option}
+                              {...tagProps}
+                              onDelete={() => {
+                                const newSkills = SelectedSkill.filter(
+                                  (_, i) => i !== index
+                                );
+                                setSelectedSkill(newSkills);
+                              }}
+                            />
+                          );
+                        })
                       }
                     />
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ mt: 1, display: 'block' }}
+                    >
+                      💡 Using consistent skill names helps match with relevant
+                      collaborators
+                    </Typography>
                   </Grid>
                 </Grid>
               </Box>
