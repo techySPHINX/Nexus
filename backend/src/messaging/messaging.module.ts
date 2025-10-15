@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MessagingService } from './messaging.service';
 import { MessagingController } from './messaging.controller';
 import { ImprovedMessagingGateway } from './messaging.gateway.improved';
+import { FastChatGateway } from './fast-chat.gateway';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { AuthModule } from 'src/auth/auth.module';
 
@@ -16,7 +17,11 @@ import { AuthModule } from 'src/auth/auth.module';
     }),
   ],
   controllers: [MessagingController],
-  providers: [MessagingService, ImprovedMessagingGateway],
-  exports: [ImprovedMessagingGateway, MessagingService],
+  providers: [
+    MessagingService, 
+    ImprovedMessagingGateway,
+    FastChatGateway, // Add the fast chat gateway
+  ],
+  exports: [ImprovedMessagingGateway, FastChatGateway, MessagingService],
 })
 export class MessagingModule {}
