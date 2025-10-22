@@ -69,7 +69,9 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
       }
 
       if (
-        !['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'].includes(file.type)
+        !['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'].includes(
+          file.type
+        )
       ) {
         alert(
           `File ${file.name} has an unsupported format. Please use PDF, JPG, or PNG.`
@@ -127,7 +129,7 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
       );
 
       // Parent will be updated via useEffect
-    } catch (error) {
+    } catch {
       setDocuments((prev) =>
         prev.map((doc, i) =>
           i === index
