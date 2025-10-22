@@ -41,13 +41,13 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalFilters((prev) => ({ ...prev, search: value, page: 1 }));
-    onFilterChange({ ...localFilters, search: value, page: 1 });
+    onFilterChange({ ...localFilters, search: value });
     setSearchActive(!!value);
   };
 
   const handleClearSearch = () => {
-    setLocalFilters((prev) => ({ ...prev, search: '', page: 1 }));
-    onFilterChange({ ...localFilters, search: '', page: 1 });
+    setLocalFilters((prev) => ({ ...prev, search: '' }));
+    onFilterChange({ ...localFilters, search: '' });
     setSearchActive(false);
   };
 
@@ -76,12 +76,10 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
 
   const clearAllFilters = () => {
     setLocalFilters({
-      page: 1,
       pageSize: 15,
       personalize: localFilters.personalize,
     });
     onFilterChange({
-      page: 1,
       pageSize: 15,
       personalize: localFilters.personalize,
     });

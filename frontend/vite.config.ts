@@ -18,7 +18,9 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     ].filter(Boolean),
 
     server: {
+      host: true, // expose to LAN for mobile testing
       port: 3001,
+      cors: true,
       proxy: {
         '/api': {
           target: 'http://localhost:3000',

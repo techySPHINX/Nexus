@@ -1,3 +1,5 @@
+import { Role } from './profileType';
+
 export enum status {
   IDEA = 'IDEA',
   IN_PROGRESS = 'IN_PROGRESS',
@@ -15,6 +17,11 @@ export interface CreateProjectInterface {
   tags: string[];
   status: status;
   seeking?: string[];
+}
+
+export interface PaginatedProjectsInterface {
+  data: ProjectInterface[];
+  pagination: ProjectPaginationResponse;
 }
 
 export interface ProjectInterface {
@@ -38,6 +45,7 @@ export interface ProjectInterface {
   _count: {
     supporters: number;
     followers: number;
+    collaborationRequests?: number;
   };
   supporters?: { userId: string }[];
   followers?: { userId: string }[];
@@ -68,7 +76,7 @@ export interface ProjectComment {
   user?: {
     id: string;
     name: string;
-    role?: string;
+    role?: Role;
     profile: {
       avatarUrl?: string;
     };
@@ -77,7 +85,7 @@ export interface ProjectComment {
 
 export interface ProjectCommentsResponse {
   comments: ProjectComment[];
-  pagination: ProjectsPaginationResponse;
+  pagination: CommentPaginationResponse;
 }
 
 export enum sortBy {
@@ -95,8 +103,8 @@ export interface FilterProjectInterface {
   status?: status;
   seeking?: string[];
   personalize?: boolean;
-  page?: number;
   pageSize?: number;
+  cursor?: string;
 }
 
 export interface CreateProjectUpdateInterface {
@@ -144,11 +152,21 @@ export interface ProjectTeam {
   };
 }
 
-export interface ProjectsPaginationResponse {
+export interface CommentPaginationResponse {
   page: number;
   pageSize: number;
   total: number;
   totalPages: number;
   hasNext: boolean;
   hasPrev: boolean;
+}
+
+export interface ProjectPaginationResponse {
+  nextCursor?: string;
+  hasNext: boolean;
+}
+
+export interface Tags {
+  id: string;
+  name: string;
 }

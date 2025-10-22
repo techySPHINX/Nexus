@@ -107,6 +107,16 @@ Nexus is a comprehensive social networking platform designed specifically for st
    npx prisma generate
    ```
 
+4. **Seed development data:**
+
+   This repository includes multiple seed scripts for users, skills, connections, referrals, mentorship, showcase, etc. Run them in a safe order via the orchestrator:
+
+   ```bash
+   npm run seed
+   ```
+
+   You should see logs for each seed category. If a particular seed fails, the orchestrator continues with the rest.
+
 ### Running the Application
 
 1. **Start the backend server:**
