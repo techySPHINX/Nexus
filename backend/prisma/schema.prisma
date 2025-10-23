@@ -13,12 +13,21 @@ model User {
   password                              String?                       @db.VarChar(255)
   name                                  String?
   role                                  Role                          @default(STUDENT)
-  description                           String?
-  iconUrl                               String?
-  bannerUrl                             String?
-  createdAt                             DateTime                      @default(now())
-  reportsHandled                        ContentReport[]               @relation("ReportsHandled")
-  reportsMade                           ContentReport[]               @relation("ReportsMade")
+  description         String?
+  iconUrl             String?
+  bannerUrl           String?
+  isEmailVerified     Boolean           @default(false)
+  isAccountActive     Boolean           @default(false)
+  accountStatus       AccountStatus     @default(PENDING_VERIFICATION)
+  emailVerificationToken String?
+  passwordResetToken String?
+  passwordResetExpires DateTime?
+  lastLoginAt         DateTime?
+  failedLoginAttempts Int               @default(0)
+  lockedUntil         DateTime?
+  twoFactorEnabled    Boolean           @default(false)
+  twoFactorSecret     String?
+  createdAt           DateTime              @default(now())
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
@@ -665,6 +674,7 @@ model Event {
   location         String?
   author           User          @relation(fields: [authorId], references: [id])
 
+
   @@map("events")
 }
 
@@ -677,6 +687,7 @@ model Flair {
 
   @@unique([name, subCommunityId])
 }
+
 
 enum ProjectStatus {
   IDEA
@@ -830,4 +841,123 @@ enum EventCategory {
   WORKSHOP
   NETWORKING
   COMMUNITY
+}
+
+// Enhanced Authentication Models
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  isRevoked Boolean  @default(false)
+  deviceInfo String?
+  ipAddress String?
+
+  @@map("refresh_tokens")
+}
+
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  email     String
+  ipAddress String
+  userAgent String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@map("login_attempts")
+}
+
+model SecurityEvent {
+  id        String            @id @default(uuid())
+  userId    String?
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType SecurityEventType
+  ipAddress String
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  @@map("security_events")
+}
+
+model UserSession {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken String   @unique
+  deviceInfo   String?
+  ipAddress    String
+  userAgent    String?
+  lastActivity DateTime @default(now())
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@map("user_sessions")
+}
+
+model VerificationDocument {
+  id              String               @id @default(uuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType    DocumentType
+  documentUrl     String
+  status          DocumentStatus       @default(PENDING)
+  adminComments   String?
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  submittedAt     DateTime             @default(now())
+
+  @@map("verification_documents")
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("email_verifications")
+}
+
+// Enhanced Enums
+enum AccountStatus {
+  PENDING_VERIFICATION
+  PENDING_DOCUMENT_REVIEW
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum DocumentType {
+  STUDENT_ID
+  TRANSCRIPT
+  DEGREE_CERTIFICATE
+  ALUMNI_CERTIFICATE
+  EMPLOYMENT_PROOF
+}
+
+enum DocumentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REQUIRES_RESUBMISSION
+}
+
+enum SecurityEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILED
+  LOGOUT
+  PASSWORD_CHANGED
+  EMAIL_VERIFIED
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  MFA_ENABLED
+  MFA_DISABLED
+  DOCUMENT_UPLOADED
+  DOCUMENT_APPROVED
+  DOCUMENT_REJECTED
 }
