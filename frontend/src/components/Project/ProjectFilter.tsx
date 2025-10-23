@@ -25,6 +25,11 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
   const [expanded, setExpanded] = useState(false);
   const [searchActive, setSearchActive] = useState(false);
 
+  // Keep localFilters in sync when parent `filters` prop changes
+  React.useEffect(() => {
+    setLocalFilters(filters);
+  }, [filters]);
+
   // Only apply filters when user clicks the button (for dropdown fields)
   const handleApplyFilters = () => {
     onFilterChange({
@@ -40,14 +45,28 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
   // Search applies instantly, but can be cleared
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setLocalFilters((prev) => ({ ...prev, search: value, page: 1 }));
-    onFilterChange({ ...localFilters, search: value });
+    setLocalFilters((prev) => {
+      const next: FilterProjectInterface = {
+        ...prev,
+        search: value,
+        cursor: undefined,
+      };
+      onFilterChange(next);
+      return next;
+    });
     setSearchActive(!!value);
   };
 
   const handleClearSearch = () => {
-    setLocalFilters((prev) => ({ ...prev, search: '' }));
-    onFilterChange({ ...localFilters, search: '' });
+    setLocalFilters((prev) => {
+      const next: FilterProjectInterface = {
+        ...prev,
+        search: '',
+        cursor: undefined,
+      };
+      onFilterChange(next);
+      return next;
+    });
     setSearchActive(false);
   };
 
@@ -55,7 +74,7 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
     key: keyof FilterProjectInterface,
     value: FilterProjectInterface[typeof key]
   ) => {
-    setLocalFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+    setLocalFilters((prev) => ({ ...prev, [key]: value, cursor: undefined }));
   };
 
   const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -75,13 +94,13 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
   };
 
   const clearAllFilters = () => {
-    setLocalFilters({
-      pageSize: 15,
-      personalize: localFilters.personalize,
-    });
-    onFilterChange({
-      pageSize: 15,
-      personalize: localFilters.personalize,
+    setLocalFilters((prev) => {
+      const next: FilterProjectInterface = {
+        pageSize: 12,
+        personalize: prev.personalize,
+      };
+      onFilterChange(next);
+      return next;
     });
   };
 
@@ -116,7 +135,7 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
               : undefined,
           }}
         >
-          {localFilters.personalize ? 'Personalized' : 'Show All'}
+          {localFilters.personalize ? 'Show All' : 'Personalize'}
         </Button>
 
         {/* Quick Search Bar */}
