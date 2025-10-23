@@ -10,10 +10,13 @@ declare global {
   }
 }
 
+<<<<<<< HEAD
 =======
 import 'react-lazy-load-image-component/src/effects/blur.css';
 
 >>>>>>> a2802a3 (Performance upgrade- lazy Loading)
+=======
+>>>>>>> c0dcd0b (lint fix)
 interface OptimizedImageProps {
   src: string;
   alt: string;
@@ -36,6 +39,9 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     : '/default-project.webp';
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> c0dcd0b (lint fix)
   // const instanceNoRef = React.useRef<number | null>(null);
   // if (instanceNoRef.current === null) {
   //   const g = globalThis as any;
@@ -44,6 +50,7 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
   //   }
   //   instanceNoRef.current = ++g.__optimizedImageCounter;
   // }
+<<<<<<< HEAD
 =======
   const instanceNoRef = React.useRef<number | null>(null);
   if (instanceNoRef.current === null) {
@@ -53,11 +60,14 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     instanceNoRef.current = ++(globalThis as any).__optimizedImageCounter;
   }
 >>>>>>> a2802a3 (Performance upgrade- lazy Loading)
+=======
+>>>>>>> c0dcd0b (lint fix)
 
   React.useEffect(() => {
     console.log(
       'optimized source:',
       optimizedSrc,
+<<<<<<< HEAD
 <<<<<<< HEAD
       'for no'
       // instanceNoRef.current
@@ -82,6 +92,10 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
 =======
       'for no',
       instanceNoRef.current
+=======
+      'for no'
+      // instanceNoRef.current
+>>>>>>> c0dcd0b (lint fix)
     );
   }, [optimizedSrc]);
 
