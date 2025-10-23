@@ -1,9 +1,8 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type ConfigEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 
-// https://vitejs.dev/config/
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ mode }: ConfigEnv) => {
   const isAnalyze = mode === 'analyze';
 
   return {
@@ -17,6 +16,7 @@ export default defineConfig(({ mode }) => {
           brotliSize: true,
         }),
     ].filter(Boolean),
+
     server: {
       host: true, // expose to LAN for mobile testing
       port: 3001,
@@ -29,32 +29,73 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+
     build: {
       outDir: 'dist',
-      sourcemap: true,
+      sourcemap: mode === 'development',
+      minify: 'terser',
+      target: 'es2015',
+      chunkSizeWarningLimit: 1000,
+      terserOptions: {
+        compress: {
+          drop_console: mode === 'production',
+          drop_debugger: true,
+        },
+      },
       rollupOptions: {
         output: {
-          manualChunks: (id) => {
-            if (id.indexOf('node_modules') !== -1) {
-              // Group vendors into logical chunks
-              if (id.indexOf('@mui') !== -1) return 'vendor-mui';
-              if (id.indexOf('react') !== -1) return 'vendor-react';
-              if (id.indexOf('axios') !== -1 || id.indexOf('date-fns') !== -1)
-                return 'vendor-utils';
+          manualChunks: (id: string): string | undefined => {
+            if (typeof id !== 'string') return;
+
+            // Vendor chunks
+            if (id.includes('node_modules')) {
+              if (id.includes('react') || id.includes('react-dom'))
+                return 'vendor-react';
+              if (id.includes('@mui/material')) return 'vendor-mui-core';
+              if (id.includes('@mui/icons-material')) return 'vendor-mui-icons';
+              if (id.includes('@emotion')) return 'vendor-emotion';
+              if (id.includes('framer-motion')) return 'vendor-animation';
+              if (id.includes('axios')) return 'vendor-http';
+              if (id.includes('date-fns')) return 'vendor-date';
+              if (id.includes('react-router')) return 'vendor-router';
               return 'vendor-other';
             }
 
-            // Group by feature
+            // Feature chunks (case-insensitive)
+            const lowerId = id.toLowerCase();
+            if (lowerId.includes('/admin/') || lowerId.includes('admin'))
+              return 'admin-features';
+            if (lowerId.includes('/auth/') || lowerId.includes('auth'))
+              return 'auth-features';
             if (
-              id.indexOf('/Admin/') !== -1 ||
-              id.indexOf('Moderation') !== -1
-            ) {
-              return 'moderation-features';
+              lowerId.includes('/messaging/') ||
+              lowerId.includes('messaging')
+            )
+              return 'messaging-features';
+            if (lowerId.includes('/profile/') || lowerId.includes('profile'))
+              return 'profile-features';
+            if (lowerId.includes('/post/') || lowerId.includes('post'))
+              return 'post-features';
+
+            return undefined;
+          },
+
+          chunkFileNames: `js/[name]-[hash].js`,
+
+          assetFileNames: (assetInfo) => {
+            const name = assetInfo.name ?? '';
+            const ext = name.split('.').pop() ?? '';
+
+            if (ext === 'css') return `css/[name]-[hash].${ext}`;
+            if (/\.(png|jpe?g|svg|gif|tiff|bmp|ico)$/i.test(name)) {
+              return `images/[name]-[hash].${ext}`;
             }
+            return `assets/[name]-[hash].${ext}`;
           },
         },
       },
     },
+
     resolve: {
       alias: {
         '@': '/src',

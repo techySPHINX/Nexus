@@ -13,6 +13,13 @@ interface User {
   email: string;
   name: string;
   role: 'STUDENT' | 'ALUM' | 'ADMIN';
+  isEmailVerified: boolean;
+  accountStatus:
+    | 'PENDING_VERIFICATION'
+    | 'PENDING_DOCUMENT_REVIEW'
+    | 'ACTIVE'
+    | 'SUSPENDED'
+    | 'BANNED';
   profileCompleted: boolean;
   profile?: Profile;
 }
@@ -21,9 +28,11 @@ interface DecodedToken {
   sub: string;
   name: string;
   email: string;
-  role: 'STUDENT' | 'ALUM' | 'ADMIN'; // adjust if you have more roles
+  role: 'STUDENT' | 'ALUM' | 'ADMIN';
+  isEmailVerified: boolean;
+  accountStatus: string;
   profileCompleted: boolean;
-  profile?: Profile; // make this stricter if you know its shape
+  profile?: Profile;
 }
 
 export interface Profile {
@@ -89,6 +98,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: decoded.name,
           email: decoded.email,
           role: decoded.role,
+          isEmailVerified: decoded.isEmailVerified || false,
+          accountStatus:
+            (decoded.accountStatus as
+              | 'PENDING_VERIFICATION'
+              | 'PENDING_DOCUMENT_REVIEW'
+              | 'ACTIVE'
+              | 'SUSPENDED'
+              | 'BANNED'
+              | undefined) || 'PENDING_VERIFICATION',
           profileCompleted: decoded.profileCompleted,
           profile: decoded.profile,
         };
@@ -121,6 +139,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: decoded.name,
         email: decoded.email,
         role: decoded.role,
+        isEmailVerified: decoded.isEmailVerified || false,
+        accountStatus:
+          (decoded.accountStatus as
+            | 'PENDING_VERIFICATION'
+            | 'PENDING_DOCUMENT_REVIEW'
+            | 'ACTIVE'
+            | 'SUSPENDED'
+            | 'BANNED'
+            | undefined) || 'PENDING_VERIFICATION',
         profileCompleted: decoded.profileCompleted,
         profile: decoded.profile,
       };
@@ -168,6 +195,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         name: decoded.name,
         email: decoded.email,
         role: decoded.role,
+        isEmailVerified: decoded.isEmailVerified || false,
+        accountStatus:
+          (decoded.accountStatus as
+            | 'PENDING_VERIFICATION'
+            | 'PENDING_DOCUMENT_REVIEW'
+            | 'ACTIVE'
+            | 'SUSPENDED'
+            | 'BANNED'
+            | undefined) || 'PENDING_VERIFICATION',
         profileCompleted: decoded.profileCompleted,
         profile: decoded.profile,
       };

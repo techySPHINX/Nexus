@@ -18,7 +18,7 @@ import { AuthModule } from 'src/auth/auth.module';
   ],
   controllers: [MessagingController],
   providers: [
-    MessagingService, 
+    MessagingService,
     ImprovedMessagingGateway,
     FastChatGateway, // Add the fast chat gateway
   ],
