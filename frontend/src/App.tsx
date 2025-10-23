@@ -45,7 +45,7 @@ import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
 import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { MySubCommunitiesPage } from './pages/SubCommunity/MySubCommunityPage';
-import ProjectsMainPage from './pages/Project/ProjectMainPage';
+const ProjectsMainPage = lazy(() => import('./pages/Project/ProjectMainPage'));
 
 // Lazy load components for better performance
 // const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));

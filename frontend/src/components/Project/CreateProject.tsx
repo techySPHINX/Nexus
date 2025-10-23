@@ -627,7 +627,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                   {/* Description (20-50 words hint) */}
                   <Grid item xs={12}>
                     <TextField
-                      label="Project Description (20–50 words recommended)"
+                      label="Project Description (20-50 words recommended)"
                       name="description"
                       value={pending.description ?? formData.description}
                       onChange={handleInputChange}
@@ -670,6 +670,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                               src={getProxiedImageUrl(formData.imageUrl)}
                               alt="Project preview"
                               loading="lazy"
+                              decoding="async"
                               style={{
                                 width: '100%',
                                 height: 140,

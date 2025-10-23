@@ -45,7 +45,7 @@ export class FilterProjectDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  pageSize: number = 15;
+  pageSize: number = 12;
 
   @IsOptional()
   @IsString()
