@@ -1203,13 +1203,19 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         if (projToAdd) {
           setFollowedProjects((prev) => ({
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> eaf5b80 (state variable fix)
             data: [
               { ...projToAdd, followers: [{ userId: user.id }] },
               ...prev.data.filter((p) => p.id !== projectId),
             ],
+<<<<<<< HEAD
 =======
             data: [projToAdd, ...prev.data.filter((p) => p.id !== projectId)],
 >>>>>>> a2802a3 (Performance upgrade- lazy Loading)
+=======
+>>>>>>> eaf5b80 (state variable fix)
             pagination: prev.pagination,
           }));
         } else {
