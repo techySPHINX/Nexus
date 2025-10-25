@@ -428,6 +428,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           total: prev.total + 1,
           owned: prev.owned + 1,
         }));
+        setProjectsByUserId((prev) => ({
+          data: [response, ...prev.data],
+          pagination: prev.pagination,
+        }));
       } catch (err) {
         setError(
           `Failed to create project: ${err instanceof Error ? err.message : String(err)}`
@@ -491,7 +495,16 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           ...prev,
           data: prev.data.filter((project) => project.id !== projectId),
         }));
-
+        setProjectCounts((prev) => ({
+          ...prev,
+          total: prev.total - 1,
+          owned: prev.owned - 1,
+        }));
+        setProjectsByUserId((prev) => ({
+          ...prev,
+          data: prev.data.filter((p) => p.id !== projectId),
+          pagination: prev.pagination,
+        }));
         // Clear cache for deleted project
         setProjectsCache((prev) => {
           const newCache = new Map(prev);
@@ -679,16 +692,27 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     async (
       ownerId?: string,
       filterProjectDto?: FilterProjectInterface,
-      loadMore?: boolean
+      loadMore: boolean = false
     ) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
 
+      const targetOwnerId = ownerId ?? user.id;
+
+      // If not loading more and we already have data for the same owner, skip fetch
+      if (
+        !loadMore &&
+        projectsByUserId.data.length > 0 &&
+        projectsByUserId.data[0]?.owner?.id === targetOwnerId
+      ) {
+        return;
+      }
+
       setLoading(true);
       try {
-        if (ownerId == user.id || !ownerId) {
+        if (targetOwnerId === user.id) {
           const response =
             await ShowcaseService.getMyProjects(filterProjectDto);
           if (loadMore) {
@@ -704,7 +728,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         } else {
           const response = await ShowcaseService.getProjectsByOwner(
-            ownerId,
+            targetOwnerId,
             filterProjectDto
           );
           if (loadMore) {
@@ -727,13 +751,26 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user]
+    [user, projectsByUserId]
   );
 
   const getSupportedProjects = useCallback(
-    async (filterProjectDto?: FilterProjectInterface, loadMore?: boolean) => {
+    async (
+      filterProjectDto?: FilterProjectInterface,
+      loadMore: boolean = false
+    ) => {
       if (!user) {
         setError('User not authenticated');
+        return;
+      }
+
+      // Skip fetch if not loading more and we already have data
+      if (!loadMore && supportedProjects.data.length > 0) {
+        return;
+      }
+
+      // If loading more but there's no next page, skip
+      if (loadMore && !supportedProjects.pagination.hasNext) {
         return;
       }
 
@@ -742,13 +779,26 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         const response =
           await ShowcaseService.getSupportedProjects(filterProjectDto);
         if (loadMore) {
-          setSupportedProjects((prev) => ({
-            data: [...prev.data, ...response.data],
+          setSupportedProjects((prev: PaginatedProjectsInterface) => ({
+            data: [
+              ...prev.data,
+              ...response.data.map((p: ProjectDetailInterface) => ({
+                ...p,
+                supporters: Array.isArray(p.supporters)
+                  ? [...p.supporters, { userId: user.id }]
+                  : [{ userId: user.id }],
+              })),
+            ],
             pagination: response.pagination,
           }));
         } else {
           setSupportedProjects({
-            data: response.data,
+            data: response.data.map((p: ProjectDetailInterface) => ({
+              ...p,
+              supporters: Array.isArray(p.supporters)
+                ? [...p.supporters, { userId: user.id }]
+                : [{ userId: user.id }],
+            })),
             pagination: response.pagination,
           });
         }
@@ -760,13 +810,26 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user]
+    [user, supportedProjects]
   );
 
   const getFollowedProjects = useCallback(
-    async (filterProjectDto?: FilterProjectInterface, loadMore?: boolean) => {
+    async (
+      filterProjectDto?: FilterProjectInterface,
+      loadMore: boolean = false
+    ) => {
       if (!user) {
         setError('User not authenticated');
+        return;
+      }
+
+      // Skip fetch if not loading more and we already have data
+      if (!loadMore && followedProjects.data.length > 0) {
+        return;
+      }
+
+      // If loading more but there's no next page, skip
+      if (loadMore && !followedProjects.pagination.hasNext) {
         return;
       }
 
@@ -776,12 +839,25 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           await ShowcaseService.getFollowedProjects(filterProjectDto);
         if (loadMore) {
           setFollowedProjects((prev) => ({
-            data: [...prev.data, ...response.data],
+            data: [
+              ...prev.data,
+              ...response.data.map((p: ProjectDetailInterface) => ({
+                ...p,
+                followers: Array.isArray(p.followers)
+                  ? [...p.followers, { userId: user.id }]
+                  : [{ userId: user.id }],
+              })),
+            ],
             pagination: response.pagination,
           }));
         } else {
           setFollowedProjects({
-            data: response.data,
+            data: response.data.map((p: ProjectDetailInterface) => ({
+              ...p,
+              followers: Array.isArray(p.followers)
+                ? [...p.followers, { userId: user.id }]
+                : [{ userId: user.id }],
+            })),
             pagination: response.pagination,
           });
         }
@@ -793,7 +869,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user]
+    [user, followedProjects]
   );
 
   // Add project sharing function
@@ -966,6 +1042,26 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           ...prev,
           supported: prev.supported + 1,
         }));
+        // Find project from current projects list or from projectById and add it to supportedProjects
+        const projToAdd =
+          projects.data.find((p) => p.id === projectId) ||
+          (projectById?.id === projectId ? projectById : null);
+
+        if (projToAdd) {
+          setSupportedProjects((prev) => ({
+            data: [
+              { ...projToAdd, supporters: [{ userId: user.id }] },
+              ...prev.data.filter((p) => p.id !== projectId),
+            ],
+            pagination: prev.pagination,
+          }));
+        } else {
+          // If not found locally, keep the existing supportedProjects state
+          setSupportedProjects((prev) => ({
+            data: prev.data,
+            pagination: prev.pagination,
+          }));
+        }
       } catch (err) {
         setError(
           `Failed to support project: ${err instanceof Error ? err.message : String(err)}`
@@ -978,7 +1074,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
     },
-    [projectById?.id, user]
+    [projectById, projects.data, user]
   );
 
   const unsupportProject = useCallback(
@@ -1031,6 +1127,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setProjectCounts((prev) => ({
           ...prev,
           supported: Math.max(prev.supported - 1, 0),
+        }));
+        setSupportedProjects((prev) => ({
+          data: prev.data.filter((p) => p.id !== projectId),
+          pagination: prev.pagination,
         }));
       } catch (err) {
         setError(
@@ -1095,6 +1195,26 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           );
         }
         setProjectCounts((prev) => ({ ...prev, followed: prev.followed + 1 }));
+        // Find project from current projects list or from projectById and add it to followedProjects
+        const projToAdd =
+          projects.data.find((p) => p.id === projectId) ||
+          (projectById?.id === projectId ? projectById : null);
+
+        if (projToAdd) {
+          setFollowedProjects((prev) => ({
+            data: [
+              { ...projToAdd, followers: [{ userId: user.id }] },
+              ...prev.data.filter((p) => p.id !== projectId),
+            ],
+            pagination: prev.pagination,
+          }));
+        } else {
+          // If not found locally, keep the existing followedProjects state
+          setFollowedProjects((prev) => ({
+            data: prev.data,
+            pagination: prev.pagination,
+          }));
+        }
       } catch (err) {
         setError(
           `Failed to follow project: ${err instanceof Error ? err.message : String(err)}`
@@ -1107,7 +1227,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
     },
-    [user, projectById?.id]
+    [user, projectById, projects.data]
   );
 
   const unfollowProject = useCallback(
@@ -1160,6 +1280,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setProjectCounts((prev) => ({
           ...prev,
           followed: Math.max(prev.followed - 1, 0),
+        }));
+        setFollowedProjects((prev) => ({
+          data: prev.data.filter((p) => p.id !== projectId),
+          pagination: prev.pagination,
         }));
       } catch (err) {
         setError(

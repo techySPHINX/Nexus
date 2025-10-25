@@ -7,7 +7,7 @@ import {
   IsNumber,
 } from 'class-validator';
 import { ProjectStatus } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class FilterProjectDto {
   @IsArray()
@@ -33,8 +33,8 @@ export class FilterProjectDto {
   seeking?: string[];
 
   @IsOptional()
-  @Type(() => Boolean)
   @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
   personalize?: boolean;
 
   @IsOptional()
@@ -45,7 +45,7 @@ export class FilterProjectDto {
   @IsOptional()
   @Type(() => Number)
   @IsNumber()
-  pageSize: number = 15;
+  pageSize: number = 12;
 
   @IsOptional()
   @IsString()

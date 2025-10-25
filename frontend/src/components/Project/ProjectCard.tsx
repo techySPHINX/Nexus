@@ -7,6 +7,7 @@ import {
   Stack,
   Tooltip,
   IconButton,
+  Skeleton,
 } from '@mui/material';
 import {
   Favorite,
@@ -21,6 +22,7 @@ import {
 import { format } from 'date-fns';
 import { ProjectInterface, status } from '@/types/ShowcaseType';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
+// import { OptimizedImage } from '@/utils/optimizedImageLoading';
 import { Role } from '@/types/profileType';
 
 interface ProjectCardProps {
@@ -43,6 +45,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   onViewDetails,
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   const statusConfig = {
     [status.IDEA]: {
@@ -99,8 +102,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     >
       {/* Project Image with Gradient Overlay */}
       <Box sx={{ position: 'relative', height: '100%', width: '100%' }}>
-        <motion.img
-          src={project.imageUrl || '/default-project.png'}
+        {/* <OptimizedImage
+          src={project.imageUrl || '/default-project.webp'}
           alt={project.title}
           style={{
             width: '100%',
@@ -109,7 +112,109 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             filter: isHovered ? 'brightness(0.7) blur(2px)' : 'brightness(0.9)',
             transition: 'all 0.4s ease',
           }}
-        />
+        /> */}
+        {/* Lazy-load optimized image with WebP hint and graceful fallback */}
+        {(() => {
+          const webpUrl =
+            project.imageUrl?.replace(/\.(jpg|jpeg|png)(\?.*)?$/i, '.webp$2') ??
+            undefined;
+          return (
+            <Box sx={{ position: 'absolute', inset: 0 }}>
+              <picture>
+                {webpUrl && (
+                  <source
+                    srcSet={webpUrl}
+                    type="image/webp"
+                    // let the browser decide when to fetch optimized format
+                  />
+                )}
+
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  // hint to the browser this image is non-critical
+                  fetchPriority="low"
+                  src={project.imageUrl || '/default-project.png'}
+                  // provide a simple srcSet to help high-DPI devices (no assumptions about multiple sizes)
+                  srcSet={
+                    project.imageUrl
+                      ? `${project.imageUrl} 1x, ${project.imageUrl} 2x`
+                      : undefined
+                  }
+                  sizes="(max-width:600px) 100vw, 50vw"
+                  alt={project.title}
+                  onLoad={() => setImgLoaded(true)}
+                  onError={(e) => {
+                    // fallback to default image and mark loaded to remove placeholder
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = '/default-project.png';
+                    setImgLoaded(true);
+                  }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    // reduce brightness/blur on hover for effect
+                    filter: isHovered
+                      ? 'brightness(0.7) blur(2px)'
+                      : 'brightness(0.9)',
+                    // fade in once loaded to avoid layout shift / flash
+                    opacity: imgLoaded ? 1 : 0,
+                    transition:
+                      'opacity 0.5s ease, filter 0.4s ease, transform 0.4s ease',
+                    willChange: 'opacity, filter',
+                    display: 'block',
+                  }}
+                />
+              </picture>
+
+              {/* lightweight placeholder shown until image loads to avoid CLS */}
+              {!imgLoaded && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    inset: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background:
+                      'linear-gradient(135deg, rgba(0,0,0,0.08), rgba(0,0,0,0.18))',
+                    // subtle animated shimmer to indicate loading
+                    backgroundSize: '200% 100%',
+                    animation: 'placeholderShimmer 1.2s linear infinite',
+                    color: 'rgba(255,255,255,0.6)',
+                    fontSize: 12,
+                  }}
+                >
+                  Loading…
+                </Box>
+              )}
+
+              {/* keyframes for shimmer (scoped inline) */}
+              <style>{`
+          @keyframes placeholderShimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+              `}</style>
+            </Box>
+          );
+        })()}
+        {!imgLoaded && (
+          <Box
+            sx={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(135deg, #333, #111)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              color: '#777',
+            }}
+          >
+            Loading...
+          </Box>
+        )}
 
         {/* Gradient Overlay */}
         <Box
@@ -226,167 +331,184 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         {/* Hover Overlay Content */}
         <AnimatePresence>
           {isHovered && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0, 0, 0, 0.9)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                padding: 20,
-                color: 'white',
-              }}
+            <React.Suspense
+              fallback={
+                <Skeleton variant="rectangular" width="100%" height="100%" />
+              }
             >
-              {/* Tags Section */}
-              <Box>
-                <Typography
-                  variant="overline"
-                  sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}
-                >
-                  Technologies & Tags
-                </Typography>
-                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                  {project.tags?.slice(0, 4).map((tag, idx) => (
-                    <Chip
-                      key={idx}
-                      label={tag}
-                      size="small"
-                      sx={{
-                        backgroundColor: 'rgba(255,255,255,0.1)',
-                        color: 'white',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        mb: 1,
-                        '&:hover': {
-                          backgroundColor: 'rgba(255,255,255,0.2)',
-                        },
-                      }}
-                    />
-                  ))}
-                  {project.tags && project.tags.length > 4 && (
-                    <Chip
-                      label={`+${project.tags.length - 4}`}
-                      size="small"
-                      sx={{
-                        backgroundColor: 'rgba(255,255,255,0.05)',
-                        color: 'rgba(255,255,255,0.7)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                      }}
-                    />
-                  )}
-                </Stack>
-              </Box>
-
-              {/* Owner Profile */}
-              <Box sx={{ mb: 2 }}>
-                <Typography
-                  variant="overline"
-                  sx={{ color: 'rgba(255,255,255,0.7)' }}
-                >
-                  Project Owner
-                </Typography>
-                <Box
-                  sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}
-                >
-                  <ProfileNameLink
-                    user={{
-                      id: project.owner.id,
-                      name: project.owner.name,
-                      role: project.owner.role as Role,
-                      profile: { avatarUrl: project.owner.profile?.avatarUrl },
-                    }}
-                    avatarSize={40}
-                    linkToProfile={false}
-                    showAvatar
-                  />
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  background: 'rgba(0, 0, 0, 0.9)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  padding: 20,
+                  color: 'white',
+                }}
+              >
+                {/* Tags Section */}
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{ color: 'rgba(255,255,255,0.7)', mb: 1 }}
+                  >
+                    Technologies & Tags
+                  </Typography>
+                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                    {project.tags?.slice(0, 4).map((tag, idx) => (
+                      <Chip
+                        key={idx}
+                        label={tag}
+                        size="small"
+                        sx={{
+                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          color: 'white',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          mb: 1,
+                          '&:hover': {
+                            backgroundColor: 'rgba(255,255,255,0.2)',
+                          },
+                        }}
+                      />
+                    ))}
+                    {project.tags && project.tags.length > 4 && (
+                      <Chip
+                        label={`+${project.tags.length - 4}`}
+                        size="small"
+                        sx={{
+                          backgroundColor: 'rgba(255,255,255,0.05)',
+                          color: 'rgba(255,255,255,0.7)',
+                          border: '1px solid rgba(255,255,255,0.1)',
+                        }}
+                      />
+                    )}
+                  </Stack>
                 </Box>
-              </Box>
 
-              {/* Action Buttons */}
-              {!isOwner && (
-                <Stack direction="row" spacing={1} justifyContent="end">
-                  <Tooltip title={isSupported ? 'Unsupport' : 'Support'}>
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSupport(project.id, !!isSupported);
-                      }}
-                      sx={{
-                        background: isSupported
-                          ? 'rgba(255,107,107,0.2)'
-                          : 'rgba(255,255,255,0.1)',
-                        color: isSupported ? '#ff6b6b' : 'white',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        '&:hover': {
-                          background: isSupported
-                            ? 'rgba(255,107,107,0.3)'
-                            : 'rgba(255,255,255,0.2)',
-                          transform: 'scale(1.1)',
+                {/* Owner Profile */}
+                <Box sx={{ mb: 2 }}>
+                  <Typography
+                    variant="overline"
+                    sx={{ color: 'rgba(255,255,255,0.7)' }}
+                  >
+                    Project Owner
+                  </Typography>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1,
+                      mt: 1,
+                    }}
+                  >
+                    <ProfileNameLink
+                      user={{
+                        id: project.owner.id,
+                        name: project.owner.name,
+                        role: project.owner.role as Role,
+                        profile: {
+                          avatarUrl: project.owner.profile?.avatarUrl,
                         },
-                        transition: 'all 0.2s ease',
                       }}
-                    >
-                      {isSupported ? <Favorite /> : <FavoriteBorder />}
-                    </IconButton>
-                  </Tooltip>
+                      avatarSize={40}
+                      linkToProfile={false}
+                      showAvatar
+                    />
+                  </Box>
+                </Box>
 
-                  <Tooltip title={isFollowing ? 'Unfollow' : 'Follow'}>
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onFollow(project.id, !!isFollowing);
-                      }}
-                      sx={{
-                        background: isFollowing
-                          ? 'rgba(116,185,255,0.2)'
-                          : 'rgba(255,255,255,0.1)',
-                        color: isFollowing ? '#74b9ff' : 'white',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        '&:hover': {
-                          background: isFollowing
-                            ? 'rgba(116,185,255,0.3)'
-                            : 'rgba(255,255,255,0.2)',
-                          transform: 'scale(1.1)',
-                        },
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      {isFollowing ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </Tooltip>
-
-                  {!isOwner && onCollaborate && (
-                    <Tooltip title="Collaborate">
+                {/* Action Buttons */}
+                {!isOwner && (
+                  <Stack direction="row" spacing={1} justifyContent="end">
+                    <Tooltip title={isSupported ? 'Unsupport' : 'Support'}>
                       <IconButton
                         onClick={(e) => {
                           e.stopPropagation();
-                          onCollaborate();
+                          onSupport(project.id, !!isSupported);
                         }}
                         sx={{
-                          background: 'rgba(255,255,255,0.1)',
-                          color: '#ffeaa7',
+                          background: isSupported
+                            ? 'rgba(255,107,107,0.2)'
+                            : 'rgba(255,255,255,0.1)',
+                          color: isSupported ? '#ff6b6b' : 'white',
                           border: '1px solid rgba(255,255,255,0.2)',
                           '&:hover': {
-                            background: 'rgba(255,255,255,0.2)',
-                            transform: 'scale(1.1)',
+                            background: isSupported
+                              ? 'rgba(255,107,107,0.3)'
+                              : 'rgba(255,255,255,0.2)',
+                            boxShadow: isSupported
+                              ? '0 0 10px #ff6b6b'
+                              : '0 0 10px #ffffff',
                           },
                           transition: 'all 0.2s ease',
                         }}
                       >
-                        <Handshake />
+                        {isSupported ? <Favorite /> : <FavoriteBorder />}
                       </IconButton>
                     </Tooltip>
-                  )}
-                </Stack>
-              )}
-            </motion.div>
+
+                    <Tooltip title={isFollowing ? 'Unfollow' : 'Follow'}>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onFollow(project.id, !!isFollowing);
+                        }}
+                        sx={{
+                          background: isFollowing
+                            ? 'rgba(116,185,255,0.2)'
+                            : 'rgba(255,255,255,0.1)',
+                          color: isFollowing ? '#74b9ff' : 'white',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          '&:hover': {
+                            background: isFollowing
+                              ? 'rgba(116,185,255,0.3)'
+                              : 'rgba(255,255,255,0.2)',
+                            boxShadow: isFollowing
+                              ? '0 0 10px #74b9ff'
+                              : '0 0 10px #ffffff',
+                          },
+                          transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {isFollowing ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </Tooltip>
+
+                    {!isOwner && onCollaborate && (
+                      <Tooltip title="Collaborate">
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCollaborate();
+                          }}
+                          sx={{
+                            background: 'rgba(255,255,255,0.1)',
+                            color: '#ffeaa7',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            '&:hover': {
+                              background: 'rgba(255,255,255,0.2)',
+                              boxShadow: '0 0 10px #ffeaa7',
+                            },
+                            transition: 'all 0.2s ease',
+                          }}
+                        >
+                          <Handshake />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
+                )}
+              </motion.div>
+            </React.Suspense>
           )}
         </AnimatePresence>
       </Box>
@@ -394,4 +516,4 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   );
 };
 
-export default ProjectCard;
+export default React.memo(ProjectCard);

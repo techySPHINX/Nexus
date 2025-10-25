@@ -2,7 +2,7 @@ import React from 'react';
 import { Grid, Box, Typography, Alert, Button, Skeleton } from '@mui/material';
 import { motion } from 'framer-motion';
 import { ProjectInterface } from '@/types/ShowcaseType';
-import ProjectCard from './ProjectCard';
+const ProjectCard = React.lazy(() => import('./ProjectCard'));
 import { Add } from '@mui/icons-material';
 
 interface ProjectsGridProps {

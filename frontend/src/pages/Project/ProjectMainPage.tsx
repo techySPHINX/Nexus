@@ -88,7 +88,7 @@ const ProjectsMainPage: React.FC = () => {
 
   const { user } = useAuth();
   const [filters, setFilters] = useState<FilterProjectInterface>({
-    pageSize: 15,
+    pageSize: 12,
   });
   const [activeTab, setActiveTab] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -106,6 +106,10 @@ const ProjectsMainPage: React.FC = () => {
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [tabLoading, setTabLoading] = useState(false);
+  // Short-lived cache to avoid repeated refetches when an API returns empty results
+  // Keyed by `${activeTab}:${JSON.stringify(filters)}` -> timestamp of last empty response
+  const lastEmptyFetchRef = React.useRef<Record<string, number>>({});
+  const EMPTY_FETCH_TTL = 60 * 1000; // 60 seconds
 
   useEffect(() => {
     getProjectCounts();
@@ -118,6 +122,15 @@ const ProjectsMainPage: React.FC = () => {
     const loadTabData = async () => {
       setTabLoading(true);
       try {
+        // Build a short-lived key for this tab + filters to prevent rapid re-fetches
+        const key = `${activeTab}:${JSON.stringify(filters ?? {})}`;
+        const lastEmpty = lastEmptyFetchRef.current[key] ?? 0;
+        if (Date.now() - lastEmpty < EMPTY_FETCH_TTL) {
+          // We recently fetched this tab+filters and it returned empty — skip refetch for TTL
+          setTabLoading(false);
+          return;
+        }
+
         switch (activeTab) {
           case 0: // All Projects
             await getAllProjects(filters);
@@ -131,6 +144,30 @@ const ProjectsMainPage: React.FC = () => {
           case 3: // Followed Projects
             await getFollowedProjects(filters);
             break;
+        }
+
+        // After fetching, if the resulting project list for this tab is empty, record timestamp
+        // so we don't keep re-requesting the same empty set repeatedly.
+        let currentDataLength = 0;
+        switch (activeTab) {
+          case 0:
+            currentDataLength = projects.data.length;
+            break;
+          case 1:
+            currentDataLength = projectsByUserId.data.length;
+            break;
+          case 2:
+            currentDataLength = supportedProjects.data.length;
+            break;
+          case 3:
+            currentDataLength = followedProjects.data.length;
+            break;
+        }
+        if (currentDataLength === 0) {
+          lastEmptyFetchRef.current[key] = Date.now();
+        } else {
+          // if we have results, clear any previous empty marker for this key
+          delete lastEmptyFetchRef.current[key];
         }
       } catch (err) {
         console.error('Failed to load tab data:', err);
@@ -148,6 +185,11 @@ const ProjectsMainPage: React.FC = () => {
     getProjectsByUserId,
     getSupportedProjects,
     getFollowedProjects,
+    projects.data.length,
+    projectsByUserId.data.length,
+    supportedProjects.data.length,
+    followedProjects.data.length,
+    EMPTY_FETCH_TTL,
   ]);
 
   // Get current pagination based on active tab
@@ -182,6 +224,7 @@ const ProjectsMainPage: React.FC = () => {
     try {
       const nextFilters = {
         ...filters,
+        pageSize: 9,
         cursor: currentPagination.nextCursor,
       };
 
@@ -792,4 +835,4 @@ const ProjectsMainPage: React.FC = () => {
   );
 };
 
-export default ProjectsMainPage;
+export default React.memo(ProjectsMainPage);

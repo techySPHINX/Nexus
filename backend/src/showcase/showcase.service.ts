@@ -270,20 +270,6 @@ export class ShowcaseService {
                 select: { userId: true },
               }
             : false,
-        collaborationRequests:
-          userId !== undefined
-            ? {
-                where: { userId, status: 'PENDING' },
-                select: { userId: true },
-              }
-            : false,
-        teamMembers:
-          userId !== undefined
-            ? {
-                where: { userId },
-                select: { userId: true },
-              }
-            : false,
       },
     });
 
