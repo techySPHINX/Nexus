@@ -47,19 +47,17 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     );
   }, [optimizedSrc]);
 
-  return (
-    <LazyLoadImage
-      loading="lazy"
-      decoding="async"
-      src={optimizedSrc}
-      alt={alt}
-      width={width}
-      height={height}
-      className={className}
-      style={style}
-      effect="blur"
-      placeholderSrc="/image-placeholder.webp"
-      threshold={1} // Load when 100px from viewport
-    />
-  );
+  return React.createElement(LazyLoadImage as React.ComponentType<any>, {
+    loading: 'lazy',
+    decoding: 'async',
+    src: optimizedSrc,
+    alt,
+    width,
+    height,
+    className,
+    style,
+    effect: 'blur',
+    placeholderSrc: '/image-placeholder.webp',
+    threshold: 1,
+  });
 };
