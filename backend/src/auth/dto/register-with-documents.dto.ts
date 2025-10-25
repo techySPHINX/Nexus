@@ -10,6 +10,11 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Role } from '@prisma/client';
+import {
+  SanitizeEmail,
+  Sanitize,
+  Trim,
+} from '../../common/decorators/sanitize.decorator';
 
 /**
  * DTO for uploading verification documents
@@ -22,9 +27,11 @@ export class DocumentUploadDto {
     'ALUMNI_CERTIFICATE',
     'EMPLOYMENT_PROOF',
   ])
+  @Trim()
   documentType: string;
 
   @IsNotEmpty()
+  @Trim()
   documentUrl: string;
 }
 
@@ -34,6 +41,7 @@ export class DocumentUploadDto {
 export class RegisterWithDocumentsDto {
   @IsEmail()
   @IsNotEmpty()
+  @SanitizeEmail()
   email: string;
 
   @MinLength(12, { message: 'Password must be at least 12 characters long' })
@@ -45,6 +53,8 @@ export class RegisterWithDocumentsDto {
   password: string;
 
   @IsNotEmpty()
+  @Sanitize()
+  @Trim()
   name: string;
 
   @IsEnum(Role)

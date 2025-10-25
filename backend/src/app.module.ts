@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
@@ -21,10 +23,24 @@ import { GamificationModule } from './gamification/gamification.module';
 import { ReportModule } from './report/report.module';
 import { EventsModule } from './events/events.module';
 import { ShowcaseModule } from './showcase/showcase.module';
+import { securityConfig } from './common/config/security.config';
+import { WinstonLoggerService } from './common/logger/winston-logger.service';
+import { AuditLogService } from './common/services/audit-log.service';
+import { GdprService } from './common/services/gdpr.service';
+import { RedisService } from './common/services/redis.service';
+import { CachingService } from './common/services/caching.service';
+import { RateLimitService } from './common/guards/enhanced-rate-limit.guard';
+import { FileSecurityService } from './common/services/file-security.service';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: securityConfig.rateLimit.ttl * 1000,
+        limit: securityConfig.rateLimit.limit,
+      },
+    ]),
     PrismaModule,
     AuthModule,
     AdminModule,
@@ -46,6 +62,33 @@ import { ShowcaseModule } from './showcase/showcase.module';
     ShowcaseModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Global Services - Logging & Audit
+    WinstonLoggerService,
+    AuditLogService,
+    // Global Services - Data & Privacy
+    GdprService,
+    // Global Services - Caching & Performance
+    RedisService,
+    CachingService,
+    // Global Services - Security
+    RateLimitService,
+    FileSecurityService,
+    // Global Rate Limiting Guard
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
+  exports: [
+    WinstonLoggerService,
+    AuditLogService,
+    GdprService,
+    RedisService,
+    CachingService,
+    RateLimitService,
+    FileSecurityService,
+  ],
 })
-export class AppModule {}
+export class AppModule { }
