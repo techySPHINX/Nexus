@@ -1,4 +1,5 @@
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
+import { SanitizeEmail } from '../../common/decorators/sanitize.decorator';
 
 /**
  * Data transfer object for user login.
@@ -10,6 +11,7 @@ export class LoginDto {
    */
   @IsEmail()
   @IsNotEmpty()
+  @SanitizeEmail()
   email: string;
 
   /**
