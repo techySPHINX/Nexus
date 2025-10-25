@@ -1,5 +1,6 @@
 import React from 'react';
 import { LazyLoadImage } from 'react-lazy-load-image-component';
+import type { LazyLoadImageProps } from 'react-lazy-load-image-component';
 import 'react-lazy-load-image-component/src/effects/blur.css';
 
 declare global {
@@ -47,17 +48,20 @@ export const OptimizedImage: React.FC<OptimizedImageProps> = ({
     );
   }, [optimizedSrc]);
 
-  return React.createElement(LazyLoadImage as React.ComponentType<any>, {
-    loading: 'lazy',
-    decoding: 'async',
-    src: optimizedSrc,
-    alt,
-    width,
-    height,
-    className,
-    style,
-    effect: 'blur',
-    placeholderSrc: '/image-placeholder.webp',
-    threshold: 1,
-  });
+  return React.createElement(
+    LazyLoadImage as React.ComponentType<LazyLoadImageProps>,
+    {
+      loading: 'lazy',
+      decoding: 'async',
+      src: optimizedSrc,
+      alt,
+      width,
+      height,
+      className,
+      style,
+      effect: 'blur',
+      placeholderSrc: '/image-placeholder.webp',
+      threshold: 1,
+    }
+  );
 };
