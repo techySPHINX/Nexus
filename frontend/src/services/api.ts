@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
+import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
 
 // Create axios instance with default config
 const api: AxiosInstance = axios.create({
@@ -33,6 +34,8 @@ api.interceptors.response.use(
       // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      // clear cached persisted data associated with the session
+      clearAllShowcaseCache().catch(() => {});
       window.location.href = '/login';
     }
     return Promise.reject(error);

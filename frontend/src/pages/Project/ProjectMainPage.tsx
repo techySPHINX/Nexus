@@ -18,6 +18,7 @@ import {
   Tabs,
   Tab,
   Chip,
+  Skeleton,
   Button,
   Snackbar,
   Alert,
@@ -68,6 +69,7 @@ const ProjectsMainPage: React.FC = () => {
     loading,
     actionLoading,
     error,
+    refreshProjects,
     getProjectCounts,
     getAllProjects,
     getProjectsByUserId,
@@ -84,6 +86,9 @@ const ProjectsMainPage: React.FC = () => {
     clearError,
     getComments,
     createComment,
+    getProjectTeamMembers,
+    removeProjectTeamMember,
+    createProjectTeamMember,
   } = useShowcase();
 
   const { user } = useAuth();
@@ -511,27 +516,57 @@ const ProjectsMainPage: React.FC = () => {
               </Typography>
             </Box>
 
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setShowCreateModal(true)}
-                sx={{
-                  borderRadius: 3,
-                  px: 3,
-                  py: 1.2,
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                }}
-                size="large"
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                Create New Project
-              </Button>
-            </motion.div>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => setShowCreateModal(true)}
+                  sx={{
+                    borderRadius: 3,
+                    px: 3,
+                    py: 1.2,
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                  }}
+                  size="large"
+                >
+                  Create New Project
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={() => refreshProjects(activeTab)}
+                  startIcon={
+                    actionLoading.refresh ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : undefined
+                  }
+                  sx={{
+                    borderRadius: 3,
+                    px: 3,
+                    py: 1.2,
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                  }}
+                  size="large"
+                  disabled={actionLoading.refresh}
+                >
+                  Refresh
+                </Button>
+              </motion.div>
+            </Box>
           </Box>
         </motion.div>
 
-        {/* Summary Stats */}
+        {/* Summary Stats (show skeletons while loading to improve FCP) */}
         {user && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
@@ -539,30 +574,41 @@ const ProjectsMainPage: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              <Chip
-                label={`${counts.all} Total Projects`}
-                color="primary"
-                variant="filled"
-                sx={{ fontWeight: 600, px: 1 }}
-              />
-              <Chip
-                label={`${counts.owned} Owned`}
-                color="secondary"
-                variant="filled"
-                sx={{ fontWeight: 600, px: 1 }}
-              />
-              <Chip
-                label={`${counts.supported} Supported`}
-                color="success"
-                variant="filled"
-                sx={{ fontWeight: 600, px: 1 }}
-              />
-              <Chip
-                label={`${counts.following} Following`}
-                color="info"
-                variant="filled"
-                sx={{ fontWeight: 600, px: 1 }}
-              />
+              {actionLoading.count ? (
+                <>
+                  <Skeleton variant="text" width={140} height={40} />
+                  <Skeleton variant="text" width={100} height={40} />
+                  <Skeleton variant="text" width={120} height={40} />
+                  <Skeleton variant="text" width={120} height={40} />
+                </>
+              ) : (
+                <>
+                  <Chip
+                    label={`${counts.all} Total Projects`}
+                    color="primary"
+                    variant="filled"
+                    sx={{ fontWeight: 600, px: 1 }}
+                  />
+                  <Chip
+                    label={`${counts.owned} Owned`}
+                    color="secondary"
+                    variant="filled"
+                    sx={{ fontWeight: 600, px: 1 }}
+                  />
+                  <Chip
+                    label={`${counts.supported} Supported`}
+                    color="success"
+                    variant="filled"
+                    sx={{ fontWeight: 600, px: 1 }}
+                  />
+                  <Chip
+                    label={`${counts.following} Following`}
+                    color="info"
+                    variant="filled"
+                    sx={{ fontWeight: 600, px: 1 }}
+                  />
+                </>
+              )}
             </Box>
           </motion.div>
         )}
@@ -787,6 +833,14 @@ const ProjectsMainPage: React.FC = () => {
               loadingComments={actionLoading.comment.has(selectedProjectId)}
               onLoadComments={(page, forceRefresh) =>
                 getComments(selectedProjectId, page, forceRefresh)
+              }
+              onLoadTeamMembers={() => getProjectTeamMembers(selectedProjectId)}
+              isProjectOwner={isProjectOwner(projectById || selectedProject)}
+              onCreateTeamMember={(data) =>
+                createProjectTeamMember(selectedProjectId, data)
+              }
+              onRemoveTeamMember={(userId) =>
+                removeProjectTeamMember(selectedProjectId, userId)
               }
               onCreateComment={(comment) =>
                 handleCreateComment(selectedProjectId, comment)

@@ -65,7 +65,6 @@ export interface ProjectDetailInterface extends ProjectInterface {
     teamMembers: number;
     updates: number;
   };
-  teamMembers: ProjectTeam[];
   updates: ProjectUpdateInterface[];
 }
 
@@ -140,8 +139,9 @@ export interface CollaborationRequestInterface
 }
 
 export interface ProjectTeam {
-  userId: string;
+  id: string;
   role: string;
+  createdAt: Date;
   user?: {
     id?: string;
     name: string;

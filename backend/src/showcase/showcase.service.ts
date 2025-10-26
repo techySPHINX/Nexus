@@ -137,6 +137,121 @@ export class ShowcaseService {
     };
   }
 
+  async getOptimizedImageUrl(
+    imageUrl?: string,
+    width = 400,
+    height = 200,
+  ): Promise<string | undefined> {
+    if (!imageUrl) return undefined;
+
+    try {
+      const trimUrl = imageUrl.trim();
+
+      // Do not try to transform svg or data urls
+      if (
+        trimUrl.startsWith('data:') ||
+        /\.svg(\?.*)?$/i.test(trimUrl) ||
+        trimUrl.includes('image/svg+xml')
+      ) {
+        return trimUrl;
+      }
+
+      const appendParams = (
+        u: string,
+        params: Record<string, string | number>,
+      ) => {
+        const qs = Object.entries(params)
+          .map(
+            ([k, v]) =>
+              `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`,
+          )
+          .join('&');
+        return u.includes('?') ? `${u}&${qs}` : `${u}?${qs}`;
+      };
+
+      // WordPress mshots / s0.wp.com (preserve existing query keys)
+      if (trimUrl.includes('s0.wp.com/mshots')) {
+        if (trimUrl.match(/w=\d+/) || trimUrl.match(/h=\d+/)) {
+          return trimUrl
+            .replace(/w=\d+/g, `w=${width}`)
+            .replace(/h=\d+/g, `h=${height}`);
+        }
+        const hasQuery = trimUrl.includes('?');
+        return `${trimUrl}${hasQuery ? '&' : '?'}w=${width}&h=${height}`;
+      }
+
+      // Cloudinary (insert transformation after /upload/)
+      if (
+        trimUrl.includes('res.cloudinary.com') ||
+        trimUrl.includes('cloudinary.com')
+      ) {
+        // use auto format & quality, and resizing/cropping
+        return trimUrl.replace(
+          /\/upload(\/?)/,
+          `/upload/f_auto,q_auto,w_${width},h_${height},c_fill/`,
+        );
+      }
+
+      // Imgix and many CDN providers that support fm=auto & auto=compress/format
+      if (
+        trimUrl.includes('imgix.net') ||
+        trimUrl.includes('images.ctfassets') ||
+        trimUrl.includes('images.unsplash.com')
+      ) {
+        return appendParams(trimUrl, {
+          fm: 'webp',
+          auto: 'format,compress',
+          w: width,
+          h: height,
+        });
+      }
+
+      // Google user content (use =s{size} param)
+      if (
+        trimUrl.includes('googleusercontent.com') ||
+        trimUrl.includes('lh3.googleusercontent.com')
+      ) {
+        if (trimUrl.match(/=s\d+/)) {
+          return trimUrl.replace(/=s\d+(-c)?/, `=s${width}`);
+        }
+        return `${trimUrl}=s${width}`;
+      }
+
+      // Cloudflare Images / Fastly / other CDNs that accept auto=format,quality params
+      if (
+        trimUrl.includes('cloudflare') ||
+        trimUrl.includes('fastly') ||
+        trimUrl.includes('cdn')
+      ) {
+        return appendParams(trimUrl, {
+          auto: 'format,compress',
+          w: width,
+          h: height,
+        });
+      }
+
+      // For typical direct image files (jpg/jpeg/png/gif) — prefer .webp and add sizing params when possible
+      if (trimUrl.match(/\.(jpe?g|png)(\?.*)?$/i)) {
+        // convert extension to webp, keep existing query string
+        const converted = trimUrl.replace(/\.(jpe?g|png)(\?.*)?$/i, '.webp$2');
+
+        // if the host likely supports query resizing, append params, otherwise just return webp URL
+        // We'll conservatively append width/height/quality params
+        return appendParams(converted, { w: width, h: height, q: 75 });
+      }
+
+      // Fallback: try to request automatic format & compression if supported
+      return appendParams(trimUrl, {
+        auto: 'format,compress',
+        w: width,
+        h: height,
+      });
+    } catch (error) {
+      console.error('Error optimizing image URL:', error);
+      return imageUrl;
+    }
+  }
+
   async getProjects(userId: string, filterProjectDto: FilterProjectDto) {
     const {
       tags,
@@ -273,8 +388,16 @@ export class ShowcaseService {
       },
     });
 
+    // 👉 Inject optimized URLs
+    const optimizedProjects = await Promise.all(
+      projects.map(async (project) => ({
+        ...project,
+        optimizedImageUrl: await this.getOptimizedImageUrl(project.imageUrl),
+      })),
+    );
+
     return {
-      data: projects,
+      data: optimizedProjects,
       pagination: {
         nextCursor: projects.length ? projects[projects.length - 1].id : null,
         hasNext: projects.length === pageSize,
@@ -283,11 +406,13 @@ export class ShowcaseService {
   }
 
   async getProjectById(projectId: string) {
-    return this.prisma.project.findUnique({
+    const project = await this.prisma.project.findUnique({
       where: { id: projectId },
       select: {
         id: true,
+        title: true,
         description: true,
+        imageUrl: true,
         videoUrl: true,
         websiteUrl: true,
         skills: true,
@@ -300,25 +425,24 @@ export class ShowcaseService {
             updates: true,
           },
         },
-        teamMembers: {
-          select: {
-            userId: true,
-            role: true,
-            user: {
-              select: {
-                name: true,
-                role: true,
-                profile: { select: { avatarUrl: true } },
-              },
-            },
-          },
-        },
         updates: {
           orderBy: { createdAt: 'desc' },
           take: 5,
         },
       },
     });
+
+    if (!project) return null;
+
+    // 👉 Inject optimized URLs
+    const optimizedProjects = await this.getOptimizedImageUrl(project.imageUrl);
+
+    console.log('Optimized Image URL:', optimizedProjects);
+
+    return {
+      ...project,
+      optimizedImageUrl: optimizedProjects,
+    };
   }
 
   async getMyProjects(userId: string, filterProjectDto: FilterProjectDto) {
@@ -1013,7 +1137,19 @@ export class ShowcaseService {
   async getTeamMembers(projectId: string) {
     return this.prisma.projectTeamMember.findMany({
       where: { projectId },
-      include: { user: true },
+      select: {
+        id: true,
+        role: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+      },
     });
   }
 

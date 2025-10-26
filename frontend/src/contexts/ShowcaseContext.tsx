@@ -15,7 +15,9 @@ import {
   Tags,
 } from '@/types/ShowcaseType';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { saveSmallList, restoreSmallList } from './showcasePersistence';
 import { useAuth } from './AuthContext';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 // Cache interfaces
 interface ProjectCache {
@@ -37,6 +39,13 @@ const CACHE_CONFIG = {
   MAX_CACHE_SIZE: 50, // Maximum number of items to cache
 };
 
+// Persistence keys & config
+const SHOWCASE_PROJECTS_KEY = 'showcase:projectsList:v1';
+const SHOWCASE_SUPPORTED_KEY = 'showcase:supportedProjects:v1';
+const SHOWCASE_FOLLOWED_KEY = 'showcase:followedProjects:v1';
+const SHOWCASE_MYPROJECTS_KEY = 'showcase:myProjects:v1';
+const PERSIST_DEBOUNCE_MS = 500; // debounce writes to IndexedDB
+
 export interface ShowcaseContextType {
   // States
   projectCounts: {
@@ -55,6 +64,9 @@ export interface ShowcaseContextType {
   collaborationRequests: CollaborationRequestInterface[];
   loading: boolean;
   actionLoading: {
+    teamMembers: boolean;
+    refresh: boolean;
+    count: boolean;
     support: Set<string>;
     follow: Set<string>;
     comment: Set<string>;
@@ -76,6 +88,7 @@ export interface ShowcaseContextType {
   typeLoading: boolean;
 
   // Actions
+  refreshProjects: (tab: number) => Promise<void>;
   createProject: (data: CreateProjectInterface) => Promise<void>;
   updateProject: (
     projectId: string,
@@ -167,6 +180,9 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   collaborationRequests: [],
   loading: false,
   actionLoading: {
+    teamMembers: false,
+    refresh: false,
+    count: false,
     support: new Set<string>(),
     follow: new Set<string>(),
     comment: new Set<string>(),
@@ -183,6 +199,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   clearSpecificCache: () => {},
 
   //actions
+  refreshProjects: async () => {},
   createProject: async () => {},
   updateProject: async () => {},
   deleteProject: async () => {},
@@ -216,6 +233,9 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState({
+    teamMembers: false,
+    refresh: false,
+    count: false,
     support: new Set<string>(),
     follow: new Set<string>(),
     comment: new Set<string>(),
@@ -302,6 +322,12 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const loadingRef = React.useRef(loading);
   const projectsCacheRef = React.useRef(projectsCache);
   const commentsCacheRef = React.useRef(commentsCache);
+  const rehydrateResolveRef = React.useRef<(() => void) | null>(null);
+  const rehydratePromiseRef = React.useRef<Promise<void>>(
+    new Promise((res) => {
+      rehydrateResolveRef.current = res;
+    })
+  );
 
   useEffect(() => {
     paginationRef.current = projects.pagination;
@@ -309,6 +335,62 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     projectsCacheRef.current = projectsCache;
     commentsCacheRef.current = commentsCache;
   }, [projects.pagination, loading, projectsCache, commentsCache]);
+
+  // Restore small persisted lists (index-only) on mount
+  useEffect(() => {
+    let mounted = true;
+
+    const restore = async () => {
+      try {
+        const p = await restoreSmallList(SHOWCASE_PROJECTS_KEY);
+        if (mounted && p) setProjects(p);
+
+        const sup = await restoreSmallList(SHOWCASE_SUPPORTED_KEY);
+        if (mounted && sup) setSupportedProjects(sup);
+
+        const fol = await restoreSmallList(SHOWCASE_FOLLOWED_KEY);
+        if (mounted && fol) setFollowedProjects(fol);
+
+        const my = await restoreSmallList(SHOWCASE_MYPROJECTS_KEY);
+        if (mounted && my) setProjectsByUserId(my);
+
+        // mark rehydration complete so callers can wait briefly for caches
+        if (rehydrateResolveRef.current) rehydrateResolveRef.current();
+      } catch (err) {
+        console.error('Failed to restore showcase small lists', err);
+      }
+    };
+
+    restore();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  // Persist small lists (index-only) to IndexedDB (debounced)
+  useEffect(() => {
+    let t: number | null = null;
+    if (t) window.clearTimeout(t);
+    t = window.setTimeout(() => {
+      try {
+        saveSmallList(SHOWCASE_PROJECTS_KEY, projects);
+        saveSmallList(SHOWCASE_SUPPORTED_KEY, supportedProjects);
+        saveSmallList(SHOWCASE_FOLLOWED_KEY, followedProjects);
+        saveSmallList(SHOWCASE_MYPROJECTS_KEY, projectsByUserId);
+      } catch (err) {
+        console.error('Failed to persist small lists', err);
+      }
+      if (t) {
+        window.clearTimeout(t);
+        t = null;
+      }
+    }, PERSIST_DEBOUNCE_MS);
+
+    return () => {
+      if (t) window.clearTimeout(t);
+    };
+  }, [projects, supportedProjects, followedProjects, projectsByUserId]);
 
   // Cache management functions
   const getCachedProject = useCallback(
@@ -421,7 +503,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         const response = await ShowcaseService.createProject(data);
         setProjects((prev) => ({
           data: [response, ...prev.data],
-          pagination: response.pagination,
+          pagination: prev.pagination,
         }));
         setProjectCounts((prev) => ({
           ...prev,
@@ -537,7 +619,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    setLoading(true);
+    setActionLoading((prev) => ({ ...prev, count: true }));
     try {
       const counts = await ShowcaseService.getProjectCounts();
       setProjectCounts({
@@ -547,18 +629,17 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         followed: counts.followedProjects || 0,
       });
     } catch (err) {
-      setError(
-        `Failed to get project counts: ${err instanceof Error ? err.message : String(err)}`
-      );
+      setError(getErrorMessage(err));
     } finally {
-      setLoading(false);
+      setActionLoading((prev) => ({ ...prev, count: false }));
     }
   }, [user]);
 
   const getAllProjects = useCallback(
     async (
       filterProjectDto?: FilterProjectInterface | undefined,
-      loadMore: boolean = false
+      loadMore: boolean = false,
+      forceLoad: boolean = false
     ) => {
       if (!user) {
         setError('User not authenticated');
@@ -568,6 +649,20 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       // Use refs for pagination and loading
       const currentPagination = paginationRef.current;
       const isLoading = loadingRef.current;
+      // Wait briefly for cache rehydration so we can use restored projects list
+      if (!loadMore && !forceLoad) {
+        try {
+          await Promise.race([
+            rehydratePromiseRef.current,
+            new Promise((res) => setTimeout(res, 2000)),
+          ]);
+        } catch {
+          /* ignore */
+        }
+
+        // If we already have projects (rehydrated), avoid refetch on initial mount
+        if (projects.data.length > 0) return;
+      }
       if (loadMore && (isLoading || !currentPagination.hasNext)) {
         return;
       }
@@ -589,14 +684,12 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           });
         }
       } catch (err) {
-        setError(
-          `Failed to get projects: ${err instanceof Error ? err.message : String(err)}`
-        );
+        setError(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
     },
-    [user] // pagination and loading handled via refs
+    [user, projects] // pagination and loading handled via refs
   );
 
   // Enhanced getProjectById with caching
@@ -607,22 +700,36 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      // Check cache first (unless force refresh)
+      setActionLoading((prev) => ({
+        ...prev,
+        projectDetails: new Set(prev.projectDetails).add(projectId),
+      }));
+
+      // Check cache first (unless force refresh). Wait briefly for rehydration so restored caches are used.
       if (!forceRefresh) {
+        try {
+          await Promise.race([
+            rehydratePromiseRef.current,
+            new Promise((res) => setTimeout(res, 2000)),
+          ]);
+        } catch {
+          /* ignore */
+        }
+
         const cachedProject = getCachedProject(projectId);
         if (cachedProject) {
           setProjectById(cachedProject);
           setProjectByIdUpdates(
             projectsCacheRef.current.get(projectId)?.updates || []
           );
+          setActionLoading((prev) => {
+            const next = new Set(prev.projectDetails);
+            next.delete(projectId);
+            return { ...prev, projectDetails: next };
+          });
           return;
         }
       }
-
-      setActionLoading((prev) => ({
-        ...prev,
-        projectDetails: new Set(prev.projectDetails).add(projectId),
-      }));
       try {
         const existingProject = projects.data.find(
           (proj) => proj.id === projectId
@@ -692,7 +799,8 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     async (
       ownerId?: string,
       filterProjectDto?: FilterProjectInterface,
-      loadMore: boolean = false
+      loadMore: boolean = false,
+      forceLoad: boolean = false
     ) => {
       if (!user) {
         setError('User not authenticated');
@@ -701,13 +809,24 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const targetOwnerId = ownerId ?? user.id;
 
-      // If not loading more and we already have data for the same owner, skip fetch
-      if (
-        !loadMore &&
-        projectsByUserId.data.length > 0 &&
-        projectsByUserId.data[0]?.owner?.id === targetOwnerId
-      ) {
-        return;
+      // Wait briefly for cache rehydration so we can use restored my-projects list
+      if (!loadMore && !forceLoad) {
+        try {
+          await Promise.race([
+            rehydratePromiseRef.current,
+            new Promise((res) => setTimeout(res, 2000)),
+          ]);
+        } catch {
+          /* ignore */
+        }
+
+        // If not loading more and we already have data for the same owner, skip fetch
+        if (
+          projectsByUserId.data.length > 0 &&
+          projectsByUserId.data[0]?.owner?.id === targetOwnerId
+        ) {
+          return;
+        }
       }
 
       setLoading(true);
@@ -744,9 +863,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         }
       } catch (err) {
-        setError(
-          `Failed to get my projects: ${err instanceof Error ? err.message : String(err)}`
-        );
+        setError(getErrorMessage(err));
       } finally {
         setLoading(false);
       }
@@ -757,16 +874,27 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const getSupportedProjects = useCallback(
     async (
       filterProjectDto?: FilterProjectInterface,
-      loadMore: boolean = false
+      loadMore: boolean = false,
+      forceLoad: boolean = false
     ) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
 
-      // Skip fetch if not loading more and we already have data
-      if (!loadMore && supportedProjects.data.length > 0) {
-        return;
+      // Wait briefly for cache rehydration so we can use restored supported list
+      if (!loadMore && !forceLoad) {
+        try {
+          await Promise.race([
+            rehydratePromiseRef.current,
+            new Promise((res) => setTimeout(res, 2000)),
+          ]);
+        } catch {
+          /* ignore */
+        }
+
+        // Skip fetch if not loading more and we already have data
+        if (supportedProjects.data.length > 0) return;
       }
 
       // If loading more but there's no next page, skip
@@ -816,16 +944,27 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const getFollowedProjects = useCallback(
     async (
       filterProjectDto?: FilterProjectInterface,
-      loadMore: boolean = false
+      loadMore: boolean = false,
+      forceLoad: boolean = false
     ) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
 
-      // Skip fetch if not loading more and we already have data
-      if (!loadMore && followedProjects.data.length > 0) {
-        return;
+      // Wait briefly for cache rehydration so we can use restored followed list
+      if (!loadMore && !forceLoad) {
+        try {
+          await Promise.race([
+            rehydratePromiseRef.current,
+            new Promise((res) => setTimeout(res, 2000)),
+          ]);
+        } catch {
+          /* ignore */
+        }
+
+        // Skip fetch if not loading more and we already have data
+        if (followedProjects.data.length > 0) return;
       }
 
       // If loading more but there's no next page, skip
@@ -1422,6 +1561,15 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Check cache first (unless force refresh or loading more pages)
       if (!forceRefresh && page === 1) {
+        try {
+          await Promise.race([
+            rehydratePromiseRef.current,
+            new Promise((res) => setTimeout(res, 2000)),
+          ]);
+        } catch {
+          /* ignore */
+        }
+
         const cachedComments = getCachedComments(projectId);
         if (cachedComments) {
           setComments((prev) => ({ ...prev, [projectId]: cachedComments }));
@@ -1514,7 +1662,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setError('User not authenticated');
         return;
       }
-      setLoading(true);
+      setActionLoading((prev) => ({
+        ...prev,
+        teamMembers: true,
+      }));
       try {
         const response = await ShowcaseService.getProjectTeamMembers(projectId);
         setTeamMembers(response);
@@ -1523,7 +1674,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           `Failed to get team members: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => ({
+          ...prev,
+          teamMembers: false,
+        }));
       }
     },
     [user]
@@ -1539,7 +1693,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         await ShowcaseService.removeProjectTeamMember(projectId, userId);
         setTeamMembers((prev) =>
-          prev.filter((member) => member.userId !== userId)
+          prev.filter((member) => member.user?.id !== userId)
         );
       } catch (err) {
         setError(
@@ -1571,10 +1725,43 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [typesLastFetched]);
 
+  const refreshProjects = useCallback(
+    async (tab: number) => {
+      if (!user) {
+        setError('User not authenticated');
+        return;
+      }
+      setActionLoading((prev) => ({ ...prev, refresh: true }));
+      try {
+        console.log('Refreshing projects for tab:', tab);
+        getProjectCounts();
+        if (tab === 0) await getAllProjects(undefined, false, true);
+        if (tab === 1)
+          await getProjectsByUserId(user.id, undefined, false, true);
+        if (tab === 2) await getSupportedProjects(undefined, false, true);
+        if (tab === 3) await getFollowedProjects(undefined, false, true);
+      } catch (err) {
+        setError(
+          `Failed to refresh projects: ${err instanceof Error ? err.message : String(err)}`
+        );
+      } finally {
+        setActionLoading((prev) => ({ ...prev, refresh: false }));
+      }
+    },
+    [
+      getAllProjects,
+      getFollowedProjects,
+      getProjectCounts,
+      getProjectsByUserId,
+      getSupportedProjects,
+      user,
+    ]
+  );
+
   // New method to clear specific project cache
   const clearSpecificCache = useCallback((projectId: string) => {
     setProjectsCache((prev) => {
-      const newCache = { ...prev };
+      const newCache = new Map(prev);
       newCache.delete(projectId);
       return newCache;
     });
@@ -1601,44 +1788,11 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   // Cache info for debugging
   const cacheInfo = useMemo(
     () => ({
-      projects: Object.keys(projectsCache).length,
-      comments: Object.keys(commentsCache).length,
+      projects: projectsCache instanceof Map ? projectsCache.size : 0,
+      comments: commentsCache instanceof Map ? commentsCache.size : 0,
     }),
     [projectsCache, commentsCache]
   );
-
-  // Add infinite scroll functionality
-  // Add debounce to prevent multiple rapid calls
-  // useEffect(() => {
-  //   let ticking = false;
-
-  //   const handleScroll = () => {
-  //     if (!ticking) {
-  //       requestAnimationFrame(() => {
-  //         if (loadingRef.current || !paginationRef.current.hasNext) return;
-
-  //         const scrollTop = document.documentElement.scrollTop;
-  //         const scrollHeight = document.documentElement.scrollHeight;
-  //         const clientHeight = document.documentElement.clientHeight;
-
-  //         if (scrollTop + clientHeight >= scrollHeight - 100) {
-  //           getAllProjects(
-  //             {
-  //               ...paginationRef.current,
-  //               page: paginationRef.current.page + 1,
-  //             },
-  //             true
-  //           );
-  //         }
-  //         ticking = false;
-  //       });
-  //       ticking = true;
-  //     }
-  //   };
-
-  //   window.addEventListener('scroll', handleScroll, { passive: true });
-  //   return () => window.removeEventListener('scroll', handleScroll);
-  // }, [getAllProjects]);
 
   const state: ShowcaseContextType = useMemo(
     () => ({
@@ -1666,6 +1820,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       clearSpecificCache,
 
       // Actions (include all the existing ones)
+      refreshProjects,
       createProject,
       updateProject,
       deleteProject,
@@ -1713,6 +1868,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       allTypes,
       typeLoading,
       clearError,
+      refreshProjects,
       createProject,
       updateProject,
       deleteProject,

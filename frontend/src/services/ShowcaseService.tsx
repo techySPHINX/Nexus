@@ -8,6 +8,7 @@ import {
   ProjectCommentsResponse,
 } from '@/types/ShowcaseType';
 import api from './api';
+import { getErrorMessage } from '@/utils/errorHandler';
 
 export const ShowcaseService = {
   createProject: async (data: CreateProjectInterface) => {
@@ -15,7 +16,9 @@ export const ShowcaseService = {
       const response = await api.post('/showcase/project', data);
       return response.data;
     } catch (error) {
-      throw new Error('Failed to create project with error: ' + error);
+      throw new Error(
+        'Failed to create project with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -27,7 +30,9 @@ export const ShowcaseService = {
       const response = await api.put(`/showcase/project/${projectId}`, data);
       return response.data;
     } catch (error) {
-      throw new Error('Failed to update project with error: ' + error);
+      throw new Error(
+        'Failed to update project with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -36,7 +41,9 @@ export const ShowcaseService = {
       const response = await api.delete(`/showcase/project/${projectId}`);
       return response.data;
     } catch (error) {
-      throw new Error('Failed to delete project with error: ' + error);
+      throw new Error(
+        'Failed to delete project with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -46,7 +53,9 @@ export const ShowcaseService = {
       const response = await api.get('/showcase/project/count');
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get project counts with error: ' + error);
+      throw new Error(
+        'Failed to get project counts with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -58,7 +67,9 @@ export const ShowcaseService = {
       });
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get projects with error: ' + error);
+      throw new Error(
+        'Failed to get projects with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -67,7 +78,9 @@ export const ShowcaseService = {
       const response = await api.get(`/showcase/project/${projectId}`);
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get project by ID with error: ' + error);
+      throw new Error(
+        'Failed to get project by ID with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -79,7 +92,9 @@ export const ShowcaseService = {
       });
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get my projects with error: ' + error);
+      throw new Error(
+        'Failed to get my projects with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -94,7 +109,9 @@ export const ShowcaseService = {
       });
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get projects by owner with error: ' + error);
+      throw new Error(
+        'Failed to get projects by owner with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -106,7 +123,9 @@ export const ShowcaseService = {
       });
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get supported projects with error: ' + error);
+      throw new Error(
+        'Failed to get supported projects with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -118,7 +137,9 @@ export const ShowcaseService = {
       });
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get followed projects with error: ' + error);
+      throw new Error(
+        'Failed to get followed projects with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -133,7 +154,9 @@ export const ShowcaseService = {
       );
       return response.data;
     } catch (error) {
-      throw new Error('Failed to create Project update with error ' + error);
+      throw new Error(
+        'Failed to create Project update with error ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -142,7 +165,9 @@ export const ShowcaseService = {
       const response = await api.get(`/showcase/project/${projectId}/updates`);
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get Project updates with error ' + error);
+      throw new Error(
+        'Failed to get Project updates with error ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -150,7 +175,9 @@ export const ShowcaseService = {
     try {
       await api.post(`/showcase/${projectId}/support`);
     } catch (error) {
-      throw new Error('Failed to support project with error: ' + error);
+      throw new Error(
+        'Failed to support project with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -158,7 +185,9 @@ export const ShowcaseService = {
     try {
       await api.delete(`/showcase/${projectId}/support`);
     } catch (error) {
-      throw new Error('Failed to unsupport project with error: ' + error);
+      throw new Error(
+        'Failed to unsupport project with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -166,7 +195,9 @@ export const ShowcaseService = {
     try {
       await api.post(`/showcase/${projectId}/follow`);
     } catch (error) {
-      throw new Error('Failed to follow project with error: ' + error);
+      throw new Error(
+        'Failed to follow project with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -174,7 +205,9 @@ export const ShowcaseService = {
     try {
       await api.delete(`/showcase/${projectId}/follow`);
     } catch (error) {
-      throw new Error('Failed to unfollow project with error: ' + error);
+      throw new Error(
+        'Failed to unfollow project with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -186,7 +219,8 @@ export const ShowcaseService = {
       await api.post(`/showcase/${projectId}/collaborate`, data);
     } catch (error) {
       throw new Error(
-        'Failed to create collaboration request with error: ' + error
+        'Failed to create collaboration request with error: ' +
+          getErrorMessage(error)
       );
     }
   },
@@ -203,7 +237,8 @@ export const ShowcaseService = {
       return response.data;
     } catch (error) {
       throw new Error(
-        'Failed to update collaboration request status with error: ' + error
+        'Failed to update collaboration request status with error: ' +
+          getErrorMessage(error)
       );
     }
   },
@@ -214,7 +249,8 @@ export const ShowcaseService = {
       return response.data;
     } catch (error) {
       throw new Error(
-        'Failed to get collaboration requests with error: ' + error
+        'Failed to get collaboration requests with error: ' +
+          getErrorMessage(error)
       );
     }
   },
@@ -226,7 +262,9 @@ export const ShowcaseService = {
       });
       return response.data;
     } catch (error) {
-      throw new Error('Failed to create comment with error: ' + error);
+      throw new Error(
+        'Failed to create comment with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -241,16 +279,21 @@ export const ShowcaseService = {
       });
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get project comments with error: ' + error);
+      throw new Error(
+        'Failed to get project comments with error: ' + getErrorMessage(error)
+      );
     }
   },
 
   createProjectTeamMember: async (projectId: string, data: ProjectTeam) => {
     try {
+      console.log('Adding team member to project:', projectId, data);
       const response = await api.post(`/showcase/${projectId}/team`, data);
       return response.data;
     } catch (error) {
-      throw new Error('Failed to add team member with error: ' + error);
+      throw new Error(
+        'Failed to add team member with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -259,7 +302,9 @@ export const ShowcaseService = {
       const response = await api.get(`/showcase/${projectId}/team`);
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get project team with error: ' + error);
+      throw new Error(
+        'Failed to get project team with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -270,7 +315,9 @@ export const ShowcaseService = {
       );
       return response.data;
     } catch (error) {
-      throw new Error('Failed to remove team member with error: ' + error);
+      throw new Error(
+        'Failed to remove team member with error: ' + getErrorMessage(error)
+      );
     }
   },
 
@@ -279,7 +326,9 @@ export const ShowcaseService = {
       const response = await api.get('/showcase/tags');
       return response.data;
     } catch (error) {
-      throw new Error('Failed to get project types with error: ' + error);
+      throw new Error(
+        'Failed to get project types with error: ' + getErrorMessage(error)
+      );
     }
   },
 };

@@ -90,6 +90,7 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
         <Tooltip title={getUserName()}>
           <Avatar
             src={user.profile?.avatarUrl || undefined}
+            alt={getUserName()}
             sx={{
               width: avatarSize,
               height: avatarSize,

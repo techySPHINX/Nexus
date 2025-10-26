@@ -46,6 +46,7 @@ import {
   Label,
   Send,
 } from '@mui/icons-material';
+import { AddCircle, Delete } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import {
@@ -55,7 +56,10 @@ import {
   ProjectUpdateInterface,
   ProjectDetailInterface,
 } from '@/types/ShowcaseType';
+import { User } from '@/types/profileType';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
+import { useShowcase } from '@/contexts/ShowcaseContext';
+import { apiService } from '@/services/api';
 
 interface ProjectDetailModalProps {
   project: ProjectDetailInterface;
@@ -70,6 +74,10 @@ interface ProjectDetailModalProps {
   onCollaborate: () => void;
   onLoadComments: (page?: number, forceRefresh?: boolean) => void;
   onCreateComment: (comment: string) => Promise<void>;
+  onLoadTeamMembers: () => void;
+  isProjectOwner: boolean | null;
+  onCreateTeamMember: (data: ProjectTeam) => Promise<void>;
+  onRemoveTeamMember: (userId: string) => Promise<void>;
   onRefresh: () => void;
   onDelete: () => void;
 }
@@ -126,12 +134,24 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onFollow,
   onCollaborate,
   onLoadComments,
+  onLoadTeamMembers,
   onCreateComment,
+  onCreateTeamMember,
+  onRemoveTeamMember,
   onRefresh,
   onDelete,
 }) => {
+  const { teamMembers, actionLoading } = useShowcase();
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
+  // team member search / create state
+  const [userSearch, setUserSearch] = useState('');
+  const [userOptions, setUserOptions] = useState<User[]>([]);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [newMemberRole, setNewMemberRole] = useState<'MEMBER' | 'OWNER'>(
+    'MEMBER'
+  );
+  const [isAddingMember, setIsAddingMember] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const submitDebounce = useRef<number | null>(null);
@@ -183,6 +203,66 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     // lazy load comments when user switches to comments tab
     if (newValue === 2 && comments.length === 0 && !loadingComments) {
       onLoadComments(1, false);
+    }
+    if (newValue === 1 && (teamMembers?.length ?? 0) === 0) {
+      onLoadTeamMembers();
+    }
+  };
+
+  // debounce search for users
+  useEffect(() => {
+    let t: number | null = null;
+    if (!userSearch || userSearch.trim().length < 2) {
+      setUserOptions([]);
+      return;
+    }
+    t = window.setTimeout(async () => {
+      try {
+        const resp = await apiService.users.search(userSearch.trim());
+        // apiService returns an Axios response; response data likely an array of users
+        const data = resp?.data ?? [];
+        setUserOptions(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Failed to search users', err);
+        setUserOptions([]);
+      }
+    }, 350);
+
+    return () => {
+      if (t) window.clearTimeout(t);
+    };
+  }, [userSearch]);
+
+  const handleAddMember = async () => {
+    if (!selectedUser || !onCreateTeamMember) return;
+    // prevent duplicates
+    if (teamMembers?.some((m) => m.user?.id === selectedUser.id)) {
+      console.warn('User already a team member');
+      return;
+    }
+    setIsAddingMember(true);
+    try {
+      // construct a ProjectTeam shaped payload (backend only needs userId and role)
+      const payload: ProjectTeam = {
+        id: '',
+        role: newMemberRole,
+        createdAt: new Date(),
+        user: {
+          id: selectedUser.id,
+          name: selectedUser.name || selectedUser.email || 'Unknown',
+          role: selectedUser.role,
+          profile: { avatarUrl: selectedUser.profile?.avatarUrl || '' },
+        },
+      };
+      await onCreateTeamMember(payload);
+      // clear inputs
+      setSelectedUser(null);
+      setUserSearch('');
+      setUserOptions([]);
+    } catch (err) {
+      console.error('Failed to add team member', err);
+    } finally {
+      setIsAddingMember(false);
     }
   };
 
@@ -571,12 +651,6 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   id="project-detail-tab-3"
                   aria-controls="project-detail-tabpanel-3"
                 />
-                <Tab
-                  icon={<Favorite />}
-                  label={`Supporters (${project._count?.supporters ?? 0})`}
-                  id="project-detail-tab-4"
-                  aria-controls="project-detail-tabpanel-4"
-                />
               </Tabs>
             </Box>
 
@@ -639,47 +713,169 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 animate="visible"
                 variants={containerStagger}
               >
-                <List>
-                  <motion.div
-                    variants={containerStagger}
-                    initial="hidden"
-                    animate="visible"
+                {/* Owner-only: search & add team member */}
+                {isOwner && (
+                  <Box
+                    sx={{
+                      mb: 2,
+                      display: 'flex',
+                      gap: 1,
+                      alignItems: 'center',
+                    }}
                   >
-                    {(project.teamMembers ?? []).length ? (
-                      (project.teamMembers ?? []).map(
-                        (member: ProjectTeam, i: number) => (
-                          <motion.div
-                            key={member.userId}
-                            variants={listItemVariants}
-                            custom={i + 1}
+                    <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Search users by name or email..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      InputProps={{
+                        endAdornment: (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              gap: 1,
+                              alignItems: 'center',
+                            }}
                           >
-                            <ListItem>
-                              <ListItemAvatar>
-                                <Avatar src={member.user?.profile?.avatarUrl}>
-                                  <Person />
-                                </Avatar>
-                              </ListItemAvatar>
-                              <ListItemText
-                                primary={
-                                  member.user?.name || `User ${member.userId}`
+                            {isAddingMember ? (
+                              <CircularProgress size={20} />
+                            ) : null}
+                          </Box>
+                        ),
+                      }}
+                      aria-label="Search users to add to team"
+                    />
+
+                    <TextField
+                      size="small"
+                      select
+                      value={newMemberRole}
+                      onChange={(e) =>
+                        setNewMemberRole(e.target.value as 'MEMBER' | 'OWNER')
+                      }
+                      SelectProps={{ native: true }}
+                      sx={{ width: 140 }}
+                    >
+                      <option value="MEMBER">Member</option>
+                      <option value="OWNER">Owner</option>
+                    </TextField>
+
+                    <Button
+                      variant="contained"
+                      onClick={handleAddMember}
+                      disabled={!selectedUser || isAddingMember}
+                      startIcon={<AddCircle />}
+                    >
+                      Add
+                    </Button>
+                  </Box>
+                )}
+                {/* quick suggestions list (visible when typing) */}
+                {userSearch && userOptions.length > 0 && (
+                  <Box sx={{ mb: 2 }}>
+                    <List dense>
+                      {userOptions.map((u) => (
+                        <ListItem
+                          key={u.id}
+                          button
+                          onClick={() => {
+                            setSelectedUser(u);
+                            setUserSearch(u.name || u.email || '');
+                            setUserOptions([]);
+                          }}
+                        >
+                          <ListItemAvatar>
+                            <Avatar src={u.profile?.avatarUrl ?? undefined}>
+                              <Person />
+                            </Avatar>
+                          </ListItemAvatar>
+                          <ListItemText
+                            primary={u.name || u.email}
+                            secondary={u.role}
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Box>
+                )}
+                {actionLoading.teamMembers ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      minHeight: 100,
+                    }}
+                  >
+                    <CircularProgress
+                      size={40}
+                      thickness={4}
+                      aria-label="Loading team members"
+                    />
+                  </Box>
+                ) : (
+                  <List>
+                    <motion.div
+                      variants={containerStagger}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      {(teamMembers ?? []).length ? (
+                        (teamMembers ?? []).map(
+                          (member: ProjectTeam, i: number) => (
+                            <motion.div
+                              key={member.id}
+                              variants={listItemVariants}
+                              custom={i + 1}
+                            >
+                              <ListItem
+                                secondaryAction={
+                                  isOwner ? (
+                                    <IconButton
+                                      edge="end"
+                                      aria-label="Remove team member"
+                                      onClick={() =>
+                                        onRemoveTeamMember(member.id)
+                                      }
+                                    >
+                                      <Delete />
+                                    </IconButton>
+                                  ) : undefined
                                 }
-                                secondary={member.role || 'Team Member'}
-                              />
-                            </ListItem>
-                          </motion.div>
+                              >
+                                <ListItemAvatar>
+                                  <Avatar
+                                    src={
+                                      member.user?.profile?.avatarUrl ??
+                                      undefined
+                                    }
+                                  >
+                                    <Person />
+                                  </Avatar>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={
+                                    member.user?.name || 'Unnamed Member'
+                                  }
+                                  secondary={member.role || 'Team Member'}
+                                />
+                              </ListItem>
+                            </motion.div>
+                          )
                         )
-                      )
-                    ) : (
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ py: 2, textAlign: 'center' }}
-                      >
-                        No team members yet
-                      </Typography>
-                    )}
-                  </motion.div>
-                </List>
+                      ) : (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ py: 2, textAlign: 'center' }}
+                        >
+                          No team members yet
+                        </Typography>
+                      )}
+                    </motion.div>
+                  </List>
+                )}
               </motion.div>
             </TabPanel>
 
@@ -735,8 +931,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   </Stack>
                 ) : (
                   <AnimatePresence initial={false}>
-                    <motion.ul
-                      style={{ listStyle: 'none', padding: 0, margin: 0 }}
+                    <motion.div
+                      style={{ padding: 0, margin: 0 }}
                       variants={containerStagger}
                       initial="hidden"
                       animate="visible"
@@ -744,7 +940,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     >
                       {comments.length ? (
                         comments.map((comment: ProjectComment, idx: number) => (
-                          <motion.li
+                          <motion.div
                             key={comment.id ?? idx}
                             variants={listItemVariants}
                             custom={idx}
@@ -812,7 +1008,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                             {idx < comments.length - 1 && (
                               <Divider variant="inset" component="li" />
                             )}
-                          </motion.li>
+                          </motion.div>
                         ))
                       ) : (
                         <Typography
@@ -823,7 +1019,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                           No comments yet — be the first to comment.
                         </Typography>
                       )}
-                    </motion.ul>
+                    </motion.div>
                   </AnimatePresence>
                 )}
               </Box>
@@ -889,44 +1085,6 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       sx={{ py: 2, textAlign: 'center' }}
                     >
                       No updates yet
-                    </Typography>
-                  )}
-                </List>
-              </Box>
-            </TabPanel>
-
-            <TabPanel value={activeTab} index={4}>
-              <Box sx={listContainerSx}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  <Favorite color="error" sx={{ mr: 1 }} />
-                  Supporters ({project.supporters?.length ?? 0})
-                </Typography>
-                <List>
-                  {(project.supporters ?? []).length ? (
-                    (project.supporters ?? []).map((s, i) => (
-                      <motion.div
-                        key={s.userId ?? i}
-                        variants={listItemVariants}
-                        custom={i}
-                      >
-                        <ListItem>
-                          <ListItemAvatar>
-                            <Avatar>
-                              <Person />
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText primary={`User ${s.userId}`} />
-                        </ListItem>
-                        <Divider variant="inset" component="li" />
-                      </motion.div>
-                    ))
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ py: 2, textAlign: 'center' }}
-                    >
-                      No supporters yet
                     </Typography>
                   )}
                 </List>

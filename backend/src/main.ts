@@ -4,7 +4,6 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { IoAdapter } from '@nestjs/platform-socket.io';
-import helmet from 'helmet';
 import { getCorsConfig, securityConfig } from './common/config/security.config';
 import { WinstonLoggerService } from './common/logger/winston-logger.service';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
@@ -29,9 +28,10 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app));
   loggerService.log('✅ WebSocket adapter configured', 'Bootstrap');
 
-  // Helmet - Set security-related HTTP headers
-  app.use(helmet(securityConfig.helmet as any));
-  loggerService.log('✅ Helmet security headers enabled', 'Bootstrap');
+  app.enableCors({
+    origin: ['http://localhost:3001', 'http://localhost:4173'],
+    credentials: true,
+  });
 
   // CORS - Configure Cross-Origin Resource Sharing
   app.enableCors(getCorsConfig());
