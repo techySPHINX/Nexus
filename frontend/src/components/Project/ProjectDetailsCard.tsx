@@ -571,12 +571,6 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   id="project-detail-tab-3"
                   aria-controls="project-detail-tabpanel-3"
                 />
-                <Tab
-                  icon={<Favorite />}
-                  label={`Supporters (${project._count?.supporters ?? 0})`}
-                  id="project-detail-tab-4"
-                  aria-controls="project-detail-tabpanel-4"
-                />
               </Tabs>
             </Box>
 
@@ -735,8 +729,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   </Stack>
                 ) : (
                   <AnimatePresence initial={false}>
-                    <motion.ul
-                      style={{ listStyle: 'none', padding: 0, margin: 0 }}
+                    <motion.div
+                      style={{ padding: 0, margin: 0 }}
                       variants={containerStagger}
                       initial="hidden"
                       animate="visible"
@@ -744,7 +738,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     >
                       {comments.length ? (
                         comments.map((comment: ProjectComment, idx: number) => (
-                          <motion.li
+                          <motion.div
                             key={comment.id ?? idx}
                             variants={listItemVariants}
                             custom={idx}
@@ -812,7 +806,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                             {idx < comments.length - 1 && (
                               <Divider variant="inset" component="li" />
                             )}
-                          </motion.li>
+                          </motion.div>
                         ))
                       ) : (
                         <Typography
@@ -823,7 +817,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                           No comments yet — be the first to comment.
                         </Typography>
                       )}
-                    </motion.ul>
+                    </motion.div>
                   </AnimatePresence>
                 )}
               </Box>
@@ -889,44 +883,6 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       sx={{ py: 2, textAlign: 'center' }}
                     >
                       No updates yet
-                    </Typography>
-                  )}
-                </List>
-              </Box>
-            </TabPanel>
-
-            <TabPanel value={activeTab} index={4}>
-              <Box sx={listContainerSx}>
-                <Typography variant="h6" sx={{ mb: 1 }}>
-                  <Favorite color="error" sx={{ mr: 1 }} />
-                  Supporters ({project.supporters?.length ?? 0})
-                </Typography>
-                <List>
-                  {(project.supporters ?? []).length ? (
-                    (project.supporters ?? []).map((s, i) => (
-                      <motion.div
-                        key={s.userId ?? i}
-                        variants={listItemVariants}
-                        custom={i}
-                      >
-                        <ListItem>
-                          <ListItemAvatar>
-                            <Avatar>
-                              <Person />
-                            </Avatar>
-                          </ListItemAvatar>
-                          <ListItemText primary={`User ${s.userId}`} />
-                        </ListItem>
-                        <Divider variant="inset" component="li" />
-                      </motion.div>
-                    ))
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ py: 2, textAlign: 'center' }}
-                    >
-                      No supporters yet
                     </Typography>
                   )}
                 </List>

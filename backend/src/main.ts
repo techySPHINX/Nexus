@@ -29,9 +29,16 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app));
   loggerService.log('✅ WebSocket adapter configured', 'Bootstrap');
 
+<<<<<<< HEAD
   // Helmet - Set security-related HTTP headers
   app.use(helmet(securityConfig.helmet as any));
   loggerService.log('✅ Helmet security headers enabled', 'Bootstrap');
+=======
+  app.enableCors({
+    origin: ['http://localhost:3001', 'http://localhost:4173'],
+    credentials: true,
+  });
+>>>>>>> d5be008 (project cached in localForage)
 
   // CORS - Configure Cross-Origin Resource Sharing
   app.enableCors(getCorsConfig());

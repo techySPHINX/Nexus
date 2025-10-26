@@ -18,6 +18,7 @@ import {
   Tabs,
   Tab,
   Chip,
+  Skeleton,
   Button,
   Snackbar,
   Alert,
@@ -531,7 +532,7 @@ const ProjectsMainPage: React.FC = () => {
           </Box>
         </motion.div>
 
-        {/* Summary Stats */}
+        {/* Summary Stats (show skeletons while loading to improve FCP) */}
         {user && (
           <motion.div
             initial={{ y: 20, opacity: 0 }}
@@ -539,30 +540,41 @@ const ProjectsMainPage: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              <Chip
-                label={`${counts.all} Total Projects`}
-                color="primary"
-                variant="filled"
-                sx={{ fontWeight: 600, px: 1 }}
-              />
-              <Chip
-                label={`${counts.owned} Owned`}
-                color="secondary"
-                variant="filled"
-                sx={{ fontWeight: 600, px: 1 }}
-              />
-              <Chip
-                label={`${counts.supported} Supported`}
-                color="success"
-                variant="filled"
-                sx={{ fontWeight: 600, px: 1 }}
-              />
-              <Chip
-                label={`${counts.following} Following`}
-                color="info"
-                variant="filled"
-                sx={{ fontWeight: 600, px: 1 }}
-              />
+              {loading ? (
+                <>
+                  <Skeleton variant="text" width={140} height={40} />
+                  <Skeleton variant="text" width={100} height={40} />
+                  <Skeleton variant="text" width={120} height={40} />
+                  <Skeleton variant="text" width={120} height={40} />
+                </>
+              ) : (
+                <>
+                  <Chip
+                    label={`${counts.all} Total Projects`}
+                    color="primary"
+                    variant="filled"
+                    sx={{ fontWeight: 600, px: 1 }}
+                  />
+                  <Chip
+                    label={`${counts.owned} Owned`}
+                    color="secondary"
+                    variant="filled"
+                    sx={{ fontWeight: 600, px: 1 }}
+                  />
+                  <Chip
+                    label={`${counts.supported} Supported`}
+                    color="success"
+                    variant="filled"
+                    sx={{ fontWeight: 600, px: 1 }}
+                  />
+                  <Chip
+                    label={`${counts.following} Following`}
+                    color="info"
+                    variant="filled"
+                    sx={{ fontWeight: 600, px: 1 }}
+                  />
+                </>
+              )}
             </Box>
           </motion.div>
         )}
