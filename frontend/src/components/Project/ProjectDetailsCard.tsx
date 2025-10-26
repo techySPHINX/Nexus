@@ -47,7 +47,7 @@ import {
   Send,
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format } from 'date-fns';
+import { format, isValid } from 'date-fns';
 import {
   status,
   ProjectComment,
@@ -321,7 +321,9 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 >
                   <CalendarToday sx={{ fontSize: 16, mr: 0.5 }} />
                   <Typography variant="body2">
-                    {format(new Date(project.createdAt), 'MMM d, yyyy')}
+                    {isValid(new Date(project.createdAt ?? ''))
+                      ? format(new Date(project.createdAt ?? ''), 'MMM d, yyyy')
+                      : '—'}
                   </Typography>
                 </Box>
                 {project.githubUrl && (

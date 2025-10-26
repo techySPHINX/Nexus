@@ -697,6 +697,11 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
+      setActionLoading((prev) => ({
+        ...prev,
+        projectDetails: new Set(prev.projectDetails).add(projectId),
+      }));
+
       // Check cache first (unless force refresh). Wait briefly for rehydration so restored caches are used.
       if (!forceRefresh) {
         try {
@@ -714,14 +719,14 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           setProjectByIdUpdates(
             projectsCacheRef.current.get(projectId)?.updates || []
           );
+          setActionLoading((prev) => {
+            const next = new Set(prev.projectDetails);
+            next.delete(projectId);
+            return { ...prev, projectDetails: next };
+          });
           return;
         }
       }
-
-      setActionLoading((prev) => ({
-        ...prev,
-        projectDetails: new Set(prev.projectDetails).add(projectId),
-      }));
       try {
         const existingProject = projects.data.find(
           (proj) => proj.id === projectId
