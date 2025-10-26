@@ -69,6 +69,7 @@ const ProjectsMainPage: React.FC = () => {
     loading,
     actionLoading,
     error,
+    refreshProjects,
     getProjectCounts,
     getAllProjects,
     getProjectsByUserId,
@@ -512,23 +513,53 @@ const ProjectsMainPage: React.FC = () => {
               </Typography>
             </Box>
 
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setShowCreateModal(true)}
-                sx={{
-                  borderRadius: 3,
-                  px: 3,
-                  py: 1.2,
-                  fontWeight: 600,
-                  fontSize: '1rem',
-                }}
-                size="large"
+            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
               >
-                Create New Project
-              </Button>
-            </motion.div>
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => setShowCreateModal(true)}
+                  sx={{
+                    borderRadius: 3,
+                    px: 3,
+                    py: 1.2,
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                  }}
+                  size="large"
+                >
+                  Create New Project
+                </Button>
+              </motion.div>
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={() => refreshProjects(activeTab)}
+                  startIcon={
+                    actionLoading.refresh ? (
+                      <CircularProgress size={18} color="inherit" />
+                    ) : undefined
+                  }
+                  sx={{
+                    borderRadius: 3,
+                    px: 3,
+                    py: 1.2,
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                  }}
+                  size="large"
+                  disabled={actionLoading.refresh}
+                >
+                  Refresh
+                </Button>
+              </motion.div>
+            </Box>
           </Box>
         </motion.div>
 
@@ -540,7 +571,7 @@ const ProjectsMainPage: React.FC = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              {loading ? (
+              {actionLoading.count ? (
                 <>
                   <Skeleton variant="text" width={140} height={40} />
                   <Skeleton variant="text" width={100} height={40} />
