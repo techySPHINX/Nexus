@@ -287,6 +287,7 @@ export const ShowcaseService = {
 
   createProjectTeamMember: async (projectId: string, data: ProjectTeam) => {
     try {
+      console.log('Adding team member to project:', projectId, data);
       const response = await api.post(`/showcase/${projectId}/team`, data);
       return response.data;
     } catch (error) {

@@ -64,6 +64,7 @@ export interface ShowcaseContextType {
   collaborationRequests: CollaborationRequestInterface[];
   loading: boolean;
   actionLoading: {
+    teamMembers: boolean;
     refresh: boolean;
     count: boolean;
     support: Set<string>;
@@ -179,6 +180,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   collaborationRequests: [],
   loading: false,
   actionLoading: {
+    teamMembers: false,
     refresh: false,
     count: false,
     support: new Set<string>(),
@@ -231,6 +233,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState({
+    teamMembers: false,
     refresh: false,
     count: false,
     support: new Set<string>(),
@@ -1659,7 +1662,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setError('User not authenticated');
         return;
       }
-      setLoading(true);
+      setActionLoading((prev) => ({
+        ...prev,
+        teamMembers: true,
+      }));
       try {
         const response = await ShowcaseService.getProjectTeamMembers(projectId);
         setTeamMembers(response);
@@ -1668,7 +1674,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           `Failed to get team members: ${err instanceof Error ? err.message : String(err)}`
         );
       } finally {
-        setLoading(false);
+        setActionLoading((prev) => ({
+          ...prev,
+          teamMembers: false,
+        }));
       }
     },
     [user]
@@ -1684,7 +1693,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         await ShowcaseService.removeProjectTeamMember(projectId, userId);
         setTeamMembers((prev) =>
-          prev.filter((member) => member.userId !== userId)
+          prev.filter((member) => member.user?.id !== userId)
         );
       } catch (err) {
         setError(

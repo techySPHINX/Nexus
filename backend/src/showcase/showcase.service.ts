@@ -425,19 +425,6 @@ export class ShowcaseService {
             updates: true,
           },
         },
-        teamMembers: {
-          select: {
-            userId: true,
-            role: true,
-            user: {
-              select: {
-                name: true,
-                role: true,
-                profile: { select: { avatarUrl: true } },
-              },
-            },
-          },
-        },
         updates: {
           orderBy: { createdAt: 'desc' },
           take: 5,
@@ -1150,7 +1137,19 @@ export class ShowcaseService {
   async getTeamMembers(projectId: string) {
     return this.prisma.projectTeamMember.findMany({
       where: { projectId },
-      include: { user: true },
+      select: {
+        id: true,
+        role: true,
+        createdAt: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+      },
     });
   }
 

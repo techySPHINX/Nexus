@@ -86,6 +86,9 @@ const ProjectsMainPage: React.FC = () => {
     clearError,
     getComments,
     createComment,
+    getProjectTeamMembers,
+    removeProjectTeamMember,
+    createProjectTeamMember,
   } = useShowcase();
 
   const { user } = useAuth();
@@ -830,6 +833,14 @@ const ProjectsMainPage: React.FC = () => {
               loadingComments={actionLoading.comment.has(selectedProjectId)}
               onLoadComments={(page, forceRefresh) =>
                 getComments(selectedProjectId, page, forceRefresh)
+              }
+              onLoadTeamMembers={() => getProjectTeamMembers(selectedProjectId)}
+              isProjectOwner={isProjectOwner(projectById || selectedProject)}
+              onCreateTeamMember={(data) =>
+                createProjectTeamMember(selectedProjectId, data)
+              }
+              onRemoveTeamMember={(userId) =>
+                removeProjectTeamMember(selectedProjectId, userId)
               }
               onCreateComment={(comment) =>
                 handleCreateComment(selectedProjectId, comment)
