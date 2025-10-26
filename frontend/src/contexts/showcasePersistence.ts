@@ -30,7 +30,6 @@ export async function saveProjectsIndexPage(
     );
   } catch (e) {
     // swallow errors; persistence is best-effort
-    // eslint-disable-next-line no-console
     console.error('saveProjectsIndexPage error', e);
   }
 }
@@ -53,7 +52,6 @@ export async function restoreProjectsIndexPage(
         } as ProjectPaginationResponse),
     };
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('restoreProjectsIndexPage error', e);
     return null;
   }
@@ -73,7 +71,6 @@ export async function saveSmallList(
       }
     );
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('saveSmallList error', e);
   }
 }
@@ -96,7 +93,6 @@ export async function restoreSmallList(
         } as ProjectPaginationResponse),
     };
   } catch (e) {
-    // eslint-disable-next-line no-console
     console.error('restoreSmallList error', e);
     return null;
   }
@@ -112,7 +108,6 @@ export async function clearAllShowcaseCache() {
     await lf.clear();
   } catch (e) {
     // best-effort; log and continue
-    // eslint-disable-next-line no-console
     console.error('clearAllShowcaseCache error', e);
   }
 }

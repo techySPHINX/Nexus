@@ -842,10 +842,6 @@ enum EventCategory {
   NETWORKING
   COMMUNITY
 }
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 88f4bcb (Merge error resolved)
 
 // Enhanced Authentication Models
 model RefreshToken {
@@ -964,10 +960,4 @@ enum SecurityEventType {
   DOCUMENT_UPLOADED
   DOCUMENT_APPROVED
   DOCUMENT_REJECTED
-<<<<<<< HEAD
 }
-=======
->>>>>>> 7b4eaf9 (added indexing in projects and tags model)
-=======
-}
->>>>>>> 88f4bcb (Merge error resolved)
