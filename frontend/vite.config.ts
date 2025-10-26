@@ -16,12 +16,12 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     plugins: [
       react(),
       isAnalyze &&
-      visualizer({
-        filename: 'dist/stats.html',
-        open: true,
-        gzipSize: true,
-        brotliSize: true,
-      }),
+        visualizer({
+          filename: 'dist/stats.html',
+          open: true,
+          gzipSize: true,
+          brotliSize: true,
+        }),
     ].filter(Boolean),
     server: {
       host: true, // expose to LAN for mobile testing

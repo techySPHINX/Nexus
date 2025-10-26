@@ -1,5 +1,8 @@
 import localforage from 'localforage';
-import type { PaginatedProjectsInterface } from '@/types/ShowcaseType';
+import type {
+  PaginatedProjectsInterface,
+  ProjectPaginationResponse,
+} from '@/types/ShowcaseType';
 
 const STORE_NAME = 'nexus-showcase-cache';
 const lf = localforage.createInstance({ name: STORE_NAME });
@@ -17,11 +20,14 @@ export async function saveProjectsIndexPage(
   page: PaginatedProjectsInterface
 ) {
   try {
-    await lf.setItem(KEYS.PROJECTS_INDEX_PREFIX + pageKey, {
-      data: page.data,
-      pagination: page.pagination,
-      lastFetched: Date.now(),
-    });
+    await lf.setItem<PaginatedProjectsInterface & { lastFetched: number }>(
+      KEYS.PROJECTS_INDEX_PREFIX + pageKey,
+      {
+        data: page.data,
+        pagination: page.pagination,
+        lastFetched: Date.now(),
+      }
+    );
   } catch (e) {
     // swallow errors; persistence is best-effort
     // eslint-disable-next-line no-console
@@ -33,11 +39,18 @@ export async function restoreProjectsIndexPage(
   pageKey: string
 ): Promise<PaginatedProjectsInterface | null> {
   try {
-    const r = (await lf.getItem(KEYS.PROJECTS_INDEX_PREFIX + pageKey)) as any;
+    const r = await lf.getItem<
+      PaginatedProjectsInterface & { lastFetched: number }
+    >(KEYS.PROJECTS_INDEX_PREFIX + pageKey);
     if (!r) return null;
     return {
       data: r.data || [],
-      pagination: r.pagination || { nextCursor: undefined, hasNext: false },
+      pagination:
+        (r.pagination as ProjectPaginationResponse) ||
+        ({
+          nextCursor: undefined,
+          hasNext: false,
+        } as ProjectPaginationResponse),
     };
   } catch (e) {
     // eslint-disable-next-line no-console
@@ -51,11 +64,14 @@ export async function saveSmallList(
   page: PaginatedProjectsInterface
 ) {
   try {
-    await lf.setItem(key, {
-      data: page.data,
-      pagination: page.pagination,
-      lastFetched: Date.now(),
-    });
+    await lf.setItem<PaginatedProjectsInterface & { lastFetched: number }>(
+      key,
+      {
+        data: page.data,
+        pagination: page.pagination,
+        lastFetched: Date.now(),
+      }
+    );
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('saveSmallList error', e);
@@ -66,11 +82,18 @@ export async function restoreSmallList(
   key: string
 ): Promise<PaginatedProjectsInterface | null> {
   try {
-    const r = (await lf.getItem(key)) as any;
+    const r = await lf.getItem<
+      PaginatedProjectsInterface & { lastFetched: number }
+    >(key);
     if (!r) return null;
     return {
       data: r.data || [],
-      pagination: r.pagination || { nextCursor: undefined, hasNext: false },
+      pagination:
+        (r.pagination as ProjectPaginationResponse) ||
+        ({
+          nextCursor: undefined,
+          hasNext: false,
+        } as ProjectPaginationResponse),
     };
   } catch (e) {
     // eslint-disable-next-line no-console
