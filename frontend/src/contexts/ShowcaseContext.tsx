@@ -74,7 +74,7 @@ export interface ShowcaseContextType {
   };
   comments: Record<string, ProjectComment[]>;
   commentsPagination: Record<string, ProjectPaginationResponse>;
-  teamMembers: ProjectTeam[];
+  teamMembers: Record<string, ProjectTeam[]>;
   error: string | null;
   clearError: () => void;
 
@@ -191,7 +191,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   comments: {},
   commentsPagination: {},
   cacheInfo: { projects: 0, comments: 0 },
-  teamMembers: [],
+  teamMembers: {},
   allTypes: [],
   error: null,
   typeLoading: false,
@@ -295,7 +295,9 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const [collaborationRequests, setCollaborationRequests] = useState<
     CollaborationRequestInterface[]
   >([]);
-  const [teamMembers, setTeamMembers] = useState<ProjectTeam[]>([]);
+  const [teamMembers, setTeamMembers] = useState<Record<string, ProjectTeam[]>>(
+    {}
+  );
   const [error, setError] = useState<string | null>(null);
 
   // Cache states
@@ -765,6 +767,12 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           updates: details.updates || [],
         };
 
+        setTeamMembers((prev) => {
+          const next = { ...prev };
+          delete next[projectId];
+          return next;
+        });
+
         setProjectById(fullProject);
         setProjectByIdUpdates(details.updates || []);
 
@@ -789,7 +797,6 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           next.delete(projectId);
           return { ...prev, projectDetails: next };
         });
-        // setLoading(false); --- IGNORE ---
       }
     },
     [projects, user, getCachedProject, setCachedProject]
@@ -1644,7 +1651,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           projectId,
           data
         );
-        setTeamMembers((prev) => [...prev, response]);
+        setTeamMembers((prev) => ({
+          ...prev,
+          [projectId]: [...(prev[projectId] ?? []), response],
+        }));
       } catch (err) {
         setError(
           `Failed to create team member: ${err instanceof Error ? err.message : String(err)}`
@@ -1668,7 +1678,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       }));
       try {
         const response = await ShowcaseService.getProjectTeamMembers(projectId);
-        setTeamMembers(response);
+        setTeamMembers((prev) => ({ ...prev, [projectId]: response }));
       } catch (err) {
         setError(
           `Failed to get team members: ${err instanceof Error ? err.message : String(err)}`
@@ -1684,17 +1694,20 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const removeProjectTeamMember = useCallback(
-    async (projectId: string, userId: string) => {
+    async (projectId: string, teamMemberId: string) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
       setLoading(true);
       try {
-        await ShowcaseService.removeProjectTeamMember(projectId, userId);
-        setTeamMembers((prev) =>
-          prev.filter((member) => member.user?.id !== userId)
-        );
+        await ShowcaseService.removeProjectTeamMember(projectId, teamMemberId);
+        setTeamMembers((prev) => ({
+          ...prev,
+          [projectId]: (prev[projectId] ?? []).filter(
+            (member) => member.id !== teamMemberId
+          ),
+        }));
       } catch (err) {
         setError(
           `Failed to remove team member: ${err instanceof Error ? err.message : String(err)}`

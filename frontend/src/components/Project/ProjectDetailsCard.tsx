@@ -204,7 +204,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     if (newValue === 2 && comments.length === 0 && !loadingComments) {
       onLoadComments(1, false);
     }
-    if (newValue === 1 && (teamMembers?.length ?? 0) === 0) {
+    if (newValue === 1 && (teamMembers?.[project.id]?.length ?? 0) === 0) {
       onLoadTeamMembers();
     }
   };
@@ -236,7 +236,11 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const handleAddMember = async () => {
     if (!selectedUser || !onCreateTeamMember) return;
     // prevent duplicates
-    if (teamMembers?.some((m) => m.user?.id === selectedUser.id)) {
+    if (
+      (teamMembers?.[project.id] ?? []).some(
+        (m) => m.user?.id === selectedUser.id
+      )
+    ) {
       console.warn('User already a team member');
       return;
     }
@@ -821,8 +825,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       initial="hidden"
                       animate="visible"
                     >
-                      {(teamMembers ?? []).length ? (
-                        (teamMembers ?? []).map(
+                      {(teamMembers?.[project.id] ?? []).length ? (
+                        (teamMembers?.[project.id] ?? []).map(
                           (member: ProjectTeam, i: number) => (
                             <motion.div
                               key={member.id}
