@@ -8,7 +8,7 @@ const STORE_NAME = 'nexus-showcase-cache';
 const lf = localforage.createInstance({ name: STORE_NAME });
 
 export const KEYS = {
-  PROJECTS_INDEX_PREFIX: 'showcase:projects:page:',
+  PROJECTS_INDEX_PREFIX: 'showcase:allProjects:page:',
   SUPPORTED: 'showcase:supportedProjects:v1',
   FOLLOWED: 'showcase:followedProjects:v1',
   MYPROJECTS: 'showcase:myProjects:v1',

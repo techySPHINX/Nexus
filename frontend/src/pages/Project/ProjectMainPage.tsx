@@ -60,7 +60,7 @@ function TabPanel(props: TabPanelProps) {
 const ProjectsMainPage: React.FC = () => {
   const {
     projectCounts,
-    projects,
+    allProjects,
     projectsByUserId,
     supportedProjects,
     followedProjects,
@@ -156,7 +156,7 @@ const ProjectsMainPage: React.FC = () => {
         let currentDataLength = 0;
         switch (activeTab) {
           case 0:
-            currentDataLength = projects.data.length;
+            currentDataLength = allProjects.data.length;
             break;
           case 1:
             currentDataLength = projectsByUserId.data.length;
@@ -190,7 +190,7 @@ const ProjectsMainPage: React.FC = () => {
     getProjectsByUserId,
     getSupportedProjects,
     getFollowedProjects,
-    projects.data.length,
+    allProjects.data.length,
     projectsByUserId.data.length,
     supportedProjects.data.length,
     followedProjects.data.length,
@@ -201,7 +201,7 @@ const ProjectsMainPage: React.FC = () => {
   const getCurrentPagination = useCallback(() => {
     switch (activeTab) {
       case 0:
-        return projects.pagination;
+        return allProjects.pagination;
       case 1:
         return projectsByUserId.pagination;
       case 2:
@@ -209,12 +209,12 @@ const ProjectsMainPage: React.FC = () => {
       case 3:
         return followedProjects.pagination;
       default:
-        return projects.pagination;
+        return allProjects.pagination;
     }
   }, [
     activeTab,
     followedProjects.pagination,
-    projects.pagination,
+    allProjects.pagination,
     projectsByUserId.pagination,
     supportedProjects.pagination,
   ]);
@@ -269,7 +269,7 @@ const ProjectsMainPage: React.FC = () => {
   const getCurrentProjects = (): ProjectInterface[] => {
     switch (activeTab) {
       case 0:
-        return projects.data;
+        return allProjects.data;
       case 1:
         return projectsByUserId.data;
       case 2:
@@ -277,7 +277,7 @@ const ProjectsMainPage: React.FC = () => {
       case 3:
         return followedProjects.data;
       default:
-        return projects.data;
+        return allProjects.data;
     }
   };
 
@@ -296,25 +296,6 @@ const ProjectsMainPage: React.FC = () => {
       setSnackbar({ open: true, message: error, severity: 'error' });
     }
   }, [error]);
-
-  // Handle scroll for infinite loading
-  // useEffect(() => {
-  //   const handleScroll = () => {
-  //     if (loading || isLoadingMore || !getCurrentPagination().hasNext) return;
-
-  //     const scrollTop = document.documentElement.scrollTop;
-  //     const scrollHeight = document.documentElement.scrollHeight;
-  //     const clientHeight = document.documentElement.clientHeight;
-
-  //     // Load more when 100px from bottom
-  //     if (scrollTop + clientHeight >= scrollHeight - 100) {
-  //       loadMoreProjects();
-  //     }
-  //   };
-
-  //   window.addEventListener('scroll', handleScroll, { passive: true });
-  //   return () => window.removeEventListener('scroll', handleScroll);
-  // }, [loading, isLoadingMore, loadMoreProjects, getCurrentPagination]);
 
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
@@ -359,7 +340,7 @@ const ProjectsMainPage: React.FC = () => {
     setSelectedProjectId(project.id);
 
     try {
-      await getProjectById(project.id, forceRefresh);
+      await getProjectById(project.id, forceRefresh, activeTab);
     } catch (err) {
       console.error('Failed to load project details:', err);
     }
@@ -697,6 +678,7 @@ const ProjectsMainPage: React.FC = () => {
         <TabPanel value={activeTab} index={0}>
           <ProjectGrid
             projects={currentProjects}
+            tab={activeTab}
             loading={loading || tabLoading}
             error={error}
             user={{ id: user?.id || null }}
@@ -724,6 +706,7 @@ const ProjectsMainPage: React.FC = () => {
           <TabPanel key={tabIndex} value={activeTab} index={tabIndex}>
             <ProjectGrid
               projects={currentProjects}
+              tab={activeTab}
               loading={loading || tabLoading}
               error={error}
               user={{ id: user?.id || null }}
@@ -830,7 +813,7 @@ const ProjectsMainPage: React.FC = () => {
               loading={actionLoading.projectDetails.has(selectedProjectId)}
               currentUserId={user?.id}
               comments={comments[selectedProjectId] || []}
-              loadingComments={actionLoading.comment.has(selectedProjectId)}
+              loadingComments={actionLoading.comment}
               onLoadComments={(page, forceRefresh) =>
                 getComments(selectedProjectId, page, forceRefresh)
               }
@@ -839,6 +822,7 @@ const ProjectsMainPage: React.FC = () => {
               onCreateTeamMember={(data) =>
                 createProjectTeamMember(selectedProjectId, data)
               }
+              loadingTeamMembers={actionLoading.teamMembers}
               onRemoveTeamMember={(userId) =>
                 removeProjectTeamMember(selectedProjectId, userId)
               }

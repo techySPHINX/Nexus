@@ -273,6 +273,7 @@ export const ShowcaseService = {
     page: number = 1
   ): Promise<ProjectCommentsResponse> {
     try {
+      console.log('Fetching comments for project:', projectId, 'page:', page);
       const response = await api.get(`/showcase/${projectId}/comments`, {
         params: { page },
       });

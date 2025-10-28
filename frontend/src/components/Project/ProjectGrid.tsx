@@ -7,6 +7,7 @@ import { Add } from '@mui/icons-material';
 
 interface ProjectsGridProps {
   projects: ProjectInterface[];
+  tab: number;
   loading: boolean;
   error: string | null;
   isProjectOwner: (project: ProjectInterface | null) => boolean | null;
@@ -25,6 +26,7 @@ interface ProjectsGridProps {
 
 const ProjectGrid: React.FC<ProjectsGridProps> = ({
   projects,
+  tab,
   loading,
   error,
   onSupport,
@@ -156,6 +158,7 @@ const ProjectGrid: React.FC<ProjectsGridProps> = ({
               <motion.div variants={itemVariants}>
                 <ProjectCard
                   project={project}
+                  tab={tab}
                   currentUserId={user?.id}
                   isOwner={isProjectOwner(project)}
                   onSupport={onSupport}

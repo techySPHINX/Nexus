@@ -67,6 +67,7 @@ interface ProjectDetailModalProps {
   comments?: ProjectComment[];
   loading?: boolean;
   loadingComments?: boolean;
+  loadingTeamMembers?: boolean;
   currentUserId?: string;
   onClose: () => void;
   onSupport: (isSupported: boolean) => void;
@@ -128,6 +129,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   comments = [],
   loading = false,
   loadingComments = false,
+  loadingTeamMembers = false,
   currentUserId,
   onClose,
   onSupport,
@@ -141,7 +143,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onRefresh,
   onDelete,
 }) => {
-  const { teamMembers, actionLoading } = useShowcase();
+  const { teamMembers } = useShowcase();
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
   // team member search / create state
@@ -405,7 +407,10 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 >
                   <CalendarToday sx={{ fontSize: 16, mr: 0.5 }} />
                   <Typography variant="body2">
-                    {format(new Date(project.createdAt), 'MMM d, yyyy')}
+                    {project.createdAt &&
+                    !isNaN(new Date(project.createdAt).getTime())
+                      ? format(new Date(project.createdAt), 'MMM d, yyyy')
+                      : 'Unknown date'}
                   </Typography>
                 </Box>
                 {project.githubUrl && (
@@ -803,7 +808,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     </List>
                   </Box>
                 )}
-                {actionLoading.teamMembers ? (
+                {loadingTeamMembers ? (
                   <Box
                     sx={{
                       display: 'flex',
@@ -1010,7 +1015,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                               />
                             </ListItem>
                             {idx < comments.length - 1 && (
-                              <Divider variant="inset" component="li" />
+                              <Divider variant="inset" />
                             )}
                           </motion.div>
                         ))
