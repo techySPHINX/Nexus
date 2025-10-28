@@ -291,8 +291,7 @@ export const ShowcaseService = {
         role: data.role,
       };
       console.log('Adding team member to project:', projectId, payload);
-      const response = await api.post(`/showcase/${projectId}/team`, payload);
-      return response.data;
+      await api.post(`/showcase/${projectId}/team`, payload);
     } catch (error) {
       throw new Error(
         'Failed to add team member with error: ' + getErrorMessage(error)

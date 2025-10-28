@@ -1647,13 +1647,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       setLoading(true);
       try {
-        const response = await ShowcaseService.createProjectTeamMember(
-          projectId,
-          data
-        );
+        await ShowcaseService.createProjectTeamMember(projectId, data);
         setTeamMembers((prev) => ({
           ...prev,
-          [projectId]: [...(prev[projectId] ?? []), response],
+          [projectId]: [...(prev[projectId] ?? []), data],
         }));
       } catch (err) {
         setError(
