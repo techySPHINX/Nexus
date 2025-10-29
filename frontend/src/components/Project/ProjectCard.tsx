@@ -7,8 +7,6 @@ import {
   Stack,
   Tooltip,
   IconButton,
-  Snackbar,
-  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -35,6 +33,7 @@ import {
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { Role } from '@/types/profileType';
 import { useShowcase } from '@/contexts/ShowcaseContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface ProjectCardProps {
   project: ProjectInterface;
@@ -58,11 +57,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   onViewDetails,
 }) => {
   const { deleteProject, getProjectById, projectById } = useShowcase();
-  const [snackOpen, setSnackOpen] = useState(false);
-  const [snackMsg, setSnackMsg] = useState('');
-  const [snackSeverity, setSnackSeverity] = useState<
-    'success' | 'error' | 'info' | 'warning'
-  >('success');
+  const { showNotification } = useNotification();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -120,15 +115,11 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     setDeleting(true);
     try {
       await deleteProject(project.id);
-      setSnackMsg('Project deleted');
-      setSnackSeverity('success');
-      setSnackOpen(true);
+      showNotification?.('Project deleted', 'success');
       setConfirmDeleteOpen(false);
     } catch (error) {
       console.error('Failed to delete project', error);
-      setSnackMsg('Failed to delete project');
-      setSnackSeverity('error');
-      setSnackOpen(true);
+      showNotification?.('Failed to delete project', 'error');
     } finally {
       setDeleting(false);
     }
@@ -165,14 +156,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     }
     try {
       await onSupport(project.id, !!isSupported);
-      setSnackMsg(isSupported ? 'Removed support' : 'Supported project');
-      setSnackSeverity('success');
-      setSnackOpen(true);
+      showNotification?.(
+        isSupported ? 'Removed support' : 'Supported project',
+        'success'
+      );
     } catch (err) {
       console.error('Support action failed', err);
-      setSnackMsg('Action failed');
-      setSnackSeverity('error');
-      setSnackOpen(true);
+      showNotification?.('Action failed', 'error');
     }
   };
 
@@ -182,14 +172,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     }
     try {
       await onFollow(project.id, !!isFollowing);
-      setSnackMsg(isFollowing ? 'Unfollowed' : 'Following project');
-      setSnackSeverity('success');
-      setSnackOpen(true);
+      showNotification?.(
+        isFollowing ? 'Unfollowed' : 'Following project',
+        'success'
+      );
     } catch (err) {
       console.error('Follow action failed', err);
-      setSnackMsg('Action failed');
-      setSnackSeverity('error');
-      setSnackOpen(true);
+      showNotification?.('Action failed', 'error');
     }
   };
 
@@ -700,21 +689,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
         </Box>
       </Box>
 
-      {/* Snackbar */}
-      <Snackbar
-        open={snackOpen}
-        autoHideDuration={4000}
-        onClose={() => setSnackOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackOpen(false)}
-          severity={snackSeverity}
-          sx={{ width: '100%' }}
-        >
-          {snackMsg}
-        </Alert>
-      </Snackbar>
+      {/* Notifications are now handled by NotificationProvider */}
     </>
   );
 };

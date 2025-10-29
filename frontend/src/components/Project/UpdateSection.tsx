@@ -5,7 +5,7 @@ import {
   CreateProjectInterface,
 } from '@/types/ShowcaseType';
 import ProjectModal from './CreateProject';
-import { Snackbar, Alert } from '@mui/material';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface UpdateProjectModalProps {
   open: boolean;
@@ -26,11 +26,7 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
     (propProject as ProjectDetailInterface) || projectById || null;
 
   const [saving, setSaving] = React.useState(false);
-  const [snackbar, setSnackbar] = React.useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info' | 'warning';
-  }>({ open: false, message: '', severity: 'success' });
+  const { showNotification } = useNotification();
 
   const handleSubmit = async (data: CreateProjectInterface) => {
     if (!effectiveProject) return;
@@ -67,22 +63,14 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
         onUpdated(updated);
       }
 
-      setSnackbar({
-        open: true,
-        message: 'Project updated!',
-        severity: 'success',
-      });
+      showNotification?.('Project updated!', 'success');
       // close modal after a short delay so user can see the success snackbar
       setTimeout(() => {
         onClose();
       }, 300);
     } catch (err) {
       console.error('Failed to update project', err);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update project',
-        severity: 'error',
-      });
+      showNotification?.('Failed to update project', 'error');
     } finally {
       setSaving(false);
     }
@@ -99,21 +87,7 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
         loading={saving}
       />
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-          severity={snackbar.severity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      {/* Notifications handled by NotificationProvider */}
     </>
   );
 };
