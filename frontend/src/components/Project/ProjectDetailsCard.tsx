@@ -1043,121 +1043,126 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     ))}
                   </Stack>
                 ) : (
-                  <AnimatePresence initial={false}>
-                    <motion.div
-                      style={{ padding: 0, margin: 0 }}
-                      variants={containerStagger}
-                      initial="hidden"
-                      animate="visible"
-                    >
-                      {commentData.length ? (
-                        commentData.map(
-                          (comment: ProjectComment, idx: number) => (
-                            <motion.div
-                              key={comment.id ?? idx}
-                              variants={listItemVariants}
-                              custom={idx}
-                            >
-                              <ListItem
-                                alignItems="flex-start"
-                                sx={{ alignItems: 'flex-start' }}
+                  <>
+                    <AnimatePresence initial={false}>
+                      <motion.div
+                        style={{ padding: 0, margin: 0 }}
+                        variants={containerStagger}
+                        initial="hidden"
+                        animate="visible"
+                      >
+                        {commentData.length ? (
+                          commentData.map(
+                            (comment: ProjectComment, idx: number) => (
+                              <motion.div
+                                key={comment.id ?? idx}
+                                variants={listItemVariants}
+                                custom={idx}
                               >
-                                <ListItemAvatar>
-                                  <Tooltip
-                                    title={`View ${comment.user?.name}'s profile`}
-                                  >
-                                    <Avatar
-                                      src={comment.user?.profile?.avatarUrl}
-                                      sx={{ cursor: 'pointer' }}
-                                      onClick={() =>
-                                        window.open(
-                                          `/profile/${comment.user?.id}`,
-                                          '_blank'
-                                        )
-                                      }
+                                <ListItem
+                                  alignItems="flex-start"
+                                  sx={{ alignItems: 'flex-start' }}
+                                >
+                                  <ListItemAvatar>
+                                    <Tooltip
+                                      title={`View ${comment.user?.name}'s profile`}
                                     >
-                                      <Person />
-                                    </Avatar>
-                                  </Tooltip>
-                                </ListItemAvatar>
-                                <ListItemText
-                                  primary={
-                                    <Box
-                                      sx={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'baseline',
-                                      }}
-                                    >
-                                      <ProfileNameLink
-                                        user={
-                                          comment.user ?? {
-                                            id: 'unknown',
-                                            name: 'Unknown User',
-                                            role: undefined,
-                                            profile: { avatarUrl: '' },
-                                          }
+                                      <Avatar
+                                        src={comment.user?.profile?.avatarUrl}
+                                        sx={{ cursor: 'pointer' }}
+                                        onClick={() =>
+                                          window.open(
+                                            `/profile/${comment.user?.id}`,
+                                            '_blank'
+                                          )
                                         }
-                                        avatarSize={20}
-                                      />
-                                      <Typography
-                                        variant="caption"
-                                        color="text.secondary"
                                       >
-                                        {format(
-                                          new Date(comment.createdAt),
-                                          'MMM d, yyyy • h:mm a'
-                                        )}
+                                        <Person />
+                                      </Avatar>
+                                    </Tooltip>
+                                  </ListItemAvatar>
+                                  <ListItemText
+                                    primary={
+                                      <Box
+                                        sx={{
+                                          display: 'flex',
+                                          justifyContent: 'space-between',
+                                          alignItems: 'baseline',
+                                        }}
+                                      >
+                                        <ProfileNameLink
+                                          user={
+                                            comment.user ?? {
+                                              id: 'unknown',
+                                              name: 'Unknown User',
+                                              role: undefined,
+                                              profile: { avatarUrl: '' },
+                                            }
+                                          }
+                                          avatarSize={20}
+                                        />
+                                        <Typography
+                                          variant="caption"
+                                          color="text.secondary"
+                                        >
+                                          {format(
+                                            new Date(comment.createdAt),
+                                            'MMM d, yyyy • h:mm a'
+                                          )}
+                                        </Typography>
+                                      </Box>
+                                    }
+                                    secondary={
+                                      <Typography
+                                        variant="body1"
+                                        sx={{ mt: 1 }}
+                                      >
+                                        {comment.comment}
                                       </Typography>
-                                    </Box>
-                                  }
-                                  secondary={
-                                    <Typography variant="body1" sx={{ mt: 1 }}>
-                                      {comment.comment}
-                                    </Typography>
-                                  }
-                                />
-                              </ListItem>
-                              {idx < commentData.length - 1 && (
-                                <Divider variant="inset" />
-                              )}
-                            </motion.div>
+                                    }
+                                  />
+                                </ListItem>
+                                {idx < commentData.length - 1 && (
+                                  <Divider variant="inset" />
+                                )}
+                              </motion.div>
+                            )
                           )
-                        )
-                      ) : (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{ py: 2, textAlign: 'center' }}
-                        >
-                          No comments yet — be the first to comment.
-                        </Typography>
-                      )}
-                    </motion.div>
-                  </AnimatePresence>
+                        ) : (
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{ py: 2, textAlign: 'center' }}
+                          >
+                            No comments yet — be the first to comment.
+                          </Typography>
+                        )}
+                      </motion.div>
+                    </AnimatePresence>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {/* Quick load-more for incremental UX */}
+                      {comments?.pagination &&
+                        (comments.pagination.page ?? 1) <
+                          (comments.pagination.totalPages ?? 1) && (
+                          <Button
+                            size="large"
+                            variant="outlined"
+                            sx={{ mx: 'auto' }}
+                            onClick={() =>
+                              onLoadComments(
+                                (comments!.pagination!.page ?? 1) + 1,
+                                false
+                              )
+                            }
+                            disabled={loadingComments}
+                            aria-label="Load more comments"
+                          >
+                            {loadingComments ? 'Loading...' : 'Load more'}
+                          </Button>
+                        )}
+                    </Box>
+                  </>
                 )}
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                {/* Quick load-more for incremental UX */}
-                {comments?.pagination &&
-                  (comments.pagination.page ?? 1) <
-                    (comments.pagination.totalPages ?? 1) && (
-                    <Button
-                      size="large"
-                      variant="outlined"
-                      sx={{ mx: 'auto' }}
-                      onClick={() =>
-                        onLoadComments(
-                          (comments!.pagination!.page ?? 1) + 1,
-                          false
-                        )
-                      }
-                      disabled={loadingComments}
-                      aria-label="Load more comments"
-                    >
-                      {loadingComments ? 'Loading...' : 'Load more'}
-                    </Button>
-                  )}
               </Box>
             </TabPanel>
 
