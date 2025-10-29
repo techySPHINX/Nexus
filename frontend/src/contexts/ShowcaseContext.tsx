@@ -2,6 +2,7 @@ import { ShowcaseService } from '@/services/ShowcaseService';
 import {
   CollaborationRequestInterface,
   CollaborationStatus,
+  CommentPaginationResponse,
   CreateCollaborationRequestInterface,
   CreateProjectInterface,
   CreateProjectUpdateInterface,
@@ -9,7 +10,6 @@ import {
   PaginatedProjectsInterface,
   ProjectComment,
   ProjectDetailInterface,
-  ProjectPaginationResponse,
   ProjectTeam,
   ProjectUpdateInterface,
   Tags,
@@ -29,7 +29,7 @@ interface ProjectCache {
 interface CommentsCache {
   comments: ProjectComment[];
   lastFetched: number;
-  pagination: ProjectPaginationResponse;
+  pagination: CommentPaginationResponse;
 }
 
 // Cache configuration
@@ -73,8 +73,13 @@ export interface ShowcaseContextType {
     comment: boolean;
     projectDetails: Set<string>;
   };
-  comments: Record<string, ProjectComment[]>;
-  commentsPagination: Record<string, ProjectPaginationResponse>;
+  comments: Record<
+    string,
+    {
+      data: ProjectComment[];
+      pagination: CommentPaginationResponse;
+    }
+  >;
   teamMembers: Record<string, ProjectTeam[]>;
   error: string | null;
   clearError: () => void;
@@ -195,7 +200,6 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
     projectDetails: new Set<string>(),
   },
   comments: {},
-  commentsPagination: {},
   cacheInfo: { projects: 0, comments: 0 },
   teamMembers: {},
   allTypes: [],
@@ -313,11 +317,14 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   >(new Map());
 
   // Comments state (now backed by cache)
-  const [comments, setComments] = useState<Record<string, ProjectComment[]>>(
-    {}
-  );
-  const [commentsPagination, setCommentsPagination] = useState<
-    Record<string, ProjectPaginationResponse>
+  const [comments, setComments] = useState<
+    Record<
+      string,
+      {
+        data: ProjectComment[];
+        pagination: CommentPaginationResponse;
+      }
+    >
   >({});
 
   const [allTypes, setAllTypes] = useState<Tags[]>([]);
@@ -446,32 +453,29 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     []
   );
 
-  const getCachedComments = useCallback(
-    (projectId: string): ProjectComment[] | null => {
-      const cache = commentsCacheRef.current.get(projectId);
-      if (!cache) return null;
+  const getCachedComments = useCallback((projectId: string) => {
+    const cache = commentsCacheRef.current.get(projectId);
+    if (!cache) return null;
 
-      const isExpired =
-        Date.now() - cache.lastFetched > CACHE_CONFIG.COMMENTS_TTL;
-      if (isExpired) {
-        setCommentsCache((prev) => {
-          const newCache = new Map(prev);
-          newCache.delete(projectId);
-          return newCache;
-        });
-        return null;
-      }
+    const isExpired =
+      Date.now() - cache.lastFetched > CACHE_CONFIG.COMMENTS_TTL;
+    if (isExpired) {
+      setCommentsCache((prev) => {
+        const newCache = new Map(prev);
+        newCache.delete(projectId);
+        return newCache;
+      });
+      return null;
+    }
 
-      return cache.comments;
-    },
-    []
-  );
+    return cache;
+  }, []);
 
   const setCachedComments = useCallback(
     (
       projectId: string,
       comments: ProjectComment[],
-      pagination: ProjectPaginationResponse
+      pagination: CommentPaginationResponse
     ) => {
       setCommentsCache((prev) => {
         const newCache = new Map(prev);
@@ -781,6 +785,12 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         };
 
         setTeamMembers((prev) => {
+          const next = { ...prev };
+          delete next[projectId];
+          return next;
+        });
+
+        setComments((prev) => {
           const next = { ...prev };
           delete next[projectId];
           return next;
@@ -1627,7 +1637,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
         setComments((prev) => ({
           ...prev,
-          [projectId]: [response, ...(prev[projectId] ?? [])],
+          [projectId]: {
+            data: [response, ...(prev[projectId]?.data ?? [])],
+            pagination: prev[projectId]?.pagination,
+          },
         }));
 
         setProjectById((prev) =>
@@ -1682,27 +1695,23 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
         const cachedComments = getCachedComments(projectId);
         if (cachedComments) {
-          setComments((prev) => ({ ...prev, [projectId]: cachedComments }));
-          setCommentsPagination((prev) => ({
+          setComments((prev) => ({
             ...prev,
-            [projectId]: commentsCacheRef.current.get(projectId)
-              ?.pagination || {
-              page: 1,
-              pageSize: 10,
-              total: 0,
-              totalPages: 0,
-              hasNext: false,
-              hasPrev: false,
+            [projectId]: {
+              data: cachedComments.comments,
+              pagination: cachedComments.pagination,
             },
           }));
           return;
         }
       }
 
-      setActionLoading((prev) => ({
-        ...prev,
-        comment: true,
-      }));
+      if (page === 1) {
+        setActionLoading((prev) => ({
+          ...prev,
+          comment: true,
+        }));
+      }
 
       try {
         const response = await ShowcaseService.getComments(projectId, page);
@@ -1711,7 +1720,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           // First page - replace comments
           setComments((prev) => ({
             ...prev,
-            [projectId]: response.comments,
+            [projectId]: {
+              data: response.comments,
+              pagination: response.pagination,
+            },
           }));
           // Cache first page results
           setCachedComments(projectId, response.comments, response.pagination);
@@ -1719,14 +1731,12 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           // Subsequent pages - append comments
           setComments((prev) => ({
             ...prev,
-            [projectId]: [...(prev[projectId] ?? []), ...response.comments],
+            [projectId]: {
+              data: [...(prev[projectId]?.data ?? []), ...response.comments],
+              pagination: response.pagination,
+            },
           }));
         }
-
-        setCommentsPagination((prev) => ({
-          ...prev,
-          [projectId]: response.pagination,
-        }));
       } catch (err) {
         setError(
           `Failed to get project comments: ${err instanceof Error ? err.message : String(err)}`
@@ -1922,7 +1932,6 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       actionLoading,
       error,
       comments,
-      commentsPagination,
       teamMembers,
       cacheInfo,
       allTypes,
@@ -1976,7 +1985,6 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       cacheInfo,
       error,
       comments,
-      commentsPagination,
       teamMembers,
       allTypes,
       typeLoading,
