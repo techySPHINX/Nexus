@@ -27,6 +27,8 @@ import {
   Tooltip,
   Grid,
   useTheme,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Close,
@@ -60,6 +62,7 @@ import {
 import { User } from '@/types/profileType';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { useShowcase } from '@/contexts/ShowcaseContext';
+const UpdateSection = React.lazy(() => import('./UpdateSection'));
 import { apiService } from '@/services/api';
 
 interface ProjectDetailModalProps {
@@ -149,7 +152,76 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 }) => {
   const { teamMembers } = useShowcase();
   const theme = useTheme();
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [snackOpen, setSnackOpen] = useState(false);
+  const [snackMsg, setSnackMsg] = useState('');
+  const [snackSeverity, setSnackSeverity] = useState<
+    'success' | 'error' | 'info' | 'warning'
+  >('success');
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+
+  // action handlers show snackbar and call parent handlers
+  const handleSupportClick = async () => {
+    try {
+      await onSupport(isSupported);
+      setSnackMsg(isSupported ? 'Removed support' : 'Supported project');
+      setSnackSeverity('success');
+      setSnackOpen(true);
+    } catch (err) {
+      console.error(err);
+      setSnackMsg('Support action failed');
+      setSnackSeverity('error');
+      setSnackOpen(true);
+    }
+  };
+
+  const handleFollowClick = async () => {
+    try {
+      await onFollow(isFollowing);
+      setSnackMsg(isFollowing ? 'Unfollowed' : 'Following project');
+      setSnackSeverity('success');
+      setSnackOpen(true);
+    } catch (err) {
+      console.error(err);
+      setSnackMsg('Follow action failed');
+      setSnackSeverity('error');
+      setSnackOpen(true);
+    }
+  };
+
+  const handleRefreshClick = async () => {
+    try {
+      await onRefresh();
+      setSnackMsg('Refreshed');
+      setSnackSeverity('success');
+      setSnackOpen(true);
+    } catch (err) {
+      console.error(err);
+      setSnackMsg('Refresh failed');
+      setSnackSeverity('error');
+      setSnackOpen(true);
+    }
+  };
+
+  const handleDeleteConfirmed = async () => {
+    setDeleting(true);
+    try {
+      await onDelete();
+      setSnackMsg('Project deleted');
+      setSnackSeverity('success');
+      setSnackOpen(true);
+      setConfirmDeleteOpen(false);
+    } catch (err) {
+      console.error(err);
+      setSnackMsg('Delete failed');
+      setSnackSeverity('error');
+      setSnackOpen(true);
+    } finally {
+      setDeleting(false);
+    }
+  };
   // team member search / create state
   const [userSearch, setUserSearch] = useState('');
   const [userOptions, setUserOptions] = useState<User[]>([]);
@@ -1182,7 +1254,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                         aria-label={
                           isSupported ? 'Un-support project' : 'Support project'
                         }
-                        onClick={() => onSupport(isSupported)}
+                        onClick={handleSupportClick}
                         color={isSupported ? 'error' : 'default'}
                         size="large"
                       >
@@ -1201,7 +1273,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                         aria-label={
                           isFollowing ? 'Unfollow project' : 'Follow project'
                         }
-                        onClick={() => onFollow(isFollowing)}
+                        onClick={handleFollowClick}
                         color={isFollowing ? 'primary' : 'default'}
                         size="large"
                       >
@@ -1229,7 +1301,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
             <Box sx={{ display: 'flex', gap: 1 }}>
               <Button
-                onClick={onRefresh}
+                onClick={handleRefreshClick}
                 variant="outlined"
                 size="small"
                 aria-label="Refresh project details"
@@ -1237,15 +1309,26 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 Refresh
               </Button>
               {isOwner && (
-                <Button
-                  onClick={onDelete}
-                  variant="outlined"
-                  color="error"
-                  size="small"
-                  aria-label="Delete project"
-                >
-                  Delete
-                </Button>
+                <>
+                  <Button
+                    onClick={() => setUpdateModalOpen(true)}
+                    variant="contained"
+                    size="small"
+                    aria-label="Update project"
+                  >
+                    Update
+                  </Button>
+
+                  <Button
+                    onClick={() => setConfirmDeleteOpen(true)}
+                    variant="outlined"
+                    color="error"
+                    size="small"
+                    aria-label="Delete project"
+                  >
+                    Delete
+                  </Button>
+                </>
               )}
               <Button
                 onClick={onClose}
@@ -1256,6 +1339,80 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               </Button>
             </Box>
           </DialogActions>
+          {/* Lazy-loaded update modal — reuses UpdateSection component */}
+          {updateModalOpen && (
+            <React.Suspense
+              fallback={
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: 2,
+                  }}
+                >
+                  Loading editor…
+                </Box>
+              }
+            >
+              <UpdateSection
+                open={updateModalOpen}
+                project={project}
+                onClose={() => setUpdateModalOpen(false)}
+                onUpdated={() => {
+                  onRefresh();
+                  setUpdateModalOpen(false);
+                  setSnackMsg('Project updated');
+                  setSnackSeverity('success');
+                  setSnackOpen(true);
+                }}
+              />
+            </React.Suspense>
+          )}
+          {/* Confirm delete dialog */}
+          <Dialog
+            open={confirmDeleteOpen}
+            onClose={() => setConfirmDeleteOpen(false)}
+            aria-labelledby="confirm-delete-title"
+          >
+            <DialogTitle id="confirm-delete-title">Delete project?</DialogTitle>
+            <DialogContent>
+              Are you sure you want to delete this project?
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={() => setConfirmDeleteOpen(false)}
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteConfirmed}
+                color="error"
+                variant="contained"
+                disabled={deleting}
+                startIcon={deleting ? <CircularProgress size={16} /> : null}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Snackbar */}
+          <Snackbar
+            open={snackOpen}
+            autoHideDuration={4000}
+            onClose={() => setSnackOpen(false)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert
+              onClose={() => setSnackOpen(false)}
+              severity={snackSeverity}
+              sx={{ width: '100%' }}
+            >
+              {snackMsg}
+            </Alert>
+          </Snackbar>
         </>
       )}
     </Dialog>

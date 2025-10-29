@@ -6,6 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { useTheme } from '@mui/material/styles';
 import {
   Dialog,
   DialogTitle,
@@ -506,6 +507,25 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   // Accessibility: compute firstField id
   const firstFieldId = useMemo(() => 'project-title-field', []);
 
+  const theme = useTheme();
+
+  // Paper style override so MotionPaper can remain generic but visuals adapt to theme
+  const paperStyle: React.CSSProperties =
+    theme.palette.mode === 'dark'
+      ? {
+          background:
+            'linear-gradient(180deg, rgba(8,10,12,0.9) 0%, rgba(18,20,22,0.85) 50%, rgba(12,14,16,0.8) 100%)',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+          border: '1px solid rgba(255,255,255,0.03)',
+        }
+      : {
+          // keep previous light gradient for light mode
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.60) 0%, rgba(230,255,236,0.45) 50%, rgba(245,255,250,0.35) 100%)',
+          boxShadow: '0 12px 30px rgba(18, 60, 37, 0.12)',
+          border: '1px solid rgba(255,255,255,0.4)',
+        };
+
   return (
     <Dialog
       open
@@ -513,6 +533,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
       maxWidth="md"
       fullWidth
       PaperComponent={MotionPaper as any}
+      PaperProps={{ style: paperStyle }}
       aria-labelledby="project-modal-title"
       sx={{
         zIndex: 1400,
@@ -573,7 +594,9 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           maxHeight: '68vh',
           overflowY: 'auto',
           background:
-            'linear-gradient(180deg, rgba(255,255,255,0.6), rgba(240,255,245,0.5))',
+            theme.palette.mode === 'dark'
+              ? 'linear-gradient(180deg, rgba(18,18,20,0.6), rgba(12,12,14,0.45))'
+              : 'linear-gradient(180deg, rgba(255,255,255,0.6), rgba(240,255,245,0.5))',
           // Add this to ensure Autocomplete dropdowns can overflow
           position: 'relative', // This helps with z-index context
         }}

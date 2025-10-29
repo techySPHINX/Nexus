@@ -1,0 +1,121 @@
+import React from 'react';
+import { useShowcase } from '@/contexts/ShowcaseContext';
+import {
+  ProjectDetailInterface,
+  CreateProjectInterface,
+} from '@/types/ShowcaseType';
+import ProjectModal from './CreateProject';
+import { Snackbar, Alert } from '@mui/material';
+
+interface UpdateProjectModalProps {
+  open: boolean;
+  project?: ProjectDetailInterface | null;
+  onClose: () => void;
+  onUpdated?: (project: ProjectDetailInterface) => void;
+}
+
+const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
+  open,
+  project: propProject,
+  onClose,
+  onUpdated,
+}) => {
+  const { projectById, updateProject, refreshProjects, getProjectsByUserId } =
+    useShowcase();
+  const effectiveProject: ProjectDetailInterface | null =
+    (propProject as ProjectDetailInterface) || projectById || null;
+
+  const [saving, setSaving] = React.useState(false);
+  const [snackbar, setSnackbar] = React.useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info' | 'warning';
+  }>({ open: false, message: '', severity: 'success' });
+
+  const handleSubmit = async (data: CreateProjectInterface) => {
+    if (!effectiveProject) return;
+    setSaving(true);
+    try {
+      await updateProject(effectiveProject.id, data);
+
+      // Try to refresh lists (best-effort)
+      try {
+        await refreshProjects(1);
+      } catch {
+        try {
+          await getProjectsByUserId?.(effectiveProject.owner?.id);
+        } catch {
+          // ignore
+        }
+      }
+
+      if (onUpdated) {
+        const updated: ProjectDetailInterface = {
+          ...(effectiveProject as ProjectDetailInterface),
+          ...data,
+          title: data.title || effectiveProject.title,
+          description: data.description || effectiveProject.description,
+          status: data.status || effectiveProject.status,
+          githubUrl: data.githubUrl || effectiveProject.githubUrl,
+          websiteUrl: data.websiteUrl || effectiveProject.websiteUrl,
+          videoUrl: data.videoUrl || effectiveProject.videoUrl,
+          imageUrl: data.imageUrl || effectiveProject.imageUrl,
+          tags: data.tags || effectiveProject.tags,
+          skills: data.skills || effectiveProject.skills,
+          seeking: data.seeking || effectiveProject.seeking,
+        } as ProjectDetailInterface;
+        onUpdated(updated);
+      }
+
+      setSnackbar({
+        open: true,
+        message: 'Project updated!',
+        severity: 'success',
+      });
+      // close modal after a short delay so user can see the success snackbar
+      setTimeout(() => {
+        onClose();
+      }, 300);
+    } catch (err) {
+      console.error('Failed to update project', err);
+      setSnackbar({
+        open: true,
+        message: 'Failed to update project',
+        severity: 'error',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <>
+      <ProjectModal
+        project={effectiveProject as ProjectDetailInterface}
+        onClose={onClose}
+        onSubmit={handleSubmit}
+        loading={saving}
+      />
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
+  );
+};
+
+export default UpdateProjectModal;
