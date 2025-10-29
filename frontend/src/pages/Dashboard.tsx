@@ -34,10 +34,12 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 // import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useShowcase } from '@/contexts/ShowcaseContext';
 import useConnections from '../hooks/useConnections';
 import { apiService } from '../services/api';
 import { improvedWebSocketService } from '../services/websocket.improved';
 import type { WebSocketMessage } from '../services/websocket.improved';
+import NotificationMenu from '@/components/Notification/NotificationMenu';
 // import type { Connection, ConnectionSuggestion } from '../types/connections';
 
 interface DashboardStats {
@@ -119,11 +121,15 @@ const Dashboard: React.FC = () => {
     fetchAll,
   } = useConnections();
 
+  const { getAllProjects, allProjects } = useShowcase();
+
   // Fetch connections data when component mounts
   useEffect(() => {
     if (user?.id) {
       fetchAll({ page: 1, limit: 20 });
-
+      // Call getAllProjects with the expected signature from the hook (no second boolean arg)
+      getAllProjects();
+      console.log('projects:', allProjects);
       // Also test the API directly for debugging
       const testPendingRequests = async () => {
         try {
@@ -139,7 +145,7 @@ const Dashboard: React.FC = () => {
 
       testPendingRequests();
     }
-  }, [user?.id, fetchAll]);
+  }, [user?.id, fetchAll, getAllProjects, allProjects]);
 
   interface AppUserProfile {
     bio?: string;
@@ -294,6 +300,7 @@ const Dashboard: React.FC = () => {
 
         // Fetch message count
         await fetchMessageCount();
+        await getAllProjects();
 
         // Update stats with real data from connections
         setStats((prev) => ({
@@ -428,6 +435,7 @@ const Dashboard: React.FC = () => {
     suggestions,
     user,
     calculateProfileCompletion,
+    getAllProjects,
   ]);
 
   const quickActions = [
@@ -638,7 +646,7 @@ const Dashboard: React.FC = () => {
           </Paper>
 
           {/* Recent Activity */}
-          <Paper sx={{ p: 3 }}>
+          <Paper sx={{ p: 3, mb: 3 }}>
             <Box
               display="flex"
               justifyContent="space-between"
@@ -699,82 +707,44 @@ const Dashboard: React.FC = () => {
               )}
             </List>
           </Paper>
+
+          {/* Recommended Projects */}
+          <Paper sx={{ p: 3, mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
+              Recommended Projects
+            </Typography>
+            <List>
+              {allProjects.data.length === 0 ? (
+                <ListItem>
+                  <ListItemText
+                    primary="No recommended projects"
+                    secondary="Complete your profile to see recommendations"
+                  />
+                </ListItem>
+              ) : (
+                allProjects.data.map((project) => (
+                  <ListItem key={project.id}>
+                    <ListItemText
+                      primary={project.title}
+                      secondary={project.owner?.name || 'Unknown Owner'}
+                    />
+                  </ListItem>
+                ))
+              )}
+            </List>
+          </Paper>
         </Grid>
 
         {/* Right Column */}
         <Grid item xs={12} md={4}>
           {/* Notifications */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={3}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Notifications
-              </Typography>
-              <Chip
-                label={notifications.length}
-                size="small"
-                color={notifications.length > 0 ? 'primary' : 'default'}
-              />
-            </Box>
-            <List>
-              {notifications.length === 0 ? (
-                <ListItem>
-                  <ListItemText
-                    primary="No notifications"
-                    secondary="You're all caught up!"
-                  />
-                </ListItem>
-              ) : (
-                notifications.map((notification, index) => (
-                  <React.Fragment key={notification.id}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          {notification.type === 'message' && <Message />}
-                          {notification.type === 'connection' && <PersonAdd />}
-                          {notification.type === 'event' && <Event />}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={notification.title}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {notification.description}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {new Date(
-                                notification.timestamp
-                              ).toLocaleTimeString()}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {index < notifications.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))
-              )}
-            </List>
-            {notifications.length > 0 && (
-              <Button
-                variant="text"
-                size="small"
-                fullWidth
-                onClick={() => setNotifications([])}
-                sx={{ mt: 1 }}
-              >
-                Clear All
-              </Button>
-            )}
-          </Paper>
+          <NotificationMenu
+            open={true}
+            inline={true}
+            handleClose={function (): void {
+              throw new Error('Function not implemented.');
+            }}
+          />
 
           {/* Recent Posts */}
           <Paper sx={{ p: 3, mb: 3 }}>

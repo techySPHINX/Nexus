@@ -25,6 +25,7 @@ import { Role } from '@/types/profileType';
 
 interface ProjectCardProps {
   project: ProjectInterface;
+  tab: number;
   currentUserId?: string | null;
   isOwner?: boolean | null;
   onSupport: (projectId: string, isSupported: boolean) => void;
@@ -35,6 +36,7 @@ interface ProjectCardProps {
 
 const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
+  tab,
   currentUserId,
   isOwner,
   onSupport,
@@ -219,10 +221,10 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
           >
             <ProfileNameLink
               user={{
-                id: project.owner.id,
-                name: project.owner.name,
-                role: project.owner.role as Role,
-                profile: { avatarUrl: project.owner.profile?.avatarUrl },
+                id: project.owner?.id || '',
+                name: project.owner?.name || 'Cannot Load',
+                role: (project.owner?.role as Role) || 'Cannot Load',
+                profile: { avatarUrl: project.owner?.profile?.avatarUrl || '' },
               }}
               avatarSize={30}
               showRoleBadge={false}
@@ -249,14 +251,20 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
         {/* ✅ Status + Date */}
         <Chip
-          icon={statusConfig[project.status].icon}
-          label={statusConfig[project.status].label}
+          icon={
+            statusConfig[project.status]?.icon ?? (
+              <RocketLaunch sx={{ fontSize: 16 }} />
+            )
+          }
+          label={statusConfig[project.status]?.label ?? 'Unknown'}
           size="small"
           sx={{
             position: 'absolute',
             top: 16,
             left: 16,
-            background: statusConfig[project.status].gradient,
+            background:
+              statusConfig[project.status]?.gradient ??
+              'linear-gradient(135deg, #6b7280 0%, #374151 100%)',
             color: 'white',
             fontWeight: 600,
             backdropFilter: 'blur(10px)',
@@ -278,7 +286,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             backdropFilter: 'blur(4px)',
           }}
         >
-          {format(new Date(project.createdAt), 'MMM d, yyyy')}
+          {project.createdAt && !isNaN(new Date(project.createdAt).getTime())
+            ? format(new Date(project.createdAt), 'MMM d, yyyy')
+            : 'Unknown date'}
         </Typography>
 
         {/* ✅ Hover overlay — isolated from image */}
@@ -352,10 +362,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                 >
                   <ProfileNameLink
                     user={{
-                      id: project.owner.id,
-                      name: project.owner.name,
-                      role: project.owner.role as Role,
-                      profile: { avatarUrl: project.owner.profile?.avatarUrl },
+                      id: project.owner?.id || '',
+                      name: project.owner?.name || 'Cannot Load',
+                      role: (project.owner?.role as Role) || 'Cannot Load',
+                      profile: {
+                        avatarUrl: project.owner?.profile?.avatarUrl || '',
+                      },
                     }}
                     avatarSize={40}
                     linkToProfile={false}
@@ -367,58 +379,60 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               {/* Actions */}
               {!isOwner && (
                 <Stack direction="row" spacing={1} justifyContent="end">
-                  <Tooltip title={isSupported ? 'Unsupport' : 'Support'}>
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSupport(project.id, !!isSupported);
-                      }}
-                      sx={{
-                        background: isSupported
-                          ? 'rgba(255,107,107,0.2)'
-                          : 'rgba(255,255,255,0.1)',
-                        color: isSupported ? '#ff6b6b' : 'white',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        '&:hover': {
+                  {!(tab == 3) && (
+                    <Tooltip title={isSupported ? 'Unsupport' : 'Support'}>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSupport(project.id, !!isSupported);
+                        }}
+                        sx={{
                           background: isSupported
-                            ? 'rgba(255,107,107,0.3)'
-                            : 'rgba(255,255,255,0.2)',
-                          boxShadow: isSupported
-                            ? '0 0 10px #ff6b6b'
-                            : '0 0 10px #ffffff',
-                        },
-                      }}
-                    >
-                      {isSupported ? <Favorite /> : <FavoriteBorder />}
-                    </IconButton>
-                  </Tooltip>
-
-                  <Tooltip title={isFollowing ? 'Unfollow' : 'Follow'}>
-                    <IconButton
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onFollow(project.id, !!isFollowing);
-                      }}
-                      sx={{
-                        background: isFollowing
-                          ? 'rgba(116,185,255,0.2)'
-                          : 'rgba(255,255,255,0.1)',
-                        color: isFollowing ? '#74b9ff' : 'white',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        '&:hover': {
+                            ? 'rgba(255,107,107,0.2)'
+                            : 'rgba(255,255,255,0.1)',
+                          color: isSupported ? '#ff6b6b' : 'white',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          '&:hover': {
+                            background: isSupported
+                              ? 'rgba(255,107,107,0.3)'
+                              : 'rgba(255,255,255,0.2)',
+                            boxShadow: isSupported
+                              ? '0 0 10px #ff6b6b'
+                              : '0 0 10px #ffffff',
+                          },
+                        }}
+                      >
+                        {isSupported ? <Favorite /> : <FavoriteBorder />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {!(tab == 2) && (
+                    <Tooltip title={isFollowing ? 'Unfollow' : 'Follow'}>
+                      <IconButton
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onFollow(project.id, !!isFollowing);
+                        }}
+                        sx={{
                           background: isFollowing
-                            ? 'rgba(116,185,255,0.3)'
-                            : 'rgba(255,255,255,0.2)',
-                          boxShadow: isFollowing
-                            ? '0 0 10px #74b9ff'
-                            : '0 0 10px #ffffff',
-                        },
-                      }}
-                    >
-                      {isFollowing ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </Tooltip>
-
+                            ? 'rgba(116,185,255,0.2)'
+                            : 'rgba(255,255,255,0.1)',
+                          color: isFollowing ? '#74b9ff' : 'white',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          '&:hover': {
+                            background: isFollowing
+                              ? 'rgba(116,185,255,0.3)'
+                              : 'rgba(255,255,255,0.2)',
+                            boxShadow: isFollowing
+                              ? '0 0 10px #74b9ff'
+                              : '0 0 10px #ffffff',
+                          },
+                        }}
+                      >
+                        {isFollowing ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </Tooltip>
+                  )}
                   {onCollaborate && (
                     <Tooltip title="Collaborate">
                       <IconButton

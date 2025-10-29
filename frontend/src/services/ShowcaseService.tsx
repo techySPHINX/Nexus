@@ -61,7 +61,6 @@ export const ShowcaseService = {
 
   getAllProjects: async (filterProjectDto?: FilterProjectInterface) => {
     try {
-      console.log('Fetching all projects with filter:', filterProjectDto);
       const response = await api.get('/showcase/project', {
         params: filterProjectDto,
       });
@@ -274,6 +273,7 @@ export const ShowcaseService = {
     page: number = 1
   ): Promise<ProjectCommentsResponse> {
     try {
+      console.log('Fetching comments for project:', projectId, 'page:', page);
       const response = await api.get(`/showcase/${projectId}/comments`, {
         params: { page },
       });
@@ -287,9 +287,12 @@ export const ShowcaseService = {
 
   createProjectTeamMember: async (projectId: string, data: ProjectTeam) => {
     try {
-      console.log('Adding team member to project:', projectId, data);
-      const response = await api.post(`/showcase/${projectId}/team`, data);
-      return response.data;
+      const payload = {
+        userId: data.user?.id,
+        role: data.role,
+      };
+      console.log('Adding team member to project:', projectId, payload);
+      await api.post(`/showcase/${projectId}/team`, payload);
     } catch (error) {
       throw new Error(
         'Failed to add team member with error: ' + getErrorMessage(error)
@@ -299,6 +302,7 @@ export const ShowcaseService = {
 
   getProjectTeamMembers: async (projectId: string) => {
     try {
+      console.log('Fetching team members for project:', projectId);
       const response = await api.get(`/showcase/${projectId}/team`);
       return response.data;
     } catch (error) {

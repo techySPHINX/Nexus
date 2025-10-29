@@ -55,6 +55,7 @@ import {
   ProjectTeam,
   ProjectUpdateInterface,
   ProjectDetailInterface,
+  CommentPaginationResponse,
 } from '@/types/ShowcaseType';
 import { User } from '@/types/profileType';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
@@ -64,9 +65,13 @@ import { apiService } from '@/services/api';
 interface ProjectDetailModalProps {
   project: ProjectDetailInterface;
   open: boolean;
-  comments?: ProjectComment[];
+  comments?: {
+    data: ProjectComment[];
+    pagination: CommentPaginationResponse;
+  };
   loading?: boolean;
   loadingComments?: boolean;
+  loadingTeamMembers?: boolean;
   currentUserId?: string;
   onClose: () => void;
   onSupport: (isSupported: boolean) => void;
@@ -125,9 +130,10 @@ const containerStagger = {
 const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   project,
   open,
-  comments = [],
+  comments,
   loading = false,
   loadingComments = false,
+  loadingTeamMembers = false,
   currentUserId,
   onClose,
   onSupport,
@@ -141,7 +147,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onRefresh,
   onDelete,
 }) => {
-  const { teamMembers, actionLoading } = useShowcase();
+  const { teamMembers } = useShowcase();
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState(0);
   // team member search / create state
@@ -155,6 +161,9 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const [commentText, setCommentText] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const submitDebounce = useRef<number | null>(null);
+
+  // normalize comments prop into an array for rendering and length checks
+  const commentData: ProjectComment[] = comments?.data ?? [];
 
   // Accessibility: focus first action when open
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -197,14 +206,13 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     [status.IN_PROGRESS]: 'In Progress',
     [status.COMPLETED]: 'Completed',
   };
-
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
     // lazy load comments when user switches to comments tab
-    if (newValue === 2 && comments.length === 0 && !loadingComments) {
+    if (newValue === 2 && commentData.length === 0 && !loadingComments) {
       onLoadComments(1, false);
     }
-    if (newValue === 1 && (teamMembers?.length ?? 0) === 0) {
+    if (newValue === 1 && (teamMembers?.[project.id]?.length ?? 0) === 0) {
       onLoadTeamMembers();
     }
   };
@@ -236,7 +244,11 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const handleAddMember = async () => {
     if (!selectedUser || !onCreateTeamMember) return;
     // prevent duplicates
-    if (teamMembers?.some((m) => m.user?.id === selectedUser.id)) {
+    if (
+      (teamMembers?.[project.id] ?? []).some(
+        (m) => m.user?.id === selectedUser.id
+      )
+    ) {
       console.warn('User already a team member');
       return;
     }
@@ -401,7 +413,10 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 >
                   <CalendarToday sx={{ fontSize: 16, mr: 0.5 }} />
                   <Typography variant="body2">
-                    {format(new Date(project.createdAt), 'MMM d, yyyy')}
+                    {project.createdAt &&
+                    !isNaN(new Date(project.createdAt).getTime())
+                      ? format(new Date(project.createdAt), 'MMM d, yyyy')
+                      : 'Unknown date'}
                   </Typography>
                 </Box>
                 {project.githubUrl && (
@@ -799,7 +814,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     </List>
                   </Box>
                 )}
-                {actionLoading.teamMembers ? (
+                {loadingTeamMembers ? (
                   <Box
                     sx={{
                       display: 'flex',
@@ -821,8 +836,8 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       initial="hidden"
                       animate="visible"
                     >
-                      {(teamMembers ?? []).length ? (
-                        (teamMembers ?? []).map(
+                      {(teamMembers?.[project.id] ?? []).length ? (
+                        (teamMembers?.[project.id] ?? []).map(
                           (member: ProjectTeam, i: number) => (
                             <motion.div
                               key={member.id}
@@ -914,7 +929,33 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   />
                 </Box>
               )}
-
+              {/* top pagination removed — load more will be rendered at the bottom */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  mb: 2,
+                  mt: 1,
+                  gap: 2,
+                  flexWrap: 'wrap',
+                }}
+              >
+                <Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {(() => {
+                      const total =
+                        comments?.pagination?.total ?? commentData.length;
+                      const page = comments?.pagination?.page ?? 1;
+                      const perPage =
+                        comments?.pagination?.pageSize ?? commentData.length;
+                      const end = Math.min(page * perPage, total || 0);
+                      if (!total) return 'No comments';
+                      return `Showing 1-${end} of ${total} comment${total === 1 ? '' : 's'}`;
+                    })()}
+                  </Typography>
+                </Box>
+              </Box>
               {/* Comments list (scrollable) */}
               <Box sx={listContainerSx} aria-live="polite">
                 {loadingComments ? (
@@ -936,80 +977,81 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       variants={containerStagger}
                       initial="hidden"
                       animate="visible"
-                      exit="hidden"
                     >
-                      {comments.length ? (
-                        comments.map((comment: ProjectComment, idx: number) => (
-                          <motion.div
-                            key={comment.id ?? idx}
-                            variants={listItemVariants}
-                            custom={idx}
-                          >
-                            <ListItem
-                              alignItems="flex-start"
-                              sx={{ alignItems: 'flex-start' }}
+                      {commentData.length ? (
+                        commentData.map(
+                          (comment: ProjectComment, idx: number) => (
+                            <motion.div
+                              key={comment.id ?? idx}
+                              variants={listItemVariants}
+                              custom={idx}
                             >
-                              <ListItemAvatar>
-                                <Tooltip
-                                  title={`View ${comment.user?.name}'s profile`}
-                                >
-                                  <Avatar
-                                    src={comment.user?.profile?.avatarUrl}
-                                    sx={{ cursor: 'pointer' }}
-                                    onClick={() =>
-                                      window.open(
-                                        `/profile/${comment.user?.id}`,
-                                        '_blank'
-                                      )
-                                    }
+                              <ListItem
+                                alignItems="flex-start"
+                                sx={{ alignItems: 'flex-start' }}
+                              >
+                                <ListItemAvatar>
+                                  <Tooltip
+                                    title={`View ${comment.user?.name}'s profile`}
                                   >
-                                    <Person />
-                                  </Avatar>
-                                </Tooltip>
-                              </ListItemAvatar>
-                              <ListItemText
-                                primary={
-                                  <Box
-                                    sx={{
-                                      display: 'flex',
-                                      justifyContent: 'space-between',
-                                      alignItems: 'baseline',
-                                    }}
-                                  >
-                                    <ProfileNameLink
-                                      user={
-                                        comment.user ?? {
-                                          id: 'unknown',
-                                          name: 'Unknown User',
-                                          role: undefined,
-                                          profile: { avatarUrl: '' },
-                                        }
+                                    <Avatar
+                                      src={comment.user?.profile?.avatarUrl}
+                                      sx={{ cursor: 'pointer' }}
+                                      onClick={() =>
+                                        window.open(
+                                          `/profile/${comment.user?.id}`,
+                                          '_blank'
+                                        )
                                       }
-                                      avatarSize={20}
-                                    />
-                                    <Typography
-                                      variant="caption"
-                                      color="text.secondary"
                                     >
-                                      {format(
-                                        new Date(comment.createdAt),
-                                        'MMM d, yyyy • h:mm a'
-                                      )}
+                                      <Person />
+                                    </Avatar>
+                                  </Tooltip>
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={
+                                    <Box
+                                      sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'baseline',
+                                      }}
+                                    >
+                                      <ProfileNameLink
+                                        user={
+                                          comment.user ?? {
+                                            id: 'unknown',
+                                            name: 'Unknown User',
+                                            role: undefined,
+                                            profile: { avatarUrl: '' },
+                                          }
+                                        }
+                                        avatarSize={20}
+                                      />
+                                      <Typography
+                                        variant="caption"
+                                        color="text.secondary"
+                                      >
+                                        {format(
+                                          new Date(comment.createdAt),
+                                          'MMM d, yyyy • h:mm a'
+                                        )}
+                                      </Typography>
+                                    </Box>
+                                  }
+                                  secondary={
+                                    <Typography variant="body1" sx={{ mt: 1 }}>
+                                      {comment.comment}
                                     </Typography>
-                                  </Box>
-                                }
-                                secondary={
-                                  <Typography variant="body1" sx={{ mt: 1 }}>
-                                    {comment.comment}
-                                  </Typography>
-                                }
-                              />
-                            </ListItem>
-                            {idx < comments.length - 1 && (
-                              <Divider variant="inset" component="li" />
-                            )}
-                          </motion.div>
-                        ))
+                                  }
+                                />
+                              </ListItem>
+                              {idx < commentData.length - 1 && (
+                                <Divider variant="inset" />
+                              )}
+                            </motion.div>
+                          )
+                        )
                       ) : (
                         <Typography
                           variant="body2"
@@ -1022,6 +1064,28 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     </motion.div>
                   </AnimatePresence>
                 )}
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {/* Quick load-more for incremental UX */}
+                {comments?.pagination &&
+                  (comments.pagination.page ?? 1) <
+                    (comments.pagination.totalPages ?? 1) && (
+                    <Button
+                      size="large"
+                      variant="outlined"
+                      sx={{ mx: 'auto' }}
+                      onClick={() =>
+                        onLoadComments(
+                          (comments!.pagination!.page ?? 1) + 1,
+                          false
+                        )
+                      }
+                      disabled={loadingComments}
+                      aria-label="Load more comments"
+                    >
+                      {loadingComments ? 'Loading...' : 'Load more'}
+                    </Button>
+                  )}
               </Box>
             </TabPanel>
 
