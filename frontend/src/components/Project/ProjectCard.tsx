@@ -433,7 +433,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                       </IconButton>
                     </Tooltip>
                   )}
-                  ;
                   {onCollaborate && (
                     <Tooltip title="Collaborate">
                       <IconButton
