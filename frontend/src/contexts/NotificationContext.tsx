@@ -10,6 +10,7 @@ import {
 } from '@/services/notificationService';
 import { Notification, NotificationType } from '@/types/notification';
 import React, { createContext, useContext, useState, useCallback } from 'react';
+import { Snackbar, Alert } from '@mui/material';
 import { useAuth } from './AuthContext';
 
 interface NotificationContextType {
@@ -40,6 +41,11 @@ interface NotificationContextType {
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   deleteReadNotifications: () => Promise<void>;
+  /** lightweight helper to show a UI snackbar message */
+  showNotification?: (
+    message: string,
+    severity?: 'success' | 'error' | 'info' | 'warning'
+  ) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(
@@ -97,6 +103,22 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Lightweight snackbar helper state
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifMessage, setNotifMessage] = useState('');
+  const [notifSeverity, setNotifSeverity] = useState<
+    'success' | 'error' | 'info' | 'warning'
+  >('info');
+
+  const showNotification = (
+    message: string,
+    severity: 'success' | 'error' | 'info' | 'warning' = 'info'
+  ) => {
+    setNotifMessage(message);
+    setNotifSeverity(severity);
+    setNotifOpen(true);
+  };
 
   // Update the fetchAllUnreadCounts function
   const fetchAllUnreadCounts = useCallback(async () => {
@@ -387,9 +409,27 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         markAllAsRead,
         deleteNotification,
         deleteReadNotifications,
+        showNotification,
       }}
     >
       {children}
+
+      {/* Lightweight snackbar for quick messages across the app */}
+      <Snackbar
+        open={notifOpen}
+        autoHideDuration={4000}
+        onClose={() => setNotifOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setNotifOpen(false)}
+          severity={notifSeverity}
+          variant="filled"
+          sx={{ width: '100%' }}
+        >
+          {notifMessage}
+        </Alert>
+      </Snackbar>
     </NotificationContext.Provider>
   );
 };
