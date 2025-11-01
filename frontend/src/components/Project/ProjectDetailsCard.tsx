@@ -717,6 +717,40 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                         </Stack>
                       </Box>
                     )}
+
+                    {project.seeking && project.seeking.length > 0 && (
+                      <Box
+                        sx={{
+                          mt: 2,
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Typography
+                          variant="h6"
+                          gutterBottom
+                          color="info.main"
+                          fontWeight={700}
+                        >
+                          🤝 Looking for Help
+                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                          }}
+                        >
+                          {(project.seeking ?? []).map((skill) => (
+                            <Chip
+                              key={skill}
+                              label={skill}
+                              variant="outlined"
+                              color="primary"
+                            />
+                          ))}
+                        </Box>
+                      </Box>
+                    )}
                   </CardContent>
                 </Card>
               </Grid>
