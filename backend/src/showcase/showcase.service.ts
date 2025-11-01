@@ -21,16 +21,22 @@ export class ShowcaseService {
   ) {}
 
   async createProject(userId: string, createProjectDto: CreateProjectDto) {
+    // optimize image URL before creating the project
+    const optimizedImageUrl = await this.getOptimizedImageUrl(
+      (createProjectDto as any).imageUrl,
+    );
+
     const project = await this.prisma.project.create({
       data: {
-        ownerId: userId,
-        ...createProjectDto,
-        teamMembers: {
-          create: {
-            userId,
-            role: 'OWNER',
-          },
+      ownerId: userId,
+      imageUrl: optimizedImageUrl ?? (createProjectDto as any).imageUrl,
+      ...createProjectDto,
+      teamMembers: {
+        create: {
+        userId,
+        role: 'OWNER',
         },
+      },
       },
     });
 
@@ -65,7 +71,6 @@ export class ShowcaseService {
   ) {
     const project = await this.prisma.project.findUnique({
       where: { id: projectId },
-      select: { ownerId: true },
     });
     if (!project) {
       throw new Error('Project not found');
@@ -74,17 +79,75 @@ export class ShowcaseService {
       throw new Error('You are not the owner of this project');
     }
 
-    const updated = await this.prisma.project.update({
+    // If update includes an imageUrl, optimize it first
+    if ((updateProjectDto as any).imageUrl) {
+      const optimized = await this.getOptimizedImageUrl(
+      (updateProjectDto as any).imageUrl,
+      );
+      (updateProjectDto as any).imageUrl =
+      optimized ?? (updateProjectDto as any).imageUrl;
+    }
+
+    // determine which keys actually changed (simple shallow comparison)
+    const changedKeys = Object.keys(updateProjectDto).filter((key) => {
+      const oldVal = (project as any)[key];
+      const newVal = (updateProjectDto as any)[key];
+      // stringify to compare arrays/objects safely
+      return JSON.stringify(oldVal) !== JSON.stringify(newVal);
+    });
+
+    // prepare select object to return the updated fields (keep original behavior)
+    const selectObj = {
+      id: true,
+      ...Object.fromEntries(changedKeys.map((key) => [key, true])),
+    } as any;
+
+    // create a human-readable summary of changes for the project update record
+    const changeSummary =
+      changedKeys.length > 0
+      ? changedKeys
+        .map((k) => {
+          const oldVal = (project as any)[k];
+          const newVal = (updateProjectDto as any)[k];
+          return `Field "${k}" changed from "${JSON.stringify(
+          oldVal,
+          )}" to "${JSON.stringify(newVal)}"`;
+        })
+        .join('\n')
+      : 'No significant field changes detected.';
+
+    // create projectUpdate record alongside updating the project in a transaction
+    const [updatedProject] = await this.prisma.$transaction([
+      this.prisma.project.update({
       where: { id: projectId },
       data: updateProjectDto,
-      select: {
-        id: true,
-        ...Object.fromEntries(
-          Object.keys(updateProjectDto).map((key) => [key, true]),
-        ),
+      select: selectObj,
+      }),
+      this.prisma.projectUpdate.create({
+      data: {
+        projectId,
+        authorId: userId,
+        title: `Project updated: ${project.title}`,
+        content: changeSummary,
       },
+      }),
+    ]);
+
+    // notify followers about the new project update (post-transaction)
+    const followers = await this.prisma.projectFollower.findMany({
+      where: { projectId },
     });
-    return updated;
+
+    for (const follower of followers) {
+      await this.notificationService.create({
+        userId: follower.userId,
+        message: `The project "${project.title}" was updated.`,
+        type: 'PROJECT_UPDATE',
+      });
+    }
+
+    // return both updated project fields and the created projectUpdate for caller use
+    return { updatedProject };
   }
 
   async deleteProject(userId: string, projectId: string) {
@@ -351,10 +414,9 @@ export class ShowcaseService {
         id: true,
         title: true,
         imageUrl: true,
-        githubUrl: true,
         tags: true,
         status: true,
-        seeking: true,
+        seekingCollaboration: true,
         createdAt: true,
         updatedAt: true,
         owner: {
@@ -388,16 +450,8 @@ export class ShowcaseService {
       },
     });
 
-    // 👉 Inject optimized URLs
-    const optimizedProjects = await Promise.all(
-      projects.map(async (project) => ({
-        ...project,
-        optimizedImageUrl: await this.getOptimizedImageUrl(project.imageUrl),
-      })),
-    );
-
     return {
-      data: optimizedProjects,
+      data: projects,
       pagination: {
         nextCursor: projects.length ? projects[projects.length - 1].id : null,
         hasNext: projects.length === pageSize,
@@ -412,6 +466,7 @@ export class ShowcaseService {
         id: true,
         title: true,
         description: true,
+        githubUrl: true,
         imageUrl: true,
         videoUrl: true,
         websiteUrl: true,
@@ -424,24 +479,14 @@ export class ShowcaseService {
             teamMembers: true,
             updates: true,
           },
-        },
-        updates: {
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-        },
+        }
       },
     });
 
     if (!project) return null;
 
-    // 👉 Inject optimized URLs
-    const optimizedProjects = await this.getOptimizedImageUrl(project.imageUrl);
-
-    console.log('Optimized Image URL:', optimizedProjects);
-
     return {
       ...project,
-      optimizedImageUrl: optimizedProjects,
     };
   }
 

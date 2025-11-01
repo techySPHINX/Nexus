@@ -16,6 +16,7 @@ export interface CreateProjectInterface {
   skills: string[];
   tags: string[];
   status: status;
+  seekingCollaboration?: boolean;
   seeking?: string[];
 }
 
@@ -31,7 +32,8 @@ export interface ProjectInterface {
   githubUrl?: string;
   tags: string[];
   status: status;
-  seeking: string[];
+  seekingCollaboration?: string[];
+  seeking?: string[];
   createdAt: Date;
   updatedAt?: Date;
   owner: {

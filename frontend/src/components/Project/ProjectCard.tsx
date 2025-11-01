@@ -73,6 +73,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   // ✅ Memoize image URL to prevent recomputation / re-renders
   const webpUrl = useMemo(() => {
     if (!project.imageUrl) return undefined;
+    console.log('Computing webp URL for', project.imageUrl);
     return project.imageUrl.replace(/\.(jpg|jpeg|png)(\?.*)?$/i, '.webp$2');
   }, [project.imageUrl]);
 

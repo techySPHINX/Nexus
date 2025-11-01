@@ -510,6 +510,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       }
       setLoading(true);
       try {
+        console.log('Creating project wirh data', data);
         const response = await ShowcaseService.createProject(data);
         // setProjects((prev) => [response, ...prev]);
         setProjectCounts((prev) => ({

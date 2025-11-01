@@ -1,5 +1,5 @@
 // ProjectDetailModal.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -47,6 +47,9 @@ import {
   Code,
   Label,
   Send,
+  Build,
+  CheckCircle,
+  RocketLaunch,
 } from '@mui/icons-material';
 import { AddCircle, Delete } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -267,17 +270,27 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   );
   const isOwner = !!(currentUserId && project.owner?.id === currentUserId);
 
-  const statusColors: Record<status, 'default' | 'primary' | 'success'> = {
-    [status.IDEA]: 'default',
-    [status.IN_PROGRESS]: 'primary',
-    [status.COMPLETED]: 'success',
-  };
-
-  const statusLabels = {
-    [status.IDEA]: 'Idea',
-    [status.IN_PROGRESS]: 'In Progress',
-    [status.COMPLETED]: 'Completed',
-  };
+  // ✅ Status configuration (static)
+  const statusConfig = useMemo(
+    () => ({
+      [status.IDEA]: {
+        label: 'Idea',
+        gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        icon: <RocketLaunch sx={{ fontSize: 16 }} />,
+      },
+      [status.IN_PROGRESS]: {
+        label: 'In Progress',
+        gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        icon: <Build sx={{ fontSize: 16 }} />,
+      },
+      [status.COMPLETED]: {
+        label: 'Completed',
+        gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        icon: <CheckCircle sx={{ fontSize: 16 }} />,
+      },
+    }),
+    []
+  );
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
     // lazy load comments when user switches to comments tab
@@ -471,10 +484,25 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 }}
               >
                 <Chip
-                  label={statusLabels[project.status]}
-                  color={statusColors[project.status]}
+                  icon={
+                    statusConfig[project.status]?.icon ?? (
+                      <RocketLaunch sx={{ fontSize: 16 }} />
+                    )
+                  }
+                  label={statusConfig[project.status]?.label ?? 'Unknown'}
                   size="small"
-                  sx={{ fontWeight: 700 }}
+                  sx={{
+                    // position: 'absolute',
+                    top: 16,
+                    left: 16,
+                    background:
+                      statusConfig[project.status]?.gradient ??
+                      'linear-gradient(135deg, #6b7280 0%, #374151 100%)',
+                    color: 'white',
+                    fontWeight: 600,
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                  }}
                 />
                 <Box
                   sx={{
@@ -491,6 +519,15 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       : 'Unknown date'}
                   </Typography>
                 </Box>
+                {project.websiteUrl && (
+                  <Button
+                    size="small"
+                    startIcon={<Language />}
+                    onClick={() => window.open(project.websiteUrl, '_blank')}
+                  >
+                    Website
+                  </Button>
+                )}
                 {project.githubUrl && (
                   <Button
                     size="small"
@@ -680,8 +717,6 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                       <Box
                         sx={{
                           mt: 2,
-                          p: 2,
-                          bgcolor: 'info.light',
                           borderRadius: 2,
                         }}
                       >
@@ -693,11 +728,22 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                         >
                           🤝 Looking for Help
                         </Typography>
-                        <Typography variant="body1" color="info.main">
-                          {Array.isArray(project.seeking)
-                            ? project.seeking.join(', ')
-                            : project.seeking}
-                        </Typography>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            gap: 1,
+                          }}
+                        >
+                          {(project.seeking ?? []).map((skill) => (
+                            <Chip
+                              key={skill}
+                              label={skill}
+                              variant="outlined"
+                              color="primary"
+                            />
+                          ))}
+                        </Box>
                       </Box>
                     )}
                   </CardContent>
@@ -722,7 +768,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                 />
                 <Tab
                   icon={<Group />}
-                  label="Team"
+                  label={`Team (${project._count?.teamMembers ?? 0})`}
                   id="project-detail-tab-1"
                   aria-controls="project-detail-tabpanel-1"
                 />
@@ -750,31 +796,11 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               >
                 <Box sx={{ mb: 3 }}>
                   <Typography variant="h6" gutterBottom>
-                    Skills Required
+                    Project Tags
                   </Typography>
                   <Box
                     sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}
                   >
-                    {(project.skills ?? []).length ? (
-                      (project.skills ?? []).map((skill) => (
-                        <Chip
-                          key={skill}
-                          label={skill}
-                          variant="outlined"
-                          color="primary"
-                        />
-                      ))
-                    ) : (
-                      <Typography variant="body2" color="text.secondary">
-                        No skills listed.
-                      </Typography>
-                    )}
-                  </Box>
-
-                  <Typography variant="h6" gutterBottom>
-                    Project Tags
-                  </Typography>
-                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
                     {(project.tags ?? []).length ? (
                       (project.tags ?? []).map((tag) => (
                         <Chip
@@ -787,6 +813,25 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     ) : (
                       <Typography variant="body2" color="text.secondary">
                         No tags.
+                      </Typography>
+                    )}
+                  </Box>
+                  <Typography variant="h6" gutterBottom>
+                    Skills Used
+                  </Typography>
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                    {(project.skills ?? []).length ? (
+                      (project.skills ?? []).map((skill) => (
+                        <Chip
+                          key={skill}
+                          label={skill}
+                          variant="outlined"
+                          color="primary"
+                        />
+                      ))
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No skills listed.
                       </Typography>
                     )}
                   </Box>

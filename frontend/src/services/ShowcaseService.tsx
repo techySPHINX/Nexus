@@ -28,7 +28,7 @@ export const ShowcaseService = {
   ) => {
     try {
       const response = await api.put(`/showcase/project/${projectId}`, data);
-      return response.data;
+      return response.data.updatedProject;
     } catch (error) {
       throw new Error(
         'Failed to update project with error: ' + getErrorMessage(error)
@@ -64,6 +64,7 @@ export const ShowcaseService = {
       const response = await api.get('/showcase/project', {
         params: filterProjectDto,
       });
+      console.log('Fetched projects:', response.data);
       return response.data;
     } catch (error) {
       throw new Error(
