@@ -719,35 +719,113 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     )}
 
                     {project.seeking && project.seeking.length > 0 && (
-                      <Box
-                        sx={{
-                          mt: 2,
-                          borderRadius: 2,
-                        }}
-                      >
-                        <Typography
-                          variant="h6"
-                          gutterBottom
-                          color="info.main"
-                          fontWeight={700}
-                        >
-                          🤝 Looking for Help
-                        </Typography>
+                      <Box sx={{ mt: 2 }}>
+                        {/* Decorative styles + small keyframes for subtle motion */}
+                        <style>{`
+                          @keyframes seekingPulse {
+                            0% { box-shadow: 0 0 0 0 rgba(66,153,225,0.08); }
+                            50% { box-shadow: 0 10px 30px rgba(66,153,225,0.06); transform: translateY(-2px); }
+                            100% { box-shadow: 0 0 0 0 rgba(66,153,225,0.00); transform: translateY(0); }
+                          }
+                          @keyframes chipFloat {
+                            0% { transform: translateY(0); }
+                            50% { transform: translateY(-4px); }
+                            100% { transform: translateY(0); }
+                          }
+                        `}</style>
+
                         <Box
                           sx={{
                             display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 1,
+                            gap: 2,
+                            alignItems: 'center',
+                            p: 2,
+                            borderRadius: 2,
+                            background:
+                              'linear-gradient(90deg, rgba(14,165,233,0.06), rgba(99,102,241,0.04))',
+                            border: '1px solid rgba(99,102,241,0.08)',
                           }}
                         >
-                          {(project.seeking ?? []).map((skill) => (
-                            <Chip
-                              key={skill}
-                              label={skill}
-                              variant="outlined"
-                              color="primary"
-                            />
-                          ))}
+                          <Avatar
+                            sx={{
+                              bgcolor: 'info.main',
+                              width: 56,
+                              height: 56,
+                              boxShadow: '0 6px 18px rgba(99,102,241,0.14)',
+                              animation: 'seekingPulse 3s ease-in-out infinite',
+                            }}
+                          >
+                            <Handshake sx={{ color: 'white' }} />
+                          </Avatar>
+
+                          <Box sx={{ flex: 1 }}>
+                            <Typography
+                              variant="h6"
+                              gutterBottom
+                              sx={{
+                                fontWeight: 800,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                              }}
+                            >
+                              <Box component="span" aria-hidden>
+                                🤝
+                              </Box>
+                              Looking for collaborators
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mb: 1 }}
+                            >
+                              This project is actively seeking help for the
+                              following roles or skills — click a tag to learn
+                              more.
+                            </Typography>
+
+                            <Box
+                              sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
+                            >
+                              {(project.seeking ?? []).map((skill, idx) => (
+                                <Chip
+                                  key={skill + idx}
+                                  label={skill}
+                                  size="small"
+                                  clickable
+                                  sx={{
+                                    background: 'rgba(255,255,255,0.02)',
+                                    color: 'text.primary',
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    '&:hover': {
+                                      transform: 'translateY(-4px)',
+                                      boxShadow:
+                                        '0 10px 24px rgba(99,102,241,0.12)',
+                                    },
+                                    animation:
+                                      idx % 2 === 0
+                                        ? 'chipFloat 3.2s ease-in-out infinite'
+                                        : undefined,
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                          </Box>
+
+                          {/* Optional CTA for contributors */}
+                          {onCollaborate && !isOwner && (
+                            <Box>
+                              <Button
+                                variant="contained"
+                                color="secondary"
+                                startIcon={<Handshake />}
+                                onClick={onCollaborate}
+                                sx={{ whiteSpace: 'nowrap' }}
+                              >
+                                Offer help
+                              </Button>
+                            </Box>
+                          )}
                         </Box>
                       </Box>
                     )}
