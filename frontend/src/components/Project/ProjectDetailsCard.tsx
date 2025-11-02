@@ -89,6 +89,7 @@ interface ProjectDetailModalProps {
   isProjectOwner: boolean | null;
   onCreateTeamMember: (data: ProjectTeam) => Promise<void>;
   onRemoveTeamMember: (userId: string) => Promise<void>;
+  onLoadUpdates: () => void;
   onRefresh: () => void;
   onDelete: () => void;
 }
@@ -147,13 +148,14 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onCollaborate,
   onLoadComments,
   onLoadTeamMembers,
+  onLoadUpdates,
   onCreateComment,
   onCreateTeamMember,
   onRemoveTeamMember,
   onRefresh,
   onDelete,
 }) => {
-  const { teamMembers } = useShowcase();
+  const { teamMembers, updates, actionLoading } = useShowcase();
   const theme = useTheme();
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [snackOpen, setSnackOpen] = useState(false);
@@ -299,6 +301,9 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     }
     if (newValue === 1 && (teamMembers?.[project.id]?.length ?? 0) === 0) {
       onLoadTeamMembers();
+    }
+    if (newValue === 3 && (updates?.[project.id]?.length ?? 0) === 0) {
+      onLoadUpdates();
     }
   };
 
@@ -714,35 +719,113 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                     )}
 
                     {project.seeking && project.seeking.length > 0 && (
-                      <Box
-                        sx={{
-                          mt: 2,
-                          borderRadius: 2,
-                        }}
-                      >
-                        <Typography
-                          variant="h6"
-                          gutterBottom
-                          color="info.main"
-                          fontWeight={700}
-                        >
-                          🤝 Looking for Help
-                        </Typography>
+                      <Box sx={{ mt: 2 }}>
+                        {/* Decorative styles + small keyframes for subtle motion */}
+                        <style>{`
+                          @keyframes seekingPulse {
+                            0% { box-shadow: 0 0 0 0 rgba(66,153,225,0.08); }
+                            50% { box-shadow: 0 10px 30px rgba(66,153,225,0.06); transform: translateY(-2px); }
+                            100% { box-shadow: 0 0 0 0 rgba(66,153,225,0.00); transform: translateY(0); }
+                          }
+                          @keyframes chipFloat {
+                            0% { transform: translateY(0); }
+                            50% { transform: translateY(-4px); }
+                            100% { transform: translateY(0); }
+                          }
+                        `}</style>
+
                         <Box
                           sx={{
                             display: 'flex',
-                            flexWrap: 'wrap',
-                            gap: 1,
+                            gap: 2,
+                            alignItems: 'center',
+                            p: 2,
+                            borderRadius: 2,
+                            background:
+                              'linear-gradient(90deg, rgba(14,165,233,0.06), rgba(99,102,241,0.04))',
+                            border: '1px solid rgba(99,102,241,0.08)',
                           }}
                         >
-                          {(project.seeking ?? []).map((skill) => (
-                            <Chip
-                              key={skill}
-                              label={skill}
-                              variant="outlined"
-                              color="primary"
-                            />
-                          ))}
+                          <Avatar
+                            sx={{
+                              bgcolor: 'info.main',
+                              width: 56,
+                              height: 56,
+                              boxShadow: '0 6px 18px rgba(99,102,241,0.14)',
+                              animation: 'seekingPulse 3s ease-in-out infinite',
+                            }}
+                          >
+                            <Handshake sx={{ color: 'white' }} />
+                          </Avatar>
+
+                          <Box sx={{ flex: 1 }}>
+                            <Typography
+                              variant="h6"
+                              gutterBottom
+                              sx={{
+                                fontWeight: 800,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1,
+                              }}
+                            >
+                              <Box component="span" aria-hidden>
+                                🤝
+                              </Box>
+                              Looking for collaborators
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mb: 1 }}
+                            >
+                              This project is actively seeking help for the
+                              following roles or skills — click a tag to learn
+                              more.
+                            </Typography>
+
+                            <Box
+                              sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}
+                            >
+                              {(project.seeking ?? []).map((skill, idx) => (
+                                <Chip
+                                  key={skill + idx}
+                                  label={skill}
+                                  size="small"
+                                  clickable
+                                  sx={{
+                                    background: 'rgba(255,255,255,0.02)',
+                                    color: 'text.primary',
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    '&:hover': {
+                                      transform: 'translateY(-4px)',
+                                      boxShadow:
+                                        '0 10px 24px rgba(99,102,241,0.12)',
+                                    },
+                                    animation:
+                                      idx % 2 === 0
+                                        ? 'chipFloat 3.2s ease-in-out infinite'
+                                        : undefined,
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                          </Box>
+
+                          {/* Optional CTA for contributors */}
+                          {onCollaborate && !isOwner && (
+                            <Box>
+                              <Button
+                                variant="contained"
+                                color="secondary"
+                                startIcon={<Handshake />}
+                                onClick={onCollaborate}
+                                sx={{ whiteSpace: 'nowrap' }}
+                              >
+                                Offer help
+                              </Button>
+                            </Box>
+                          )}
                         </Box>
                       </Box>
                     )}
@@ -1213,67 +1296,85 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
             <TabPanel value={activeTab} index={3}>
               <Box sx={listContainerSx}>
-                <List>
-                  {(project.updates ?? []).length ? (
-                    (project.updates ?? []).map(
-                      (update: ProjectUpdateInterface, i: number) => (
-                        <motion.div
-                          key={update.id}
-                          initial="hidden"
-                          animate="visible"
-                          variants={listItemVariants}
-                          custom={i}
-                        >
-                          <ListItem alignItems="flex-start">
-                            <ListItemAvatar>
-                              <Avatar
-                                sx={{ bgcolor: theme.palette.primary.main }}
-                              >
-                                <Update />
-                              </Avatar>
-                            </ListItemAvatar>
-                            <ListItemText
-                              primary={
-                                <Typography variant="h6">
-                                  {update.title}
-                                </Typography>
-                              }
-                              secondary={
-                                <>
-                                  <Typography
-                                    variant="body2"
-                                    color="text.primary"
-                                    paragraph
-                                  >
-                                    {update.content}
+                {actionLoading?.updates ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      minHeight: 160,
+                    }}
+                  >
+                    <CircularProgress size={36} />
+                  </Box>
+                ) : (
+                  <List>
+                    {(updates?.[project.id] ?? []).length ? (
+                      (updates?.[project.id] ?? []).map(
+                        (update: ProjectUpdateInterface, i: number) => (
+                          <motion.div
+                            key={update.id}
+                            initial="hidden"
+                            animate="visible"
+                            variants={listItemVariants}
+                            custom={i}
+                          >
+                            <ListItem alignItems="flex-start">
+                              <ListItemAvatar>
+                                <Avatar
+                                  sx={{ bgcolor: theme.palette.primary.main }}
+                                >
+                                  <Update />
+                                </Avatar>
+                              </ListItemAvatar>
+                              <ListItemText
+                                primary={
+                                  <Typography variant="h6">
+                                    {update.title}
                                   </Typography>
-                                  <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                  >
-                                    {format(
-                                      new Date(update.createdAt),
-                                      'MMM d, yyyy • h:mm a'
-                                    )}
-                                  </Typography>
-                                </>
-                              }
-                            />
-                          </ListItem>
-                          <Divider variant="inset" component="li" />
-                        </motion.div>
+                                }
+                                secondary={
+                                  <>
+                                    <Typography
+                                      variant="body2"
+                                      color="text.primary"
+                                      paragraph
+                                    >
+                                      {update.content}
+                                    </Typography>
+                                    <Typography
+                                      variant="caption"
+                                      color="text.secondary"
+                                    >
+                                      {update.createdAt &&
+                                      !isNaN(
+                                        new Date(update.createdAt).getTime()
+                                      )
+                                        ? format(
+                                            new Date(update.createdAt),
+                                            'MMM d, yyyy • h:mm a'
+                                          )
+                                        : 'Unknown date'}
+                                    </Typography>
+                                  </>
+                                }
+                              />
+                            </ListItem>
+                            <Divider variant="inset" component="li" />
+                          </motion.div>
+                        )
                       )
-                    )
-                  ) : (
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ py: 2, textAlign: 'center' }}
-                    >
-                      No updates yet
-                    </Typography>
-                  )}
-                </List>
+                    ) : (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ py: 2, textAlign: 'center' }}
+                      >
+                        No updates yet
+                      </Typography>
+                    )}
+                  </List>
+                )}
               </Box>
             </TabPanel>
           </DialogContent>

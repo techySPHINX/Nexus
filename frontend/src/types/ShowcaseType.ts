@@ -67,7 +67,6 @@ export interface ProjectDetailInterface extends ProjectInterface {
     teamMembers: number;
     updates: number;
   };
-  updates: ProjectUpdateInterface[];
 }
 
 export interface ProjectComment {
@@ -115,9 +114,7 @@ export interface CreateProjectUpdateInterface {
 
 export interface ProjectUpdateInterface extends CreateProjectUpdateInterface {
   id: string;
-  projectId: string;
   createdAt: Date;
-  authorId: string;
 }
 
 export enum CollaborationStatus {

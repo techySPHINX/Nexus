@@ -163,6 +163,7 @@ export const ShowcaseService = {
   getProjectUpdates: async (projectId: string) => {
     try {
       const response = await api.get(`/showcase/project/${projectId}/updates`);
+      console.log('Fetched updates:', response.data);
       return response.data;
     } catch (error) {
       throw new Error(
@@ -286,6 +287,19 @@ export const ShowcaseService = {
     }
   },
 
+  async getUpdates(projectId: string) {
+    try {
+      console.log('Fetching updates for project:', projectId);
+      const response = await api.get(`/showcase/project/${projectId}/updates`);
+      console.log('Fetched updates:', response.data);
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        'Failed to get project updates with error: ' + getErrorMessage(error)
+      );
+    }
+  },
+
   createProjectTeamMember: async (projectId: string, data: ProjectTeam) => {
     try {
       const payload = {
@@ -322,6 +336,19 @@ export const ShowcaseService = {
     } catch (error) {
       throw new Error(
         'Failed to remove team member with error: ' + getErrorMessage(error)
+      );
+    }
+  },
+
+  getSeekingOptions: async (projectId: string) => {
+    try {
+      console.log('Fetching seeking options for project:', projectId);
+      const response = await api.get(`/showcase/${projectId}/seeking-status`);
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        'Failed to get project seeking options with error: ' +
+          getErrorMessage(error)
       );
     }
   },

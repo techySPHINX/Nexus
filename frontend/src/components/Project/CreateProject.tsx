@@ -98,6 +98,7 @@ const EMPTY_FORM: CreateProjectInterface = {
   skills: [],
   tags: [],
   status: status.IDEA,
+  seekingCollaboration: false,
   seeking: undefined, // Change from [] to undefined
 };
 

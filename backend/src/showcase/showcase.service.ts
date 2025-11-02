@@ -597,7 +597,7 @@ export class ShowcaseService {
         githubUrl: true,
         tags: true,
         status: true,
-        seeking: true,
+        seekingCollaboration: true,
         createdAt: true,
         updatedAt: true,
         owner: {
@@ -676,7 +676,7 @@ export class ShowcaseService {
         githubUrl: true,
         tags: true,
         status: true,
-        seeking: true,
+        seekingCollaboration: true,
         createdAt: true,
         updatedAt: true,
         owner: {
@@ -760,7 +760,7 @@ export class ShowcaseService {
         githubUrl: true,
         tags: true,
         status: true,
-        seeking: true,
+        seekingCollaboration: true,
         createdAt: true,
         updatedAt: true,
         owner: {
@@ -827,9 +827,16 @@ export class ShowcaseService {
   async getProjectUpdates(projectId: string) {
     return this.prisma.projectUpdate.findMany({
       where: { projectId },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        createdAt: true,
+      },
       orderBy: {
         createdAt: 'desc',
       },
+      take: 10,
     });
   }
 
@@ -1196,6 +1203,14 @@ export class ShowcaseService {
         },
       },
     });
+  }
+
+  async getSeekingOptions(projectId: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { seeking: true },
+    });
+    return project?.seeking || [];
   }
 
   async getAllTags() {

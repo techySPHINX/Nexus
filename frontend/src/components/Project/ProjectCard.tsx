@@ -111,6 +111,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   const followersCount =
     project._count?.followers || project.followers?.length || 0;
 
+  // Support both possible spellings used in codebase: seekingCollaboration or seekingCOllaboration
+  const seeking = Boolean(
+    (project as unknown as Record<string, unknown>)['seekingCollaboration'] ??
+      (project as unknown as Record<string, unknown>)['seekingCOllaboration'] ??
+      false
+  );
+
   // Centralized delete handler: use context action.
   const handleDeleteProject = async () => {
     setDeleting(true);
@@ -269,6 +276,17 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             @keyframes placeholderShimmer {
               0% { background-position: 200% 0; }
               100% { background-position: -200% 0; }
+            }
+            @keyframes seekFloat {
+              0% { transform: translateY(0); }
+              50% { transform: translateY(-6px); }
+              100% { transform: translateY(0); }
+            }
+
+            @keyframes seekGlow {
+              0% { box-shadow: 0 0 0px rgba(255,235,59,0.0); }
+              50% { box-shadow: 0 0 18px rgba(255,235,59,0.22); }
+              100% { box-shadow: 0 0 0px rgba(255,235,59,0.0); }
             }
           `}</style>
 
@@ -660,6 +678,56 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Persistent collaborate button (visible when not hovered). It glows/ floats when project seeks collaborators. */}
+          {onCollaborate &&
+            // !isOwner &&
+            project.seekingCollaboration && ( // && !isHovered
+              <Box
+                sx={{
+                  position: 'absolute',
+                  right: 16,
+                  bottom: 64,
+                  zIndex: 50,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* Permanent label next to the button. Glows when seeking. */}
+                <Box
+                  component="span"
+                  aria-hidden
+                  sx={{
+                    px: 1.25,
+                    py: 0.5,
+                    borderRadius: 2,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: seeking ? '#1f1a00' : 'rgba(255,255,255,0.9)',
+                    bgcolor: seeking
+                      ? 'rgba(255,242,150,0.95)'
+                      : 'rgba(255,255,255,0.04)',
+                    border: seeking
+                      ? '1px solid rgba(255,210,80,0.9)'
+                      : '1px solid rgba(255,255,255,0.06)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 0.5,
+                    ...(seeking
+                      ? {
+                          animation:
+                            'seekFloat 2.6s ease-in-out infinite, seekGlow 2.6s ease-in-out infinite',
+                          boxShadow: '0 6px 18px rgba(250,216,104,0.18)',
+                          transformOrigin: 'center',
+                        }
+                      : {}),
+                  }}
+                >
+                  {seeking ? 'Seeking collaborators' : 'Collaborate'}
+                </Box>
+              </Box>
+            )}
 
           {/* Update modal / panel — lazy-loaded UpdateSection */}
           <React.Suspense

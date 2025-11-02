@@ -276,6 +276,11 @@ export class ShowcaseController {
     return this.showcaseService.getTeamMembers(projectId);
   }
 
+  @Get(':id/seeking-status')
+  getSeekingStatus(@Param('id') projectId: string) {
+    return this.showcaseService.getSeekingOptions(projectId);
+  }
+
   @Get('tags')
   async getAllTags() {
     return this.showcaseService.getAllTags();
