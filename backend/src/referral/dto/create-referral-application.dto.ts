@@ -1,5 +1,5 @@
 
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
 
 
 /**
@@ -25,10 +25,11 @@ export class CreateReferralApplicationDto {
   /**
    * The URL or path to the uploaded resume file.
    * This field is typically populated after the file is uploaded and processed.
-   * @example "https://example.com/resume.pdf"
+   * @example "https://example.com/resume.pdf" or "https://drive.google.com/file/d/..."
    */
   @IsString()
   @IsNotEmpty()
+  @IsUrl({ require_protocol: true, protocols: ['http', 'https'] })
   resumeUrl: string;
 
   /**

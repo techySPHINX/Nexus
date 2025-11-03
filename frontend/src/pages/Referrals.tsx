@@ -90,7 +90,7 @@ interface CreateReferralDto {
 
 interface CreateApplicationDto {
   referralId: string;
-  resumeFile: File | null;
+  resumeLink?: string;
   coverLetter?: string;
 }
 
@@ -106,6 +106,8 @@ const Referrals: React.FC = () => {
     null
   );
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [appsDialogOpen, setAppsDialogOpen] = useState(false);
+  const [referralApps, setReferralApps] = useState<ReferralApplication[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const didInit = useRef(false);
@@ -123,7 +125,7 @@ const Referrals: React.FC = () => {
 
   const [applicationForm, setApplicationForm] = useState<CreateApplicationDto>({
     referralId: '',
-    resumeFile: null,
+    resumeLink: '',
     coverLetter: '',
   });
 
@@ -166,6 +168,33 @@ const Referrals: React.FC = () => {
       setLoading(false);
     }
   }, [user]);
+
+  const openReferralApplications = async (referralId: string) => {
+    try {
+      const res = await apiService.referrals.getApplications(referralId);
+      setReferralApps(res.data || []);
+      setAppsDialogOpen(true);
+    } catch (e) {
+      console.error('Failed to load applications', e);
+      setError('Failed to load applications');
+    }
+  };
+
+  const updateApplicationStatus = async (
+    applicationId: string,
+    status: 'REVIEWED' | 'ACCEPTED' | 'REJECTED',
+  ) => {
+    try {
+      await apiService.referrals.updateApplicationStatus(applicationId, status);
+      // refresh local list
+      setReferralApps((prev) =>
+        prev.map((a) => (a.id === applicationId ? { ...a, status } : a)),
+      );
+    } catch (e) {
+      console.error('Failed to update application status', e);
+      setError('Failed to update application status');
+    }
+  };
 
   // Fetch referrals and applications
   useEffect(() => {
@@ -214,14 +243,28 @@ const Referrals: React.FC = () => {
         setError('Please provide an application deadline.');
         return;
       }
-      // Normalize deadline to ISO if provided
+
+      // Validate referralLink (optional). Only include if valid absolute URL
+      let safeReferralLink: string | undefined = undefined;
+      if (createForm.referralLink && createForm.referralLink.trim().length > 0) {
+        try {
+          const url = new URL(createForm.referralLink.trim());
+          if (url.protocol === 'http:' || url.protocol === 'https:') {
+            safeReferralLink = url.toString();
+          }
+        } catch (_) {
+          // ignore invalid link; do not include in payload
+        }
+      }
+
       const body = {
         ...createForm,
         deadline: createForm.deadline
           ? new Date(createForm.deadline).toISOString()
           : undefined,
-        referralLink: createForm.referralLink || undefined,
+        referralLink: safeReferralLink,
       };
+
       await apiService.referrals.create(body);
       setCreateDialogOpen(false);
       setCreateForm({
@@ -242,28 +285,58 @@ const Referrals: React.FC = () => {
 
   const handleApply = async () => {
     try {
-      if (!applicationForm.resumeFile) {
-        setError('Please select a resume file to upload.');
+      if (!applicationForm.resumeLink || !applicationForm.resumeLink.trim()) {
+        setError('Please provide a resume link (Google Drive or URL).');
         return;
       }
-      const formData = new FormData();
-      formData.append('referralId', applicationForm.referralId);
-      if (applicationForm.coverLetter) {
-        formData.append('coverLetter', applicationForm.coverLetter);
-      }
-      formData.append('resume', applicationForm.resumeFile);
 
-      await apiService.referrals.apply(formData);
+      // Validate and normalize URL format
+      let resumeUrl = applicationForm.resumeLink.trim();
+      
+      // Check if it's a valid URL format
+      try {
+        new URL(resumeUrl);
+      } catch (e) {
+        // If URL parsing fails, check if it might be a Google Drive ID or partial URL
+        if (resumeUrl.includes('drive.google.com') || resumeUrl.includes('docs.google.com')) {
+          // Try to fix common Google Drive URL issues
+          if (!resumeUrl.startsWith('http://') && !resumeUrl.startsWith('https://')) {
+            resumeUrl = 'https://' + resumeUrl;
+          }
+          // Validate again after adding protocol
+          try {
+            new URL(resumeUrl);
+          } catch (e2) {
+            setError('Please provide a valid URL (must start with http:// or https://)');
+            return;
+          }
+        } else {
+          setError('Please provide a valid URL (must start with http:// or https://)');
+          return;
+        }
+      }
+
+      const response = await apiService.referrals.apply({
+        referralId: applicationForm.referralId,
+        resumeUrl: resumeUrl,
+        coverLetter: applicationForm.coverLetter?.trim() || undefined,
+      });
+
+      // Success - show message and reset
+      setError(null);
       setApplyDialogOpen(false);
       setApplicationForm({
         referralId: '',
-        resumeFile: null,
+        resumeLink: '',
         coverLetter: '',
       });
       fetchApplications();
-    } catch (err) {
+      fetchReferrals(); // Refresh to show updated application count
+    } catch (err: any) {
       console.error('Error applying:', err);
-      setError('Failed to submit application');
+      // Extract error message from response
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to submit application';
+      setError(errorMessage);
     }
   };
 
@@ -526,6 +599,13 @@ const Referrals: React.FC = () => {
                       )}
                       {user?.id === referral.alumniId && (
                         <>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => openReferralApplications(referral.id)}
+                          >
+                            Applications ({referral.applications?.length ?? 0})
+                          </Button>
                           <IconButton size="small" color="primary">
                             <Edit />
                           </IconButton>
@@ -653,6 +733,7 @@ const Referrals: React.FC = () => {
                   setCreateForm({ ...createForm, referralLink: e.target.value })
                 }
                 placeholder="https://company.com/job/123"
+                helperText="Leave blank if none. Must be a valid http(s) URL if provided."
               />
             </Grid>
             <Grid item xs={12}>
@@ -699,26 +780,22 @@ const Referrals: React.FC = () => {
           )}
 
           <Grid container spacing={2}>
+            {/* Resume link only (no upload) */}
             <Grid item xs={12}>
-              <Button variant="outlined" component="label">
-                Upload Resume (PDF)
-                <input
-                  type="file"
-                  hidden
-                  accept="application/pdf"
-                  onChange={(e) =>
-                    setApplicationForm({
-                      ...applicationForm,
-                      resumeFile: e.target.files?.[0] || null,
-                    })
-                  }
-                />
-              </Button>
-              {applicationForm.resumeFile && (
-                <Typography variant="caption" sx={{ ml: 1 }}>
-                  {applicationForm.resumeFile.name}
-                </Typography>
-              )}
+              <TextField
+                fullWidth
+                label="Resume Link (Google Drive or URL)"
+                value={applicationForm.resumeLink}
+                onChange={(e) =>
+                  setApplicationForm({
+                    ...applicationForm,
+                    resumeLink: e.target.value,
+                  })
+                }
+                placeholder="https://drive.google.com/... or any accessible URL"
+                helperText="Paste your resume link (Google Drive share link or any public URL)"
+                required
+              />
             </Grid>
             <Grid item xs={12}>
               <TextField
@@ -827,6 +904,59 @@ const Referrals: React.FC = () => {
               Apply
             </Button>
           )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Applications Dialog for Alumni */}
+      <Dialog
+        open={appsDialogOpen}
+        onClose={() => setAppsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Applications</DialogTitle>
+        <DialogContent dividers>
+          {referralApps.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No applications yet.
+            </Typography>
+          ) : (
+            <Stack spacing={2}>
+              {referralApps.map((app) => (
+                <Card key={app.id} variant="outlined">
+                  <CardContent>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Box>
+                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                          {app.applicant?.name} ({app.applicant?.role})
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Applied {new Date(app.createdAt).toLocaleString()}
+                        </Typography>
+                      </Box>
+                      <Chip label={app.status} color={getStatusColor(app.status)} size="small" />
+                    </Stack>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                      <Button size="small" variant="outlined" startIcon={<Visibility />} onClick={() => window.open(app.resumeUrl, '_blank')}>
+                        View Resume
+                      </Button>
+                      {app.coverLetter && (
+                        <Button size="small" variant="outlined" startIcon={<Description />} onClick={() => alert(app.coverLetter)}>
+                          View Cover Letter
+                        </Button>
+                      )}
+                      <Button size="small" onClick={() => updateApplicationStatus(app.id, 'REVIEWED')}>Mark Reviewed</Button>
+                      <Button size="small" color="success" onClick={() => updateApplicationStatus(app.id, 'ACCEPTED')}>Accept</Button>
+                      <Button size="small" color="error" onClick={() => updateApplicationStatus(app.id, 'REJECTED')}>Reject</Button>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAppsDialogOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 

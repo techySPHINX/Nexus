@@ -389,11 +389,6 @@ export class ReferralService {
     dto: UpdateReferralApplicationDto,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (user.role !== Role.ADMIN) {
-      throw new ForbiddenException(
-        'Only admins can update referral application status.',
-      );
-    }
 
     const application = await this.prisma.referralApplication.findUnique({
       where: { id: applicationId },
@@ -403,12 +398,21 @@ export class ReferralService {
       throw new NotFoundException('Referral application not found.');
     }
 
+    // Permit ADMINs or the ALUM who posted the referral to update status
+    const isAdmin = user.role === Role.ADMIN;
+    const isReferralOwner = application.referral.alumniId === userId;
+    if (!isAdmin && !isReferralOwner) {
+      throw new ForbiddenException(
+        'You are not authorized to update this application status.',
+      );
+    }
+
     const updatedApplication = await this.prisma.referralApplication.update({
       where: { id: applicationId },
       data: dto,
     });
 
-    // Notify the student about the application status change
+    // Notify the applicant about the application status change
     if (dto.status && dto.status !== application.status) {
       await this.notificationService.create({
         userId: application.applicantId,

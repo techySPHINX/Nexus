@@ -51,7 +51,7 @@ export class ReferralController {
   @Post()
   @Roles(Role.ALUM)
   async createReferral(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body() dto: CreateReferralDto,
   ) {
     return this.referralService.createReferral(userId, dto);
@@ -88,7 +88,7 @@ export class ReferralController {
    */
   @Put(':id')
   async updateReferral(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateReferralDto,
   ) {
@@ -103,7 +103,7 @@ export class ReferralController {
    */
   @Delete(':id')
   async deleteReferral(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Param('id') id: string,
   ) {
     return this.referralService.deleteReferral(userId, id);
@@ -122,22 +122,15 @@ export class ReferralController {
    */
   @Post('apply')
   @Roles(Role.STUDENT, Role.ALUM)
-  @UseInterceptors(FileInterceptor('resume'))
   async createReferralApplication(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body() dto: CreateReferralApplicationDto,
-    @UploadedFile() resume: Express.Multer.File,
   ) {
-    if (!resume) {
-      throw new BadRequestException('Resume file is required.');
+    if (!dto.resumeUrl) {
+      throw new BadRequestException('Resume link is required.');
     }
 
-    const resumeUrl = await this.legacyFilesService.saveFile(resume, userId);
-
-    return this.referralService.createReferralApplication(userId, {
-      ...dto,
-      resumeUrl: resumeUrl,
-    });
+    return this.referralService.createReferralApplication(userId, dto);
   }
 
   /**
@@ -173,9 +166,9 @@ export class ReferralController {
    * @returns A promise that resolves to the updated referral application.
    */
   @Put('applications/:id/status')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.ALUM)
   async updateReferralApplicationStatus(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateReferralApplicationDto,
   ) {
@@ -190,7 +183,7 @@ export class ReferralController {
   @Get('applications/my')
   @Roles(Role.STUDENT, Role.ALUM)
   @SkipThrottle()
-  async getMyApplications(@GetCurrentUser('sub') userId: string) {
+  async getMyApplications(@GetCurrentUser('userId') userId: string) {
     return this.referralService.getMyApplications(userId);
   }
 
@@ -199,7 +192,7 @@ export class ReferralController {
   @Roles(Role.ALUM)
   @SkipThrottle()
   async getReferralApplications(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Param('id') referralId: string,
   ) {
     return this.referralService.getReferralApplications(referralId, userId);

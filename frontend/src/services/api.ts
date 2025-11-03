@@ -124,11 +124,9 @@ export const apiService = {
     getById: (id: string) => api.get(`/referral/${id}`),
     update: (id: string, data: unknown) => api.put(`/referral/${id}`, data),
     delete: (id: string) => api.delete(`/referral/${id}`),
-    // For applications, backend expects multipart/form-data with field name 'resume'
-    apply: (formData: FormData) =>
-      api.post('/referral/apply', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      }),
+    // Applications now expect JSON body with resumeUrl (Drive link)
+    apply: (data: { referralId: string; resumeUrl: string; coverLetter?: string }) =>
+      api.post('/referral/apply', data),
     getApplications: (referralId: string) =>
       api.get(`/referral/${referralId}/applications`),
     getAllApplications: () => api.get('/referral/applications'),
