@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUrl, IsArray, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsUrl, IsArray, IsEnum, IsBoolean } from 'class-validator';
 import { ProjectStatus } from '@prisma/client';
 
 export class CreateProjectDto {
@@ -34,6 +34,10 @@ export class CreateProjectDto {
 
   @IsEnum(ProjectStatus)
   status: ProjectStatus;
+
+  @IsOptional()
+  @IsBoolean()
+  seekingCollaboration?: boolean;
 
   @IsOptional()
   @IsArray()

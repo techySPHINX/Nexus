@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, Box, Typography, Alert, Button, Skeleton } from '@mui/material';
+import { Grid, Box, Typography, Button, Skeleton } from '@mui/material';
 import { motion } from 'framer-motion';
 import { ProjectInterface } from '@/types/ShowcaseType';
 const ProjectCard = React.lazy(() => import('./ProjectCard'));
@@ -28,7 +28,6 @@ const ProjectGrid: React.FC<ProjectsGridProps> = ({
   projects,
   tab,
   loading,
-  error,
   onSupport,
   onFollow,
   onCollaborate,
@@ -97,14 +96,6 @@ const ProjectGrid: React.FC<ProjectsGridProps> = ({
     );
   }
 
-  if (error) {
-    return (
-      <Alert severity="error" sx={{ mb: 3 }}>
-        {error}
-      </Alert>
-    );
-  }
-
   if (!projects || projects.length === 0) {
     return (
       <Box sx={{ textAlign: 'center', py: 8 }}>
@@ -154,7 +145,14 @@ const ProjectGrid: React.FC<ProjectsGridProps> = ({
       >
         <Grid container spacing={3}>
           {projects.map((project) => (
-            <Grid item xs={12} sm={6} md={4} key={project?.id || Math.random()}>
+            <Grid
+              item
+              xs={12}
+              sm={6}
+              md={6}
+              lg={4}
+              key={project?.id || Math.random()}
+            >
               <motion.div variants={itemVariants}>
                 <ProjectCard
                   project={project}

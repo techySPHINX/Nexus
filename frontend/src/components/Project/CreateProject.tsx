@@ -41,7 +41,7 @@ import {
   status,
   Tags,
 } from '@/types/ShowcaseType';
-import { Close, ImageSearch, Work } from '@mui/icons-material';
+import { Close, ImageSearch } from '@mui/icons-material';
 import { useProfile } from '@/contexts/ProfileContext';
 import { Skill } from '@/types/profileType';
 import { useShowcase } from '@/contexts/ShowcaseContext';
@@ -98,6 +98,7 @@ const EMPTY_FORM: CreateProjectInterface = {
   skills: [],
   tags: [],
   status: status.IDEA,
+  seekingCollaboration: false,
   seeking: undefined, // Change from [] to undefined
 };
 
@@ -125,6 +126,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   const pendingRef = useRef(pending);
 
   const [seekingCollaboration, setSeekingCollaboration] = useState(false);
+  const [SeekingSkills, setSeekingSkills] = useState<string[]>([]);
 
   // Image preview state
   const [imageLoading, setImageLoading] = useState(false);
@@ -153,16 +155,18 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
         tags: project.tags ?? [],
         skills: project.skills ?? [],
         status: project.status ?? status.IDEA,
-        seeking: project.seeking ?? undefined, // Change from [] to undefined
+        seeking: project.seeking ?? [],
       } as CreateProjectInterface);
       setSelectedSkill(project.skills || []);
       setSelectedType(project.tags || []);
       setSeekingCollaboration(!!project.seeking && project.seeking.length > 0);
+      setSeekingSkills(project.seeking || []);
     } else {
       setFormData(EMPTY_FORM); // Use EMPTY_FORM directly since it's now properly typed
       setSelectedSkill([]);
       setSelectedType([]);
       setSeekingCollaboration(false);
+      setSeekingSkills([]);
     }
   }, [project]);
 
@@ -176,10 +180,30 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
     setFormData((prev) => ({ ...prev, tags: SelectedType }));
   }, [SelectedType]);
 
+  // Update formData when seekingSkills changes
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, seeking: SeekingSkills }));
+  }, [SeekingSkills]);
+
+  useEffect(() => {
+    if (!seekingCollaboration) {
+      console.log('Collaboration not sought, clearing seeking skills');
+      setFormData((prev) => ({ ...prev, seeking: undefined }));
+      // console.log('Form data after clearing seeking:', formData);
+    }
+  }, [setFormData, seekingCollaboration]);
+
   // Function to handle skill selection changes
   const handleSkillsChange = useCallback((_event: any, newSkills: string[]) => {
     setSelectedSkill(newSkills);
   }, []);
+
+  const handleSeekingSkillsChange = useCallback(
+    (_event: any, newSkills: string[]) => {
+      setSeekingSkills(newSkills);
+    },
+    []
+  );
 
   const handleTypesChange = useCallback((_event: any, newTypes: string[]) => {
     setSelectedType(newTypes);
@@ -637,6 +661,19 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                         onChange={handleSelectChange}
                         label="Status"
                         inputProps={{ 'aria-label': 'Project status' }}
+                        MenuProps={{
+                          // Ensure the menu is rendered into the document body (so it sits above the Dialog)
+                          container:
+                            typeof document !== 'undefined'
+                              ? document.body
+                              : undefined,
+                          // Force a higher zIndex on the Paper/popover to appear above the Dialog
+                          PaperProps: {
+                            style: { zIndex: 1403 },
+                          },
+                          // Also apply sx to be safe across MUI versions
+                          sx: { zIndex: 1403 },
+                        }}
                       >
                         <MenuItem value={status.IDEA}>Idea</MenuItem>
                         <MenuItem value={status.IN_PROGRESS}>
@@ -668,7 +705,7 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                   </Grid>
 
                   {/* Left column: image preview (lazy) */}
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={8} md={4}>
                     <Box
                       sx={{
                         borderRadius: 2,
@@ -881,35 +918,67 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                       label="Looking for collaborators?"
                     />
                     {seekingCollaboration && (
-                      <TextField
-                        label="What help are you looking for?"
-                        name="seeking"
-                        value={
-                          pending.seeking ??
-                          (Array.isArray(formData.seeking)
-                            ? formData.seeking.join(', ')
-                            : formData.seeking || '')
-                        }
-                        onChange={(e) => {
-                          // store as a simple CSV string in pending to avoid frequent array ops
-                          setPending((p) => ({
-                            ...p,
-                            seeking: e.target.value,
-                          }));
+                      <Autocomplete
+                        multiple
+                        options={availableSkillNames}
+                        value={SeekingSkills}
+                        onChange={handleSeekingSkillsChange}
+                        onOpen={() => fetchAllSkills()}
+                        loading={skillsLoading}
+                        componentsProps={{
+                          popper: {
+                            style: {
+                              zIndex: 1401, // Higher than Dialog zIndex
+                            },
+                          },
                         }}
-                        fullWidth
-                        multiline
-                        rows={2}
-                        size="small"
-                        sx={{ mt: 1 }}
-                        placeholder="Describe the skills or roles you need..."
-                        inputProps={{ 'aria-label': 'Seeking help' }}
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            helperText="Select from existing skills you are looking for"
+                            InputProps={{
+                              ...params.InputProps,
+                              startAdornment: (
+                                <>
+                                  <InputAdornment position="start">
+                                    <Chip
+                                      label="Skill"
+                                      color="warning"
+                                      size="small"
+                                    />
+                                  </InputAdornment>
+                                  {params.InputProps.startAdornment}
+                                </>
+                              ),
+                            }}
+                            placeholder="Add or select skills you are looking for"
+                          />
+                        )}
+                        freeSolo
+                        renderTags={(value, getTagProps) =>
+                          value.map((option, index) => {
+                            const { key, ...tagProps } = getTagProps({ index });
+                            return (
+                              <Chip
+                                key={key}
+                                label={option}
+                                {...tagProps}
+                                onDelete={() => {
+                                  const newSkills = SeekingSkills.filter(
+                                    (_, i) => i !== index
+                                  );
+                                  setSeekingSkills(newSkills);
+                                }}
+                              />
+                            );
+                          })
+                        }
                       />
                     )}
                   </Grid>
 
                   {/* Tags & Skills */}
-                  <Grid item xs={12} md={8}>
+                  <Grid item xs={12} md={12}>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                       Project Tags
                     </Typography>
@@ -965,18 +1034,11 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                         })
                       }
                     />
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ mt: 1, display: 'block' }}
-                    >
-                      💡 Using relevant tags helps your project get discovered
-                    </Typography>
                   </Grid>
 
-                  <Grid item xs={12} md={8}>
+                  <Grid item xs={12} md={12}>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                      Required Skills
+                      Skills Used:
                     </Typography>
                     <Autocomplete
                       multiple
@@ -1001,12 +1063,17 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                             startAdornment: (
                               <>
                                 <InputAdornment position="start">
-                                  <Work color="action" />
+                                  <Chip
+                                    label="Skill"
+                                    color="secondary"
+                                    size="small"
+                                  />
                                 </InputAdornment>
                                 {params.InputProps.startAdornment}
                               </>
                             ),
                           }}
+                          placeholder="Add or select skills"
                         />
                       )}
                       freeSolo
@@ -1034,8 +1101,8 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
                       color="text.secondary"
                       sx={{ mt: 1, display: 'block' }}
                     >
-                      💡 Using consistent skill names helps match with relevant
-                      collaborators
+                      💡 Using consistent skill and relevant tag names helps
+                      match with relevant collaborators
                     </Typography>
                   </Grid>
                 </Grid>
