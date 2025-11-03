@@ -46,6 +46,9 @@ async function seedUsers() {
           password: hashedPassword,
           name: userData.name,
           role: userData.role,
+          isEmailVerified: true,
+          isAccountActive: true,
+          accountStatus: 'ACTIVE',
           profile: {
             create: {
               bio: `This is ${userData.name}'s profile`,

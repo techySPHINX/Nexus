@@ -13,21 +13,21 @@ model User {
   password                              String?                       @db.VarChar(255)
   name                                  String?
   role                                  Role                          @default(STUDENT)
-  description         String?
-  iconUrl             String?
-  bannerUrl           String?
-  isEmailVerified     Boolean           @default(false)
-  isAccountActive     Boolean           @default(false)
-  accountStatus       AccountStatus     @default(PENDING_VERIFICATION)
-  emailVerificationToken String?
-  passwordResetToken String?
-  passwordResetExpires DateTime?
-  lastLoginAt         DateTime?
-  failedLoginAttempts Int               @default(0)
-  lockedUntil         DateTime?
-  twoFactorEnabled    Boolean           @default(false)
-  twoFactorSecret     String?
-  createdAt           DateTime              @default(now())
+  description                           String?
+  iconUrl                               String?
+  bannerUrl                             String?
+  isEmailVerified                       Boolean                       @default(false)
+  isAccountActive                       Boolean                       @default(false)
+  accountStatus                         AccountStatus                 @default(PENDING_VERIFICATION)
+  emailVerificationToken                String?
+  passwordResetToken                    String?
+  passwordResetExpires                  DateTime?
+  lastLoginAt                           DateTime?
+  failedLoginAttempts                   Int                           @default(0)
+  lockedUntil                           DateTime?
+  twoFactorEnabled                      Boolean                       @default(false)
+  twoFactorSecret                       String?
+  createdAt                             DateTime                      @default(now())
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
@@ -67,13 +67,13 @@ model User {
   userPoints                            UserPoints?
   Vote                                  Vote[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
-  
-  refreshTokens                         RefreshToken[]
-  securityEvents                        SecurityEvent[]
-  userSessions                          UserSession[]
-  verificationDocuments                 VerificationDocument[]
-  ReportsHandled                        ContentReport[] @relation("ReportsHandled")
-  ReportsMade                           ContentReport[] @relation("ReportsMade")
+
+  refreshTokens         RefreshToken[]
+  securityEvents        SecurityEvent[]
+  userSessions          UserSession[]
+  verificationDocuments VerificationDocument[]
+  ReportsHandled        ContentReport[]        @relation("ReportsHandled")
+  ReportsMade           ContentReport[]        @relation("ReportsMade")
 
   @@map("users")
 }
@@ -388,6 +388,8 @@ model Referral {
   description  String
   requirements String
   location     String
+  deadline     DateTime
+  referralLink String?
   status       ReferralStatus        @default(PENDING)
   alumniId     String
   createdAt    DateTime              @default(now())
@@ -399,16 +401,17 @@ model Referral {
 }
 
 model ReferralApplication {
-  id          String            @id @default(uuid())
-  referralId  String
-  studentId   String
-  resumeUrl   String
-  coverLetter String?
-  status      ApplicationStatus @default(PENDING)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  referral    Referral          @relation(fields: [referralId], references: [id])
-  student     User              @relation(fields: [studentId], references: [id])
+  id             String            @id @default(uuid())
+  referralId     String
+  applicantId    String
+  resumeUrl      String
+  coverLetter    String?
+  additionalLink String?
+  status         ApplicationStatus @default(PENDING)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  referral       Referral          @relation(fields: [referralId], references: [id])
+  applicant      User              @relation(fields: [applicantId], references: [id])
 
   @@map("referral_applications")
 }
@@ -674,7 +677,6 @@ model Event {
   location         String?
   author           User          @relation(fields: [authorId], references: [id])
 
-
   @@map("events")
 }
 
@@ -687,7 +689,6 @@ model Flair {
 
   @@unique([name, subCommunityId])
 }
-
 
 enum ProjectStatus {
   IDEA
@@ -845,15 +846,15 @@ enum EventCategory {
 
 // Enhanced Authentication Models
 model RefreshToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  isRevoked Boolean  @default(false)
+  id         String   @id @default(uuid())
+  token      String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  isRevoked  Boolean  @default(false)
   deviceInfo String?
-  ipAddress String?
+  ipAddress  String?
 
   @@map("refresh_tokens")
 }
@@ -898,16 +899,16 @@ model UserSession {
 }
 
 model VerificationDocument {
-  id              String               @id @default(uuid())
-  userId          String
-  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documentType    DocumentType
-  documentUrl     String
-  status          DocumentStatus       @default(PENDING)
-  adminComments   String?
-  reviewedBy      String?
-  reviewedAt      DateTime?
-  submittedAt     DateTime             @default(now())
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentType  DocumentType
+  documentUrl   String
+  status        DocumentStatus @default(PENDING)
+  adminComments String?
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  submittedAt   DateTime       @default(now())
 
   @@map("verification_documents")
 }

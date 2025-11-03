@@ -43,9 +43,30 @@ export class ReferralService {
       throw new ForbiddenException('Only alumni can post referrals.');
     }
 
+    // Only allow the new fields if present in dto
+    const {
+      company,
+      jobTitle,
+      description,
+      requirements,
+      location,
+      deadline,
+      referralLink,
+    } = dto;
+
+    // deadline is required in schema
+    if (!deadline) {
+      throw new BadRequestException('Deadline is required for a referral.');
+    }
     return this.prisma.referral.create({
       data: {
-        ...dto,
+        company,
+        jobTitle,
+        description,
+        requirements,
+        location,
+        deadline: new Date(deadline),
+        referralLink,
         alumniId: userId,
       },
     });
@@ -148,9 +169,32 @@ export class ReferralService {
       );
     }
 
+    // Only allow the new fields if present in dto
+    const {
+      company,
+      jobTitle,
+      description,
+      requirements,
+      location,
+      deadline,
+      referralLink,
+      status,
+    } = dto;
+
+    const updateData: any = {};
+    if (company !== undefined) updateData.company = company;
+    if (jobTitle !== undefined) updateData.jobTitle = jobTitle;
+    if (description !== undefined) updateData.description = description;
+    if (requirements !== undefined) updateData.requirements = requirements;
+    if (location !== undefined) updateData.location = location;
+    if (deadline !== undefined)
+      updateData.deadline = deadline ? new Date(deadline) : undefined;
+    if (referralLink !== undefined) updateData.referralLink = referralLink;
+    if (status !== undefined) updateData.status = status;
+
     const updatedReferral = await this.prisma.referral.update({
       where: { id: referralId },
-      data: dto,
+      data: updateData,
     });
 
     // Notify alum if referral status changes (only if updated by admin)
@@ -212,11 +256,12 @@ export class ReferralService {
    */
   async createReferralApplication(
     userId: string,
-    dto: { referralId: string; resumeUrl: string; coverLetter?: string },
+    dto: { referralId: string; resumeUrl: string; coverLetter?: string; applicantId?: string },
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (user.role !== Role.STUDENT) {
-      throw new ForbiddenException('Only students can apply for referrals.');
+    // Allow both STUDENT and ALUM to apply
+    if (user.role !== Role.STUDENT && user.role !== Role.ALUM) {
+      throw new ForbiddenException('Only students or alumni can apply for referrals.');
     }
 
     const referral = await this.prisma.referral.findUnique({
@@ -227,19 +272,19 @@ export class ReferralService {
       throw new NotFoundException('Referral not found.');
     }
 
-    const existingApplication = await this.prisma.referralApplication.findFirst(
-      {
-        where: {
-          referralId: dto.referralId,
-          studentId: userId,
-        },
+    // Use applicantId from dto (for future extensibility), but default to userId
+    const applicantId = dto.applicantId || userId;
+
+    // Check if already applied
+    const existingApplication = await this.prisma.referralApplication.findFirst({
+      where: {
+        referralId: dto.referralId,
+        applicantId: applicantId,
       },
-    );
+    });
 
     if (existingApplication) {
-      throw new BadRequestException(
-        'You have already applied for this referral.',
-      );
+      throw new BadRequestException('You have already applied for this referral.');
     }
 
     const application = await this.prisma.referralApplication.create({
@@ -247,7 +292,7 @@ export class ReferralService {
         referralId: dto.referralId,
         resumeUrl: dto.resumeUrl,
         coverLetter: dto.coverLetter,
-        studentId: userId,
+        applicantId: applicantId,
       },
     });
 
@@ -273,7 +318,7 @@ export class ReferralService {
       where: { id: applicationId },
       include: {
         referral: true,
-        student: {
+        applicant: {
           select: {
             id: true,
             name: true,
@@ -296,15 +341,15 @@ export class ReferralService {
   async getFilteredReferralApplications(
     filterDto: FilterReferralApplicationsDto,
   ) {
-    const { referralId, studentId, status, skip, take } = filterDto;
+    const { referralId, applicantId, status, skip, take } = filterDto;
 
     const where: any = {};
 
     if (referralId) {
       where.referralId = referralId;
     }
-    if (studentId) {
-      where.studentId = studentId;
+    if (applicantId) {
+      where.applicantId = applicantId;
     }
     if (status) {
       where.status = status;
@@ -314,7 +359,7 @@ export class ReferralService {
       where,
       include: {
         referral: true,
-        student: {
+        applicant: {
           select: {
             id: true,
             name: true,
@@ -352,7 +397,7 @@ export class ReferralService {
 
     const application = await this.prisma.referralApplication.findUnique({
       where: { id: applicationId },
-      include: { student: true, referral: true },
+      include: { applicant: true, referral: true },
     });
     if (!application) {
       throw new NotFoundException('Referral application not found.');
@@ -366,7 +411,7 @@ export class ReferralService {
     // Notify the student about the application status change
     if (dto.status && dto.status !== application.status) {
       await this.notificationService.create({
-        userId: application.studentId,
+        userId: application.applicantId,
         message: `Your application for ${application.referral.jobTitle} at ${application.referral.company} has been ${dto.status}.`,
         type: NotificationType.REFERRAL_APPLICATION_STATUS_UPDATE,
       });
@@ -383,7 +428,7 @@ export class ReferralService {
     }
 
     return this.prisma.referralApplication.findMany({
-      where: { studentId: userId },
+      where: { applicantId: userId },
       include: {
         referral: {
           select: {
@@ -400,7 +445,7 @@ export class ReferralService {
             },
           },
         },
-        student: {
+        applicant: {
           select: {
             id: true,
             name: true,
@@ -433,7 +478,7 @@ export class ReferralService {
     return this.prisma.referralApplication.findMany({
       where: { referralId },
       include: {
-        student: {
+        applicant: {
           select: {
             id: true,
             name: true,

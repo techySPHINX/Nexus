@@ -124,9 +124,13 @@ export const apiService = {
     getById: (id: string) => api.get(`/referral/${id}`),
     update: (id: string, data: unknown) => api.put(`/referral/${id}`, data),
     delete: (id: string) => api.delete(`/referral/${id}`),
-    apply: (data: unknown) => api.post('/referral/apply', data),
+    // For applications, backend expects multipart/form-data with field name 'resume'
+    apply: (formData: FormData) =>
+      api.post('/referral/apply', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }),
     getApplications: (referralId: string) =>
-      api.get(`/referral/applications/${referralId}`),
+      api.get(`/referral/${referralId}/applications`),
     getAllApplications: () => api.get('/referral/applications'),
     updateApplicationStatus: (id: string, status: string) =>
       api.put(`/referral/applications/${id}/status`, { status }),

@@ -14,12 +14,12 @@ export class FilterReferralApplicationsDto {
   referralId?: string;
 
   /**
-   * Optional. Filter applications by the ID of the student who applied.
+   * Optional. Filter applications by the ID of the applicant who applied.
    * @example "clx0z0z0z0000000000000000"
    */
   @IsString()
   @IsOptional()
-  studentId?: string;
+  applicantId?: string;
 
   /**
    * Optional. Filter applications by their current status.

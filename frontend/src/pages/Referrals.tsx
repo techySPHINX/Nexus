@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Grid,
@@ -47,6 +47,8 @@ interface Referral {
   description: string;
   requirements: string;
   location: string;
+  deadline: string;
+  referralLink?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   postedBy: {
     id: string;
@@ -62,13 +64,13 @@ interface Referral {
 interface ReferralApplication {
   id: string;
   referralId: string;
-  studentId: string;
+  applicantId: string;
   resumeUrl: string;
   coverLetter?: string;
   status: 'PENDING' | 'REVIEWED' | 'ACCEPTED' | 'REJECTED';
   createdAt: string;
   updatedAt: string;
-  student: {
+  applicant: {
     id: string;
     name: string;
     email: string;
@@ -82,11 +84,13 @@ interface CreateReferralDto {
   description: string;
   requirements: string;
   location: string;
+  deadline: string; // ISO string
+  referralLink?: string;
 }
 
 interface CreateApplicationDto {
   referralId: string;
-  resumeUrl: string;
+  resumeFile: File | null;
   coverLetter?: string;
 }
 
@@ -104,6 +108,7 @@ const Referrals: React.FC = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const didInit = useRef(false);
 
   // Form states
   const [createForm, setCreateForm] = useState<CreateReferralDto>({
@@ -112,11 +117,13 @@ const Referrals: React.FC = () => {
     description: '',
     requirements: '',
     location: '',
+    deadline: '',
+    referralLink: '',
   });
 
   const [applicationForm, setApplicationForm] = useState<CreateApplicationDto>({
     referralId: '',
-    resumeUrl: '',
+    resumeFile: null,
     coverLetter: '',
   });
 
@@ -178,11 +185,16 @@ const Referrals: React.FC = () => {
       return;
     }
 
+    if (didInit.current) {
+      return; // prevent double run in React StrictMode dev
+    }
+    didInit.current = true;
+
     console.log('✅ User authenticated, fetching referrals...');
     fetchReferrals();
 
-    if (user.role === 'STUDENT') {
-      console.log('🎓 Student user, fetching applications...');
+    if (user.role === 'STUDENT' || user.role === 'ALUM') {
+      console.log('🎓 Applicant-capable user, fetching applications...');
       fetchApplications();
     }
   }, [fetchReferrals, user]);
@@ -198,7 +210,19 @@ const Referrals: React.FC = () => {
 
   const handleCreateReferral = async () => {
     try {
-      await apiService.referrals.create(createForm);
+      if (!createForm.deadline) {
+        setError('Please provide an application deadline.');
+        return;
+      }
+      // Normalize deadline to ISO if provided
+      const body = {
+        ...createForm,
+        deadline: createForm.deadline
+          ? new Date(createForm.deadline).toISOString()
+          : undefined,
+        referralLink: createForm.referralLink || undefined,
+      };
+      await apiService.referrals.create(body);
       setCreateDialogOpen(false);
       setCreateForm({
         company: '',
@@ -206,6 +230,8 @@ const Referrals: React.FC = () => {
         description: '',
         requirements: '',
         location: '',
+        deadline: '',
+        referralLink: '',
       });
       fetchReferrals();
     } catch (err) {
@@ -216,11 +242,22 @@ const Referrals: React.FC = () => {
 
   const handleApply = async () => {
     try {
-      await apiService.referrals.apply(applicationForm);
+      if (!applicationForm.resumeFile) {
+        setError('Please select a resume file to upload.');
+        return;
+      }
+      const formData = new FormData();
+      formData.append('referralId', applicationForm.referralId);
+      if (applicationForm.coverLetter) {
+        formData.append('coverLetter', applicationForm.coverLetter);
+      }
+      formData.append('resume', applicationForm.resumeFile);
+
+      await apiService.referrals.apply(formData);
       setApplyDialogOpen(false);
       setApplicationForm({
         referralId: '',
-        resumeUrl: '',
+        resumeFile: null,
         coverLetter: '',
       });
       fetchApplications();
@@ -354,6 +391,7 @@ const Referrals: React.FC = () => {
               console.log('🧪 Testing API call...');
               fetchReferrals();
             }}
+            disabled={loading}
             sx={{ textTransform: 'none', width: { xs: '100%', sm: 'auto' } }}
           >
             Refresh
@@ -422,6 +460,14 @@ const Referrals: React.FC = () => {
                         {referral.location}
                       </Typography>
                     </Box>
+                    {referral.deadline && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Description sx={{ fontSize: 16, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                          Deadline: {new Date(referral.deadline).toLocaleString()}
+                        </Typography>
+                      </Box>
+                    )}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
@@ -444,6 +490,11 @@ const Referrals: React.FC = () => {
                       {new Date(referral.createdAt).toLocaleDateString()}
                     </Typography>
                     <Stack direction="row" spacing={1}>
+                      {referral.referralLink && (
+                        <Button size="small" variant="text" onClick={() => window.open(referral.referralLink, '_blank')}>
+                          Job Link
+                        </Button>
+                      )}
                       <Button
                         size="small"
                         variant="outlined"
@@ -455,7 +506,7 @@ const Referrals: React.FC = () => {
                       >
                         Details
                       </Button>
-                      {user?.role === 'STUDENT' && (
+                      {(user?.role === 'STUDENT' || user?.role === 'ALUM') && (
                         <Button
                           size="small"
                           variant="contained"
@@ -583,6 +634,30 @@ const Referrals: React.FC = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                label="Application Deadline"
+                type="datetime-local"
+                value={createForm.deadline}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, deadline: e.target.value })
+                }
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Referral Link (optional)"
+                value={createForm.referralLink}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, referralLink: e.target.value })
+                }
+                placeholder="https://company.com/job/123"
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
                 label="Requirements"
                 value={createForm.requirements}
                 onChange={(e) =>
@@ -625,20 +700,25 @@ const Referrals: React.FC = () => {
 
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Resume URL"
-                value={applicationForm.resumeUrl}
-                onChange={(e) =>
-                  setApplicationForm({
-                    ...applicationForm,
-                    resumeUrl: e.target.value,
-                  })
-                }
-                placeholder="https://example.com/resume.pdf"
-                required
-                helperText="Provide a link to your resume"
-              />
+              <Button variant="outlined" component="label">
+                Upload Resume (PDF)
+                <input
+                  type="file"
+                  hidden
+                  accept="application/pdf"
+                  onChange={(e) =>
+                    setApplicationForm({
+                      ...applicationForm,
+                      resumeFile: e.target.files?.[0] || null,
+                    })
+                  }
+                />
+              </Button>
+              {applicationForm.resumeFile && (
+                <Typography variant="caption" sx={{ ml: 1 }}>
+                  {applicationForm.resumeFile.name}
+                </Typography>
+              )}
             </Grid>
             <Grid item xs={12}>
               <TextField
@@ -690,6 +770,16 @@ const Referrals: React.FC = () => {
                   />
                   {selectedReferral.location}
                 </Typography>
+                {selectedReferral.deadline && (
+                  <Typography variant="body2" color="text.secondary">
+                    Deadline: {new Date(selectedReferral.deadline).toLocaleString()}
+                  </Typography>
+                )}
+                {selectedReferral.referralLink && (
+                  <Button size="small" sx={{ mt: 1 }} onClick={() => window.open(selectedReferral.referralLink!, '_blank')}>
+                    Open Job Link
+                  </Button>
+                )}
               </Box>
               <Box>
                 <Typography
@@ -722,7 +812,7 @@ const Referrals: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
-          {user?.role === 'STUDENT' && selectedReferral && (
+          {(user?.role === 'STUDENT' || user?.role === 'ALUM') && selectedReferral && (
             <Button
               variant="contained"
               onClick={() => {
@@ -740,8 +830,8 @@ const Referrals: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* My Applications Section (for students) */}
-      {user?.role === 'STUDENT' && applications.length > 0 && (
+      {/* My Applications Section (for students and alumni) */}
+      {(user?.role === 'STUDENT' || user?.role === 'ALUM') && applications.length > 0 && (
         <Box sx={{ mt: 6 }}>
           <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
             My Applications
@@ -784,17 +874,10 @@ const Referrals: React.FC = () => {
                       />
                     </Box>
 
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        mb: 1,
-                      }}
-                    >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                       <School sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2">
-                        {application.student.name} ({application.student.role})
+                        {application.applicant.name} ({application.applicant.role})
                       </Typography>
                     </Box>
 
@@ -803,9 +886,7 @@ const Referrals: React.FC = () => {
                         size="small"
                         variant="outlined"
                         startIcon={<Visibility />}
-                        onClick={() =>
-                          window.open(application.resumeUrl, '_blank')
-                        }
+                        onClick={() => window.open(application.resumeUrl, '_blank')}
                       >
                         View Resume
                       </Button>

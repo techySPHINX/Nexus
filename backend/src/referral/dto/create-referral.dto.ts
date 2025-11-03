@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsOptional, IsUrl } from 'class-validator';
 
 /**
  * Data transfer object for creating a new job referral.
@@ -43,4 +43,20 @@ export class CreateReferralDto {
   @IsString()
   @IsNotEmpty()
   location: string;
+
+  /**
+   * The application deadline for the referral (ISO 8601 date string).
+   * @example "2024-12-31T23:59:59.000Z"
+   */
+  @IsOptional()
+  @IsDateString()
+  deadline?: string;
+
+  /**
+   * The direct link to the referral or job posting.
+   * @example "https://company.com/job/123"
+   */
+  @IsOptional()
+  @IsUrl()
+  referralLink?: string;
 }

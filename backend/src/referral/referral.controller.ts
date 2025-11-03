@@ -24,6 +24,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { SkipThrottle } from '@nestjs/throttler';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { LegacyFilesService } from '../files/legacy-files.service';
 
@@ -62,6 +63,7 @@ export class ReferralController {
    * @returns A promise that resolves to the referral object.
    */
   @Get(':id')
+  @SkipThrottle()
   async getReferralById(@Param('id') id: string) {
     return this.referralService.getReferralById(id);
   }
@@ -72,6 +74,7 @@ export class ReferralController {
    * @returns A promise that resolves to an array of filtered referrals.
    */
   @Get()
+  @SkipThrottle()
   async getFilteredReferrals(@Query() filterDto: FilterReferralsDto) {
     return this.referralService.getFilteredReferrals(filterDto);
   }
@@ -109,7 +112,7 @@ export class ReferralController {
   // Referral Application Endpoints
 
   /**
-   * Creates a new referral application. Only accessible by STUDENTs.
+   * Creates a new referral application. Accessible by STUDENTs and ALUMs.
    * Requires a resume file upload.
    * @param userId - The ID of the authenticated user creating the application.
    * @param dto - The data for creating the referral application.
@@ -118,7 +121,7 @@ export class ReferralController {
    * @throws {BadRequestException} If no resume file is provided.
    */
   @Post('apply')
-  @Roles(Role.STUDENT)
+  @Roles(Role.STUDENT, Role.ALUM)
   @UseInterceptors(FileInterceptor('resume'))
   async createReferralApplication(
     @GetCurrentUser('sub') userId: string,
@@ -143,6 +146,7 @@ export class ReferralController {
    * @returns A promise that resolves to the referral application object.
    */
   @Get('applications/:id')
+  @SkipThrottle()
   async getReferralApplicationById(@Param('id') id: string) {
     return this.referralService.getReferralApplicationById(id);
   }
@@ -154,6 +158,7 @@ export class ReferralController {
    */
   @Get('applications')
   @Roles(Role.ADMIN)
+  @SkipThrottle()
   async getFilteredReferralApplications(
     @Query() filterDto: FilterReferralApplicationsDto,
   ) {
@@ -183,7 +188,8 @@ export class ReferralController {
 
   // Get user's own applications
   @Get('applications/my')
-  @Roles(Role.STUDENT)
+  @Roles(Role.STUDENT, Role.ALUM)
+  @SkipThrottle()
   async getMyApplications(@GetCurrentUser('sub') userId: string) {
     return this.referralService.getMyApplications(userId);
   }
@@ -191,6 +197,7 @@ export class ReferralController {
   // Get applications for a specific referral (for alumni)
   @Get(':id/applications')
   @Roles(Role.ALUM)
+  @SkipThrottle()
   async getReferralApplications(
     @GetCurrentUser('sub') userId: string,
     @Param('id') referralId: string,

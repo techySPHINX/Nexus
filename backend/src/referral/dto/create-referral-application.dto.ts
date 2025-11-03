@@ -1,4 +1,6 @@
+
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+
 
 /**
  * Data transfer object for creating a new referral application.
@@ -13,13 +15,21 @@ export class CreateReferralApplicationDto {
   referralId: string;
 
   /**
+   * The ID of the applicant (student or alumni) applying for the referral.
+   * @example "clx0z0z0z0000000000000001"
+   */
+  @IsString()
+  @IsOptional()
+  applicantId?: string;
+
+  /**
    * The URL or path to the uploaded resume file.
    * This field is typically populated after the file is uploaded and processed.
    * @example "https://example.com/resume.pdf"
    */
   @IsString()
   @IsNotEmpty()
-  resumeFile: string; // This will be the path to the uploaded file
+  resumeUrl: string;
 
   /**
    * Optional. The content of the cover letter for the application.

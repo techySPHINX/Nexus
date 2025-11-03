@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
+
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsDateString, IsUrl } from 'class-validator';
 import { ReferralStatus } from '@prisma/client';
 
 /**
@@ -57,4 +58,20 @@ export class UpdateReferralDto {
   @IsEnum(ReferralStatus)
   @IsOptional()
   status?: ReferralStatus;
+
+  /**
+   * Optional. The updated application deadline for the referral (ISO 8601 date string).
+   * @example "2024-12-31T23:59:59.000Z"
+   */
+  @IsOptional()
+  @IsDateString()
+  deadline?: string;
+
+  /**
+   * Optional. The updated direct link to the referral or job posting.
+   * @example "https://company.com/job/123"
+   */
+  @IsOptional()
+  @IsUrl()
+  referralLink?: string;
 }

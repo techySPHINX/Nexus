@@ -40,6 +40,8 @@ async function seedReferrals() {
         requirements:
           '3+ years of experience, React, Node.js, TypeScript, Git, Agile methodologies',
         location: 'San Francisco, CA',
+        deadline: new Date('2025-12-31T23:59:59.000Z'),
+        referralLink: 'https://techcorp.com/careers/software-engineer',
         alumniId: alumni?.id || users[0].id,
       },
       {
@@ -50,6 +52,8 @@ async function seedReferrals() {
         requirements:
           'Masters in Data Science, Python, TensorFlow, SQL, Statistical Analysis',
         location: 'New York, NY',
+        deadline: new Date('2025-11-30T23:59:59.000Z'),
+        referralLink: 'https://dataflow.com/jobs/data-scientist',
         alumniId: alumni?.id || users[0].id,
       },
       {
@@ -60,6 +64,7 @@ async function seedReferrals() {
         requirements:
           '2+ years PM experience, User Research, Agile, Analytics tools',
         location: 'Remote',
+        deadline: new Date('2026-01-15T23:59:59.000Z'),
         alumniId: alumni?.id || users[0].id,
       },
     ];
