@@ -73,7 +73,6 @@ const CollaborationModal: React.FC<CollaborationModalProps> = ({
     } catch (err) {
       // Keep modal open on error to allow retry. The parent should provide
       // its own error handling/notification. Log for debugging.
-      // eslint-disable-next-line no-console
       console.error('Failed to submit collaboration request', err);
     } finally {
       setIsSubmitting(false);
