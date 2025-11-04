@@ -316,7 +316,7 @@ const Referrals: React.FC = () => {
         }
       }
 
-      const response = await apiService.referrals.apply({
+      await apiService.referrals.apply({
         referralId: applicationForm.referralId,
         resumeUrl: resumeUrl,
         coverLetter: applicationForm.coverLetter?.trim() || undefined,
@@ -368,14 +368,49 @@ const Referrals: React.FC = () => {
         return 'success';
       case 'REJECTED':
         return 'error';
-      case 'REVIEWED':
+      case 'PENDING':
         return 'warning';
+      case 'REVIEWED':
+        return 'info';
       default:
         return 'default';
     }
   };
 
+  const handleApproveReferral = async (referralId: string) => {
+    try {
+      await apiService.referrals.approve(referralId);
+      setError(null);
+      // Refresh referrals list
+      await fetchReferrals();
+    } catch (err: any) {
+      console.error('Error approving referral:', err);
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to approve referral';
+      setError(errorMessage);
+    }
+  };
+
+  const handleRejectReferral = async (referralId: string) => {
+    if (window.confirm('Are you sure you want to reject this referral?')) {
+      try {
+        await apiService.referrals.reject(referralId);
+        setError(null);
+        // Refresh referrals list
+        await fetchReferrals();
+      } catch (err: any) {
+        console.error('Error rejecting referral:', err);
+        const errorMessage = err?.response?.data?.message || err?.message || 'Failed to reject referral';
+        setError(errorMessage);
+      }
+    }
+  };
+
   const filteredReferrals = referrals.filter((referral) => {
+    // Students can only see APPROVED referrals (or their own if they created it)
+    if (user?.role === 'STUDENT' && referral.status !== 'APPROVED' && referral.alumniId !== user?.id) {
+      return false;
+    }
+    
     const matchesStatus =
       filterStatus === 'ALL' || referral.status === filterStatus;
     const matchesSearch =
@@ -452,9 +487,9 @@ const Referrals: React.FC = () => {
               label="Status"
             >
               <MenuItem value="ALL">All Status</MenuItem>
-              <MenuItem value="PENDING">Pending</MenuItem>
+              {user?.role === 'ADMIN' && <MenuItem value="PENDING">Pending</MenuItem>}
               <MenuItem value="APPROVED">Approved</MenuItem>
-              <MenuItem value="REJECTED">Rejected</MenuItem>
+              {user?.role === 'ADMIN' && <MenuItem value="REJECTED">Rejected</MenuItem>}
             </Select>
           </FormControl>
           <Button
@@ -596,6 +631,26 @@ const Referrals: React.FC = () => {
                         >
                           Apply
                         </Button>
+                      )}
+                      {user?.role === 'ADMIN' && referral.status === 'PENDING' && (
+                        <>
+                          <Button
+                            size="small"
+                            variant="contained"
+                            color="success"
+                            onClick={() => handleApproveReferral(referral.id)}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => handleRejectReferral(referral.id)}
+                          >
+                            Reject
+                          </Button>
+                        </>
                       )}
                       {user?.id === referral.alumniId && (
                         <>

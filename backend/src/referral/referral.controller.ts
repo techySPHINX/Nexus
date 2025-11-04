@@ -23,7 +23,7 @@ import { FilterReferralApplicationsDto } from './dto/filter-referral-application
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { Role, ReferralStatus } from '@prisma/client';
 import { SkipThrottle } from '@nestjs/throttler';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { LegacyFilesService } from '../files/legacy-files.service';
@@ -58,29 +58,61 @@ export class ReferralController {
   }
 
   /**
-   * Retrieves a single job referral by its ID.
-   * @param id - The ID of the referral to retrieve.
-   * @returns A promise that resolves to the referral object.
-   */
-  @Get(':id')
-  @SkipThrottle()
-  async getReferralById(@Param('id') id: string) {
-    return this.referralService.getReferralById(id);
-  }
-
-  /**
    * Retrieves a list of job referrals based on provided filters.
+   * Only APPROVED referrals are shown to non-admins.
+   * Admins can see all referrals. Users can see their own referrals regardless of status.
    * @param filterDto - DTO containing filters for referral search.
+   * @param userId - The ID of the authenticated user (optional for public access).
+   * @param userRole - The role of the authenticated user.
    * @returns A promise that resolves to an array of filtered referrals.
    */
   @Get()
   @SkipThrottle()
-  async getFilteredReferrals(@Query() filterDto: FilterReferralsDto) {
-    return this.referralService.getFilteredReferrals(filterDto);
+  async getFilteredReferrals(
+    @Query() filterDto: FilterReferralsDto,
+    @GetCurrentUser('userId') userId?: string,
+    @GetCurrentUser('role') userRole?: Role,
+  ) {
+    // If user is not authenticated, userId and userRole will be undefined
+    // Service will handle this and show only APPROVED referrals
+    return this.referralService.getFilteredReferrals(filterDto, userId, userRole);
   }
 
   /**
-   * Updates an existing job referral. Only the creator of the referral can update it.
+   * Approves a referral. Only accessible by ADMINs.
+   * MUST come before @Put(':id') to avoid route conflicts.
+   * @param userId - The ID of the authenticated admin.
+   * @param id - The ID of the referral to approve.
+   * @returns A promise that resolves to the approved referral.
+   */
+  @Put(':id/approve')
+  @Roles(Role.ADMIN)
+  async approveReferral(
+    @GetCurrentUser('userId') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.referralService.updateReferral(userId, id, { status: ReferralStatus.APPROVED });
+  }
+
+  /**
+   * Rejects a referral. Only accessible by ADMINs.
+   * MUST come before @Put(':id') to avoid route conflicts.
+   * @param userId - The ID of the authenticated admin.
+   * @param id - The ID of the referral to reject.
+   * @returns A promise that resolves to the rejected referral.
+   */
+  @Put(':id/reject')
+  @Roles(Role.ADMIN)
+  async rejectReferral(
+    @GetCurrentUser('userId') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.referralService.updateReferral(userId, id, { status: ReferralStatus.REJECTED });
+  }
+
+  /**
+   * Updates an existing job referral. Only the creator of the referral or an ADMIN can update it.
+   * Admins can update the status to approve/reject referrals.
    * @param userId - The ID of the authenticated user updating the referral.
    * @param id - The ID of the referral to update.
    * @param dto - The data to update the referral with.
@@ -188,6 +220,7 @@ export class ReferralController {
   }
 
   // Get applications for a specific referral (for alumni)
+  // MUST come before @Get(':id') to avoid route conflicts
   @Get(':id/applications')
   @Roles(Role.ALUM)
   @SkipThrottle()
@@ -196,5 +229,17 @@ export class ReferralController {
     @Param('id') referralId: string,
   ) {
     return this.referralService.getReferralApplications(referralId, userId);
+  }
+
+  /**
+   * Retrieves a single job referral by its ID.
+   * MUST come after @Get(':id/applications') to avoid route conflicts.
+   * @param id - The ID of the referral to retrieve.
+   * @returns A promise that resolves to the referral object.
+   */
+  @Get(':id')
+  @SkipThrottle()
+  async getReferralById(@Param('id') id: string) {
+    return this.referralService.getReferralById(id);
   }
 }

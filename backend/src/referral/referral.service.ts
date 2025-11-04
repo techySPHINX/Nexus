@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Role } from '@prisma/client';
+import { Role, ReferralStatus } from '@prisma/client';
 import { CreateReferralDto } from './dto/create-referral.dto';
 import { UpdateReferralDto } from './dto/update-referral.dto';
 import { UpdateReferralApplicationDto } from './dto/update-referral-application.dto';
@@ -58,7 +58,8 @@ export class ReferralService {
     if (!deadline) {
       throw new BadRequestException('Deadline is required for a referral.');
     }
-    return this.prisma.referral.create({
+    
+    const referral = await this.prisma.referral.create({
       data: {
         company,
         jobTitle,
@@ -68,8 +69,34 @@ export class ReferralService {
         deadline: new Date(deadline),
         referralLink,
         alumniId: userId,
+        status: ReferralStatus.PENDING, // New referrals start as PENDING
+      },
+      include: {
+        postedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
+
+    // Notify all admins about the new referral pending approval
+    const admins = await this.prisma.user.findMany({
+      where: { role: Role.ADMIN },
+      select: { id: true },
+    });
+
+    for (const admin of admins) {
+      await this.notificationService.create({
+        userId: admin.id,
+        message: `New referral pending approval: ${referral.jobTitle} at ${referral.company} by ${referral.postedBy.name}`,
+        type: NotificationType.REFERRAL_STATUS_UPDATE,
+      });
+    }
+
+    return referral;
   }
 
   /**
@@ -104,7 +131,7 @@ export class ReferralService {
    * @param filterDto - DTO containing criteria for filtering referrals (e.g., company, job title, location, status).
    * @returns A promise that resolves to an array of filtered referrals.
    */
-  async getFilteredReferrals(filterDto: FilterReferralsDto) {
+  async getFilteredReferrals(filterDto: FilterReferralsDto, userId?: string, userRole?: Role) {
     const { company, jobTitle, location, status, skip, take } = filterDto;
 
     const where: any = {};
@@ -120,6 +147,25 @@ export class ReferralService {
     }
     if (status) {
       where.status = status;
+    } else {
+      // If no status filter provided:
+      // - Admins see all referrals
+      // - Students/ALUMs only see APPROVED referrals (unless they created it)
+      // - Non-authenticated users only see APPROVED
+      if (userRole !== Role.ADMIN) {
+        if (userId) {
+          // Show APPROVED referrals OR user's own referrals (regardless of status)
+          // This allows creators to see their own referrals even if pending/rejected
+          where.OR = [
+            { status: ReferralStatus.APPROVED },
+            { alumniId: userId },
+          ];
+        } else {
+          // Not logged in - only show APPROVED
+          where.status = ReferralStatus.APPROVED;
+        }
+      }
+      // If admin, no status filter - they see everything
     }
 
     return this.prisma.referral.findMany({
@@ -132,9 +178,15 @@ export class ReferralService {
             email: true,
           },
         },
+        applications: {
+          select: {
+            id: true,
+          },
+        },
       },
       skip: skip ? Number(skip) : undefined,
       take: take ? Number(take) : undefined,
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -192,20 +244,38 @@ export class ReferralService {
     if (referralLink !== undefined) updateData.referralLink = referralLink;
     if (status !== undefined) updateData.status = status;
 
+    const oldStatus = referral.status;
+    
+    // Only allow admins to change status
+    if (dto.status && dto.status !== referral.status && user.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only admins can change referral status.');
+    }
+    
     const updatedReferral = await this.prisma.referral.update({
       where: { id: referralId },
       data: updateData,
+      include: {
+        postedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
     });
 
-    // Notify alum if referral status changes (only if updated by admin)
-    if (
-      dto.status &&
-      dto.status !== referral.status &&
-      user.role === Role.ADMIN
-    ) {
+    // Notify the alum if the referral status changed (only if changed by admin)
+    if (dto.status && dto.status !== oldStatus && user.role === Role.ADMIN) {
+      const statusMessage = dto.status === ReferralStatus.APPROVED 
+        ? 'approved' 
+        : dto.status === ReferralStatus.REJECTED 
+          ? 'rejected' 
+          : dto.status.toLowerCase();
+      
       await this.notificationService.create({
         userId: referral.alumniId,
-        message: `Your referral for ${referral.jobTitle} at ${referral.company} has been ${dto.status}.`,
+        message: `Your referral for ${referral.jobTitle} at ${referral.company} has been ${statusMessage}.`,
         type: NotificationType.REFERRAL_STATUS_UPDATE,
       });
     }
