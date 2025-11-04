@@ -10,7 +10,6 @@ import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { NotificationService } from '../notification/notification.service';
 import { CreateStartupDto } from './dto/create-startup.dto';
 import { UpdateStartupDto } from './dto/update-startup.dto';
-import { marked } from 'marked';
 import { CreateProjectUpdateDto } from './dto/create-project-update.dto';
 
 @Injectable()
@@ -485,6 +484,13 @@ export class ShowcaseService {
 
     if (!project) return null;
 
+    // If seeking is an array, sort it in descending (reverse alphabetical) order
+    if (project?.seeking && Array.isArray(project.seeking)) {
+      project.seeking = [...project.seeking].sort((a, b) =>
+        b.localeCompare(a, undefined, { sensitivity: 'base', numeric: true }),
+      );
+    }
+
     return {
       ...project,
     };
@@ -841,13 +847,10 @@ export class ShowcaseService {
   }
 
   async createStartup(userId: string, createStartupDto: CreateStartupDto) {
-    const { description, ...rest } = createStartupDto;
-    const htmlDescription = marked.parse(description) as string;
     return this.prisma.startup.create({
       data: {
         founderId: userId,
-        description: htmlDescription,
-        ...rest,
+        ...createStartupDto,
       },
     });
   }
@@ -862,12 +865,6 @@ export class ShowcaseService {
     });
     if (!startup || startup.founderId !== userId) {
       throw new Error('Startup not found or you are not the founder');
-    }
-
-    if (updateStartupDto.description) {
-      updateStartupDto.description = marked.parse(
-        updateStartupDto.description,
-      ) as string;
     }
 
     return this.prisma.startup.update({
@@ -886,10 +883,193 @@ export class ShowcaseService {
     return this.prisma.startup.delete({ where: { id: startupId } });
   }
 
-  async getStartups() {
-    return this.prisma.startup.findMany({
-      include: { founder: true },
+  async getStartups(
+    userId: string,
+    filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
+  ) {
+    const { search, status } = filterDto || {};
+    const cursor = filterDto?.cursor;
+    const pageSize = filterDto?.pageSize ? Number(filterDto.pageSize) : 12;
+
+    const where: any = {};
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const startups = await this.prisma.startup.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        websiteUrl: true,
+        status: true,
+        founderId: true,
+        createdAt: true,
+        fundingGoal: true,
+        fundingRaised: true,
+        monetizationModel: true,
+        founder: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
+        startupFollower: { select: { userId: true } },
+      },
     });
+
+    const normalized = startups.map((s) => ({
+      ...s,
+      followersCount: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.length : 0,
+      isFollowing: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.some((f) => f.userId === userId) : false,
+    }));
+
+    const nextCursor = startups.length ? startups[startups.length - 1].id : null;
+    const hasNext = startups.length === pageSize;
+
+    return {
+      data: normalized,
+      pagination: {
+        nextCursor,
+        hasNext,
+        pageSize,
+      },
+    };
+  }
+
+  async getMyStartups(
+    userId: string,
+    filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
+  ) {
+    const { search, status } = filterDto || {};
+    const cursor = filterDto?.cursor;
+    const pageSize = filterDto?.pageSize ? Number(filterDto.pageSize) : 12;
+
+    const where: any = { founderId: userId };
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const startups = await this.prisma.startup.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        websiteUrl: true,
+        status: true,
+        founderId: true,
+        createdAt: true,
+        fundingGoal: true,
+        fundingRaised: true,
+        monetizationModel: true,
+        founder: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
+        startupFollower: { select: { userId: true } },
+      },
+    });
+
+    const normalized = startups.map((s) => ({
+      ...s,
+      followersCount: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.length : 0,
+      isFollowing: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.some((f) => f.userId === userId) : false,
+    }));
+
+    const nextCursor = startups.length ? startups[startups.length - 1].id : null;
+    const hasNext = startups.length === pageSize;
+
+    return {
+      data: normalized,
+      pagination: {
+        nextCursor,
+        hasNext,
+        pageSize,
+      },
+    };
+  }
+
+  async getFollowedStartups(
+    userId: string,
+    filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
+  ) {
+    const { search, status } = filterDto || {};
+    const cursor = filterDto?.cursor;
+    const pageSize = filterDto?.pageSize ? Number(filterDto.pageSize) : 12;
+
+    // find followed startup ids
+    const followed = await this.prisma.startupFollower.findMany({ where: { userId }, select: { startupId: true } });
+    const startupIds = followed.map((f) => f.startupId);
+
+    if (startupIds.length === 0) {
+      return {
+        data: [],
+        pagination: {
+          nextCursor: null,
+          hasNext: false,
+          pageSize,
+        },
+      };
+    }
+
+    const where: any = { id: { in: startupIds } };
+    if (status) where.status = status;
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    const startups = await this.prisma.startup.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      take: pageSize,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        websiteUrl: true,
+        status: true,
+        founderId: true,
+        createdAt: true,
+        fundingGoal: true,
+        fundingRaised: true,
+        monetizationModel: true,
+        founder: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
+        startupFollower: { select: { userId: true } },
+      },
+    });
+
+    const normalized = startups.map((s) => ({
+      ...s,
+      followersCount: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.length : 0,
+      isFollowing: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.some((f) => f.userId === userId) : false,
+    }));
+
+    const nextCursor = startups.length ? startups[startups.length - 1].id : null;
+    const hasNext = startups.length === pageSize;
+
+    return {
+      data: normalized,
+      pagination: {
+        nextCursor,
+        hasNext,
+        pageSize,
+      },
+    };
   }
 
   async getStartupById(startupId: string) {
@@ -897,6 +1077,102 @@ export class ShowcaseService {
       where: { id: startupId },
       include: { founder: true },
     });
+  }
+
+  // Follow a startup
+  async followStartup(userId: string, startupId: string) {
+    const startup = await this.prisma.startup.findUnique({ where: { id: startupId } });
+    if (!startup) {
+      throw new Error('Startup not found');
+    }
+
+    // create follower record (may throw if already exists)
+    await this.prisma.startupFollower.create({
+      data: { userId, startupId },
+    });
+
+    // await this.notificationService.create({
+    //   userId: startup.founderId,
+    //   message: `Your startup "${startup.name}" has a new follower.`,
+    //   type: 'STARTUP_FOLLOW',
+    // });
+
+    // return updated follower count and status
+    const followersCount = await this.prisma.startupFollower.count({ where: { startupId } });
+    return { isFollowing: true, followersCount };
+  }
+
+  async unfollowStartup(userId: string, startupId: string) {
+    await this.prisma.startupFollower.delete({
+      where: {
+        startupId_userId: {
+          startupId,
+          userId,
+        },
+      },
+    });
+
+    const followersCount = await this.prisma.startupFollower.count({ where: { startupId } });
+    return { isFollowing: false, followersCount };
+  }
+
+  async createStartupComment(userId: string, startupId: string, commentText: string) {
+    const startup = await this.prisma.startup.findUnique({ where: { id: startupId } });
+    if (!startup) {
+      throw new Error('Startup not found');
+    }
+
+    const comment = await this.prisma.startupComment.create({
+      data: {
+        userId,
+        startupId,
+        comment: commentText,
+      },
+      include: {
+        user: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
+      },
+    });
+
+    // await this.notificationService.create({
+    //   userId: startup.founderId,
+    //   message: `Your startup "${startup.name}" has a new comment.`,
+    //   type: 'STARTUP_COMMENT',
+    // });
+
+    return comment;
+  }
+
+  async getStartupComments(startupId: string, page = 1) {
+    const pageSize = 10;
+    const pageNum = typeof page === 'string' ? parseInt(page, 10) : page;
+
+    const comments = await this.prisma.startupComment.findMany({
+      where: { startupId },
+      orderBy: { createdAt: 'desc' },
+      skip: (pageNum - 1) * pageSize,
+      take: pageSize,
+      select: {
+        id: true,
+        comment: true,
+        createdAt: true,
+        user: {
+          select: { id: true, name: true, role: true, profile: { select: { avatarUrl: true } } },
+        },
+      },
+    });
+
+    const total = await this.prisma.startupComment.count({ where: { startupId } });
+    return {
+      comments,
+      pagination: {
+        page: pageNum,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+        hasNext: pageNum * pageSize < total,
+        hasPrev: pageNum > 1,
+      },
+    };
   }
 
   async supportProject(userId: string, projectId: string) {
@@ -1210,6 +1486,13 @@ export class ShowcaseService {
       where: { id: projectId },
       select: { seeking: true },
     });
+
+    // If seeking is an array, sort it in descending (reverse alphabetical) order
+    if (project?.seeking && Array.isArray(project.seeking)) {
+      project.seeking = [...project.seeking].sort((a, b) =>
+        b.localeCompare(a, undefined, { sensitivity: 'base', numeric: true }),
+      );
+    }
     return project?.seeking || [];
   }
 

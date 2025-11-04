@@ -68,6 +68,8 @@ model User {
   refreshTokens                         RefreshToken[]
   securityEvents                        SecurityEvent[]
   startups                              Startup[]
+  startupComment                        StartupComment[]
+  startupFollowers                      StartupFollower[]
   userPoints                            UserPoints?
   userSessions                          UserSession[]
   verificationDocuments                 VerificationDocument[]
@@ -122,8 +124,38 @@ model Startup {
   fundingRaised     Float?
   monetizationModel String?
   founder           User          @relation(fields: [founderId], references: [id])
+  startupComment    StartupComment[]
+  startupFollower   StartupFollower[]
 
+  @@index([createdAt])
   @@map("startups")
+}
+
+model StartupComment {
+  id         String   @id @default(uuid())
+  startupId  String
+  userId     String
+  comment    String
+  createdAt  DateTime @default(now())
+  startup    Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@map("startup_comments")
+}
+
+model StartupFollower {
+  id        String   @id @default(uuid())
+  startupId String
+  userId    String
+  createdAt DateTime @default(now())
+  startup   Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([startupId, userId])
+  @@index([startupId])
+  @@index([userId])
+  @@map("startup_followers")
 }
 
 model ProjectUpdate {
