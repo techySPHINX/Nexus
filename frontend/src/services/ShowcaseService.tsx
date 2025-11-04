@@ -9,6 +9,8 @@ import {
 } from '@/types/ShowcaseType';
 import api from './api';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { Startup } from '@/types/profileType';
+import { StartupSummary } from '@/types/StartupType';
 
 export const ShowcaseService = {
   createProject: async (data: CreateProjectInterface) => {
@@ -360,6 +362,159 @@ export const ShowcaseService = {
     } catch (error) {
       throw new Error(
         'Failed to get project types with error: ' + getErrorMessage(error)
+      );
+    }
+  },
+
+  // Startup related endpoints
+  getStartups: async (filterStartupDto?: {
+    search?: string;
+    status?: string;
+    cursor?: string | null;
+    pageSize?: number;
+  }) => {
+    try {
+      console.log('Fetching startups with', filterStartupDto);
+      const response = await api.get('/showcase/startup', {
+        params: filterStartupDto,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get startups: ' + getErrorMessage(error));
+    }
+  },
+
+  getMyStartups: async (filterStartupDto?: {
+    search?: string;
+    status?: string;
+    cursor?: string | null;
+    pageSize?: number;
+  }) => {
+    try {
+      const response = await api.get('/showcase/startup/my', {
+        params: filterStartupDto,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get my startups: ' + getErrorMessage(error));
+    }
+  },
+
+  getFollowedStartups: async (filterStartupDto?: {
+    search?: string;
+    status?: string;
+    cursor?: string | null;
+    pageSize?: number;
+  }) => {
+    try {
+      const response = await api.get('/showcase/startup/followed', {
+        params: filterStartupDto,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        'Failed to get followed startups: ' + getErrorMessage(error)
+      );
+    }
+  },
+
+  createStartup: async (
+    data: Partial<StartupSummary>
+  ): Promise<StartupSummary> => {
+    try {
+      console.log('Creating startup with data:', data);
+      const response = await api.post('/showcase/startup', data);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to create startup: ' + getErrorMessage(error));
+    }
+  },
+
+  updateStartup: async (
+    startupId: string,
+    data: Partial<StartupSummary>
+  ): Promise<StartupSummary> => {
+    try {
+      console.log('Updating startup ID:', startupId, 'with data:', data);
+      const response = await api.put(`/showcase/startup/${startupId}`, data);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to update startup: ' + getErrorMessage(error));
+    }
+  },
+
+  deleteStartup: async (startupId: string): Promise<void> => {
+    try {
+      console.log('Deleting startup ID:', startupId);
+      await api.delete(`/showcase/startup/${startupId}`);
+    } catch (error) {
+      throw new Error('Failed to delete startup: ' + getErrorMessage(error));
+    }
+  },
+
+  getStartupById: async (startupId: string): Promise<Startup> => {
+    try {
+      console.log('Fetching startup by ID:', startupId);
+      const response = await api.get(`/showcase/startup/${startupId}`);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get startup: ' + getErrorMessage(error));
+    }
+  },
+
+  followStartup: async (startupId: string) => {
+    try {
+      console.log('Following startup with ID:', startupId);
+      const response = await api.post(`/showcase/startup/${startupId}/follow`);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to follow startup: ' + getErrorMessage(error));
+    }
+  },
+
+  unfollowStartup: async (startupId: string) => {
+    try {
+      console.log('Unfollowing startup with ID:', startupId);
+      const response = await api.delete(
+        `/showcase/startup/${startupId}/follow`
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to unfollow startup: ' + getErrorMessage(error));
+    }
+  },
+
+  createStartupComment: async (startupId: string, comment: string) => {
+    try {
+      console.log('Creating comment for startup ID:', startupId);
+      const response = await api.post(
+        `/showcase/startup/${startupId}/comments`,
+        { comment }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        'Failed to create startup comment: ' + getErrorMessage(error)
+      );
+    }
+  },
+
+  getStartupComments: async (startupId: string, page: number = 1) => {
+    try {
+      console.log(
+        'Fetching comments for startup ID:',
+        startupId,
+        'page:',
+        page
+      );
+      const response = await api.get(
+        `/showcase/startup/${startupId}/comments`,
+        { params: { page } }
+      );
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        'Failed to get startup comments: ' + getErrorMessage(error)
       );
     }
   },
