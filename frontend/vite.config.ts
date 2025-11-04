@@ -50,17 +50,31 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       rollupOptions: {
         output: {
           manualChunks(id: string) {
+            if (id.includes('node_modules')) {
+              if (id.includes('react')) return 'vendor-react';
+              if (id.includes('axios')) return 'vendor-axios';
+              if (id.includes('chart.js') || id.includes('recharts'))
+                return 'vendor-charts';
+              return 'vendor';
+            }
             // Split only your **feature code**
-            if (id.includes('/src/admin/')) return 'admin-features';
-            if (id.includes('/src/auth/')) return 'auth-features';
-            if (id.includes('/src/profile/')) return 'profile-features';
-            if (id.includes('/src/post/')) return 'post-features';
-            if (id.includes('/src/messaging/')) return 'messaging-features';
-            if (id.includes('/src/showcase/')) return 'showcase-features';
-            if (id.includes('/src/dashboard/')) return 'dashboard-features';
-            if (id.includes('/src/settings/')) return 'settings-features';
-            if (id.includes('/src/home/')) return 'home-features';
-            if (id.includes('/src/components/')) return 'shared-components';
+            if (id.toLowerCase().includes('admin')) return 'admin-features';
+            if (id.toLowerCase().includes('auth')) return 'auth-features';
+            if (id.toLowerCase().includes('profile')) return 'profile-features';
+            if (id.toLowerCase().includes('post')) return 'post-features';
+            if (id.toLowerCase().includes('messaging'))
+              return 'messaging-features';
+            if (
+              id.toLowerCase().includes('showcase') ||
+              id.toLowerCase().includes('project')
+            )
+              return 'showcase-features';
+            if (id.toLowerCase().includes('startup')) return 'startup-features';
+            if (id.toLowerCase().includes('dashboard'))
+              return 'dashboard-features';
+            if (id.toLowerCase().includes('home')) return 'home-features';
+            if (id.toLowerCase().includes('components'))
+              return 'shared-components';
             // Let Vite handle all node_modules safely
             return undefined;
           },
