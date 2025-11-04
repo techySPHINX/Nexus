@@ -9,6 +9,11 @@
 package-lock.json
 yarn.lock
 
+# Node lockfiles (ignored intentionally)
+/package-lock.json
+/frontend/package-lock.json
+/backend/package-lock.json
+
 # testing
 /coverage
 
