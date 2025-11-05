@@ -535,14 +535,28 @@ model SubCommunity {
   status                        SubCommunityStatus           @default(ACTIVE)
   ownerId                       String
   subCommunityCreationRequestId String?                      @unique
-  type                          String                       @default("OTHER")
+  typeId                        String?
   reports                       ContentReport[]
   flairs                        Flair[]
   joinRequests                  JoinRequest[]
   owner                         User                         @relation("OwnedSubCommunities", fields: [ownerId], references: [id])
   creationRequest               SubCommunityCreationRequest? @relation(fields: [subCommunityCreationRequestId], references: [id])
   members                       SubCommunityMember[]
+  // relation to SubCommunityType (single optional relation)
+  // When a SubCommunityType is deleted, cascade delete related SubCommunity rows
+  type                          SubCommunityType? @relation(fields: [typeId], references: [id], onDelete: Cascade)
   posts                         Post[]
+}
+
+model SubCommunityType {
+  id             String         @id @default(cuid())
+  name           String         @unique
+  slug           String?
+  description    String?
+  createdAt      DateTime       @default(now())
+  subCommunities SubCommunity[]
+
+  @@map("sub_community_types")
 }
 
 model SubCommunityMember {

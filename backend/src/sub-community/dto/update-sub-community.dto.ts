@@ -16,6 +16,10 @@ export class UpdateSubCommunityDto extends PartialType(CreateSubCommunityDto) {
   type?: string;
 
   @IsOptional()
+  @IsString()
+  typeId?: string;
+
+  @IsOptional()
   isPrivate?: boolean;
 
   @IsString()

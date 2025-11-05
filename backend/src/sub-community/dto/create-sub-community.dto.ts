@@ -11,7 +11,12 @@ export class CreateSubCommunityDto {
 
   @IsString()
   @IsNotEmpty()
-  type: string;
+  @IsOptional()
+  type?: string;
+
+  @IsOptional()
+  @IsString()
+  typeId?: string;
 
   @IsBoolean()
   @IsOptional()
