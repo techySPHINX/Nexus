@@ -37,7 +37,7 @@ import { FileSecurityService } from './common/services/file-security.service';
     ConfigModule.forRoot({ isGlobal: true }),
     ThrottlerModule.forRoot([
       {
-        ttl: securityConfig.rateLimit.ttl * 1000,
+        ttl: securityConfig.rateLimit.ttl, // seconds as configured in security.config
         limit: securityConfig.rateLimit.limit,
       },
     ]),

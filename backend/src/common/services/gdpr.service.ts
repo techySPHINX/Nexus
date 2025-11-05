@@ -109,7 +109,7 @@ export class GdprService {
           include: { teamMembers: true, updates: true },
         }),
         this.prisma.referralApplication.findMany({
-          where: { studentId: userId },
+          where: { applicantId: userId },
         }),
         this.prisma.referral.findMany({
           where: { alumniId: userId },
@@ -224,7 +224,7 @@ export class GdprService {
 
         deletedRecords += (
           await tx.referralApplication.deleteMany({
-            where: { studentId: userId },
+            where: { applicantId: userId },
           })
         ).count;
         deletedRecords += (

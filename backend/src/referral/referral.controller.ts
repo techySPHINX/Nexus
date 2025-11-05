@@ -8,11 +8,8 @@ import {
   Put,
   UseGuards,
   Query,
-  UseInterceptors,
-  UploadedFile,
   BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { ReferralService } from './referral.service';
 import { CreateReferralDto } from './dto/create-referral.dto';
 import { UpdateReferralDto } from './dto/update-referral.dto';
@@ -23,9 +20,9 @@ import { FilterReferralApplicationsDto } from './dto/filter-referral-application
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
-import { Role } from '@prisma/client';
+import { Role, ReferralStatus } from '@prisma/client';
+import { SkipThrottle } from '@nestjs/throttler';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
-import { LegacyFilesService } from '../files/legacy-files.service';
 
 /**
  * Controller for managing job referrals and referral applications.
@@ -36,7 +33,6 @@ import { LegacyFilesService } from '../files/legacy-files.service';
 export class ReferralController {
   constructor(
     private readonly referralService: ReferralService,
-    private readonly legacyFilesService: LegacyFilesService,
   ) {}
 
   // Referral Endpoints
@@ -50,34 +46,68 @@ export class ReferralController {
   @Post()
   @Roles(Role.ALUM)
   async createReferral(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body() dto: CreateReferralDto,
   ) {
     return this.referralService.createReferral(userId, dto);
   }
 
   /**
-   * Retrieves a single job referral by its ID.
-   * @param id - The ID of the referral to retrieve.
-   * @returns A promise that resolves to the referral object.
-   */
-  @Get(':id')
-  async getReferralById(@Param('id') id: string) {
-    return this.referralService.getReferralById(id);
-  }
-
-  /**
    * Retrieves a list of job referrals based on provided filters.
+   * Only APPROVED referrals are shown to non-admins.
+   * Admins can see all referrals. Users can see their own referrals regardless of status.
    * @param filterDto - DTO containing filters for referral search.
+   * @param userId - The ID of the authenticated user (optional for public access).
+   * @param userRole - The role of the authenticated user.
    * @returns A promise that resolves to an array of filtered referrals.
    */
   @Get()
-  async getFilteredReferrals(@Query() filterDto: FilterReferralsDto) {
-    return this.referralService.getFilteredReferrals(filterDto);
+  @SkipThrottle()
+  async getFilteredReferrals(
+    @Query() filterDto: FilterReferralsDto,
+    @GetCurrentUser('userId') userId?: string,
+    @GetCurrentUser('role') userRole?: Role,
+  ) {
+    // If user is not authenticated, userId and userRole will be undefined
+    // Service will handle this and show only APPROVED referrals
+    return this.referralService.getFilteredReferrals(filterDto, userId, userRole);
   }
 
   /**
-   * Updates an existing job referral. Only the creator of the referral can update it.
+   * Approves a referral. Only accessible by ADMINs.
+   * MUST come before @Put(':id') to avoid route conflicts.
+   * @param userId - The ID of the authenticated admin.
+   * @param id - The ID of the referral to approve.
+   * @returns A promise that resolves to the approved referral.
+   */
+  @Put(':id/approve')
+  @Roles(Role.ADMIN)
+  async approveReferral(
+    @GetCurrentUser('userId') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.referralService.updateReferral(userId, id, { status: ReferralStatus.APPROVED });
+  }
+
+  /**
+   * Rejects a referral. Only accessible by ADMINs.
+   * MUST come before @Put(':id') to avoid route conflicts.
+   * @param userId - The ID of the authenticated admin.
+   * @param id - The ID of the referral to reject.
+   * @returns A promise that resolves to the rejected referral.
+   */
+  @Put(':id/reject')
+  @Roles(Role.ADMIN)
+  async rejectReferral(
+    @GetCurrentUser('userId') userId: string,
+    @Param('id') id: string,
+  ) {
+    return this.referralService.updateReferral(userId, id, { status: ReferralStatus.REJECTED });
+  }
+
+  /**
+   * Updates an existing job referral. Only the creator of the referral or an ADMIN can update it.
+   * Admins can update the status to approve/reject referrals.
    * @param userId - The ID of the authenticated user updating the referral.
    * @param id - The ID of the referral to update.
    * @param dto - The data to update the referral with.
@@ -85,7 +115,7 @@ export class ReferralController {
    */
   @Put(':id')
   async updateReferral(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateReferralDto,
   ) {
@@ -100,7 +130,7 @@ export class ReferralController {
    */
   @Delete(':id')
   async deleteReferral(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Param('id') id: string,
   ) {
     return this.referralService.deleteReferral(userId, id);
@@ -109,7 +139,7 @@ export class ReferralController {
   // Referral Application Endpoints
 
   /**
-   * Creates a new referral application. Only accessible by STUDENTs.
+   * Creates a new referral application. Accessible by STUDENTs and ALUMs.
    * Requires a resume file upload.
    * @param userId - The ID of the authenticated user creating the application.
    * @param dto - The data for creating the referral application.
@@ -118,23 +148,16 @@ export class ReferralController {
    * @throws {BadRequestException} If no resume file is provided.
    */
   @Post('apply')
-  @Roles(Role.STUDENT)
-  @UseInterceptors(FileInterceptor('resume'))
+  @Roles(Role.STUDENT, Role.ALUM)
   async createReferralApplication(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Body() dto: CreateReferralApplicationDto,
-    @UploadedFile() resume: Express.Multer.File,
   ) {
-    if (!resume) {
-      throw new BadRequestException('Resume file is required.');
+    if (!dto.resumeUrl) {
+      throw new BadRequestException('Resume link is required.');
     }
 
-    const resumeUrl = await this.legacyFilesService.saveFile(resume, userId);
-
-    return this.referralService.createReferralApplication(userId, {
-      ...dto,
-      resumeUrl: resumeUrl,
-    });
+    return this.referralService.createReferralApplication(userId, dto);
   }
 
   /**
@@ -143,6 +166,7 @@ export class ReferralController {
    * @returns A promise that resolves to the referral application object.
    */
   @Get('applications/:id')
+  @SkipThrottle()
   async getReferralApplicationById(@Param('id') id: string) {
     return this.referralService.getReferralApplicationById(id);
   }
@@ -154,6 +178,7 @@ export class ReferralController {
    */
   @Get('applications')
   @Roles(Role.ADMIN)
+  @SkipThrottle()
   async getFilteredReferralApplications(
     @Query() filterDto: FilterReferralApplicationsDto,
   ) {
@@ -168,9 +193,9 @@ export class ReferralController {
    * @returns A promise that resolves to the updated referral application.
    */
   @Put('applications/:id/status')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.ALUM)
   async updateReferralApplicationStatus(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateReferralApplicationDto,
   ) {
@@ -183,18 +208,40 @@ export class ReferralController {
 
   // Get user's own applications
   @Get('applications/my')
-  @Roles(Role.STUDENT)
-  async getMyApplications(@GetCurrentUser('sub') userId: string) {
+  @Roles(Role.STUDENT, Role.ALUM)
+  @SkipThrottle()
+  async getMyApplications(@GetCurrentUser('userId') userId: string) {
     return this.referralService.getMyApplications(userId);
   }
 
   // Get applications for a specific referral (for alumni)
+  // MUST come before @Get(':id') to avoid route conflicts
   @Get(':id/applications')
   @Roles(Role.ALUM)
+  @SkipThrottle()
   async getReferralApplications(
-    @GetCurrentUser('sub') userId: string,
+    @GetCurrentUser('userId') userId: string,
     @Param('id') referralId: string,
   ) {
     return this.referralService.getReferralApplications(referralId, userId);
+  }
+
+  /**
+   * Retrieves a single job referral by its ID.
+   * MUST come after @Get(':id/applications') to avoid route conflicts.
+   * Non-admins can only access APPROVED referrals or their own referrals.
+   * @param id - The ID of the referral to retrieve.
+   * @param userId - The ID of the authenticated user (optional).
+   * @param userRole - The role of the authenticated user (optional).
+   * @returns A promise that resolves to the referral object.
+   */
+  @Get(':id')
+  @SkipThrottle()
+  async getReferralById(
+    @Param('id') id: string,
+    @GetCurrentUser('userId') userId?: string,
+    @GetCurrentUser('role') userRole?: Role,
+  ) {
+    return this.referralService.getReferralById(id, userId, userRole);
   }
 }

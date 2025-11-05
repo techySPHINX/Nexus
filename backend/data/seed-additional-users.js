@@ -112,6 +112,9 @@ async function seedAdditionalUsers() {
           password: hashedPassword,
           name: userData.name,
           role: userData.role,
+          isEmailVerified: true,
+          isAccountActive: true,
+          accountStatus: 'ACTIVE',
           profile: {
             create: userData.profile,
           },

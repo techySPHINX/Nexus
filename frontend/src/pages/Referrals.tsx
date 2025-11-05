@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Grid,
@@ -47,6 +47,8 @@ interface Referral {
   description: string;
   requirements: string;
   location: string;
+  deadline: string;
+  referralLink?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   postedBy: {
     id: string;
@@ -62,13 +64,13 @@ interface Referral {
 interface ReferralApplication {
   id: string;
   referralId: string;
-  studentId: string;
+  applicantId: string;
   resumeUrl: string;
   coverLetter?: string;
   status: 'PENDING' | 'REVIEWED' | 'ACCEPTED' | 'REJECTED';
   createdAt: string;
   updatedAt: string;
-  student: {
+  applicant: {
     id: string;
     name: string;
     email: string;
@@ -82,28 +84,55 @@ interface CreateReferralDto {
   description: string;
   requirements: string;
   location: string;
+  deadline: string; // ISO string
+  referralLink?: string;
 }
 
 interface CreateApplicationDto {
   referralId: string;
-  resumeUrl: string;
+  resumeLink?: string;
   coverLetter?: string;
 }
 
 const Referrals: React.FC = () => {
+  // Extract a human-friendly message from unknown errors
+  const getErrorMessage = (err: unknown): string => {
+    if (typeof err === 'string') return err;
+    if (err && typeof err === 'object') {
+      const e = err as {
+        response?: { data?: { message?: string }; statusText?: string };
+        message?: string;
+      };
+      return (
+        e.response?.data?.message ||
+        e.message ||
+        e.response?.statusText ||
+        'Unknown error'
+      );
+    }
+    try {
+      return String(err);
+    } catch {
+      return 'Unknown error';
+    }
+  };
   const { user } = useAuth();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [applications, setApplications] = useState<ReferralApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(
     null
   );
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [appsDialogOpen, setAppsDialogOpen] = useState(false);
+  const [referralApps, setReferralApps] = useState<ReferralApplication[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const didInit = useRef(false);
 
   // Form states
   const [createForm, setCreateForm] = useState<CreateReferralDto>({
@@ -112,11 +141,13 @@ const Referrals: React.FC = () => {
     description: '',
     requirements: '',
     location: '',
+    deadline: '',
+    referralLink: '',
   });
 
   const [applicationForm, setApplicationForm] = useState<CreateApplicationDto>({
     referralId: '',
-    resumeUrl: '',
+    resumeLink: '',
     coverLetter: '',
   });
 
@@ -136,29 +167,40 @@ const Referrals: React.FC = () => {
         '✅ Referrals loaded successfully:',
         response.data?.length || 0
       );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('❌ Error fetching referrals:', err);
-      if (err.response) {
-        console.error('Response data:', err.response.data);
-        console.error('Response status:', err.response.status);
-        console.error('Response headers:', err.response.headers);
-        setError(
-          `Failed to load referrals: ${err.response.data?.message || err.response.statusText || 'Unknown error'}`
-        );
-      } else if (err.request) {
-        console.error('Request error:', err.request);
-        setError(
-          'Failed to load referrals: Network error - no response received'
-        );
-      } else {
-        console.error('Error message:', err.message);
-        setError(`Failed to load referrals: ${err.message}`);
-      }
+      setError(`Failed to load referrals: ${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
   }, [user]);
+
+  const openReferralApplications = async (referralId: string) => {
+    try {
+      const res = await apiService.referrals.getApplications(referralId);
+      setReferralApps(res.data || []);
+      setAppsDialogOpen(true);
+    } catch {
+      console.error('Failed to load applications');
+      setError('Failed to load applications');
+    }
+  };
+
+  const updateApplicationStatus = async (
+    applicationId: string,
+    status: 'REVIEWED' | 'ACCEPTED' | 'REJECTED'
+  ) => {
+    try {
+      await apiService.referrals.updateApplicationStatus(applicationId, status);
+      // refresh local list
+      setReferralApps((prev) =>
+        prev.map((a) => (a.id === applicationId ? { ...a, status } : a))
+      );
+    } catch {
+      console.error('Failed to update application status');
+      setError('Failed to update application status');
+    }
+  };
 
   // Fetch referrals and applications
   useEffect(() => {
@@ -178,11 +220,16 @@ const Referrals: React.FC = () => {
       return;
     }
 
+    if (didInit.current) {
+      return; // prevent double run in React StrictMode dev
+    }
+    didInit.current = true;
+
     console.log('✅ User authenticated, fetching referrals...');
     fetchReferrals();
 
-    if (user.role === 'STUDENT') {
-      console.log('🎓 Student user, fetching applications...');
+    if (user.role === 'STUDENT' || user.role === 'ALUM') {
+      console.log('🎓 Applicant-capable user, fetching applications...');
       fetchApplications();
     }
   }, [fetchReferrals, user]);
@@ -198,7 +245,40 @@ const Referrals: React.FC = () => {
 
   const handleCreateReferral = async () => {
     try {
-      await apiService.referrals.create(createForm);
+      if (!createForm.deadline) {
+        setError('Please provide an application deadline.');
+        return;
+      }
+
+      // Validate referralLink (optional). Only include if valid absolute URL
+      let safeReferralLink: string | undefined = undefined;
+      if (
+        createForm.referralLink &&
+        createForm.referralLink.trim().length > 0
+      ) {
+        try {
+          const url = new URL(createForm.referralLink.trim());
+          if (url.protocol === 'http:' || url.protocol === 'https:') {
+            safeReferralLink = url.toString();
+          }
+        } catch {
+          // ignore invalid link; do not include in payload
+        }
+      }
+
+      const body = {
+        ...createForm,
+        deadline: createForm.deadline
+          ? new Date(createForm.deadline).toISOString()
+          : undefined,
+        referralLink: safeReferralLink,
+      };
+
+      await apiService.referrals.create(body);
+      setError(null);
+      setSuccessMessage(
+        'Referral created successfully! It will be reviewed by an admin.'
+      );
       setCreateDialogOpen(false);
       setCreateForm({
         company: '',
@@ -206,27 +286,85 @@ const Referrals: React.FC = () => {
         description: '',
         requirements: '',
         location: '',
+        deadline: '',
+        referralLink: '',
       });
       fetchReferrals();
-    } catch (err) {
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: unknown) {
       console.error('Error creating referral:', err);
-      setError('Failed to create referral');
+      setError(getErrorMessage(err) || 'Failed to create referral');
+      setSuccessMessage(null);
     }
   };
 
   const handleApply = async () => {
     try {
-      await apiService.referrals.apply(applicationForm);
+      if (!applicationForm.resumeLink || !applicationForm.resumeLink.trim()) {
+        setError('Please provide a resume link (Google Drive or URL).');
+        return;
+      }
+
+      // Validate and normalize URL format
+      let resumeUrl = applicationForm.resumeLink.trim();
+
+      // Check if it's a valid URL format
+      try {
+        new URL(resumeUrl);
+      } catch {
+        // If URL parsing fails, check if it might be a Google Drive ID or partial URL
+        if (
+          resumeUrl.includes('drive.google.com') ||
+          resumeUrl.includes('docs.google.com')
+        ) {
+          // Try to fix common Google Drive URL issues
+          if (
+            !resumeUrl.startsWith('http://') &&
+            !resumeUrl.startsWith('https://')
+          ) {
+            resumeUrl = 'https://' + resumeUrl;
+          }
+          // Validate again after adding protocol
+          try {
+            new URL(resumeUrl);
+          } catch {
+            setError(
+              'Please provide a valid URL (must start with http:// or https://)'
+            );
+            return;
+          }
+        } else {
+          setError(
+            'Please provide a valid URL (must start with http:// or https://)'
+          );
+          return;
+        }
+      }
+
+      await apiService.referrals.apply({
+        referralId: applicationForm.referralId,
+        resumeUrl: resumeUrl,
+        coverLetter: applicationForm.coverLetter?.trim() || undefined,
+      });
+
+      // Success - show message and reset
+      setError(null);
+      setSuccessMessage('Application submitted successfully!');
       setApplyDialogOpen(false);
       setApplicationForm({
         referralId: '',
-        resumeUrl: '',
+        resumeLink: '',
         coverLetter: '',
       });
       fetchApplications();
-    } catch (err) {
+      fetchReferrals(); // Refresh to show updated application count
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: unknown) {
       console.error('Error applying:', err);
-      setError('Failed to submit application');
+      setError(getErrorMessage(err) || 'Failed to submit application');
+      setSuccessMessage(null);
     }
   };
 
@@ -234,10 +372,14 @@ const Referrals: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this referral?')) {
       try {
         await apiService.referrals.delete(referralId);
+        setError(null);
+        setSuccessMessage('Referral deleted successfully.');
         fetchReferrals();
-      } catch (err) {
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } catch (err: unknown) {
         console.error('Error deleting referral:', err);
-        setError('Failed to delete referral');
+        setError(getErrorMessage(err) || 'Failed to delete referral');
+        setSuccessMessage(null);
       }
     }
   };
@@ -258,14 +400,59 @@ const Referrals: React.FC = () => {
         return 'success';
       case 'REJECTED':
         return 'error';
-      case 'REVIEWED':
+      case 'PENDING':
         return 'warning';
+      case 'REVIEWED':
+        return 'info';
       default:
         return 'default';
     }
   };
 
+  const handleApproveReferral = async (referralId: string) => {
+    try {
+      await apiService.referrals.approve(referralId);
+      setError(null);
+      setSuccessMessage('Referral approved successfully!');
+      // Refresh referrals list
+      await fetchReferrals();
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: unknown) {
+      console.error('Error approving referral:', err);
+      setError(getErrorMessage(err) || 'Failed to approve referral');
+      setSuccessMessage(null);
+    }
+  };
+
+  const handleRejectReferral = async (referralId: string) => {
+    if (window.confirm('Are you sure you want to reject this referral?')) {
+      try {
+        await apiService.referrals.reject(referralId);
+        setError(null);
+        setSuccessMessage('Referral rejected successfully.');
+        // Refresh referrals list
+        await fetchReferrals();
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } catch (err: unknown) {
+        console.error('Error rejecting referral:', err);
+        setError(getErrorMessage(err) || 'Failed to reject referral');
+        setSuccessMessage(null);
+      }
+    }
+  };
+
   const filteredReferrals = referrals.filter((referral) => {
+    // Students can only see APPROVED referrals (or their own if they created it)
+    if (
+      user?.role === 'STUDENT' &&
+      referral.status !== 'APPROVED' &&
+      referral.alumniId !== user?.id
+    ) {
+      return false;
+    }
+
     const matchesStatus =
       filterStatus === 'ALL' || referral.status === filterStatus;
     const matchesSearch =
@@ -313,6 +500,17 @@ const Referrals: React.FC = () => {
         </Alert>
       )}
 
+      {/* Success Alert */}
+      {successMessage && (
+        <Alert
+          severity="success"
+          sx={{ mb: 3 }}
+          onClose={() => setSuccessMessage(null)}
+        >
+          {successMessage}
+        </Alert>
+      )}
+
       {/* Actions Bar */}
       <Stack
         direction={{ xs: 'column', md: 'row' }}
@@ -342,9 +540,13 @@ const Referrals: React.FC = () => {
               label="Status"
             >
               <MenuItem value="ALL">All Status</MenuItem>
-              <MenuItem value="PENDING">Pending</MenuItem>
+              {user?.role === 'ADMIN' && (
+                <MenuItem value="PENDING">Pending</MenuItem>
+              )}
               <MenuItem value="APPROVED">Approved</MenuItem>
-              <MenuItem value="REJECTED">Rejected</MenuItem>
+              {user?.role === 'ADMIN' && (
+                <MenuItem value="REJECTED">Rejected</MenuItem>
+              )}
             </Select>
           </FormControl>
           <Button
@@ -354,6 +556,7 @@ const Referrals: React.FC = () => {
               console.log('🧪 Testing API call...');
               fetchReferrals();
             }}
+            disabled={loading}
             sx={{ textTransform: 'none', width: { xs: '100%', sm: 'auto' } }}
           >
             Refresh
@@ -422,6 +625,19 @@ const Referrals: React.FC = () => {
                         {referral.location}
                       </Typography>
                     </Box>
+                    {referral.deadline && (
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
+                        <Description
+                          sx={{ fontSize: 16, color: 'text.secondary' }}
+                        />
+                        <Typography variant="body2" color="text.secondary">
+                          Deadline:{' '}
+                          {new Date(referral.deadline).toLocaleString()}
+                        </Typography>
+                      </Box>
+                    )}
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
@@ -444,6 +660,17 @@ const Referrals: React.FC = () => {
                       {new Date(referral.createdAt).toLocaleDateString()}
                     </Typography>
                     <Stack direction="row" spacing={1}>
+                      {referral.referralLink && (
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() =>
+                            window.open(referral.referralLink, '_blank')
+                          }
+                        >
+                          Job Link
+                        </Button>
+                      )}
                       <Button
                         size="small"
                         variant="outlined"
@@ -455,26 +682,68 @@ const Referrals: React.FC = () => {
                       >
                         Details
                       </Button>
-                      {user?.role === 'STUDENT' && (
-                        <Button
-                          size="small"
-                          variant="contained"
-                          startIcon={<Send />}
-                          onClick={() => {
-                            setSelectedReferral(referral);
-                            setApplicationForm({
-                              ...applicationForm,
-                              referralId: referral.id,
-                            });
-                            setApplyDialogOpen(true);
-                          }}
-                          sx={{ borderRadius: 2, textTransform: 'none' }}
-                        >
-                          Apply
-                        </Button>
-                      )}
+                      {(user?.role === 'STUDENT' || user?.role === 'ALUM') &&
+                        referral.status === 'APPROVED' && (
+                          <Button
+                            size="small"
+                            variant="contained"
+                            startIcon={<Send />}
+                            disabled={applications.some(
+                              (app) =>
+                                app.referralId === referral.id &&
+                                app.applicantId === user?.id
+                            )}
+                            onClick={() => {
+                              setSelectedReferral(referral);
+                              setApplicationForm({
+                                ...applicationForm,
+                                referralId: referral.id,
+                              });
+                              setApplyDialogOpen(true);
+                            }}
+                            sx={{ borderRadius: 2, textTransform: 'none' }}
+                          >
+                            {applications.some(
+                              (app) =>
+                                app.referralId === referral.id &&
+                                app.applicantId === user?.id
+                            )
+                              ? 'Already Applied'
+                              : 'Apply'}
+                          </Button>
+                        )}
+                      {user?.role === 'ADMIN' &&
+                        referral.status === 'PENDING' && (
+                          <>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              color="success"
+                              onClick={() => handleApproveReferral(referral.id)}
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              color="error"
+                              onClick={() => handleRejectReferral(referral.id)}
+                            >
+                              Reject
+                            </Button>
+                          </>
+                        )}
                       {user?.id === referral.alumniId && (
                         <>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() =>
+                              openReferralApplications(referral.id)
+                            }
+                          >
+                            Applications ({referral.applications?.length ?? 0})
+                          </Button>
                           <IconButton size="small" color="primary">
                             <Edit />
                           </IconButton>
@@ -583,6 +852,31 @@ const Referrals: React.FC = () => {
             <Grid item xs={12}>
               <TextField
                 fullWidth
+                label="Application Deadline"
+                type="datetime-local"
+                value={createForm.deadline}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, deadline: e.target.value })
+                }
+                InputLabelProps={{ shrink: true }}
+                required
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
+                label="Referral Link (optional)"
+                value={createForm.referralLink}
+                onChange={(e) =>
+                  setCreateForm({ ...createForm, referralLink: e.target.value })
+                }
+                placeholder="https://company.com/job/123"
+                helperText="Leave blank if none. Must be a valid http(s) URL if provided."
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                fullWidth
                 label="Requirements"
                 value={createForm.requirements}
                 onChange={(e) =>
@@ -624,20 +918,21 @@ const Referrals: React.FC = () => {
           )}
 
           <Grid container spacing={2}>
+            {/* Resume link only (no upload) */}
             <Grid item xs={12}>
               <TextField
                 fullWidth
-                label="Resume URL"
-                value={applicationForm.resumeUrl}
+                label="Resume Link (Google Drive or URL)"
+                value={applicationForm.resumeLink}
                 onChange={(e) =>
                   setApplicationForm({
                     ...applicationForm,
-                    resumeUrl: e.target.value,
+                    resumeLink: e.target.value,
                   })
                 }
-                placeholder="https://example.com/resume.pdf"
+                placeholder="https://drive.google.com/... or any accessible URL"
+                helperText="Paste your resume link (Google Drive share link or any public URL)"
                 required
-                helperText="Provide a link to your resume"
               />
             </Grid>
             <Grid item xs={12}>
@@ -690,6 +985,23 @@ const Referrals: React.FC = () => {
                   />
                   {selectedReferral.location}
                 </Typography>
+                {selectedReferral.deadline && (
+                  <Typography variant="body2" color="text.secondary">
+                    Deadline:{' '}
+                    {new Date(selectedReferral.deadline).toLocaleString()}
+                  </Typography>
+                )}
+                {selectedReferral.referralLink && (
+                  <Button
+                    size="small"
+                    sx={{ mt: 1 }}
+                    onClick={() =>
+                      window.open(selectedReferral.referralLink!, '_blank')
+                    }
+                  >
+                    Open Job Link
+                  </Button>
+                )}
               </Box>
               <Box>
                 <Typography
@@ -722,110 +1034,226 @@ const Referrals: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
-          {user?.role === 'STUDENT' && selectedReferral && (
-            <Button
-              variant="contained"
-              onClick={() => {
-                setApplicationForm({
-                  ...applicationForm,
-                  referralId: selectedReferral.id,
-                });
-                setDetailsDialogOpen(false);
-                setApplyDialogOpen(true);
-              }}
-            >
-              Apply
-            </Button>
-          )}
+          {(user?.role === 'STUDENT' || user?.role === 'ALUM') &&
+            selectedReferral &&
+            selectedReferral.status === 'APPROVED' && (
+              <Button
+                variant="contained"
+                disabled={applications.some(
+                  (app) =>
+                    app.referralId === selectedReferral.id &&
+                    app.applicantId === user?.id
+                )}
+                onClick={() => {
+                  setApplicationForm({
+                    ...applicationForm,
+                    referralId: selectedReferral.id,
+                  });
+                  setDetailsDialogOpen(false);
+                  setApplyDialogOpen(true);
+                }}
+              >
+                {applications.some(
+                  (app) =>
+                    app.referralId === selectedReferral.id &&
+                    app.applicantId === user?.id
+                )
+                  ? 'Already Applied'
+                  : 'Apply'}
+              </Button>
+            )}
         </DialogActions>
       </Dialog>
 
-      {/* My Applications Section (for students) */}
-      {user?.role === 'STUDENT' && applications.length > 0 && (
-        <Box sx={{ mt: 6 }}>
-          <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
-            My Applications
-          </Typography>
-          <Grid container spacing={2}>
-            {applications.map((application) => (
-              <Grid item xs={12} md={6} key={application.id}>
-                <Card sx={{ borderRadius: 3 }}>
+      {/* Applications Dialog for Alumni */}
+      <Dialog
+        open={appsDialogOpen}
+        onClose={() => setAppsDialogOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Applications</DialogTitle>
+        <DialogContent dividers>
+          {referralApps.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No applications yet.
+            </Typography>
+          ) : (
+            <Stack spacing={2}>
+              {referralApps.map((app) => (
+                <Card key={app.id} variant="outlined">
                   <CardContent>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        mb: 2,
-                      }}
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="center"
                     >
                       <Box>
-                        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                          Application #{application.id.slice(-8)}
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ fontWeight: 600 }}
+                        >
+                          {app.applicant?.name} ({app.applicant?.role})
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Submitted{' '}
-                          {new Date(application.createdAt).toLocaleDateString()}
+                          Applied {new Date(app.createdAt).toLocaleString()}
                         </Typography>
                       </Box>
                       <Chip
-                        label={application.status}
-                        color={
-                          getStatusColor(application.status) as
-                            | 'default'
-                            | 'primary'
-                            | 'secondary'
-                            | 'error'
-                            | 'info'
-                            | 'success'
-                            | 'warning'
-                        }
+                        label={app.status}
+                        color={getStatusColor(app.status)}
                         size="small"
                       />
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1,
-                        mb: 1,
-                      }}
-                    >
-                      <School sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2">
-                        {application.student.name} ({application.student.role})
-                      </Typography>
-                    </Box>
-
-                    <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                    </Stack>
+                    <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
                       <Button
                         size="small"
                         variant="outlined"
                         startIcon={<Visibility />}
-                        onClick={() =>
-                          window.open(application.resumeUrl, '_blank')
-                        }
+                        onClick={() => window.open(app.resumeUrl, '_blank')}
                       >
                         View Resume
                       </Button>
-                      {application.coverLetter && (
+                      {app.coverLetter && (
                         <Button
                           size="small"
                           variant="outlined"
                           startIcon={<Description />}
+                          onClick={() => alert(app.coverLetter)}
                         >
                           View Cover Letter
                         </Button>
                       )}
-                    </Box>
+                      <Button
+                        size="small"
+                        onClick={() =>
+                          updateApplicationStatus(app.id, 'REVIEWED')
+                        }
+                      >
+                        Mark Reviewed
+                      </Button>
+                      <Button
+                        size="small"
+                        color="success"
+                        onClick={() =>
+                          updateApplicationStatus(app.id, 'ACCEPTED')
+                        }
+                      >
+                        Accept
+                      </Button>
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() =>
+                          updateApplicationStatus(app.id, 'REJECTED')
+                        }
+                      >
+                        Reject
+                      </Button>
+                    </Stack>
                   </CardContent>
                 </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </Box>
-      )}
+              ))}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAppsDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* My Applications Section (for students and alumni) */}
+      {(user?.role === 'STUDENT' || user?.role === 'ALUM') &&
+        applications.length > 0 && (
+          <Box sx={{ mt: 6 }}>
+            <Typography variant="h5" sx={{ fontWeight: 600, mb: 3 }}>
+              My Applications
+            </Typography>
+            <Grid container spacing={2}>
+              {applications.map((application) => (
+                <Grid item xs={12} md={6} key={application.id}>
+                  <Card sx={{ borderRadius: 3 }}>
+                    <CardContent>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          mb: 2,
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                            Application #{application.id.slice(-8)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            Submitted{' '}
+                            {new Date(
+                              application.createdAt
+                            ).toLocaleDateString()}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={application.status}
+                          color={
+                            getStatusColor(application.status) as
+                              | 'default'
+                              | 'primary'
+                              | 'secondary'
+                              | 'error'
+                              | 'info'
+                              | 'success'
+                              | 'warning'
+                          }
+                          size="small"
+                        />
+                      </Box>
+
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          mb: 1,
+                        }}
+                      >
+                        <School
+                          sx={{ fontSize: 16, color: 'text.secondary' }}
+                        />
+                        <Typography variant="body2">
+                          {application.applicant.name} (
+                          {application.applicant.role})
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<Visibility />}
+                          onClick={() =>
+                            window.open(application.resumeUrl, '_blank')
+                          }
+                        >
+                          View Resume
+                        </Button>
+                        {application.coverLetter && (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<Description />}
+                          >
+                            View Cover Letter
+                          </Button>
+                        )}
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
+        )}
     </Container>
   );
 };

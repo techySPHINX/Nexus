@@ -28,8 +28,6 @@ model User {
   passwordResetToken                    String?
   twoFactorEnabled                      Boolean                       @default(false)
   twoFactorSecret                       String?
-  ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
-  ReportsMade                           ContentReport[]               @relation("ReportsMade")
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
@@ -75,6 +73,8 @@ model User {
   verificationDocuments                 VerificationDocument[]
   Vote                                  Vote[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
+  ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
+  ReportsMade                           ContentReport[]               @relation("ReportsMade")
 
   @@map("users")
 }
@@ -420,6 +420,8 @@ model Referral {
   description  String
   requirements String
   location     String
+  deadline     DateTime
+  referralLink String?
   status       ReferralStatus        @default(PENDING)
   alumniId     String
   createdAt    DateTime              @default(now())
@@ -431,16 +433,17 @@ model Referral {
 }
 
 model ReferralApplication {
-  id          String            @id @default(uuid())
-  referralId  String
-  studentId   String
-  resumeUrl   String
-  coverLetter String?
-  status      ApplicationStatus @default(PENDING)
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  referral    Referral          @relation(fields: [referralId], references: [id])
-  student     User              @relation(fields: [studentId], references: [id])
+  id             String            @id @default(uuid())
+  referralId     String
+  applicantId    String
+  resumeUrl      String
+  coverLetter    String?
+  additionalLink String?
+  status         ApplicationStatus @default(PENDING)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  referral       Referral          @relation(fields: [referralId], references: [id])
+  applicant      User              @relation(fields: [applicantId], references: [id])
 
   @@map("referral_applications")
 }
@@ -797,7 +800,6 @@ model EmailVerification {
 
   @@map("email_verifications")
 }
-
 enum ProjectStatus {
   IDEA
   IN_PROGRESS
@@ -951,7 +953,6 @@ enum EventCategory {
   NETWORKING
   COMMUNITY
 }
-
 enum AccountStatus {
   PENDING_VERIFICATION
   PENDING_DOCUMENT_REVIEW

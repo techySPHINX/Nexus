@@ -1,6 +1,16 @@
 const { basename, join } = require('path');
 const { readdirSync, existsSync } = require('fs');
-const { execFileSync } = require('child_process');
+const { execFileSync, execSync } = require('child_process');
+
+function ensureTsxAvailable() {
+  try {
+    execSync('npx --yes tsx --version', { stdio: 'ignore' });
+    return true;
+  } catch (_) {
+    console.error('❌ tsx is not available via npx. Please ensure you have network access or install tsx locally: npm i -D tsx');
+    return false;
+  }
+}
 
 function runSeed(file) {
   const filePath = join(__dirname, file);
@@ -10,7 +20,8 @@ function runSeed(file) {
   }
   console.log(`\n▶️  Running seed: ${file}`);
   try {
-    execFileSync(process.execPath, [filePath], { stdio: 'inherit' });
+    // Use tsx to execute ESM-style seed scripts seamlessly
+    execFileSync('npx', ['--yes', 'tsx', filePath], { stdio: 'inherit' });
     console.log(`✅ Finished: ${file}`);
   } catch (err) {
     console.error(`❌ Seed failed: ${file}`);
@@ -45,8 +56,10 @@ if (require.main === module) {
   const remaining = allFiles.filter((f) => !ordered.includes(f));
   const files = [...ordered, ...remaining];
 
-  for (const file of files) {
-    runSeed(file);
+  if (ensureTsxAvailable()) {
+    for (const file of files) {
+      runSeed(file);
+    }
   }
 
   console.log('\n🎉 All seed scripts attempted.');
