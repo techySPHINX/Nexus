@@ -74,6 +74,16 @@ export class ReferralController {
   }
 
   /**
+   * Returns analytics for referrals and applications (admin only).
+   */
+  @Get('analytics')
+  @Roles(Role.ADMIN)
+  @SkipThrottle()
+  async getAnalytics() {
+    return this.referralService.getAnalytics();
+  }
+
+  /**
    * Approves a referral. Only accessible by ADMINs.
    * MUST come before @Put(':id') to avoid route conflicts.
    * @param userId - The ID of the authenticated admin.

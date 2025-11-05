@@ -138,6 +138,7 @@ export const apiService = {
     updateApplicationStatus: (id: string, status: string) =>
       api.put(`/referral/applications/${id}/status`, { status }),
     getMyApplications: () => api.get('/referral/applications/my'),
+    getAnalytics: () => api.get('/referral/analytics'),
   },
 
   // Files endpoints

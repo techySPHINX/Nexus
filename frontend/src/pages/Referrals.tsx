@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
 import {
   Container,
   Grid,
@@ -133,6 +134,12 @@ const Referrals: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const didInit = useRef(false);
+  const socketRef = useRef<Socket | null>(null);
+  const [analytics, setAnalytics] = useState<{
+    totals: { referrals: number; applications: number };
+    referralsByStatus: Record<string, number>;
+    applicationsByStatus: Record<string, number>;
+  } | null>(null);
 
   // Form states
   const [createForm, setCreateForm] = useState<CreateReferralDto>({
@@ -228,10 +235,44 @@ const Referrals: React.FC = () => {
     console.log('✅ User authenticated, fetching referrals...');
     fetchReferrals();
 
+    // If admin, load analytics
+    if (user.role === 'ADMIN') {
+      apiService.referrals
+        .getAnalytics()
+        .then((res) => setAnalytics(res.data))
+        .catch(() => setAnalytics(null));
+    }
+
+    // Establish Socket.IO connection for real-time updates
+    try {
+      const base = 'http://localhost:3000';
+      const socket = io(base, {
+        transports: ['websocket'],
+        withCredentials: true,
+      });
+      socketRef.current = socket;
+      socket.on('referral.created', () => fetchReferrals());
+      socket.on('referral.updated', () => fetchReferrals());
+      socket.on('referral.deleted', () => fetchReferrals());
+      socket.on('application.created', () => {
+        if (user.role === 'STUDENT' || user.role === 'ALUM')
+          fetchApplications();
+      });
+      socket.on('application.updated', () => {
+        if (user.role === 'STUDENT' || user.role === 'ALUM')
+          fetchApplications();
+      });
+    } catch {
+      // ignore socket errors
+    }
+
     if (user.role === 'STUDENT' || user.role === 'ALUM') {
       console.log('🎓 Applicant-capable user, fetching applications...');
       fetchApplications();
     }
+    return () => {
+      socketRef.current?.disconnect();
+    };
   }, [fetchReferrals, user]);
 
   const fetchApplications = async () => {
@@ -444,9 +485,9 @@ const Referrals: React.FC = () => {
   };
 
   const filteredReferrals = referrals.filter((referral) => {
-    // Students can only see APPROVED referrals (or their own if they created it)
+    // Students and Alumni can only see APPROVED referrals (or their own if they created it)
     if (
-      user?.role === 'STUDENT' &&
+      (user?.role === 'STUDENT' || user?.role === 'ALUM') &&
       referral.status !== 'APPROVED' &&
       referral.alumniId !== user?.id
     ) {
@@ -479,6 +520,46 @@ const Referrals: React.FC = () => {
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
+      {/* Admin Analytics */}
+      {user?.role === 'ADMIN' && analytics && (
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            justifyContent="space-between"
+          >
+            <Stack direction="row" spacing={2}>
+              <Chip
+                label={`Total Referrals: ${analytics.totals.referrals}`}
+                color="primary"
+              />
+              <Chip
+                label={`Total Applications: ${analytics.totals.applications}`}
+                color="secondary"
+              />
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <Chip
+                label={`Approved: ${analytics.referralsByStatus.APPROVED || 0}`}
+              />
+              <Chip
+                label={`Pending: ${analytics.referralsByStatus.PENDING || 0}`}
+              />
+              <Chip
+                label={`Rejected: ${analytics.referralsByStatus.REJECTED || 0}`}
+              />
+            </Stack>
+          </Stack>
+        </Box>
+      )}
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography
