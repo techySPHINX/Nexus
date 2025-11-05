@@ -6,11 +6,13 @@ import { SubCommunity } from '../../types/subCommunity';
 
 interface SubCommunitySectionProps {
   title: string;
-  type: string;
+  type: string | { id: string; name: string };
   communities: SubCommunity[];
   hasMore?: boolean;
   onLoadMore?: () => void;
   initialCount?: number;
+  isLoading?: boolean;
+  remainingCount?: number | undefined;
 }
 
 export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
@@ -20,9 +22,13 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
   hasMore = false,
   onLoadMore,
   initialCount = 6,
+  isLoading = false,
+  remainingCount,
 }) => {
   const [showAll, setShowAll] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const typeKey = typeof type === 'string' ? type : type.name?.toLowerCase();
 
   const displayedCommunities = showAll
     ? communities
@@ -33,16 +39,16 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
       setShowAll(false);
       return;
     }
-
-    if (hasMore && onLoadMore && type !== 'all') {
-      setIsLoadingMore(true);
+    if (hasMore && onLoadMore && typeKey !== 'all') {
+      // if parent provides an external loading flag, prefer that to local state
+      if (!isLoading) setIsLoadingMore(true);
       try {
         await onLoadMore();
         setShowAll(true);
       } catch (error) {
         console.error('Failed to load more communities:', error);
       } finally {
-        setIsLoadingMore(false);
+        if (!isLoading) setIsLoadingMore(false);
       }
     } else {
       setShowAll(true);
@@ -54,7 +60,7 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
 
   // Don't show "Show more" for recommended (type 'all')
   const shouldShowMoreButton =
-    type !== 'all' && (hasMore || communities.length > initialCount);
+    typeKey !== 'all' && (hasMore || communities.length > initialCount);
 
   return (
     <Box sx={{ mb: 4 }}>
@@ -119,14 +125,16 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
               borderRadius: 2,
             }}
             startIcon={showAll ? <ExpandLess /> : <ExpandMore />}
-            disabled={isLoadingMore}
+            disabled={!!isLoading || isLoadingMore}
           >
-            {isLoadingMore ? (
+            {isLoading || isLoadingMore ? (
               <CircularProgress size={16} />
             ) : showAll ? (
               'Show less'
+            ) : remainingCount !== undefined ? (
+              `Show ${remainingCount} more communities`
             ) : (
-              `Show ${communities.length - initialCount} more communities`
+              `Show more`
             )}
           </Button>
         </Box>

@@ -71,13 +71,13 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   }, [user, joinRequests, subCommunity.id]);
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent navigation if click is on the join button or edit icon
-    if (
-      (e.target as HTMLElement).closest('button') ||
-      (e.target as HTMLElement).closest('.no-navigate')
-    ) {
-      return;
-    }
+    // Prevent navigation if click is on an interactive control (button/link/input)
+    const target = e.target as HTMLElement | null;
+    const isInteractive = (el: HTMLElement | null) =>
+      !!el?.closest(
+        'a, button, input, textarea, select, [role="button"], .no-navigate'
+      );
+    if (isInteractive(target)) return;
     navigate(`/subcommunities/${subCommunity.id}`);
   };
 
@@ -112,38 +112,6 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
       onEdit(subCommunity);
     }
   };
-
-  // const getTypeIcon = (type: string) => {
-  //   const typeIcons: Record<string, string> = {
-  //     TECH: '💻',
-  //     GAME: '🎮',
-  //     MUSIC: '🎵',
-  //     SPORT: '⚽',
-  //     ART: '🎨',
-  //     SCIENCE: '🔬',
-  //     EDUCATION: '📚',
-  //     ENTERTAINMENT: '🎬',
-  //     LIFESTYLE: '🌿',
-  //     OTHER: '🔮',
-  //   };
-  //   return typeIcons[type] || '🔮';
-  // };
-
-  // const getTypeColor = (type: string) => {
-  //   const typeColors: Record<string, string> = {
-  //     TECH: '#3b82f6',
-  //     GAME: '#ef4444',
-  //     MUSIC: '#8b5cf6',
-  //     SPORT: '#22c55e',
-  //     ART: '#ec4899',
-  //     SCIENCE: '#06b6d4',
-  //     EDUCATION: '#f59e0b',
-  //     ENTERTAINMENT: '#f97316',
-  //     LIFESTYLE: '#10b981',
-  //     OTHER: '#6b7280',
-  //   };
-  //   return typeColors[type] || '#6b7280';
-  // };
 
   const getRoleIcon = (role: SubCommunityRole) => {
     switch (role) {
@@ -376,13 +344,11 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
               sx={{
                 width: 48,
                 height: 48,
-                // backgroundColor: getTypeColor(subCommunity.type),
                 fontSize: '1.2rem',
                 fontWeight: 'bold',
                 color: 'white',
               }}
             >
-              {/* {getTypeIcon(subCommunity.type)} */}
               {subCommunity.name.charAt(0).toUpperCase()}
             </Avatar>
           )}
@@ -455,7 +421,11 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
           >
             {/* Community Type */}
             <Chip
-              label={subCommunity.type}
+              label={
+                typeof subCommunity.type === 'string'
+                  ? subCommunity.type
+                  : subCommunity.type?.name || 'OTHER'
+              }
               size="small"
               sx={{
                 fontSize: '0.7rem',

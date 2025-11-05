@@ -64,14 +64,18 @@ export const CreateSubCommunityDialog: React.FC<
             <TextField
               label="Name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setName(e.target.value)
+              }
               required
               fullWidth
             />
             <TextField
               label="Description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setDescription(e.target.value)
+              }
               required
               multiline
               rows={3}
@@ -81,7 +85,9 @@ export const CreateSubCommunityDialog: React.FC<
               control={
                 <Switch
                   checked={isPrivate}
-                  onChange={(e) => setIsPrivate(e.target.checked)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setIsPrivate(e.target.checked)
+                  }
                 />
               }
               label="Private Community"
