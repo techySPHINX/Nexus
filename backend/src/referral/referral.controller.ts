@@ -234,12 +234,19 @@ export class ReferralController {
   /**
    * Retrieves a single job referral by its ID.
    * MUST come after @Get(':id/applications') to avoid route conflicts.
+   * Non-admins can only access APPROVED referrals or their own referrals.
    * @param id - The ID of the referral to retrieve.
+   * @param userId - The ID of the authenticated user (optional).
+   * @param userRole - The role of the authenticated user (optional).
    * @returns A promise that resolves to the referral object.
    */
   @Get(':id')
   @SkipThrottle()
-  async getReferralById(@Param('id') id: string) {
-    return this.referralService.getReferralById(id);
+  async getReferralById(
+    @Param('id') id: string,
+    @GetCurrentUser('userId') userId?: string,
+    @GetCurrentUser('role') userRole?: Role,
+  ) {
+    return this.referralService.getReferralById(id, userId, userRole);
   }
 }

@@ -100,6 +100,7 @@ const Referrals: React.FC = () => {
   const [applications, setApplications] = useState<ReferralApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(
@@ -266,6 +267,8 @@ const Referrals: React.FC = () => {
       };
 
       await apiService.referrals.create(body);
+      setError(null);
+      setSuccessMessage('Referral created successfully! It will be reviewed by an admin.');
       setCreateDialogOpen(false);
       setCreateForm({
         company: '',
@@ -277,9 +280,13 @@ const Referrals: React.FC = () => {
         referralLink: '',
       });
       fetchReferrals();
-    } catch (err) {
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: any) {
       console.error('Error creating referral:', err);
-      setError('Failed to create referral');
+      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to create referral';
+      setError(errorMessage);
+      setSuccessMessage(null);
     }
   };
 
@@ -324,6 +331,7 @@ const Referrals: React.FC = () => {
 
       // Success - show message and reset
       setError(null);
+      setSuccessMessage('Application submitted successfully!');
       setApplyDialogOpen(false);
       setApplicationForm({
         referralId: '',
@@ -332,11 +340,14 @@ const Referrals: React.FC = () => {
       });
       fetchApplications();
       fetchReferrals(); // Refresh to show updated application count
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
       console.error('Error applying:', err);
       // Extract error message from response
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to submit application';
       setError(errorMessage);
+      setSuccessMessage(null);
     }
   };
 
@@ -344,10 +355,15 @@ const Referrals: React.FC = () => {
     if (window.confirm('Are you sure you want to delete this referral?')) {
       try {
         await apiService.referrals.delete(referralId);
+        setError(null);
+        setSuccessMessage('Referral deleted successfully.');
         fetchReferrals();
-      } catch (err) {
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } catch (err: any) {
         console.error('Error deleting referral:', err);
-        setError('Failed to delete referral');
+        const errorMessage = err?.response?.data?.message || err?.message || 'Failed to delete referral';
+        setError(errorMessage);
+        setSuccessMessage(null);
       }
     }
   };
@@ -381,12 +397,16 @@ const Referrals: React.FC = () => {
     try {
       await apiService.referrals.approve(referralId);
       setError(null);
+      setSuccessMessage('Referral approved successfully!');
       // Refresh referrals list
       await fetchReferrals();
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: any) {
       console.error('Error approving referral:', err);
       const errorMessage = err?.response?.data?.message || err?.message || 'Failed to approve referral';
       setError(errorMessage);
+      setSuccessMessage(null);
     }
   };
 
@@ -395,12 +415,16 @@ const Referrals: React.FC = () => {
       try {
         await apiService.referrals.reject(referralId);
         setError(null);
+        setSuccessMessage('Referral rejected successfully.');
         // Refresh referrals list
         await fetchReferrals();
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccessMessage(null), 5000);
       } catch (err: any) {
         console.error('Error rejecting referral:', err);
         const errorMessage = err?.response?.data?.message || err?.message || 'Failed to reject referral';
         setError(errorMessage);
+        setSuccessMessage(null);
       }
     }
   };
@@ -455,6 +479,13 @@ const Referrals: React.FC = () => {
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
+        </Alert>
+      )}
+
+      {/* Success Alert */}
+      {successMessage && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccessMessage(null)}>
+          {successMessage}
         </Alert>
       )}
 
@@ -614,11 +645,16 @@ const Referrals: React.FC = () => {
                       >
                         Details
                       </Button>
-                      {(user?.role === 'STUDENT' || user?.role === 'ALUM') && (
+                      {(user?.role === 'STUDENT' || user?.role === 'ALUM') && referral.status === 'APPROVED' && (
                         <Button
                           size="small"
                           variant="contained"
                           startIcon={<Send />}
+                          disabled={
+                            applications.some(
+                              (app) => app.referralId === referral.id && app.applicantId === user?.id
+                            )
+                          }
                           onClick={() => {
                             setSelectedReferral(referral);
                             setApplicationForm({
@@ -629,7 +665,11 @@ const Referrals: React.FC = () => {
                           }}
                           sx={{ borderRadius: 2, textTransform: 'none' }}
                         >
-                          Apply
+                          {applications.some(
+                            (app) => app.referralId === referral.id && app.applicantId === user?.id
+                          )
+                            ? 'Already Applied'
+                            : 'Apply'}
                         </Button>
                       )}
                       {user?.role === 'ADMIN' && referral.status === 'PENDING' && (
@@ -944,9 +984,14 @@ const Referrals: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailsDialogOpen(false)}>Close</Button>
-          {(user?.role === 'STUDENT' || user?.role === 'ALUM') && selectedReferral && (
+          {(user?.role === 'STUDENT' || user?.role === 'ALUM') && selectedReferral && selectedReferral.status === 'APPROVED' && (
             <Button
               variant="contained"
+              disabled={
+                applications.some(
+                  (app) => app.referralId === selectedReferral.id && app.applicantId === user?.id
+                )
+              }
               onClick={() => {
                 setApplicationForm({
                   ...applicationForm,
@@ -956,7 +1001,11 @@ const Referrals: React.FC = () => {
                 setApplyDialogOpen(true);
               }}
             >
-              Apply
+              {applications.some(
+                (app) => app.referralId === selectedReferral.id && app.applicantId === user?.id
+              )
+                ? 'Already Applied'
+                : 'Apply'}
             </Button>
           )}
         </DialogActions>

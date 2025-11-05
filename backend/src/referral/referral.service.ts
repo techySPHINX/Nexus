@@ -39,6 +39,9 @@ export class ReferralService {
    */
   async createReferral(userId: string, dto: CreateReferralDto) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
     if (user.role !== Role.ALUM) {
       throw new ForbiddenException('Only alumni can post referrals.');
     }
@@ -106,7 +109,7 @@ export class ReferralService {
    * @returns A promise that resolves to the referral object.
    * @throws {NotFoundException} If the referral is not found.
    */
-  async getReferralById(referralId: string) {
+  async getReferralById(referralId: string, userId?: string, userRole?: Role) {
     const referral = await this.prisma.referral.findUnique({
       where: { id: referralId },
       include: {
@@ -117,12 +120,25 @@ export class ReferralService {
             email: true,
           },
         },
-        applications: true,
+        applications: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
     if (!referral) {
       throw new NotFoundException('Referral not found.');
     }
+
+    // Enforce status filtering: non-admins can only access APPROVED referrals or their own
+    if (userRole !== Role.ADMIN) {
+      const isOwnReferral = userId && referral.alumniId === userId;
+      if (referral.status !== ReferralStatus.APPROVED && !isOwnReferral) {
+        throw new ForbiddenException('You can only view approved referrals.');
+      }
+    }
+
     return referral;
   }
 
@@ -214,6 +230,9 @@ export class ReferralService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
 
     if (referral.alumniId !== userId && user.role !== Role.ADMIN) {
       throw new ForbiddenException(
@@ -301,6 +320,9 @@ export class ReferralService {
     }
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
 
     if (referral.alumniId !== userId && user.role !== Role.ADMIN) {
       throw new ForbiddenException(
@@ -329,6 +351,10 @@ export class ReferralService {
     dto: { referralId: string; resumeUrl: string; coverLetter?: string; applicantId?: string },
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+    
     // Allow both STUDENT and ALUM to apply
     if (user.role !== Role.STUDENT && user.role !== Role.ALUM) {
       throw new ForbiddenException('Only students or alumni can apply for referrals.');
@@ -340,6 +366,11 @@ export class ReferralService {
     });
     if (!referral) {
       throw new NotFoundException('Referral not found.');
+    }
+
+    // Only allow applications to APPROVED referrals
+    if (referral.status !== ReferralStatus.APPROVED) {
+      throw new BadRequestException('You can only apply to approved referrals.');
     }
 
     // Use applicantId from dto (for future extensibility), but default to userId
@@ -459,6 +490,9 @@ export class ReferralService {
     dto: UpdateReferralApplicationDto,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
 
     const application = await this.prisma.referralApplication.findUnique({
       where: { id: applicationId },
