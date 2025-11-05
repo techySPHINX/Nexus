@@ -156,13 +156,69 @@ export class ShowcaseController {
   }
 
   @Get('startup')
-  getStartups() {
-    return this.showcaseService.getStartups();
+  getStartups(
+    @GetCurrentUser('userId') userId: string,
+    @Query() filterStartupDto?: { search?: string; status?: string; cursor?: string; pageSize?: number },
+  ) {
+    return this.showcaseService.getStartups(userId, filterStartupDto);
+  }
+
+  @Get('startup/my')
+  getMyStartups(
+    @GetCurrentUser('userId') userId: string,
+    @Query() filterStartupDto?: { search?: string; status?: string; cursor?: string; pageSize?: number },
+  ) {
+    return this.showcaseService.getMyStartups(userId, filterStartupDto);
+  }
+
+  @Get('startup/followed')
+  getFollowedStartups(
+    @GetCurrentUser('userId') userId: string,
+    @Query() filterStartupDto?: { search?: string; status?: string; cursor?: string; pageSize?: number },
+  ) {
+    return this.showcaseService.getFollowedStartups(userId, filterStartupDto);
   }
 
   @Get('startup/:id')
   getStartupById(@Param('id') startupId: string) {
     return this.showcaseService.getStartupById(startupId);
+  }
+
+  @Post('startup/:id/follow')
+  followStartup(
+    @GetCurrentUser('userId') userId: string,
+    @Param('id') startupId: string,
+  ) {
+    return this.showcaseService.followStartup(userId, startupId);
+  }
+
+  @Delete('startup/:id/follow')
+  unfollowStartup(
+    @GetCurrentUser('userId') userId: string,
+    @Param('id') startupId: string,
+  ) {
+    return this.showcaseService.unfollowStartup(userId, startupId);
+  }
+
+  @Post('startup/:id/comments')
+  createStartupComment(
+    @GetCurrentUser('userId') userId: string,
+    @Param('id') startupId: string,
+    @Body() createCommentDto: CreateCommentDto,
+  ) {
+    return this.showcaseService.createStartupComment(
+      userId,
+      startupId,
+      createCommentDto.comment,
+    );
+  }
+
+  @Get('startup/:id/comments')
+  getStartupComments(
+    @Param('id') startupId: string,
+    @Query('page') page = 1,
+  ) {
+    return this.showcaseService.getStartupComments(startupId, page);
   }
 
   @Post(':id/support')
@@ -274,6 +330,11 @@ export class ShowcaseController {
   @Get(':id/team')
   getTeamMembers(@Param('id') projectId: string) {
     return this.showcaseService.getTeamMembers(projectId);
+  }
+
+  @Get(':id/seeking-status')
+  getSeekingStatus(@Param('id') projectId: string) {
+    return this.showcaseService.getSeekingOptions(projectId);
   }
 
   @Get('tags')

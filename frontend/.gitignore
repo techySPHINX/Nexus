@@ -3,7 +3,28 @@
 # dependencies
 /node_modules
 /.pnp
-.pnp.js
+.pnp.json
+
+# lock files
+package-lock.json
+yarn.lock
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Node lockfiles (ignored intentionally)
+/package-lock.json
+/frontend/package-lock.json
+/backend/package-lock.json
 
 # testing
 /coverage

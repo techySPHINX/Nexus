@@ -35,6 +35,7 @@ import { EngagementService } from './services/engagementService';
 import { PostProvider } from './contexts/PostContext';
 import { SubCommunityProvider } from './contexts/SubCommunityContext';
 import { ShowcaseProvider } from './contexts/ShowcaseContext';
+import { StartupProvider } from './contexts/StartupContext';
 
 // Import components that use named exports (not default exports)
 import { FeedPage } from './pages/Posts/FeedPage';
@@ -46,6 +47,7 @@ import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { MySubCommunitiesPage } from './pages/SubCommunity/MySubCommunityPage';
 const ProjectsMainPage = lazy(() => import('./pages/Project/ProjectMainPage'));
+const StartupsMainPage = lazy(() => import('./pages/Startup/StartupMainPage'));
 
 // Lazy load components for better performance
 // const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));
@@ -265,6 +267,16 @@ const Layout: React.FC = () => {
                     <ShowcaseProvider>
                       <ProjectsMainPage />
                     </ShowcaseProvider>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/startups"
+                element={
+                  <ProtectedRoute>
+                    <StartupProvider>
+                      <StartupsMainPage />
+                    </StartupProvider>
                   </ProtectedRoute>
                 }
               />

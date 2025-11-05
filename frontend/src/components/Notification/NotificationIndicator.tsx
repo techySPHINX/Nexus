@@ -35,7 +35,7 @@ const NotificationIndicator = () => {
         interval = null;
       }
 
-      const pollInterval = isVisible ? 30000 : 90000; // 30s vs 90s
+      const pollInterval = isVisible ? 60000 : 120000; // 60s vs 120s
       interval = setInterval(fetchNotifications, pollInterval);
     };
 

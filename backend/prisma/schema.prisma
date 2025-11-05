@@ -16,18 +16,18 @@ model User {
   description                           String?
   iconUrl                               String?
   bannerUrl                             String?
-  isEmailVerified                       Boolean                       @default(false)
-  isAccountActive                       Boolean                       @default(false)
+  createdAt                             DateTime                      @default(now())
   accountStatus                         AccountStatus                 @default(PENDING_VERIFICATION)
   emailVerificationToken                String?
-  passwordResetToken                    String?
-  passwordResetExpires                  DateTime?
-  lastLoginAt                           DateTime?
   failedLoginAttempts                   Int                           @default(0)
+  isAccountActive                       Boolean                       @default(false)
+  isEmailVerified                       Boolean                       @default(false)
+  lastLoginAt                           DateTime?
   lockedUntil                           DateTime?
+  passwordResetExpires                  DateTime?
+  passwordResetToken                    String?
   twoFactorEnabled                      Boolean                       @default(false)
   twoFactorSecret                       String?
-  createdAt                             DateTime                      @default(now())
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
@@ -63,17 +63,18 @@ model User {
   projects                              Project[]
   referralApplications                  ReferralApplication[]
   postedReferrals                       Referral[]                    @relation("PostedReferrals")
+  refreshTokens                         RefreshToken[]
+  securityEvents                        SecurityEvent[]
   startups                              Startup[]
+  startupComment                        StartupComment[]
+  startupFollowers                      StartupFollower[]
   userPoints                            UserPoints?
+  userSessions                          UserSession[]
+  verificationDocuments                 VerificationDocument[]
   Vote                                  Vote[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
-
-  refreshTokens         RefreshToken[]
-  securityEvents        SecurityEvent[]
-  userSessions          UserSession[]
-  verificationDocuments VerificationDocument[]
-  ReportsHandled        ContentReport[]        @relation("ReportsHandled")
-  ReportsMade           ContentReport[]        @relation("ReportsMade")
+  ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
+  ReportsMade                           ContentReport[]               @relation("ReportsMade")
 
   @@map("users")
 }
@@ -93,6 +94,7 @@ model Project {
   seeking               String[]
   skills                String[]
   status                ProjectStatus                 @default(IDEA)
+  seekingCollaboration  Boolean?                      @default(false)
   collaborationRequests ProjectCollaborationRequest[]
   comments              ProjectComment[]
   followers             ProjectFollower[]
@@ -122,8 +124,38 @@ model Startup {
   fundingRaised     Float?
   monetizationModel String?
   founder           User          @relation(fields: [founderId], references: [id])
+  startupComment    StartupComment[]
+  startupFollower   StartupFollower[]
 
+  @@index([createdAt])
   @@map("startups")
+}
+
+model StartupComment {
+  id         String   @id @default(uuid())
+  startupId  String
+  userId     String
+  comment    String
+  createdAt  DateTime @default(now())
+  startup    Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@map("startup_comments")
+}
+
+model StartupFollower {
+  id        String   @id @default(uuid())
+  startupId String
+  userId    String
+  createdAt DateTime @default(now())
+  startup   Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([startupId, userId])
+  @@index([startupId])
+  @@index([userId])
+  @@map("startup_followers")
 }
 
 model ProjectUpdate {
@@ -690,6 +722,84 @@ model Flair {
   @@unique([name, subCommunityId])
 }
 
+model RefreshToken {
+  id         String   @id @default(uuid())
+  token      String   @unique
+  userId     String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  isRevoked  Boolean  @default(false)
+  deviceInfo String?
+  ipAddress  String?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  email     String
+  ipAddress String
+  userAgent String?
+  success   Boolean
+  createdAt DateTime @default(now())
+
+  @@map("login_attempts")
+}
+
+model SecurityEvent {
+  id        String            @id @default(uuid())
+  userId    String?
+  eventType SecurityEventType
+  ipAddress String
+  userAgent String?
+  metadata  Json?
+  createdAt DateTime          @default(now())
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("security_events")
+}
+
+model UserSession {
+  id           String   @id @default(uuid())
+  userId       String
+  sessionToken String   @unique
+  deviceInfo   String?
+  ipAddress    String
+  userAgent    String?
+  lastActivity DateTime @default(now())
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_sessions")
+}
+
+model VerificationDocument {
+  id            String         @id @default(uuid())
+  userId        String
+  documentType  DocumentType
+  documentUrl   String
+  status        DocumentStatus @default(PENDING)
+  adminComments String?
+  reviewedBy    String?
+  reviewedAt    DateTime?
+  submittedAt   DateTime       @default(now())
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("verification_documents")
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("email_verifications")
+}
 enum ProjectStatus {
   IDEA
   IN_PROGRESS
@@ -843,88 +953,6 @@ enum EventCategory {
   NETWORKING
   COMMUNITY
 }
-
-// Enhanced Authentication Models
-model RefreshToken {
-  id         String   @id @default(uuid())
-  token      String   @unique
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt  DateTime
-  createdAt  DateTime @default(now())
-  isRevoked  Boolean  @default(false)
-  deviceInfo String?
-  ipAddress  String?
-
-  @@map("refresh_tokens")
-}
-
-model LoginAttempt {
-  id        String   @id @default(uuid())
-  email     String
-  ipAddress String
-  userAgent String?
-  success   Boolean
-  createdAt DateTime @default(now())
-
-  @@map("login_attempts")
-}
-
-model SecurityEvent {
-  id        String            @id @default(uuid())
-  userId    String?
-  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  eventType SecurityEventType
-  ipAddress String
-  userAgent String?
-  metadata  Json?
-  createdAt DateTime          @default(now())
-
-  @@map("security_events")
-}
-
-model UserSession {
-  id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessionToken String   @unique
-  deviceInfo   String?
-  ipAddress    String
-  userAgent    String?
-  lastActivity DateTime @default(now())
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-
-  @@map("user_sessions")
-}
-
-model VerificationDocument {
-  id            String         @id @default(uuid())
-  userId        String
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documentType  DocumentType
-  documentUrl   String
-  status        DocumentStatus @default(PENDING)
-  adminComments String?
-  reviewedBy    String?
-  reviewedAt    DateTime?
-  submittedAt   DateTime       @default(now())
-
-  @@map("verification_documents")
-}
-
-model EmailVerification {
-  id        String   @id @default(uuid())
-  email     String
-  token     String   @unique
-  expiresAt DateTime
-  isUsed    Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  @@map("email_verifications")
-}
-
-// Enhanced Enums
 enum AccountStatus {
   PENDING_VERIFICATION
   PENDING_DOCUMENT_REVIEW

@@ -68,6 +68,7 @@ const ProjectsMainPage: React.FC = () => {
     projectById,
     loading,
     actionLoading,
+    seekingOptions,
     error,
     refreshProjects,
     getProjectCounts,
@@ -84,11 +85,13 @@ const ProjectsMainPage: React.FC = () => {
     unfollowProject,
     requestCollaboration,
     clearError,
+    getProjectUpdates,
     getComments,
     createComment,
     getProjectTeamMembers,
     removeProjectTeamMember,
     createProjectTeamMember,
+    getSeekingOptions,
   } = useShowcase();
 
   const { user } = useAuth();
@@ -446,6 +449,17 @@ const ProjectsMainPage: React.FC = () => {
     [requestCollaboration]
   );
 
+  const handleLoadSeekingOptions = useCallback(
+    async (projectId: string) => {
+      try {
+        await getSeekingOptions(projectId);
+      } catch (err) {
+        console.error('Failed to load seeking options:', err);
+      }
+    },
+    [getSeekingOptions]
+  );
+
   const isProjectOwner = useCallback(
     (project: ProjectInterface | null) => {
       return user && project?.owner?.id === user.id;
@@ -792,6 +806,10 @@ const ProjectsMainPage: React.FC = () => {
           {showCollaborationModal && selectedProject && (
             <CollaborationModal
               project={selectedProject}
+              seekingOptions={seekingOptions[selectedProject.id] || []}
+              onLoadSeekingOptions={() =>
+                handleLoadSeekingOptions(selectedProject.id)
+              }
               onClose={() => {
                 setShowCollaborationModal(false);
                 setSelectedProject(null);
@@ -818,6 +836,7 @@ const ProjectsMainPage: React.FC = () => {
                 getComments(selectedProjectId, page, forceRefresh)
               }
               onLoadTeamMembers={() => getProjectTeamMembers(selectedProjectId)}
+              onLoadUpdates={() => getProjectUpdates(selectedProjectId)}
               isProjectOwner={isProjectOwner(projectById || selectedProject)}
               onCreateTeamMember={(data) =>
                 createProjectTeamMember(selectedProjectId, data)

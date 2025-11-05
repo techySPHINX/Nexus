@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -17,9 +17,12 @@ import {
   ProjectInterface,
   CreateCollaborationRequestInterface,
 } from '@/types/ShowcaseType';
+import { useShowcase } from '@/contexts/ShowcaseContext';
 
 interface CollaborationModalProps {
   project: ProjectInterface;
+  seekingOptions?: string[];
+  onLoadSeekingOptions?: () => void;
   onClose: () => void;
   onSubmit: (data: CreateCollaborationRequestInterface) => void;
   loading?: boolean;
@@ -27,22 +30,79 @@ interface CollaborationModalProps {
 
 const MotionDialog = motion(Dialog);
 
+// Track which projects have already requested server-side seeking options.
+// This avoids duplicate network calls caused by React StrictMode (double
+// mount/unmount in development) or repeated function references from parents.
+const seekingOptionsLoaded = new Set<string>();
+
 const CollaborationModal: React.FC<CollaborationModalProps> = ({
   project,
+  seekingOptions = [],
+  onLoadSeekingOptions,
   onClose,
   onSubmit,
   loading = false,
 }) => {
+  const { actionLoading } = useShowcase();
+  // actionLoading may optionally contain a `seekingOptions` flag; keep defensive typing
+  const seekingOptionsLoading =
+    (actionLoading as Record<string, unknown>)['seekingOptions'] ?? false;
+
   const [message, setMessage] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  // local state kept for UI feedback (if needed). We don't need a "seekingLoaded"
+  // flag for preventing duplicate loads because we use the module-level set.
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || isSubmitting) return;
+    setIsSubmitting(true);
 
-    await onSubmit({ message: message.trim() || undefined });
-    setMessage('');
-    onClose();
+    // If user selected roles, append them to the message so backend receives that context
+    const finalMessage =
+      (message.trim() || '') +
+      (selectedRoles.length
+        ? `\n\nI can help with: ${selectedRoles.join(', ')}`
+        : '');
+
+    try {
+      await onSubmit({ message: finalMessage.trim() || undefined });
+      setMessage('');
+      onClose();
+    } catch (err) {
+      // Keep modal open on error to allow retry. The parent should provide
+      // its own error handling/notification. Log for debugging.
+      console.error('Failed to submit collaboration request', err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
+
+  useEffect(() => {
+    // Only request server-side seeking options once per project.
+    // Use a module-level set to avoid duplicate calls caused by StrictMode
+    // or changing handler references from parent components.
+    if (!onLoadSeekingOptions) return;
+
+    const p = project as unknown as {
+      id?: string | number;
+      title?: string;
+      seekingCollaboration?: boolean;
+    };
+
+    const key = p.id ?? p.title ?? 'unknown-project';
+    if (
+      !seekingOptionsLoaded.has(String(key)) &&
+      p.seekingCollaboration === true
+    ) {
+      seekingOptionsLoaded.add(String(key));
+      onLoadSeekingOptions();
+    }
+
+    // Intentionally keep dependency list minimal: run once when mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onLoadSeekingOptions]);
 
   return (
     <MotionDialog
@@ -83,6 +143,83 @@ const CollaborationModal: React.FC<CollaborationModalProps> = ({
       </DialogTitle>
 
       <DialogContent sx={{ p: 2 }}>
+        {/* Seeking options (roles/skills) */}
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="subtitle2" color="black" sx={{ mb: 1 }}>
+            What help does this project need?
+          </Typography>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 1,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
+            {seekingOptionsLoading ? (
+              <CircularProgress size={20} color="primary" />
+            ) : (
+              (() => {
+                // Determine a safe array of options to render.
+                const serverOpts = Array.isArray(seekingOptions)
+                  ? seekingOptions
+                  : [];
+                const projAny = project as unknown as Record<string, unknown>;
+                const projectOpts = Array.isArray(project.seeking)
+                  ? project.seeking
+                  : Array.isArray(projAny.seekingCollaboration)
+                    ? (projAny.seekingCollaboration as string[])
+                    : [];
+
+                // If project.seekingCollaboration is a boolean true it signals "load server options".
+                const wantsServerOptions =
+                  projAny.seekingCollaboration === true;
+
+                const optsToShow = serverOpts.length ? serverOpts : projectOpts;
+
+                if (optsToShow.length === 0) {
+                  // If the project requests server options but none are available yet, show a subtle hint.
+                  return (
+                    <Typography variant="body2" color="text.secondary">
+                      {wantsServerOptions
+                        ? 'No roles available yet — the project is asking for contributors.'
+                        : 'No specific roles listed.'}
+                    </Typography>
+                  );
+                }
+
+                return optsToShow.map((opt) => (
+                  <Button
+                    key={opt}
+                    size="small"
+                    variant={
+                      selectedRoles.includes(opt) ? 'contained' : 'outlined'
+                    }
+                    onClick={() => {
+                      setSelectedRoles((prev) =>
+                        prev.includes(opt)
+                          ? prev.filter((p) => p !== opt)
+                          : [...prev, opt]
+                      );
+                    }}
+                    sx={{ textTransform: 'none' }}
+                  >
+                    {opt}
+                  </Button>
+                ));
+              })()
+            )}
+          </Box>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', mt: 1 }}
+          >
+            Select any roles that match your skills — selected roles will be
+            appended to your message.
+          </Typography>
+        </Box>
+
         <TextField
           label="Message"
           value={message}
@@ -109,8 +246,9 @@ const CollaborationModal: React.FC<CollaborationModalProps> = ({
             '& .MuiInputLabel-root': { color: 'black' },
           }}
         />
-        <Typography variant="caption" color="black">
-          Minimum 20 words. Briefly explain your contribution.
+        <Typography variant="caption" color="text.secondary">
+          Minimum 20 words. You can also select roles above and submit a shorter
+          message.
         </Typography>
       </DialogContent>
 
@@ -127,7 +265,11 @@ const CollaborationModal: React.FC<CollaborationModalProps> = ({
           onClick={handleSubmit}
           variant="contained"
           size="small"
-          disabled={loading || message.trim().split(' ').length < 20}
+          disabled={
+            loading ||
+            (message.trim().split(/\s+/).filter(Boolean).length < 20 &&
+              selectedRoles.length === 0)
+          }
           startIcon={loading ? <CircularProgress size={14} /> : <Send />}
           sx={{
             backgroundColor: 'primary.main',
