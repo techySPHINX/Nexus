@@ -8,11 +8,8 @@ import {
   Put,
   UseGuards,
   Query,
-  UseInterceptors,
-  UploadedFile,
   BadRequestException,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { ReferralService } from './referral.service';
 import { CreateReferralDto } from './dto/create-referral.dto';
 import { UpdateReferralDto } from './dto/update-referral.dto';
@@ -26,7 +23,6 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role, ReferralStatus } from '@prisma/client';
 import { SkipThrottle } from '@nestjs/throttler';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
-import { LegacyFilesService } from '../files/legacy-files.service';
 
 /**
  * Controller for managing job referrals and referral applications.
@@ -37,7 +33,6 @@ import { LegacyFilesService } from '../files/legacy-files.service';
 export class ReferralController {
   constructor(
     private readonly referralService: ReferralService,
-    private readonly legacyFilesService: LegacyFilesService,
   ) {}
 
   // Referral Endpoints

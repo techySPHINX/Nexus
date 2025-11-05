@@ -127,8 +127,11 @@ export const apiService = {
     approve: (id: string) => api.put(`/referral/${id}/approve`),
     reject: (id: string) => api.put(`/referral/${id}/reject`),
     // Applications now expect JSON body with resumeUrl (Drive link)
-    apply: (data: { referralId: string; resumeUrl: string; coverLetter?: string }) =>
-      api.post('/referral/apply', data),
+    apply: (data: {
+      referralId: string;
+      resumeUrl: string;
+      coverLetter?: string;
+    }) => api.post('/referral/apply', data),
     getApplications: (referralId: string) =>
       api.get(`/referral/${referralId}/applications`),
     getAllApplications: () => api.get('/referral/applications'),
