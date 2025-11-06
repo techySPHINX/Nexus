@@ -37,7 +37,15 @@ export const SubCommunityEditBox: React.FC<SubCommunityEditBoxProps> = ({
   onSave,
 }) => {
   const { updateSubCommunity, loading } = useSubCommunity();
-  const [formData, setFormData] = useState({
+  type FormDataType = {
+    name: string;
+    description: string;
+    isPrivate: boolean;
+    iconUrl: string;
+    bannerUrl: string;
+  };
+
+  const [formData, setFormData] = useState<FormDataType>({
     name: community.name,
     description: community.description,
     isPrivate: community.isPrivate,
@@ -49,7 +57,7 @@ export const SubCommunityEditBox: React.FC<SubCommunityEditBoxProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
+    setFormData((prev: FormDataType) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));

@@ -55,7 +55,13 @@ export interface SubCommunity {
   };
   members?: SubCommunityMember[];
   posts?: Post[];
-  type: string;
+  type?:
+    | {
+        id: string;
+        name: string;
+        slug?: string;
+      }
+    | string;
 }
 
 export interface PaginationData {
@@ -76,6 +82,13 @@ export interface PaginationData {
 export interface SubCommunityTypeResponse {
   data: SubCommunity[];
   pagination: PaginationData;
+}
+
+export interface SubCommunityType {
+  id: string;
+  name: string;
+  slug?: string;
+  description?: string;
 }
 
 export interface SubCommunityMember {
@@ -141,7 +154,8 @@ export interface CreateSubCommunityRequestDto {
   name: string;
   description: string;
   rules: string;
-  type: string;
+  type?: string;
+  typeId?: string;
 }
 
 export interface ApproveJoinRequestDto {
