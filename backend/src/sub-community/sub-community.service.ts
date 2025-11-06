@@ -21,6 +21,19 @@ import {
 export class SubCommunityService {
   constructor(private prisma: PrismaService) {}
 
+  private async getOrCreateTypeId(typeName?: string) {
+    if (!typeName) return null;
+    const name = typeName.toUpperCase();
+    let type = await this.prisma.subCommunityType.findUnique({
+      where: { name },
+    });
+    if (!type) {
+      type = await this.prisma.subCommunityType.create({
+        data: { name },
+      });
+    }
+    return type.id;
+  }
   async createSubCommunityInternal(data: {
     name: string;
     description: string;
@@ -29,15 +42,17 @@ export class SubCommunityService {
     ownerId: string;
     subCommunityCreationRequestId?: string;
   }) {
+    const typeId = await this.getOrCreateTypeId(data.type);
     const subCommunity = await this.prisma.subCommunity.create({
       data: {
         name: data.name,
         description: data.description,
-        type: data.type, // Add type
+        typeId,
         isPrivate: data.isPrivate,
         ownerId: data.ownerId,
         subCommunityCreationRequestId: data.subCommunityCreationRequestId,
       },
+      include: { owner: true },
     });
 
     // Add the owner as a member with OWNER role
@@ -45,7 +60,7 @@ export class SubCommunityService {
       data: {
         userId: data.ownerId,
         subCommunityId: subCommunity.id,
-        role: 'OWNER',
+        role: SubCommunityRole.OWNER,
       },
     });
 
@@ -53,38 +68,69 @@ export class SubCommunityService {
   }
 
   async createSubCommunity(dto: CreateSubCommunityDto) {
+    const typeId = dto.typeId || (await this.getOrCreateTypeId(dto.type));
     const subCommunity = await this.prisma.subCommunity.create({
       data: {
         name: dto.name,
         description: dto.description,
-        type: dto.type, // Add type
+        typeId,
         isPrivate: dto.isPrivate,
         ownerId: dto.ownerId,
       },
+      include: { owner: true },
     });
 
     await this.prisma.subCommunityMember.create({
       data: {
         userId: dto.ownerId,
         subCommunityId: subCommunity.id,
-        role: 'OWNER',
+        role: SubCommunityRole.OWNER,
       },
     });
 
     return subCommunity;
   }
 
-  async findAllSubCommunities(userId: string) {
+  async findAllSubCommunities(
+    userId: string | undefined,
+    options?: { compact?: boolean; page?: number; limit?: number },
+  ) {
     const where: Prisma.SubCommunityWhereInput = {
       OR: [{ isPrivate: false }, { members: { some: { userId } } }],
     };
 
-    // If userId is provided, include membership info
+    const compact = options?.compact ?? true;
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    if (compact) {
+      // Return a compact summary to minimize bandwidth: only essential fields
+      return this.prisma.subCommunity.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          iconUrl: true,
+          isPrivate: true,
+          owner: { select: { id: true, name: true } },
+          _count: { select: { members: true, posts: true } },
+          type: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    // full include when not compact
     if (userId) {
       return this.prisma.subCommunity.findMany({
         where,
         include: {
           owner: { select: { id: true, name: true, role: true } },
+          type: { select: { id: true, name: true } },
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },
@@ -92,9 +138,23 @@ export class SubCommunityService {
             where: { userId },
             select: { userId: true, role: true },
           },
+          posts: true,
         },
       });
     }
+
+    // If no userId provided, return public sub-communities with summary fields
+    return this.prisma.subCommunity.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        owner: { select: { id: true, name: true } },
+        type: { select: { id: true, name: true } },
+        _count: { select: { members: true, posts: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async findOneSubCommunity(id: string, userId?: string) {
@@ -114,6 +174,7 @@ export class SubCommunityService {
             },
           },
         },
+        type: { select: { id: true, name: true } },
         posts: { orderBy: { createdAt: 'desc' } },
         _count: {
           select: { members: true, posts: { where: { status: 'APPROVED' } } },
@@ -143,23 +204,40 @@ export class SubCommunityService {
   // Service implementation
   async findSubCommunityByType(
     type: string,
+    q: string | undefined,
     page: number = 1,
     limit: number = 20,
     userId?: string,
   ) {
     const skip = (page - 1) * limit;
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found.');
+    let user = null;
+    if (userId) {
+      user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('User not found.');
+      }
     }
 
     // For "ALL" type, return all subcommunities
-    const where =
-      type.toUpperCase() === 'ALL' ? {} : { type: type.toUpperCase() };
+    const whereBase =
+      type.toUpperCase() === 'ALL'
+        ? {}
+        : ({ type: { is: { name: type.toUpperCase() } } } as any);
+
+    const where = q
+      ? {
+          AND: [
+            whereBase,
+            {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+          ],
+        }
+      : whereBase;
 
     // Find sub-communities and total count, and mark if user is a member
     const [subCommunities, totalCount] = await Promise.all([
@@ -169,6 +247,7 @@ export class SubCommunityService {
         take: limit,
         include: {
           owner: { select: { id: true, name: true, role: true } },
+          type: { select: { id: true, name: true } },
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },

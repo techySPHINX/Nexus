@@ -28,6 +28,8 @@ model User {
   passwordResetToken                    String?
   twoFactorEnabled                      Boolean                       @default(false)
   twoFactorSecret                       String?
+  ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
+  ReportsMade                           ContentReport[]               @relation("ReportsMade")
   joinRequests                          JoinRequest[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
@@ -65,16 +67,14 @@ model User {
   postedReferrals                       Referral[]                    @relation("PostedReferrals")
   refreshTokens                         RefreshToken[]
   securityEvents                        SecurityEvent[]
-  startups                              Startup[]
   startupComment                        StartupComment[]
   startupFollowers                      StartupFollower[]
+  startups                              Startup[]
   userPoints                            UserPoints?
   userSessions                          UserSession[]
   verificationDocuments                 VerificationDocument[]
   Vote                                  Vote[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
-  ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
-  ReportsMade                           ContentReport[]               @relation("ReportsMade")
 
   @@map("users")
 }
@@ -111,34 +111,35 @@ model Project {
 }
 
 model Startup {
-  id                String        @id @default(uuid())
+  id                String            @id @default(uuid())
   name              String
   description       String
   imageUrl          String
   websiteUrl        String
   founderId         String
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  status            StartupStatus @default(IDEA)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  status            StartupStatus     @default(IDEA)
   fundingGoal       Float?
   fundingRaised     Float?
   monetizationModel String[]
   founder           User          @relation(fields: [founderId], references: [id])
   startupComment    StartupComment[]
   startupFollower   StartupFollower[]
+  founder           User              @relation(fields: [founderId], references: [id])
 
   @@index([createdAt])
   @@map("startups")
 }
 
 model StartupComment {
-  id         String   @id @default(uuid())
-  startupId  String
-  userId     String
-  comment    String
-  createdAt  DateTime @default(now())
-  startup    Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id])
+  id        String   @id @default(uuid())
+  startupId String
+  userId    String
+  comment   String
+  createdAt DateTime @default(now())
+  startup   Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([createdAt])
   @@map("startup_comments")
@@ -420,12 +421,12 @@ model Referral {
   description  String
   requirements String
   location     String
-  deadline     DateTime
-  referralLink String?
   status       ReferralStatus        @default(PENDING)
   alumniId     String
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
+  deadline     DateTime
+  referralLink String?
   applications ReferralApplication[]
   postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
 
@@ -435,15 +436,15 @@ model Referral {
 model ReferralApplication {
   id             String            @id @default(uuid())
   referralId     String
-  applicantId    String
   resumeUrl      String
   coverLetter    String?
-  additionalLink String?
   status         ApplicationStatus @default(PENDING)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-  referral       Referral          @relation(fields: [referralId], references: [id])
+  additionalLink String?
+  applicantId    String
   applicant      User              @relation(fields: [applicantId], references: [id])
+  referral       Referral          @relation(fields: [referralId], references: [id])
 
   @@map("referral_applications")
 }
@@ -535,14 +536,23 @@ model SubCommunity {
   status                        SubCommunityStatus           @default(ACTIVE)
   ownerId                       String
   subCommunityCreationRequestId String?                      @unique
-  type                          String                       @default("OTHER")
+  typeId                        String?
   reports                       ContentReport[]
   flairs                        Flair[]
   joinRequests                  JoinRequest[]
   owner                         User                         @relation("OwnedSubCommunities", fields: [ownerId], references: [id])
   creationRequest               SubCommunityCreationRequest? @relation(fields: [subCommunityCreationRequestId], references: [id])
+  type                          SubCommunityType?            @relation(fields: [typeId], references: [id], onDelete: Cascade)
   members                       SubCommunityMember[]
   posts                         Post[]
+}
+
+model SubCommunityType {
+  id             String         @id @default(cuid())
+  name           String         @unique @db.VarChar(50)
+  subCommunities SubCommunity[]
+
+  @@map("sub_community_types")
 }
 
 model SubCommunityMember {
@@ -800,6 +810,7 @@ model EmailVerification {
 
   @@map("email_verifications")
 }
+
 enum ProjectStatus {
   IDEA
   IN_PROGRESS
@@ -953,6 +964,7 @@ enum EventCategory {
   NETWORKING
   COMMUNITY
 }
+
 enum AccountStatus {
   PENDING_VERIFICATION
   PENDING_DOCUMENT_REVIEW
