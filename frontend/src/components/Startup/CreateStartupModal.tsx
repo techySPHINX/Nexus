@@ -15,16 +15,17 @@ import {
   Typography,
   CircularProgress,
 } from '@mui/material';
+import { StartupStatus } from '@/types/profileType';
 
 interface CreateStartupPayload {
   name: string;
   description: string;
   websiteUrl?: string;
   imageUrl?: string;
-  status?: string;
+  status?: StartupStatus;
   fundingGoal?: number;
   fundingRaised?: number;
-  monetizationModel?: string;
+  monetizationModel?: string[];
 }
 
 interface CreateStartupModalProps {
@@ -45,10 +46,10 @@ const CreateStartupModal: React.FC<CreateStartupModalProps> = ({
     description: '',
     websiteUrl: '',
     imageUrl: '',
-    status: 'IDEA',
+    status: StartupStatus.IDEA,
     fundingGoal: '',
     fundingRaised: '',
-    monetizationModel: '',
+    monetizationModel: '', // comma-separated editor, we'll convert on submit
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -61,13 +62,19 @@ const CreateStartupModal: React.FC<CreateStartupModalProps> = ({
       fundingRaised: formData.fundingRaised
         ? Number(formData.fundingRaised)
         : undefined,
+      monetizationModel: formData.monetizationModel
+        ? formData.monetizationModel
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : undefined,
     });
     setFormData({
       name: '',
       description: '',
       websiteUrl: '',
       imageUrl: '',
-      status: 'IDEA',
+      status: StartupStatus.IDEA,
       fundingGoal: '',
       fundingRaised: '',
       monetizationModel: '',
@@ -80,7 +87,7 @@ const CreateStartupModal: React.FC<CreateStartupModalProps> = ({
       description: '',
       websiteUrl: '',
       imageUrl: '',
-      status: 'IDEA',
+      status: StartupStatus.IDEA,
       fundingGoal: '',
       fundingRaised: '',
       monetizationModel: '',
@@ -154,13 +161,18 @@ const CreateStartupModal: React.FC<CreateStartupModalProps> = ({
                 value={formData.status}
                 label="Status"
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, status: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    status: e.target.value as StartupStatus,
+                  }))
                 }
               >
-                <MenuItem value="IDEA">💡 Idea</MenuItem>
-                <MenuItem value="PROTOTYPING">🔨 Prototyping</MenuItem>
-                <MenuItem value="BETA">🚀 Beta</MenuItem>
-                <MenuItem value="LAUNCHED">🎯 Launched</MenuItem>
+                <MenuItem value={StartupStatus.IDEA}>💡 Idea</MenuItem>
+                <MenuItem value={StartupStatus.PROTOTYPING}>
+                  🔨 Prototyping
+                </MenuItem>
+                <MenuItem value={StartupStatus.BETA}>🚀 Beta</MenuItem>
+                <MenuItem value={StartupStatus.LAUNCHED}>🎯 Launched</MenuItem>
               </Select>
             </FormControl>
 

@@ -16,16 +16,17 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { StartupSummary } from '@/types/StartupType';
+import { StartupStatus } from '@/types/profileType';
 
 interface EditStartupPayload {
   name?: string;
   description?: string;
   websiteUrl?: string;
   imageUrl?: string;
-  status?: string;
+  status?: StartupStatus;
   fundingGoal?: number;
   fundingRaised?: number;
-  monetizationModel?: string;
+  monetizationModel?: string[];
 }
 
 interface EditStartupModalProps {
@@ -48,23 +49,25 @@ const EditStartupModal: React.FC<EditStartupModalProps> = ({
     description: '',
     websiteUrl: '',
     imageUrl: '',
-    status: 'IDEA',
+    status: StartupStatus.IDEA,
     fundingGoal: '',
     fundingRaised: '',
-    monetizationModel: '',
+    monetizationModel: '', // comma-separated editor
   });
 
   useEffect(() => {
     if (startup) {
       setFormData({
         name: startup.name || '',
-        description: startup.description || '',
+        description: '', //startup.description || '',
         websiteUrl: startup.websiteUrl || '',
         imageUrl: startup.imageUrl || '',
-        status: startup.status || 'IDEA',
+        status: startup.status || StartupStatus.IDEA,
         fundingGoal: startup.fundingGoal?.toString() || '',
         fundingRaised: startup.fundingRaised?.toString() || '',
-        monetizationModel: startup.monetizationModel || '',
+        monetizationModel: Array.isArray(startup.monetizationModel)
+          ? startup.monetizationModel.join(', ')
+          : String(startup.monetizationModel || ''),
       });
     }
   }, [startup]);
@@ -78,6 +81,12 @@ const EditStartupModal: React.FC<EditStartupModalProps> = ({
         : undefined,
       fundingRaised: formData.fundingRaised
         ? Number(formData.fundingRaised)
+        : undefined,
+      monetizationModel: formData.monetizationModel
+        ? formData.monetizationModel
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
         : undefined,
     });
   };
@@ -144,13 +153,18 @@ const EditStartupModal: React.FC<EditStartupModalProps> = ({
                 value={formData.status}
                 label="Status"
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, status: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    status: e.target.value as StartupStatus,
+                  }))
                 }
               >
-                <MenuItem value="IDEA">💡 Idea</MenuItem>
-                <MenuItem value="PROTOTYPING">🔨 Prototyping</MenuItem>
-                <MenuItem value="BETA">🚀 Beta</MenuItem>
-                <MenuItem value="LAUNCHED">🎯 Launched</MenuItem>
+                <MenuItem value={StartupStatus.IDEA}>💡 Idea</MenuItem>
+                <MenuItem value={StartupStatus.PROTOTYPING}>
+                  🔨 Prototyping
+                </MenuItem>
+                <MenuItem value={StartupStatus.BETA}>🚀 Beta</MenuItem>
+                <MenuItem value={StartupStatus.LAUNCHED}>🎯 Launched</MenuItem>
               </Select>
             </FormControl>
 

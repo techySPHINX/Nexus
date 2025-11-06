@@ -156,7 +156,7 @@ export interface Startup {
   status: StartupStatus;
   fundingGoal?: number;
   fundingRaised?: number;
-  monetizationModel?: string;
+  monetizationModel?: string[];
   createdAt: string;
 }
 
