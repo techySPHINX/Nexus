@@ -94,7 +94,7 @@ const Layout: React.FC = () => {
       <Box
         sx={{
           pt: position === 'top' ? { xs: 7, sm: 8 } : 0,
-          pl: position === 'left' ? { xs: 0, md: '280px' } : 0,
+          pl: position === 'left' ? { xs: 0, md: '240px' } : 0,
           minHeight: '100vh',
           bgcolor: 'background.default',
           position: 'relative',
