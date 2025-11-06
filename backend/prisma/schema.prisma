@@ -123,9 +123,6 @@ model Startup {
   fundingGoal       Float?
   fundingRaised     Float?
   monetizationModel String[]
-  founder           User          @relation(fields: [founderId], references: [id])
-  monetizationModel String[]
-  founder           User          @relation(fields: [founderId], references: [id])
   startupComment    StartupComment[]
   startupFollower   StartupFollower[]
   founder           User              @relation(fields: [founderId], references: [id])
