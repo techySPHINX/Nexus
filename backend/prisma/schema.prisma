@@ -122,7 +122,7 @@ model Startup {
   status            StartupStatus     @default(IDEA)
   fundingGoal       Float?
   fundingRaised     Float?
-  monetizationModel String?
+  monetizationModel String[]
   startupComment    StartupComment[]
   startupFollower   StartupFollower[]
   founder           User              @relation(fields: [founderId], references: [id])

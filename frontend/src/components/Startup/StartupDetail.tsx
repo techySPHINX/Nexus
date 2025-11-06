@@ -10,8 +10,10 @@ import {
   Chip,
   Divider,
   TextField,
+  Stack,
+  IconButton,
 } from '@mui/material';
-import { Language } from '@mui/icons-material';
+import { Language, Close } from '@mui/icons-material';
 import {
   StartupDetail as StartupDetailType,
   StartupComment,
@@ -44,77 +46,92 @@ const StartupDetail: React.FC<Props> = ({
   onClose,
   onFollowToggle,
 }) => {
+  if (!startup) return null;
+
   return (
     <>
+      {/* HEADER */}
       <DialogTitle
         sx={{
-          background:
-            'linear-gradient(90deg, rgba(14,165,233,0.08), rgba(99,102,241,0.06))',
-          pb: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          bgcolor:
+            'linear-gradient(90deg, rgba(59,130,246,0.05), rgba(99,102,241,0.05))',
+          py: 2,
+          px: 3,
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Stack direction="row" alignItems="center" spacing={2}>
           <Avatar
-            src={startup?.imageUrl}
+            src={startup.imageUrl}
             sx={{
-              width: 56,
-              height: 56,
-              boxShadow: '0 4px 12px rgba(99,102,241,0.2)',
+              width: 72,
+              height: 72,
+              borderRadius: 3,
+              boxShadow: '0 4px 14px rgba(99,102,241,0.2)',
             }}
           />
           <Box>
             <Typography variant="h5" fontWeight={700}>
-              {startup?.name}
+              {startup.name}
             </Typography>
-            {startup?.websiteUrl && (
+
+            {startup.websiteUrl && (
               <Button
                 size="small"
                 startIcon={<Language />}
-                onClick={() => window.open(startup?.websiteUrl, '_blank')}
+                onClick={() => window.open(startup.websiteUrl, '_blank')}
+                sx={{ textTransform: 'none', color: 'primary.main', pl: 0 }}
               >
-                {startup?.websiteUrl}
+                {startup.websiteUrl}
               </Button>
             )}
-            {startup?.founder && (
+
+            {startup.founder && (
               <ProfileNameLink
                 user={startup.founder}
-                showAvatar
+                showAvatar={false}
                 variant="subtitle1"
               />
             )}
           </Box>
-        </Box>
+        </Stack>
+
+        <IconButton onClick={onClose} sx={{ color: 'text.secondary' }}>
+          <Close />
+        </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ pt: 3 }}>
-        <Box
-          sx={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: 1.5,
-            mb: 3,
-            mt: 3,
-            justifyContent: { xs: 'center', sm: 'flex-start' },
-          }}
+      {/* CONTENT */}
+      <DialogContent sx={{ px: 3, pt: 3, pb: 1 }}>
+        {/* Chips Section */}
+        <Stack
+          direction="row"
+          flexWrap="wrap"
+          spacing={1.5}
+          justifyContent={{ xs: 'center', sm: 'flex-start' }}
+          sx={{ mb: 3 }}
         >
           <Chip
-            label={startup?.status || 'IDEA'}
+            label={startup.status || 'IDEA'}
             color={
-              startup?.status === 'LAUNCHED'
+              startup.status === 'LAUNCHED'
                 ? 'success'
-                : startup?.status === 'BETA'
+                : startup.status === 'BETA'
                   ? 'primary'
-                  : startup?.status === 'PROTOTYPING'
+                  : startup.status === 'PROTOTYPING'
                     ? 'warning'
                     : 'default'
             }
             sx={{ fontWeight: 600 }}
           />
           <Chip
-            label={`${startup?.followersCount || 0} followers`}
+            label={`${startup.followersCount || 0} followers`}
             variant="outlined"
+            sx={{ fontWeight: 500 }}
           />
-          {startup?.fundingGoal && (
+          {startup.fundingGoal && (
             <Chip
               label={`$${startup.fundingRaised || 0} / $${startup.fundingGoal} raised`}
               color="info"
@@ -122,70 +139,65 @@ const StartupDetail: React.FC<Props> = ({
               sx={{ fontWeight: 500 }}
             />
           )}
-        </Box>
+        </Stack>
 
         {/* Description */}
-        <Box sx={{ mb: 3 }}>
-          {startup?.description ? (
-            <>
-              <Typography
-                variant="body1"
-                sx={{
-                  mb: 1,
-                  lineHeight: 1.7,
-                  color: 'text.primary',
-                  fontSize: { xs: '0.95rem', sm: '1rem' },
-                }}
-                noWrap={!showFullDescription}
-                style={
-                  showFullDescription
-                    ? {}
-                    : {
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                      }
-                }
-              >
-                {startup.description}
-              </Typography>
-              <Button
-                size="small"
-                onClick={() => setShowFullDescription((s) => !s)}
-                sx={{ mt: 0.5 }}
-              >
-                {showFullDescription ? 'Show less' : 'Read more'}
-              </Button>
-            </>
-          ) : (
-            <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-              No description provided.
-            </Typography>
+        <Box sx={{ mb: 4 }}>
+          <Typography
+            variant="body1"
+            sx={{
+              lineHeight: 1.7,
+              color: 'text.primary',
+              fontSize: { xs: '0.95rem', sm: '1rem' },
+              display: '-webkit-box',
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              WebkitLineClamp: showFullDescription ? 'unset' : 4,
+            }}
+          >
+            {startup.description || 'No description provided.'}
+          </Typography>
+
+          {startup.description && (
+            <Button
+              size="small"
+              onClick={() => setShowFullDescription((s) => !s)}
+              sx={{ mt: 0.5 }}
+            >
+              {showFullDescription ? 'Show less' : 'Read more'}
+            </Button>
           )}
         </Box>
 
-        <Divider sx={{ my: 3 }} />
+        <Divider sx={{ mb: 3 }} />
 
+        {/* COMMENTS SECTION */}
         <Typography
           variant="h6"
-          gutterBottom
-          sx={{ fontWeight: 700, color: 'text.primary' }}
+          sx={{ fontWeight: 700, color: 'text.primary', mb: 1 }}
         >
           Comments ({comments.length})
         </Typography>
 
-        {commentsLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-            <Typography variant="body2">Loading comments...</Typography>
-          </Box>
-        ) : (
-          <Box sx={{ maxHeight: 400, overflow: 'auto', pr: 1 }}>
+        <Box
+          sx={{
+            maxHeight: 360,
+            overflowY: 'auto',
+            pr: 1,
+            borderRadius: 2,
+            bgcolor: 'rgba(250,250,255,0.5)',
+          }}
+        >
+          {commentsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <Typography variant="body2">Loading comments...</Typography>
+            </Box>
+          ) : (
             <AnimatePresence>
               {comments.map((comment) => (
                 <motion.div
                   key={comment.id}
-                  initial={{ opacity: 0, y: 15 }}
+                  initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   layout
@@ -195,21 +207,22 @@ const StartupDetail: React.FC<Props> = ({
                       display: 'flex',
                       gap: 2,
                       py: 2,
-                      px: 1,
                       borderBottom: '1px solid rgba(0,0,0,0.05)',
-                      opacity: comment.pending ? 0.7 : 1,
+                      opacity: comment.pending ? 0.6 : 1,
                     }}
                   >
-                    <Avatar src={comment.user?.profile?.avatarUrl} />
+                    <Avatar
+                      src={comment.user?.profile?.avatarUrl}
+                      alt={comment.user?.name}
+                      sx={{ width: 36, height: 36 }}
+                    />
                     <Box sx={{ flex: 1 }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          flexWrap: 'wrap',
-                          gap: 1,
-                          mb: 0.5,
-                        }}
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        flexWrap="wrap"
+                        sx={{ mb: 0.5 }}
                       >
                         <Typography variant="subtitle2" fontWeight={600}>
                           {comment.user?.name}
@@ -224,13 +237,10 @@ const StartupDetail: React.FC<Props> = ({
                             color="warning"
                           />
                         )}
-                      </Box>
+                      </Stack>
                       <Typography
                         variant="body2"
-                        sx={{
-                          wordBreak: 'break-word',
-                          color: 'text.secondary',
-                        }}
+                        sx={{ color: 'text.secondary', whiteSpace: 'pre-line' }}
                       >
                         {comment.comment}
                       </Typography>
@@ -239,24 +249,25 @@ const StartupDetail: React.FC<Props> = ({
                 </motion.div>
               ))}
             </AnimatePresence>
+          )}
 
-            {comments.length === 0 && (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body2" color="text.secondary">
-                  No comments yet. Be the first to comment!
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        )}
+          {!commentsLoading && comments.length === 0 && (
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="body2" color="text.secondary">
+                No comments yet. Be the first to comment!
+              </Typography>
+            </Box>
+          )}
+        </Box>
 
-        {/* Add Comment */}
+        {/* COMMENT INPUT */}
         <Box
           sx={{
             display: 'flex',
             flexDirection: { xs: 'column', sm: 'row' },
             gap: 1,
             mt: 3,
+            alignItems: { sm: 'center' },
           }}
         >
           <TextField
@@ -288,6 +299,8 @@ const StartupDetail: React.FC<Props> = ({
               minWidth: { xs: '100%', sm: 120 },
               borderRadius: 2,
               boxShadow: '0 4px 14px rgba(99,102,241,0.25)',
+              textTransform: 'none',
+              fontWeight: 600,
             }}
           >
             Post
@@ -295,30 +308,32 @@ const StartupDetail: React.FC<Props> = ({
         </Box>
       </DialogContent>
 
+      {/* ACTIONS FOOTER */}
       <DialogActions
         sx={{
           px: 3,
           py: 2,
           background: 'rgba(99,102,241,0.03)',
           justifyContent: 'space-between',
+          borderTop: '1px solid rgba(0,0,0,0.05)',
         }}
       >
         <Button onClick={onClose} sx={{ borderRadius: 2 }}>
           Close
         </Button>
-        {startup && (
-          <Button
-            variant={startup.isFollowing ? 'outlined' : 'contained'}
-            onClick={onFollowToggle}
-            sx={{
-              borderRadius: 2,
-              minWidth: 120,
-              transition: 'all 0.25s ease',
-            }}
-          >
-            {startup.isFollowing ? 'Unfollow' : 'Follow'}
-          </Button>
-        )}
+        <Button
+          variant={startup.isFollowing ? 'outlined' : 'contained'}
+          onClick={onFollowToggle}
+          sx={{
+            borderRadius: 2,
+            minWidth: 120,
+            transition: 'all 0.25s ease',
+            textTransform: 'none',
+            fontWeight: 600,
+          }}
+        >
+          {startup.isFollowing ? 'Unfollow' : 'Follow'}
+        </Button>
       </DialogActions>
     </>
   );

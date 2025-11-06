@@ -1,5 +1,5 @@
 // StartupContext.tsx
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { ShowcaseService } from '@/services/ShowcaseService';
 import {
   StartupSummary,
@@ -78,6 +78,7 @@ export interface StartupContextType {
   createStartup: (data: Partial<StartupSummary>) => Promise<void>;
   updateStartup: (id: string, data: Partial<StartupSummary>) => Promise<void>;
   deleteStartup: (id: string) => Promise<void>;
+  refreshTab: (tab: number) => Promise<void>;
 }
 
 export const StartupContext = React.createContext<StartupContextType>({
@@ -95,6 +96,7 @@ export const StartupContext = React.createContext<StartupContextType>({
   createStartup: async () => {},
   updateStartup: async () => {},
   deleteStartup: async () => {},
+  refreshTab: async () => {},
 });
 
 export const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -771,32 +773,65 @@ export const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
-  //   useEffect(() => {
-  //     getStartups();
-  //   }, [getStartups]);
+  const refreshTab = useCallback(
+    async (tab: number) => {
+      if (tab === 0) {
+        await getStartups({ pageSize: 12 }, false, true);
+      } else if (tab === 1) {
+        await getFollowedStartups({ pageSize: 12 }, false, true);
+      } else if (tab === 2) {
+        await getMyStartups({ pageSize: 12 }, false, true);
+      }
+    },
+    [getStartups, getMyStartups, getFollowedStartups]
+  );
+
+  const state: StartupContextType = useMemo(
+    () => ({
+      all,
+      mine,
+      followed,
+      getStartups,
+      getMyStartups,
+      getFollowedStartups,
+      getStartupById,
+      followStartup,
+      unfollowStartup,
+      createComment,
+      getComments,
+      refreshTab,
+      createStartup,
+      updateStartup,
+      deleteStartup,
+    }),
+    [
+      all,
+      mine,
+      followed,
+      getStartups,
+      getMyStartups,
+      getFollowedStartups,
+      getStartupById,
+      followStartup,
+      unfollowStartup,
+      createComment,
+      getComments,
+      refreshTab,
+      createStartup,
+      updateStartup,
+      deleteStartup,
+    ]
+  );
 
   return (
-    <StartupContext.Provider
-      value={{
-        all,
-        mine,
-        followed,
-        getStartups,
-        getMyStartups,
-        getFollowedStartups,
-        getStartupById,
-        followStartup,
-        unfollowStartup,
-        createComment,
-        getComments,
-        createStartup,
-        updateStartup,
-        deleteStartup,
-      }}
-    >
-      {children}
-    </StartupContext.Provider>
+    <StartupContext.Provider value={state}>{children}</StartupContext.Provider>
   );
 };
 
-export const useStartup = () => React.useContext(StartupContext);
+export const useStartup = (): StartupContextType => {
+  const context = React.useContext(StartupContext);
+  if (context === undefined) {
+    throw new Error('useStartup must be used within a StartupProvider');
+  }
+  return context;
+};

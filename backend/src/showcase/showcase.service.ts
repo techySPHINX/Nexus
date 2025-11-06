@@ -884,193 +884,195 @@ export class ShowcaseService {
   }
 
   async getStartups(
-    userId: string,
-    filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
-  ) {
-    const { search, status } = filterDto || {};
-    const cursor = filterDto?.cursor;
-    const pageSize = filterDto?.pageSize ? Number(filterDto.pageSize) : 12;
+  userId: string,
+  filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
+) {
+  const { search, status, cursor } = filterDto;
+  const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
 
-    const where: any = {};
-    if (status) where.status = status;
-    if (search) {
-      where.OR = [
+  const where: any = {
+    ...(status && { status }),
+    ...(search && {
+      OR: [
         { name: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+      ],
+    }),
+  };
 
-    const startups = await this.prisma.startup.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: pageSize,
-      cursor: cursor ? { id: cursor } : undefined,
-      skip: cursor ? 1 : 0,
-      select: {
-        id: true,
-        name: true,
-        imageUrl: true,
-        websiteUrl: true,
-        status: true,
-        founderId: true,
-        createdAt: true,
-        fundingGoal: true,
-        fundingRaised: true,
-        monetizationModel: true,
-        founder: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
-        startupFollower: { select: { userId: true } },
-      },
-    });
+  const startups = await this.prisma.startup.findMany({
+    where,
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }, // tie-breaker for stable pagination
+    ],
+    take: pageSize,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+      websiteUrl: true,
+      status: true,
+      createdAt: true,
+      fundingGoal: true,
+      fundingRaised: true,
+      monetizationModel: true,
+      founderId: true,
+      _count: { select: { startupFollower: true } },
+      startupFollower: { where: { userId }, select: { userId: true }, take: 1 },
+    },
+  });
 
-    const normalized = startups.map((s) => ({
-      ...s,
-      followersCount: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.length : 0,
-      isFollowing: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.some((f) => f.userId === userId) : false,
-    }));
+  // 🧹 Strip internal fields before returning
+  const formatted = startups.map(({ _count, startupFollower, ...rest }) => ({
+    ...rest,
+    followersCount: _count?.startupFollower ?? 0,
+    isFollowing: startupFollower?.length > 0,
+  }));
 
-    const nextCursor = startups.length ? startups[startups.length - 1].id : null;
-    const hasNext = startups.length === pageSize;
+  const nextCursor = startups.length ? startups[startups.length - 1].id : null;
+  const hasNext = startups.length === pageSize;
 
-    return {
-      data: normalized,
-      pagination: {
-        nextCursor,
-        hasNext,
-        pageSize,
-      },
-    };
-  }
+  return {
+    data: formatted,
+    pagination: {
+      nextCursor,
+      hasNext,
+      pageSize,
+    },
+  };
+}
+
 
   async getMyStartups(
-    userId: string,
-    filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
-  ) {
-    const { search, status } = filterDto || {};
-    const cursor = filterDto?.cursor;
-    const pageSize = filterDto?.pageSize ? Number(filterDto.pageSize) : 12;
+  userId: string,
+  filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
+) {
+  const { search, status, cursor } = filterDto;
+  const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
 
-    const where: any = { founderId: userId };
-    if (status) where.status = status;
-    if (search) {
-      where.OR = [
+  const where: any = {
+    founderId: userId,
+    ...(status && { status }),
+    ...(search && {
+      OR: [
         { name: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+      ],
+    }),
+  };
 
-    const startups = await this.prisma.startup.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: pageSize,
-      cursor: cursor ? { id: cursor } : undefined,
-      skip: cursor ? 1 : 0,
-      select: {
-        id: true,
-        name: true,
-        imageUrl: true,
-        websiteUrl: true,
-        status: true,
-        founderId: true,
-        createdAt: true,
-        fundingGoal: true,
-        fundingRaised: true,
-        monetizationModel: true,
-        founder: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
-        startupFollower: { select: { userId: true } },
-      },
-    });
+  const startups = await this.prisma.startup.findMany({
+    where,
+    orderBy: [
+      { createdAt: 'desc' },
+      { id: 'desc' }, // tie-breaker for stable pagination
+    ],
+    take: pageSize,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+      websiteUrl: true,
+      status: true,
+      founderId: true,
+      createdAt: true,
+      fundingGoal: true,
+      fundingRaised: true,
+      monetizationModel: true,
+      _count: { select: { startupFollower: true } },
+      startupFollower: { where: { userId }, select: { userId: true }, take: 1 },
+    },
+  });
 
-    const normalized = startups.map((s) => ({
-      ...s,
-      followersCount: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.length : 0,
-      isFollowing: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.some((f) => f.userId === userId) : false,
-    }));
+  // 🧹 Clean & normalize — remove internal fields before returning
+  const formattedStartups = startups.map(({ _count, startupFollower, ...rest }) => ({
+    ...rest,
+    followersCount: _count?.startupFollower ?? 0,
+    isFollowing: startupFollower?.length > 0,
+  }));
 
-    const nextCursor = startups.length ? startups[startups.length - 1].id : null;
-    const hasNext = startups.length === pageSize;
+  const nextCursor = startups.length ? startups[startups.length - 1].id : null;
+  const hasNext = startups.length === pageSize;
 
-    return {
-      data: normalized,
-      pagination: {
-        nextCursor,
-        hasNext,
-        pageSize,
-      },
-    };
-  }
+  return {
+    data: formattedStartups,
+    pagination: {
+      nextCursor,
+      hasNext,
+      pageSize,
+    },
+  };
+}
 
   async getFollowedStartups(
-    userId: string,
-    filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
-  ) {
-    const { search, status } = filterDto || {};
-    const cursor = filterDto?.cursor;
-    const pageSize = filterDto?.pageSize ? Number(filterDto.pageSize) : 12;
+  userId: string,
+  filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
+) {
+  const { search, status, cursor } = filterDto;
+  const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
 
-    // find followed startup ids
-    const followed = await this.prisma.startupFollower.findMany({ where: { userId }, select: { startupId: true } });
-    const startupIds = followed.map((f) => f.startupId);
-
-    if (startupIds.length === 0) {
-      return {
-        data: [],
-        pagination: {
-          nextCursor: null,
-          hasNext: false,
-          pageSize,
-        },
-      };
-    }
-
-    const where: any = { id: { in: startupIds } };
-    if (status) where.status = status;
-    if (search) {
-      where.OR = [
+  const where: any = {
+    startupFollower: { some: { userId } }, // direct relational filter
+    ...(status && { status }),
+    ...(search && {
+      OR: [
         { name: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-      ];
-    }
+      ],
+    }),
+  };
 
-    const startups = await this.prisma.startup.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: pageSize,
-      cursor: cursor ? { id: cursor } : undefined,
-      skip: cursor ? 1 : 0,
-      select: {
-        id: true,
-        name: true,
-        imageUrl: true,
-        websiteUrl: true,
-        status: true,
-        founderId: true,
-        createdAt: true,
-        fundingGoal: true,
-        fundingRaised: true,
-        monetizationModel: true,
-        founder: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
-        startupFollower: { select: { userId: true } },
+  const startups = await this.prisma.startup.findMany({
+    where,
+    orderBy: [
+      { createdAt: 'desc' }, // main ordering
+      { id: 'desc' },        // tie-breaker for stable pagination
+    ],
+    take: pageSize,
+    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+    select: {
+      id: true,
+      name: true,
+      imageUrl: true,
+      websiteUrl: true,
+      status: true,
+      founderId: true,
+      createdAt: true,
+      fundingGoal: true,
+      fundingRaised: true,
+      monetizationModel: true,
+      _count: { select: { startupFollower: true } },
+      startupFollower: {
+        where: { userId },
+        select: { userId: true },
+        take: 1,
       },
-    });
+    },
+  });
 
-    const normalized = startups.map((s) => ({
-      ...s,
-      followersCount: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.length : 0,
-      isFollowing: Array.isArray((s as any).startupFollower) ? (s as any).startupFollower.some((f) => f.userId === userId) : false,
-    }));
+  const formattedStartups = startups.map(({ _count, startupFollower, ...rest }) => ({
+  ...rest,
+  followersCount: _count?.startupFollower ?? 0,
+  isFollowing: startupFollower?.length > 0,
+}));
+  
+  const nextCursor = startups.length ? startups[startups.length - 1].id : null;
+  const hasNext = startups.length === pageSize;
 
-    const nextCursor = startups.length ? startups[startups.length - 1].id : null;
-    const hasNext = startups.length === pageSize;
+  
 
-    return {
-      data: normalized,
-      pagination: {
-        nextCursor,
-        hasNext,
-        pageSize,
-      },
-    };
-  }
+  return {
+    data: formattedStartups,
+    pagination: {
+      nextCursor,
+      hasNext,
+      pageSize,
+    },
+  };
+}
 
   async getStartupById(startupId: string) {
     return this.prisma.startup.findUnique({

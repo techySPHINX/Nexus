@@ -314,7 +314,7 @@ const Navbar: React.FC = () => {
       <AppBar
         position="fixed"
         sx={{
-          width: 280,
+          width: 240,
           height: '100vh',
           left: 0,
           top: 0,

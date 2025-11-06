@@ -4,7 +4,6 @@ import {
   Box,
   Container,
   Typography,
-  CircularProgress,
   Button,
   Dialog,
   Chip,
@@ -13,13 +12,14 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import { Add, TrendingUp, People, Rocket } from '@mui/icons-material';
+import { Add, TrendingUp, People, Rocket, Refresh } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useStartup } from '@/contexts/StartupContext';
 import {
   StartupComment,
   StartupSummary,
   StartupDetail,
+  CreateStartupSummary,
 } from '@/types/StartupType';
 import { useAuth } from '@/contexts/AuthContext';
 import CreateStartupModal from '@/components/Startup/CreateStartupModal';
@@ -65,6 +65,7 @@ const StartupMainPage: React.FC = () => {
     createStartup,
     updateStartup,
     deleteStartup,
+    refreshTab,
   } = useStartup();
 
   const { user } = useAuth();
@@ -207,7 +208,7 @@ const StartupMainPage: React.FC = () => {
     }
   };
 
-  const handleEditStartup = async (data: Partial<StartupSummary>) => {
+  const handleEditStartup = async (data: Partial<CreateStartupSummary>) => {
     if (!startupToEdit) return;
 
     try {
@@ -333,7 +334,11 @@ const StartupMainPage: React.FC = () => {
             </Typography>
           </Box>
 
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            style={{ display: 'inline-block', marginRight: 1 }}
+          >
             <Button
               variant="contained"
               startIcon={<Add />}
@@ -348,7 +353,37 @@ const StartupMainPage: React.FC = () => {
               }}
               size="large"
             >
-              Add Startup
+              Startup
+            </Button>
+          </motion.div>
+          <motion.div
+            whileHover={{ scale: 1.03 }}
+            style={{ display: 'inline-block', marginLeft: 1 }}
+          >
+            <Button
+              variant="outlined"
+              onClick={async () => {
+                try {
+                  await refreshTab(activeTab);
+                  setSnackbar({
+                    open: true,
+                    message: 'Refreshed',
+                    severity: 'success',
+                  });
+                } catch (err) {
+                  console.error('Refresh failed', err);
+                  setSnackbar({
+                    open: true,
+                    message: 'Failed to refresh: ' + getErrorMessage(err),
+                    severity: 'error',
+                  });
+                }
+              }}
+              disabled={currentList.loading}
+              sx={{ borderRadius: 3, px: 2, py: 1.2, fontWeight: 600 }}
+              size="large"
+            >
+              <Refresh />
             </Button>
           </motion.div>
         </Box>
@@ -395,71 +430,74 @@ const StartupMainPage: React.FC = () => {
           </Tabs>
         </Box>
 
-        {/* Startup Grid */}
+        {/* Startup Grid
         {currentList.loading && currentList.data.length === 0 ? (
           <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
             <CircularProgress />
           </Box>
         ) : (
-          <>
-            <TabPanel value={activeTab} index={0}>
-              <StartupGrid
-                startups={currentList.data}
-                loading={currentList.loading}
-                onFollowToggle={handleFollowToggle}
-                onView={openDetails}
-                onEdit={openEditModal}
-                onDelete={handleDeleteStartup}
-              />
-            </TabPanel>
+          <> */}
+        <TabPanel value={activeTab} index={0}>
+          <StartupGrid
+            startups={currentList.data}
+            loading={currentList.loading}
+            onFollowToggle={handleFollowToggle}
+            onView={openDetails}
+            onEdit={openEditModal}
+            onDelete={handleDeleteStartup}
+            tab={0}
+          />
+        </TabPanel>
 
-            <TabPanel value={activeTab} index={1}>
-              <StartupGrid
-                startups={currentList.data}
-                loading={currentList.loading}
-                onFollowToggle={handleFollowToggle}
-                onView={openDetails}
-                onEdit={openEditModal}
-                onDelete={handleDeleteStartup}
-              />
-            </TabPanel>
+        <TabPanel value={activeTab} index={1}>
+          <StartupGrid
+            startups={currentList.data}
+            loading={currentList.loading}
+            onFollowToggle={handleFollowToggle}
+            onView={openDetails}
+            onEdit={openEditModal}
+            onDelete={handleDeleteStartup}
+            tab={1}
+          />
+        </TabPanel>
 
-            <TabPanel value={activeTab} index={2}>
-              <StartupGrid
-                startups={currentList.data}
-                loading={currentList.loading}
-                onFollowToggle={handleFollowToggle}
-                onView={openDetails}
-                onEdit={openEditModal}
-                onDelete={handleDeleteStartup}
-              />
-            </TabPanel>
+        <TabPanel value={activeTab} index={2}>
+          <StartupGrid
+            startups={currentList.data}
+            loading={currentList.loading}
+            onFollowToggle={handleFollowToggle}
+            onView={openDetails}
+            onEdit={openEditModal}
+            onDelete={handleDeleteStartup}
+            tab={2}
+          />
+        </TabPanel>
 
-            {currentList.data.length === 0 && !currentList.loading && (
-              <Box sx={{ textAlign: 'center', py: 8 }}>
-                <Typography variant="h6" color="text.secondary" gutterBottom>
-                  No startups found
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {activeTab === 0
-                    ? 'Try adjusting your search or filters'
-                    : activeTab === 1
-                      ? "You're not following any startups yet"
-                      : "You haven't created any startups yet"}
-                </Typography>
-                {activeTab === 2 && (
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 2 }}
-                    onClick={() => setCreateModalOpen(true)}
-                  >
-                    Create Your First Startup
-                  </Button>
-                )}
-              </Box>
+        {currentList.data.length === 0 && !currentList.loading && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No startups found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {activeTab === 0
+                ? 'Try adjusting your search or filters'
+                : activeTab === 1
+                  ? "You're not following any startups yet"
+                  : "You haven't created any startups yet"}
+            </Typography>
+            {activeTab === 2 && (
+              <Button
+                variant="contained"
+                sx={{ mt: 2 }}
+                onClick={() => setCreateModalOpen(true)}
+              >
+                Create Your First Startup
+              </Button>
             )}
-          </>
+          </Box>
         )}
+        {/* </> */}
+        {/* )} */}
 
         {/* Load more (cursor-based) */}
         <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
