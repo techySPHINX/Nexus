@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
@@ -61,7 +61,7 @@ async function seedShowcase() {
         seeking: ["Blockchain Developer", "Security Expert", "UI Designer"]
       },
       {
-        ownerId: users[3].id,
+        ownerId: users[1].id,
         title: "Virtual Reality Learning Platform",
         description: "An immersive VR platform for interactive learning experiences, particularly focused on science and history education.",
         githubUrl: "https://github.com/user4/vr-learning",
@@ -73,7 +73,7 @@ async function seedShowcase() {
         seeking: ["3D Artist", "VR Developer", "Educational Content Creator"]
       },
       {
-        ownerId: users[4].id,
+        ownerId: users[2].id,
         title: "Smart Home Automation Hub",
         description: "A centralized hub for managing all smart home devices with voice control, automation rules, and energy monitoring.",
         githubUrl: "https://github.com/user5/smart-home-hub",
@@ -100,39 +100,86 @@ async function seedShowcase() {
       }
     }
 
-    // Create startups
-    const startups = [
+    // Create startups - create several varied startups. founderId will be assigned from available users
+    const startupTemplates = [
       {
-        founderId: users[5].id,
-        name: "TechFlow Solutions",
-        description: "A startup focused on developing AI-powered workflow automation tools for small and medium businesses.",
-        imageUrl: "https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=500",
-        websiteUrl: "https://techflow-solutions.com",
-        status: "BETA",
+        name: 'TechFlow Solutions',
+        description:
+          'A startup focused on developing AI-powered workflow automation tools for small and medium businesses.',
+        imageUrl: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=500',
+        websiteUrl: 'https://techflow-solutions.com',
+        status: 'BETA',
         fundingGoal: 500000,
         fundingRaised: 250000,
-        monetizationModel: "SaaS Subscription"
+        monetizationModel: ['SaaS Subscription'],
       },
       {
-        founderId: users[6].id,
-        name: "GreenTech Innovations",
-        description: "Developing sustainable technology solutions for renewable energy and environmental conservation.",
-        imageUrl: "https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?w=500",
-        websiteUrl: "https://greentech-innovations.com",
-        status: "PROTOTYPING",
+        name: 'GreenTech Innovations',
+        description:
+          'Developing sustainable technology solutions for renewable energy and environmental conservation.',
+        imageUrl: 'https://images.unsplash.com/photo-1497435334941-8c899ee9e8e9?w=500',
+        websiteUrl: 'https://greentech-innovations.com',
+        status: 'PROTOTYPING',
         fundingGoal: 1000000,
         fundingRaised: 150000,
-        monetizationModel: "Product Sales + Consulting"
-      }
+        monetizationModel: ['Product Sales', 'Consulting'],
+      },
+      {
+        name: 'Campus Connect',
+        description:
+          'A networking platform tailored for students and alumni to share internships, projects and mentorship opportunities.',
+        imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=500',
+        websiteUrl: 'https://campus-connect.edu',
+        status: 'LAUNCHED',
+        fundingGoal: 20000,
+        fundingRaised: 45000,
+        monetizationModel: ['Freemium', 'Premium Subscriptions'],
+      },
+      {
+        name: 'MediMap',
+        description:
+          'A telemedicine and appointment-management platform connecting students with local health services.',
+        imageUrl: 'https://images.unsplash.com/photo-1580281657521-0a38d4b7c0d6?w=500',
+        websiteUrl: 'https://medimap.health',
+        status: 'BETA',
+        fundingGoal: 150000,
+        fundingRaised: 40000,
+        monetizationModel: ['Subscription', 'Per-appointment Fee'],
+      },
+      {
+        name: 'LearnLoop',
+        description:
+          'Micro-courses marketplace where instructors sell short practical courses and students earn badges.',
+        imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=500',
+        websiteUrl: 'https://learnloop.com',
+        status: 'PROTOTYPING',
+        fundingGoal: 0,
+        fundingRaised: 0,
+        monetizationModel: ['Course Sales', 'Revenue Share'],
+      },
+      {
+        name: 'SupplySmart',
+        description:
+          'A B2B procurement assistant that helps small teams source cheaper supplies and track orders.',
+        imageUrl: 'https://images.unsplash.com/photo-1518779578993-ec3579fee39f?w=500',
+        websiteUrl: 'https://supplysmart.co',
+        status: 'IDEA',
+        fundingGoal: 75000,
+        fundingRaised: 5000,
+        monetizationModel: ['Commission', 'SaaS'],
+      },
     ];
 
-    for (const startupData of startups) {
+    for (let i = 0; i < startupTemplates.length; i++) {
+      const template = startupTemplates[i];
+      const founder = users[i % users.length];
+      const startupData = { ...template, founderId: founder.id };
       try {
         const startup = await prisma.startup.create({
           data: startupData,
           include: {
-            founder: { select: { name: true, email: true } }
-          }
+            founder: { select: { name: true, email: true } },
+          },
         });
         console.log(`✅ Created startup: "${startup.name}" by ${startup.founder.name}`);
       } catch (error) {
