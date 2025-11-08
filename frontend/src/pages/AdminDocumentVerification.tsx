@@ -1,533 +1,1238 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Container,
   Paper,
   Typography,
   Box,
-  Button,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
   TableHead,
   TableRow,
-  Chip,
+  TableCell,
+  TableBody,
+  Button,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
+  CircularProgress,
+  Link,
+  Snackbar,
   Alert,
+  Chip,
+  Card,
+  CardContent,
+  Grid,
   IconButton,
-  Avatar,
   Tooltip,
+  MenuItem,
+  Avatar,
+  Badge,
+  Pagination,
   FormControl,
   InputLabel,
   Select,
-  MenuItem,
-  Grid,
-  Card,
-  CardContent,
+  Checkbox,
+  Switch,
+  FormControlLabel,
+  Tab,
+  Tabs,
+  useMediaQuery,
+  useTheme,
+  Drawer,
+  Divider,
+  Fab,
+  Zoom,
 } from '@mui/material';
 import {
+  FilterList,
+  Refresh,
   Visibility,
   CheckCircle,
   Cancel,
   Download,
   Person,
-  School,
-  Work,
+  CalendarToday,
   Description,
-  DateRange,
+  SelectAll,
+  Deselect,
+  Close,
+  Search,
 } from '@mui/icons-material';
-import { motion } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import { getErrorMessage } from '@/utils/errorHandler';
+import { useNotification } from '@/contexts/NotificationContext';
 
-interface Document {
+type PendingDocument = {
   id: string;
   documentType: string;
   documentUrl: string;
+  fileName?: string;
+  fileSize?: string;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
-  submittedAt: string;
-  adminComments?: string;
-  user: {
+  userId: string;
+  user?: {
     id: string;
-    email: string;
     name: string;
-    role: string;
-    createdAt: string;
+    email: string;
+    avatar?: string;
   };
-}
+  submittedAt?: string;
+  reviewedAt?: string;
+  reviewedBy?: string;
+};
 
-const AdminDocumentVerification: React.FC = () => {
-  const { user } = useAuth();
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogType, setDialogType] = useState<'approve' | 'reject'>('approve');
+type FilterState = {
+  status: string;
+  documentType: string;
+  search: string;
+};
+
+const statusColors = {
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'error',
+} as const;
+
+const documentTypes = [
+  'ID Card',
+  'Passport',
+  'Driver License',
+  'Utility Bill',
+  'Bank Statement',
+  'Other',
+];
+
+const DocumentVerification: React.FC = () => {
+  const { showNotification } = useNotification();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isSmallMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const [loading, setLoading] = useState(false);
+  const [documents, setDocuments] = useState<PendingDocument[]>([]);
+  const [filteredDocuments, setFilteredDocuments] = useState<PendingDocument[]>(
+    []
+  );
+  const [activeTab, setActiveTab] = useState(0);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage] = useState(8);
+
+  // Selection state
+  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
+  const [batchMode, setBatchMode] = useState(false);
+
+  // Dialog states
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
+  const [activeDoc, setActiveDoc] = useState<PendingDocument | null>(null);
   const [adminComments, setAdminComments] = useState('');
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [filter, setFilter] = useState('all');
-  const [stats, setStats] = useState({
-    pending: 0,
-    approved: 0,
-    rejected: 0,
-    total: 0,
+  const [rejectReason, setRejectReason] = useState('');
+
+  // UI states
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity?: 'success' | 'error';
+  }>({ open: false, message: '', severity: 'success' });
+
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    status: 'all',
+    documentType: 'all',
+    search: '',
   });
 
-  useEffect(() => {
-    fetchPendingDocuments();
-  }, []);
-
-  const fetchPendingDocuments = async () => {
+  // Memoized fetch function
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      const response = await axios.get('/auth/admin/pending-documents');
-      const docs = response.data;
+      const res = await axios.get('/admin/pending-documents');
+      const docs: PendingDocument[] = Array.isArray(res.data)
+        ? res.data
+        : (res.data?.data ?? []);
       setDocuments(docs);
-
-      // Calculate stats
-      const pending = docs.filter(
-        (d: Document) => d.status === 'PENDING'
-      ).length;
-      const approved = docs.filter(
-        (d: Document) => d.status === 'APPROVED'
-      ).length;
-      const rejected = docs.filter(
-        (d: Document) => d.status === 'REJECTED'
-      ).length;
-
-      setStats({
-        pending,
-        approved,
-        rejected,
-        total: docs.length,
-      });
-    } catch (error) {
-      console.error('Failed to fetch documents:', error);
+    } catch (err: unknown) {
+      showNotification?.(
+        getErrorMessage(err) || 'Failed to fetch documents',
+        'error'
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]);
 
-  const handleDocumentSelection = (documentId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedDocuments((prev) => [...prev, documentId]);
-    } else {
-      setSelectedDocuments((prev) => prev.filter((id) => id !== documentId));
+  // Initial data loading
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Filter documents when dependencies change
+  const filterDocuments = useCallback(() => {
+    let filtered = [...documents];
+
+    // Tab filtering
+    if (activeTab === 1)
+      filtered = filtered.filter((doc) => doc.status === 'PENDING');
+    else if (activeTab === 2)
+      filtered = filtered.filter((doc) => doc.status === 'APPROVED');
+
+    // Additional filters
+    if (filters.status !== 'all') {
+      filtered = filtered.filter((doc) => doc.status === filters.status);
     }
-  };
-
-  const handleBulkAction = (action: 'approve' | 'reject') => {
-    if (selectedDocuments.length === 0) {
-      alert('Please select documents first');
-      return;
+    if (filters.documentType !== 'all') {
+      filtered = filtered.filter(
+        (doc) => doc.documentType === filters.documentType
+      );
     }
-    setDialogType(action);
-    setDialogOpen(true);
-  };
-
-  const handleConfirmAction = async () => {
-    try {
-      const endpoint =
-        dialogType === 'approve'
-          ? '/auth/admin/approve-documents'
-          : '/auth/admin/reject-documents';
-
-      const payload = {
-        documentIds: selectedDocuments,
-        adminComments,
-        ...(dialogType === 'reject' && { reason: rejectionReason }),
-      };
-
-      await axios.post(endpoint, payload);
-
-      // Refresh the list
-      await fetchPendingDocuments();
-
-      // Reset form
-      setSelectedDocuments([]);
-      setAdminComments('');
-      setRejectionReason('');
-      setDialogOpen(false);
-
-      alert(`Documents ${dialogType}d successfully!`);
-    } catch (error) {
-      console.error(`Failed to ${dialogType} documents:`, error);
-      alert(`Failed to ${dialogType} documents. Please try again.`);
+    if (filters.search.trim()) {
+      const searchLower = filters.search.toLowerCase();
+      filtered = filtered.filter(
+        (doc) =>
+          doc.user?.name?.toLowerCase().includes(searchLower) ||
+          doc.user?.email?.toLowerCase().includes(searchLower) ||
+          doc.documentType.toLowerCase().includes(searchLower) ||
+          doc.fileName?.toLowerCase().includes(searchLower)
+      );
     }
-  };
 
-  const getDocumentTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      STUDENT_ID: 'Student ID',
-      TRANSCRIPT: 'Transcript',
-      DEGREE_CERTIFICATE: 'Degree Certificate',
-      ALUMNI_CERTIFICATE: 'Alumni Certificate',
-      EMPLOYMENT_PROOF: 'Employment Proof',
-    };
-    return labels[type] || type;
-  };
+    setFilteredDocuments(filtered);
+    setPage(1);
+  }, [documents, activeTab, filters]);
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'STUDENT':
-        return <School />;
-      case 'ALUM':
-        return <Work />;
-      default:
-        return <Person />;
-    }
-  };
+  // Apply filters when dependencies change
+  useEffect(() => {
+    filterDocuments();
+  }, [filterDocuments]);
 
-  const filteredDocuments = documents.filter((doc) => {
-    if (filter === 'all') return true;
-    return doc.status === filter.toUpperCase();
-  });
-
-  if (user?.role !== 'ADMIN') {
-    return (
-      <Container>
-        <Alert severity="error">
-          You don't have permission to access this page.
-        </Alert>
-      </Container>
+  // Selection handlers
+  const handleSelectDoc = useCallback((docId: string) => {
+    setSelectedDocs((prev) =>
+      prev.includes(docId)
+        ? prev.filter((id) => id !== docId)
+        : [...prev, docId]
     );
-  }
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedDocs([]);
+  }, []);
+
+  const handleAction = useCallback(
+    (doc: PendingDocument, action: 'approve' | 'reject' | 'preview') => {
+      setActiveDoc(doc);
+      setAdminComments('');
+      setRejectReason('');
+
+      switch (action) {
+        case 'approve':
+          setApproveDialogOpen(true);
+          break;
+        case 'reject':
+          setRejectDialogOpen(true);
+          break;
+        case 'preview':
+          setPreviewDialogOpen(true);
+          break;
+      }
+    },
+    []
+  );
+
+  const confirmApprove = useCallback(
+    async (documentIds?: string[]) => {
+      const idsToApprove =
+        documentIds || (activeDoc ? [activeDoc.id] : selectedDocs);
+
+      if (idsToApprove.length === 0) return;
+
+      try {
+        await axios.post('/admin/approve-documents', {
+          documentIds: idsToApprove,
+          adminComments,
+        });
+        setSnackbar({
+          open: true,
+          message: `${idsToApprove.length} document(s) approved successfully`,
+          severity: 'success',
+        });
+        setApproveDialogOpen(false);
+        setSelectedDocs([]);
+        fetchData();
+      } catch (err: unknown) {
+        setSnackbar({
+          open: true,
+          message: getErrorMessage(err) || 'Approval failed',
+          severity: 'error',
+        });
+      }
+    },
+    [activeDoc, adminComments, selectedDocs, fetchData]
+  );
+
+  const confirmReject = useCallback(
+    async (documentIds?: string[]) => {
+      const idsToReject =
+        documentIds || (activeDoc ? [activeDoc.id] : selectedDocs);
+
+      if (idsToReject.length === 0) return;
+      if (!rejectReason.trim() && !activeDoc) {
+        setSnackbar({
+          open: true,
+          message: 'Rejection reason is required',
+          severity: 'error',
+        });
+        return;
+      }
+
+      try {
+        await axios.post('/admin/reject-documents', {
+          documentIds: idsToReject,
+          reason: rejectReason,
+          adminComments,
+        });
+        setSnackbar({
+          open: true,
+          message: `${idsToReject.length} document(s) rejected`,
+          severity: 'success',
+        });
+        setRejectDialogOpen(false);
+        setSelectedDocs([]);
+        fetchData();
+      } catch (err: unknown) {
+        setSnackbar({
+          open: true,
+          message: getErrorMessage(err) || 'Rejection failed',
+          severity: 'error',
+        });
+      }
+    },
+    [activeDoc, rejectReason, adminComments, selectedDocs, fetchData]
+  );
+
+  const handleDownload = useCallback(
+    async (doc: PendingDocument) => {
+      try {
+        const response = await axios.get(doc.documentUrl, {
+          responseType: 'blob',
+        });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', doc.fileName || `document-${doc.id}`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch (err) {
+        showNotification?.('Download failed. ' + getErrorMessage(err), 'error');
+      }
+    },
+    [showNotification]
+  );
+
+  const handleTabChange = useCallback(
+    (_: React.SyntheticEvent, newValue: number) => {
+      setActiveTab(newValue);
+      setSelectedDocs([]);
+    },
+    []
+  );
+
+  const handlePageChange = useCallback(
+    (_: React.ChangeEvent<unknown>, value: number) => {
+      setPage(value);
+    },
+    []
+  );
+
+  const handleFilterChange = useCallback(
+    (key: keyof FilterState, value: string) => {
+      setFilters((prev) => ({ ...prev, [key]: value }));
+    },
+    []
+  );
+
+  const clearFilters = useCallback(() => {
+    setFilters({
+      status: 'all',
+      documentType: 'all',
+      search: '',
+    });
+  }, []);
+
+  const pendingCount = documents.filter(
+    (doc) => doc.status === 'PENDING'
+  ).length;
+
+  const paginatedDocuments = filteredDocuments.slice(
+    (page - 1) * rowsPerPage,
+    page * rowsPerPage
+  );
+
+  const handleSelectAll = useCallback(() => {
+    if (selectedDocs.length === paginatedDocuments.length) {
+      setSelectedDocs([]);
+    } else {
+      setSelectedDocs(paginatedDocuments.map((doc) => doc.id));
+    }
+  }, [paginatedDocuments, selectedDocs.length]);
+
+  // Mobile-friendly table row component
+  const MobileDocumentRow = ({ doc }: { doc: PendingDocument }) => (
+    <Card sx={{ mb: 2, p: 2 }} variant="outlined">
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          mb: 2,
+        }}
+      >
+        {batchMode && (
+          <Checkbox
+            checked={selectedDocs.includes(doc.id)}
+            onChange={() => handleSelectDoc(doc.id)}
+            size="small"
+          />
+        )}
+        <Box sx={{ flex: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <Avatar src={doc.user?.avatar} sx={{ width: 32, height: 32 }}>
+              <Person />
+            </Avatar>
+            <Box>
+              <Typography variant="subtitle2" fontWeight="medium">
+                {doc.user?.name || 'Unknown User'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {doc.user?.email || doc.userId}
+              </Typography>
+            </Box>
+          </Box>
+          <Chip
+            label={doc.status}
+            color={statusColors[doc.status]}
+            size="small"
+            sx={{ mb: 1 }}
+          />
+          <Typography variant="body2" color="text.secondary">
+            {doc.documentType}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" display="block">
+            Submitted:{' '}
+            {doc.submittedAt
+              ? new Date(doc.submittedAt).toLocaleDateString()
+              : '-'}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Button
+          size="small"
+          startIcon={<Visibility />}
+          onClick={() => handleAction(doc, 'preview')}
+        >
+          View
+        </Button>
+        <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Tooltip title="Download">
+            <IconButton size="small" onClick={() => handleDownload(doc)}>
+              <Download />
+            </IconButton>
+          </Tooltip>
+          {doc.status === 'PENDING' && (
+            <>
+              <Tooltip title="Approve">
+                <IconButton
+                  size="small"
+                  color="success"
+                  onClick={() => handleAction(doc, 'approve')}
+                >
+                  <CheckCircle />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Reject">
+                <IconButton
+                  size="small"
+                  color="error"
+                  onClick={() => handleAction(doc, 'reject')}
+                >
+                  <Cancel />
+                </IconButton>
+              </Tooltip>
+            </>
+          )}
+        </Box>
+      </Box>
+    </Card>
+  );
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <Typography variant="h4" component="h1" gutterBottom>
-          Document Verification Dashboard
-        </Typography>
-        <Typography variant="body1" color="text.secondary" paragraph>
-          Review and manage student/alumni verification documents
-        </Typography>
+    <Container maxWidth="xl" sx={{ py: { xs: 1, sm: 2, md: 3 } }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 3 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Box>
+            <Typography
+              variant="h4"
+              fontWeight="bold"
+              color="primary"
+              gutterBottom
+              sx={{ fontSize: { xs: '1.75rem', sm: '2rem' } }}
+            >
+              Document Verification
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Review and verify user-submitted documents
+            </Typography>
+          </Box>
 
-        {/* Statistics Cards */}
-        <Grid container spacing={3} sx={{ mb: 4 }}>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 1,
+              alignItems: 'center',
+              width: { xs: '100%', sm: 'auto' },
+            }}
+          >
+            <TextField
+              size="small"
+              placeholder="Search documents..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <Search sx={{ color: 'text.secondary', mr: 1 }} />
+                ),
+              }}
+              sx={{
+                flex: { xs: 1, sm: 'none' },
+                minWidth: { xs: 'auto', sm: 250 },
+              }}
+            />
+            <Tooltip title="Filters">
+              <IconButton
+                onClick={() => setFilterDrawerOpen(true)}
+                color="primary"
+              >
+                <Badge
+                  badgeContent={
+                    Object.values(filters).filter(
+                      (v) => v !== 'all' && v !== ''
+                    ).length
+                  }
+                  color="error"
                 >
-                  <div>
-                    <Typography color="text.secondary" gutterBottom>
-                      Pending Review
-                    </Typography>
-                    <Typography variant="h4">{stats.pending}</Typography>
-                  </div>
-                  <Description color="warning" sx={{ fontSize: 40 }} />
-                </Box>
-              </CardContent>
+                  <FilterList />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Refresh">
+              <IconButton
+                onClick={fetchData}
+                color="primary"
+                disabled={loading}
+              >
+                <Refresh />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+
+        {/* Quick Stats */}
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={4}>
+            <Card
+              variant="outlined"
+              sx={{
+                textAlign: 'center',
+                p: 2,
+                bgcolor: 'warning.light',
+                border: 'none',
+              }}
+            >
+              <Typography variant="h4" color="warning.dark" fontWeight="bold">
+                {pendingCount}
+              </Typography>
+              <Typography variant="body2" color="warning.dark">
+                Pending Review
+              </Typography>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <div>
-                    <Typography color="text.secondary" gutterBottom>
-                      Approved
-                    </Typography>
-                    <Typography variant="h4">{stats.approved}</Typography>
-                  </div>
-                  <CheckCircle color="success" sx={{ fontSize: 40 }} />
-                </Box>
-              </CardContent>
+          <Grid item xs={4}>
+            <Card variant="outlined" sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h4" color="text.secondary" fontWeight="bold">
+                {documents.length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Total Documents
+              </Typography>
             </Card>
           </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <div>
-                    <Typography color="text.secondary" gutterBottom>
-                      Rejected
-                    </Typography>
-                    <Typography variant="h4">{stats.rejected}</Typography>
-                  </div>
-                  <Cancel color="error" sx={{ fontSize: 40 }} />
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
-            <Card>
-              <CardContent>
-                <Box
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="space-between"
-                >
-                  <div>
-                    <Typography color="text.secondary" gutterBottom>
-                      Total
-                    </Typography>
-                    <Typography variant="h4">{stats.total}</Typography>
-                  </div>
-                  <DateRange color="primary" sx={{ fontSize: 40 }} />
-                </Box>
-              </CardContent>
+          <Grid item xs={4}>
+            <Card variant="outlined" sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h4" color="text.secondary" fontWeight="bold">
+                {filteredDocuments.length}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Filtered
+              </Typography>
             </Card>
           </Grid>
         </Grid>
 
-        {/* Action Bar */}
-        <Paper
-          elevation={0}
-          sx={{ p: 2, mb: 3, border: '1px solid', borderColor: 'divider' }}
+        {/* Batch Controls */}
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 2,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
         >
-          <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-            <FormControl size="small" sx={{ minWidth: 120 }}>
-              <InputLabel>Filter</InputLabel>
-              <Select
-                value={filter}
-                label="Filter"
-                onChange={(e) => setFilter(e.target.value)}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={batchMode}
+                onChange={(e) => {
+                  setBatchMode(e.target.checked);
+                  if (!e.target.checked) setSelectedDocs([]);
+                }}
+                color="primary"
+              />
+            }
+            label="Batch Mode"
+          />
+
+          {batchMode && selectedDocs.length > 0 && (
+            <Zoom in={batchMode && selectedDocs.length > 0}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: 1,
+                  flex: 1,
+                  minWidth: { xs: '100%', sm: 'auto' },
+                }}
               >
-                <MenuItem value="all">All Documents</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="approved">Approved</MenuItem>
-                <MenuItem value="rejected">Rejected</MenuItem>
+                <Card
+                  sx={{
+                    bgcolor: 'primary.light',
+                    color: 'primary.contrastText',
+                    flex: 1,
+                  }}
+                >
+                  <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        gap: 1,
+                      }}
+                    >
+                      <Typography variant="subtitle1">
+                        {selectedDocs.length} document(s) selected
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Button
+                          startIcon={<CheckCircle />}
+                          variant="contained"
+                          color="success"
+                          onClick={() => setApproveDialogOpen(true)}
+                          size="small"
+                          sx={{ color: 'white' }}
+                        >
+                          Approve
+                        </Button>
+                        <Button
+                          startIcon={<Cancel />}
+                          variant="contained"
+                          color="error"
+                          onClick={() => setRejectDialogOpen(true)}
+                          size="small"
+                          sx={{ color: 'white' }}
+                        >
+                          Reject
+                        </Button>
+                        <Button
+                          startIcon={<Deselect />}
+                          variant="outlined"
+                          size="small"
+                          sx={{ color: 'white', borderColor: 'white' }}
+                          onClick={clearSelection}
+                        >
+                          Clear
+                        </Button>
+                      </Box>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Box>
+            </Zoom>
+          )}
+        </Box>
+      </Box>
+
+      {/* Main Content */}
+      <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+          <Tabs
+            value={activeTab}
+            onChange={handleTabChange}
+            variant={isMobile ? 'scrollable' : 'standard'}
+            scrollButtons={isMobile ? 'auto' : false}
+          >
+            <Tab label="All Documents" />
+            <Tab
+              label={
+                <Badge
+                  badgeContent={pendingCount}
+                  color="warning"
+                  showZero={false}
+                >
+                  Pending Review
+                </Badge>
+              }
+            />
+          </Tabs>
+        </Box>
+
+        {loading ? (
+          <Box sx={{ p: 4, textAlign: 'center' }}>
+            <CircularProgress />
+            <Typography sx={{ mt: 2 }}>Loading documents...</Typography>
+          </Box>
+        ) : isMobile ? (
+          /* Mobile View */
+          <Box sx={{ p: 2 }}>
+            {batchMode && paginatedDocuments.length > 0 && (
+              <Box
+                sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}
+              >
+                <Checkbox
+                  indeterminate={
+                    selectedDocs.length > 0 &&
+                    selectedDocs.length < paginatedDocuments.length
+                  }
+                  checked={
+                    paginatedDocuments.length > 0 &&
+                    selectedDocs.length === paginatedDocuments.length
+                  }
+                  onChange={handleSelectAll}
+                  size="small"
+                />
+                <Typography variant="body2" color="text.secondary">
+                  Select all ({selectedDocs.length} selected)
+                </Typography>
+              </Box>
+            )}
+
+            {paginatedDocuments.map((doc) => (
+              <MobileDocumentRow key={doc.id} doc={doc} />
+            ))}
+
+            {paginatedDocuments.length === 0 && (
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography color="text.secondary">
+                  No documents found matching your criteria
+                </Typography>
+                {Object.values(filters).some(
+                  (v) => v !== 'all' && v !== ''
+                ) && (
+                  <Button onClick={clearFilters} sx={{ mt: 1 }}>
+                    Clear Filters
+                  </Button>
+                )}
+              </Box>
+            )}
+          </Box>
+        ) : (
+          /* Desktop View */
+          <>
+            <Box
+              sx={{
+                p: 2,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Showing {filteredDocuments.length} documents
+              </Typography>
+
+              {batchMode && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Tooltip title="Select All">
+                    <IconButton size="small" onClick={handleSelectAll}>
+                      <SelectAll />
+                    </IconButton>
+                  </Tooltip>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedDocs.length} selected
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+
+            <Table sx={{ minWidth: 650 }}>
+              <TableHead>
+                <TableRow>
+                  {batchMode && (
+                    <TableCell padding="checkbox">
+                      <Checkbox
+                        indeterminate={
+                          selectedDocs.length > 0 &&
+                          selectedDocs.length < paginatedDocuments.length
+                        }
+                        checked={
+                          paginatedDocuments.length > 0 &&
+                          selectedDocs.length === paginatedDocuments.length
+                        }
+                        onChange={handleSelectAll}
+                      />
+                    </TableCell>
+                  )}
+                  <TableCell>User</TableCell>
+                  <TableCell>Document Type</TableCell>
+                  <TableCell>File</TableCell>
+                  <TableCell>Submitted</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {paginatedDocuments.map((doc) => (
+                  <TableRow
+                    key={doc.id}
+                    hover
+                    selected={selectedDocs.includes(doc.id)}
+                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                  >
+                    {batchMode && (
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          checked={selectedDocs.includes(doc.id)}
+                          onChange={() => handleSelectDoc(doc.id)}
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 2 }}
+                      >
+                        <Avatar
+                          src={doc.user?.avatar}
+                          sx={{ width: 40, height: 40 }}
+                        >
+                          <Person />
+                        </Avatar>
+                        <Box>
+                          <Typography fontWeight="medium">
+                            {doc.user?.name || 'Unknown User'}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {doc.user?.email || doc.userId}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={doc.documentType}
+                        variant="outlined"
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
+                        <Description color="action" />
+                        <Box>
+                          <Link
+                            href={doc.documentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleAction(doc, 'preview');
+                            }}
+                            sx={{ cursor: 'pointer' }}
+                          >
+                            {doc.fileName || 'View Document'}
+                          </Link>
+                          {doc.fileSize && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              display="block"
+                            >
+                              {doc.fileSize}
+                            </Typography>
+                          )}
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                      >
+                        <CalendarToday fontSize="small" color="action" />
+                        <Typography variant="body2">
+                          {doc.submittedAt
+                            ? new Date(doc.submittedAt).toLocaleDateString()
+                            : '-'}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={doc.status}
+                        color={statusColors[doc.status]}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'flex-end',
+                          gap: 1,
+                        }}
+                      >
+                        <Tooltip title="Preview">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleAction(doc, 'preview')}
+                          >
+                            <Visibility />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Download">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleDownload(doc)}
+                          >
+                            <Download />
+                          </IconButton>
+                        </Tooltip>
+                        {doc.status === 'PENDING' && (
+                          <>
+                            <Tooltip title="Approve">
+                              <IconButton
+                                size="small"
+                                color="success"
+                                onClick={() => handleAction(doc, 'approve')}
+                              >
+                                <CheckCircle />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Reject">
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() => handleAction(doc, 'reject')}
+                              >
+                                <Cancel />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {paginatedDocuments.length === 0 && (
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Typography color="text.secondary" gutterBottom>
+                  No documents found matching your criteria
+                </Typography>
+                {Object.values(filters).some(
+                  (v) => v !== 'all' && v !== ''
+                ) && <Button onClick={clearFilters}>Clear Filters</Button>}
+              </Box>
+            )}
+          </>
+        )}
+
+        {/* Pagination */}
+        {filteredDocuments.length > rowsPerPage && (
+          <Box sx={{ p: 2, display: 'flex', justifyContent: 'center' }}>
+            <Pagination
+              count={Math.ceil(filteredDocuments.length / rowsPerPage)}
+              page={page}
+              onChange={handlePageChange}
+              color="primary"
+              size={isSmallMobile ? 'small' : 'medium'}
+            />
+          </Box>
+        )}
+      </Paper>
+
+      {/* Filter Drawer for Mobile */}
+      <Drawer
+        anchor="right"
+        open={filterDrawerOpen}
+        onClose={() => setFilterDrawerOpen(false)}
+      >
+        <Box sx={{ width: 300, p: 2 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6">Filters</Typography>
+            <IconButton onClick={() => setFilterDrawerOpen(false)}>
+              <Close />
+            </IconButton>
+          </Box>
+          <Divider />
+
+          <Box sx={{ mt: 2 }}>
+            {/* <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                value={filters.status}
+                label="Status"
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+              >
+                <MenuItem value="all">All Status</MenuItem>
+                <MenuItem value="PENDING">Pending</MenuItem>
+              </Select>
+            </FormControl> */}
+
+            <FormControl fullWidth size="small" sx={{ mb: 2 }}>
+              <InputLabel>Document Type</InputLabel>
+              <Select
+                value={filters.documentType}
+                label="Document Type"
+                onChange={(e) =>
+                  handleFilterChange('documentType', e.target.value)
+                }
+              >
+                <MenuItem value="all">All Types</MenuItem>
+                {documentTypes.map((type) => (
+                  <MenuItem key={type} value={type}>
+                    {type}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
 
-            <Box sx={{ flexGrow: 1 }} />
-
             <Button
-              variant="contained"
-              color="success"
-              onClick={() => handleBulkAction('approve')}
-              disabled={selectedDocuments.length === 0}
-              startIcon={<CheckCircle />}
+              fullWidth
+              variant="outlined"
+              onClick={clearFilters}
+              startIcon={<Close />}
             >
-              Approve Selected ({selectedDocuments.length})
-            </Button>
-
-            <Button
-              variant="contained"
-              color="error"
-              onClick={() => handleBulkAction('reject')}
-              disabled={selectedDocuments.length === 0}
-              startIcon={<Cancel />}
-            >
-              Reject Selected ({selectedDocuments.length})
+              Clear Filters
             </Button>
           </Box>
-        </Paper>
+        </Box>
+      </Drawer>
 
-        {/* Documents Table */}
-        <TableContainer
-          component={Paper}
-          elevation={0}
-          sx={{ border: '1px solid', borderColor: 'divider' }}
-        >
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell padding="checkbox">
-                  <input
-                    type="checkbox"
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedDocuments(
-                          filteredDocuments.map((d) => d.id)
-                        );
-                      } else {
-                        setSelectedDocuments([]);
-                      }
-                    }}
-                    checked={
-                      selectedDocuments.length === filteredDocuments.length &&
-                      filteredDocuments.length > 0
-                    }
-                  />
-                </TableCell>
-                <TableCell>User</TableCell>
-                <TableCell>Document Type</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Submitted</TableCell>
-                <TableCell>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredDocuments.map((document) => (
-                <TableRow key={document.id} hover>
-                  <TableCell padding="checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedDocuments.includes(document.id)}
-                      onChange={(e) =>
-                        handleDocumentSelection(document.id, e.target.checked)
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={2}>
-                      <Avatar sx={{ bgcolor: 'primary.main' }}>
-                        {getRoleIcon(document.user.role)}
-                      </Avatar>
-                      <div>
-                        <Typography variant="body2" fontWeight={500}>
-                          {document.user.name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {document.user.email}
-                        </Typography>
-                        <Chip
-                          label={document.user.role}
-                          size="small"
-                          variant="outlined"
-                          sx={{ ml: 1 }}
-                        />
-                      </div>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {getDocumentTypeLabel(document.documentType)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={document.status}
-                      color={
-                        document.status === 'APPROVED'
-                          ? 'success'
-                          : document.status === 'REJECTED'
-                            ? 'error'
-                            : 'warning'
-                      }
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {new Date(document.submittedAt).toLocaleDateString()}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box display="flex" gap={1}>
-                      <Tooltip title="View Document">
-                        <IconButton
-                          onClick={() =>
-                            window.open(document.documentUrl, '_blank')
-                          }
-                          size="small"
-                        >
-                          <Visibility />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Download">
-                        <IconButton
-                          onClick={() =>
-                            window.open(document.documentUrl, '_blank')
-                          }
-                          size="small"
-                        >
-                          <Download />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      {/* Dialogs remain the same */}
+      <Dialog
+        open={approveDialogOpen}
+        onClose={() => setApproveDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <CheckCircle color="success" />
+            {activeDoc
+              ? 'Approve Document'
+              : `Approve ${selectedDocs.length} Document(s)`}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {activeDoc
+              ? 'You are about to approve this document. Optionally leave comments for the user.'
+              : `You are about to approve ${selectedDocs.length} document(s). Optionally leave comments for the users.`}
+          </Typography>
+          <TextField
+            fullWidth
+            label="Comments (optional)"
+            multiline
+            minRows={3}
+            value={adminComments}
+            onChange={(e) => setAdminComments(e.target.value)}
+            placeholder="Add any notes or instructions for the user..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setApproveDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="success"
+            onClick={() =>
+              activeDoc ? confirmApprove() : confirmApprove(selectedDocs)
+            }
+          >
+            {activeDoc
+              ? 'Approve Document'
+              : `Approve ${selectedDocs.length} Document(s)`}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        {filteredDocuments.length === 0 && !loading && (
-          <Paper sx={{ p: 4, textAlign: 'center' }}>
-            <Typography variant="h6" color="text.secondary">
-              No documents found
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {filter === 'all'
-                ? 'No document verification requests have been submitted yet.'
-                : `No ${filter} documents found.`}
-            </Typography>
-          </Paper>
-        )}
+      <Dialog
+        open={rejectDialogOpen}
+        onClose={() => setRejectDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Cancel color="error" />
+            {activeDoc
+              ? 'Reject Document'
+              : `Reject ${selectedDocs.length} Document(s)`}
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            {activeDoc
+              ? 'Please provide a reason for rejection. This will be shared with the user.'
+              : `Please provide a reason for rejecting ${selectedDocs.length} document(s). This will be shared with the users.`}
+          </Typography>
+          <TextField
+            fullWidth
+            label="Rejection reason *"
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            margin="normal"
+            required={!activeDoc}
+            placeholder="Specify why the document(s) are being rejected..."
+          />
+          <TextField
+            fullWidth
+            label="Additional comments (optional)"
+            multiline
+            minRows={2}
+            value={adminComments}
+            onChange={(e) => setAdminComments(e.target.value)}
+            placeholder="Add any additional feedback or instructions..."
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRejectDialogOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() =>
+              activeDoc ? confirmReject() : confirmReject(selectedDocs)
+            }
+            disabled={!activeDoc && !rejectReason.trim()}
+          >
+            {activeDoc
+              ? 'Reject Document'
+              : `Reject ${selectedDocs.length} Document(s)`}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-        {/* Action Dialog */}
-        <Dialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>
-            {dialogType === 'approve'
-              ? 'Approve Documents'
-              : 'Reject Documents'}
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              You are about to {dialogType} {selectedDocuments.length}{' '}
-              document(s).
-              {dialogType === 'approve'
-                ? ' The users will receive login credentials via email.'
-                : ' The users will be notified of the rejection.'}
-            </Typography>
-
-            {dialogType === 'reject' && (
-              <TextField
-                fullWidth
-                label="Rejection Reason"
-                value={rejectionReason}
-                onChange={(e) => setRejectionReason(e.target.value)}
-                required
-                multiline
-                rows={3}
-                margin="normal"
-                helperText="Please provide a clear reason for rejection"
+      <Dialog
+        open={previewDialogOpen}
+        onClose={() => setPreviewDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>Document Preview - {activeDoc?.documentType}</DialogTitle>
+        <DialogContent>
+          {activeDoc && (
+            <Box sx={{ textAlign: 'center', p: 2 }}>
+              <img
+                src={activeDoc.documentUrl}
+                alt="Document preview"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '70vh',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                }}
               />
-            )}
-
-            <TextField
-              fullWidth
-              label="Admin Comments (Optional)"
-              value={adminComments}
-              onChange={(e) => setAdminComments(e.target.value)}
-              multiline
-              rows={3}
-              margin="normal"
-              helperText="Internal comments for record keeping"
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPreviewDialogOpen(false)}>Close</Button>
+          {activeDoc && (
             <Button
-              onClick={handleConfirmAction}
-              variant="contained"
-              color={dialogType === 'approve' ? 'success' : 'error'}
-              disabled={dialogType === 'reject' && !rejectionReason.trim()}
+              startIcon={<Download />}
+              onClick={() => handleDownload(activeDoc)}
             >
-              {dialogType === 'approve' ? 'Approve' : 'Reject'}
+              Download
             </Button>
-          </DialogActions>
-        </Dialog>
-      </motion.div>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          severity={snackbar.severity}
+          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Floating Action Button for Mobile */}
+      {isMobile && batchMode && selectedDocs.length > 0 && (
+        <Fab
+          color="primary"
+          variant="extended"
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1000,
+          }}
+          onClick={() => {
+            // Show quick actions menu
+            setApproveDialogOpen(true);
+          }}
+        >
+          <CheckCircle sx={{ mr: 1 }} />
+          {selectedDocs.length}
+        </Fab>
+      )}
     </Container>
   );
 };
 
-export default AdminDocumentVerification;
+export default DocumentVerification;
