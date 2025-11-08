@@ -13,6 +13,7 @@ model User {
   password                              String?                       @db.VarChar(255)
   name                                  String?
   role                                  Role                          @default(STUDENT)
+  graduationYear                        Int?
   description                           String?
   iconUrl                               String?
   bannerUrl                             String?
@@ -253,6 +254,7 @@ model Feedback {
 model Profile {
   id           String        @id @default(uuid())
   userId       String        @unique
+  studentId    String?
   bio          String?
   location     String?       @db.VarChar(100)
   interests    String?
