@@ -66,11 +66,14 @@ export class AuthService {
         email: dto.email,
         name: dto.name,
         role: dto.role,
+        graduationYear: dto.graduationYear || null,
         accountStatus: 'PENDING_DOCUMENT_REVIEW' as any,
         isEmailVerified: false,
         isAccountActive: false,
         profile: {
           create: {
+            studentId: dto.studentId || null,
+            dept: dto.department || null,
             bio: '',
             location: '',
             interests: '',
