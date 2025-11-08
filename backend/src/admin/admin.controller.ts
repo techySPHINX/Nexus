@@ -35,7 +35,16 @@ export class AdminController {
   /**
    * Get document verification statistics
    */
-  // NOTE: document-stats endpoint removed; frontend computes stats from pending-documents
+  @Get('document-stats')
+  async getDocumentStats() {
+    // This would be implemented to show statistics
+    return {
+      pending: 0,
+      approved: 0,
+      rejected: 0,
+      total: 0,
+    };
+  }
 
   /**
    * Approve documents and activate user account

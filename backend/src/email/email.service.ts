@@ -25,7 +25,7 @@ export class EmailService {
     const { email, otp, name } = dto;
     const msg = {
       to: email,
-      from: { email: process.env.SENDGRID_EMAIL_FROM || 'noreply@yourdomain.com' },
+      from: '22053431@kiit.ac.in',
       subject: 'Welcome to Nexus! Verify Your Email',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
@@ -59,7 +59,7 @@ export class EmailService {
 
     const msg = {
       to: email,
-      from: { email: process.env.SENDGRID_EMAIL_FROM || 'noreply@yourdomain.com' },
+      from: '22053431@kiit.ac.in',
       subject: 'Verify Your Email - Nexus',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
@@ -97,7 +97,7 @@ export class EmailService {
 
     const msg = {
       to: email,
-      from: { email: process.env.SENDGRID_EMAIL_FROM || 'noreply@yourdomain.com' },
+      from: '22053431@kiit.ac.in',
       subject: 'Account Approved - Welcome to Nexus!',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
@@ -142,7 +142,7 @@ export class EmailService {
   ): Promise<void> {
     const msg = {
       to: email,
-      from: { email: process.env.SENDGRID_EMAIL_FROM || 'noreply@yourdomain.com' },
+      from: '22053431@kiit.ac.in',
       subject: 'Account Application Update - Nexus',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
@@ -182,7 +182,7 @@ export class EmailService {
 
     const msg = {
       to: email,
-      from: { email: process.env.SENDGRID_EMAIL_FROM || 'noreply@yourdomain.com' },
+      from: '22053431@kiit.ac.in',
       subject: 'Password Reset Request - Nexus',
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
