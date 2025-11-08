@@ -2,10 +2,8 @@ import {
   IsEmail,
   IsEnum,
   IsNotEmpty,
-  MinLength,
   IsArray,
   ValidateNested,
-  Matches,
   IsOptional,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -44,13 +42,13 @@ export class RegisterWithDocumentsDto {
   @SanitizeEmail()
   email: string;
 
-  @MinLength(12, { message: 'Password must be at least 12 characters long' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
-    message:
-      'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
-  })
-  @IsNotEmpty()
-  password: string;
+  // @MinLength(12, { message: 'Password must be at least 12 characters long' })
+  // @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
+  //   message:
+  //     'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character',
+  // })
+  // @IsNotEmpty()
+  // password: string;
 
   @IsNotEmpty()
   @Sanitize()
