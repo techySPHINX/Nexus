@@ -5,6 +5,7 @@ export enum Role {
   STUDENT = 'STUDENT',
   ALUM = 'ALUM',
   ADMIN = 'ADMIN',
+  MENTOR = 'MENTOR',
 }
 
 export enum ConnectionStatus {

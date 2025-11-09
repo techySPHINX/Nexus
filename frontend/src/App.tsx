@@ -20,6 +20,10 @@ const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const AdminDocumentVerification = lazy(
   () => import('./pages/AdminDocumentVerification')
 );
+
+const DocumentVerification = lazy(
+  () => import('./pages/Admin/DocumentVerification')
+);
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Connections = lazy(() => import('./pages/Connections'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
@@ -127,8 +131,8 @@ const Layout: React.FC = () => {
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/register-enhanced" element={<EnhancedRegister />} />
+              <Route path="/register" element={<EnhancedRegister />} />
+              <Route path="/register-lazy" element={<Register />} />
               <Route
                 path="/registration-success"
                 element={<RegistrationSuccess />}
@@ -146,6 +150,14 @@ const Layout: React.FC = () => {
                 element={
                   <AdminRoute>
                     <AdminDocumentVerification />
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/document-verification2"
+                element={
+                  <AdminRoute>
+                    <DocumentVerification />
                   </AdminRoute>
                 }
               />

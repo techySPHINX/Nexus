@@ -9,7 +9,6 @@ import {
   Link,
   Alert,
   InputAdornment,
-  IconButton,
   Divider,
   FormControl,
   InputLabel,
@@ -21,10 +20,7 @@ import {
   StepContent,
 } from '@mui/material';
 import {
-  Visibility,
-  VisibilityOff,
   Email,
-  Lock,
   Person,
   School,
   Work,
@@ -35,34 +31,41 @@ import {
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import ThemeToggle from '../ThemeToggle';
-import DocumentUploadComponent from './DocumentUpload';
+// DocumentUploadComponent used previously for file uploads. We're switching to URL-based
+// document inputs for now; keep the component import commented so it can be
+// re-enabled later if we switch back to file uploads.
+// import DocumentUploadComponent from './DocumentUpload';
 import { getErrorMessage } from '@/utils/errorHandler';
 import axios from 'axios';
+// Role is handled as string literals here so we can add MENTOR without changing shared types
 
-const steps = [
-  'Basic Information',
-  'Account Details',
-  'Document Verification',
-  'Review & Submit',
-];
+const steps = ['Basic Information', 'Document Verification', 'Review & Submit'];
 
 const EnhancedRegister: React.FC = () => {
   const [activeStep, setActiveStep] = useState(0);
-  const [formData, setFormData] = useState({
+  type RoleType = 'STUDENT' | 'ALUM' | 'ADMIN' | 'MENTOR';
+
+  const [formData, setFormData] = useState<{
+    email: string;
+    name: string;
+    role: RoleType;
+    studentId: string;
+    graduationYear: number | '';
+    department: string;
+  }>({
     email: '',
-    password: '',
-    confirmPassword: '',
     name: '',
     role: 'STUDENT',
     studentId: '',
+    // allow student to optionally provide graduationYear
     graduationYear: new Date().getFullYear(),
     department: '',
   });
   const [documents, setDocuments] = useState<
     Array<{ documentType: string; documentUrl: string }>
   >([]);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  // Password fields removed per request; accounts will be created without a
+  // password in the UI and handled by admin approval flow.
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -93,7 +96,6 @@ const EnhancedRegister: React.FC = () => {
 
   const validateStep = (step: number): boolean => {
     setError('');
-
     switch (step) {
       case 0: // Basic Information
         if (!formData.name.trim()) {
@@ -110,34 +112,9 @@ const EnhancedRegister: React.FC = () => {
         }
         break;
 
-      case 1: // Account Details
-        if (!formData.password) {
-          setError('Password is required');
-          return false;
-        }
-        if (formData.password.length < 12) {
-          setError('Password must be at least 12 characters long');
-          return false;
-        }
-        if (
-          !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(
-            formData.password
-          )
-        ) {
-          setError(
-            'Password must contain at least one uppercase letter, lowercase letter, number, and special character'
-          );
-          return false;
-        }
-        if (formData.password !== formData.confirmPassword) {
-          setError('Passwords do not match');
-          return false;
-        }
-        break;
-
-      case 2: // Document Verification
+      case 1: // Document Verification
         if (formData.role !== 'ADMIN' && documents.length === 0) {
-          setError('Please upload at least one verification document');
+          setError('Please provide at least one verification document URL');
           return false;
         }
         break;
@@ -153,9 +130,9 @@ const EnhancedRegister: React.FC = () => {
     setLoading(true);
 
     try {
-      const registrationData = {
+      // Build payload: do NOT include password when submitting to register-with-documents
+      const baseData: Record<string, unknown> = {
         email: formData.email,
-        password: formData.password,
         name: formData.name,
         role: formData.role,
         documents,
@@ -166,12 +143,12 @@ const EnhancedRegister: React.FC = () => {
         ...(formData.department && { department: formData.department }),
       };
 
-      const endpoint =
-        formData.role === 'ADMIN'
-          ? '/auth/register'
-          : '/auth/register-with-documents';
-
-      const response = await axios.post(endpoint, registrationData);
+      // Password removed from UI/payload per request. Always use register-with-documents
+      // endpoint and pass documents as URLs.
+      const response = await axios.post(
+        '/auth/register-with-documents',
+        baseData
+      );
 
       // Show success message and redirect
       navigate('/registration-success', {
@@ -245,12 +222,14 @@ const EnhancedRegister: React.FC = () => {
                     {formData.role === 'ADMIN' && (
                       <AdminPanelSettings color="action" />
                     )}
+                    {formData.role === 'MENTOR' && <Work color="action" />}
                   </InputAdornment>
                 }
               >
                 <MenuItem value="STUDENT">Student</MenuItem>
                 <MenuItem value="ALUM">Alumni</MenuItem>
                 <MenuItem value="ADMIN">Admin</MenuItem>
+                <MenuItem value="MENTOR">Mentor</MenuItem>
               </Select>
             </FormControl>
 
@@ -263,6 +242,15 @@ const EnhancedRegister: React.FC = () => {
                   onChange={handleChange('studentId')}
                   margin="normal"
                   helperText="Optional: Your KIIT student ID"
+                />
+                <TextField
+                  fullWidth
+                  label="Graduation Year (optional)"
+                  type="number"
+                  value={formData.graduationYear}
+                  onChange={handleChange('graduationYear')}
+                  margin="normal"
+                  inputProps={{ min: 1990, max: new Date().getFullYear() }}
                 />
                 <TextField
                   fullWidth
@@ -306,86 +294,102 @@ const EnhancedRegister: React.FC = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <TextField
-              fullWidth
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              value={formData.password}
-              onChange={handleChange('password')}
-              required
-              margin="normal"
-              helperText="Must be at least 12 characters with uppercase, lowercase, number, and special character"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() => setShowPassword(!showPassword)}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-
-            <TextField
-              fullWidth
-              label="Confirm Password"
-              type={showConfirmPassword ? 'text' : 'password'}
-              value={formData.confirmPassword}
-              onChange={handleChange('confirmPassword')}
-              required
-              margin="normal"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      edge="end"
-                    >
-                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
-          </motion.div>
-        );
-
-      case 2:
-        return (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.3 }}
-          >
             {formData.role === 'ADMIN' ? (
               <Alert severity="info">
                 Admin accounts do not require document verification.
               </Alert>
             ) : (
-              <DocumentUploadComponent
-                onDocumentsChange={setDocuments}
-                userRole={formData.role as 'STUDENT' | 'ALUM'}
-              />
+              <>
+                {/*
+                  Previously we used a DocumentUploadComponent to accept file uploads.
+                  That implementation is commented out above. For now we accept
+                  document URLs from the user and pass them to the backend as
+                  { documentType, documentUrl } objects.
+                */}
+
+                {documents.map((doc, idx) => (
+                  <Paper
+                    key={idx}
+                    elevation={0}
+                    sx={{
+                      p: 2,
+                      mb: 2,
+                      display: 'flex',
+                      gap: 2,
+                      flexDirection: { xs: 'column', md: 'row' },
+                    }}
+                  >
+                    <FormControl sx={{ minWidth: 160 }}>
+                      <InputLabel>Document Type</InputLabel>
+                      <Select
+                        value={doc.documentType}
+                        label="Document Type"
+                        onChange={(e) => {
+                          const newType = e.target.value as string;
+                          setDocuments((prev) =>
+                            prev.map((d, i) =>
+                              i === idx ? { ...d, documentType: newType } : d
+                            )
+                          );
+                        }}
+                      >
+                        <MenuItem value="STUDENT_ID">STUDENT_ID</MenuItem>
+                        <MenuItem value="UNIVERSITY_ID">UNIVERSITY_ID</MenuItem>
+                        <MenuItem value="OTHER">OTHER</MenuItem>
+                      </Select>
+                    </FormControl>
+
+                    <TextField
+                      fullWidth
+                      label="Document URL"
+                      value={doc.documentUrl}
+                      onChange={(e) =>
+                        setDocuments((prev) =>
+                          prev.map((d, i) =>
+                            i === idx
+                              ? { ...d, documentUrl: e.target.value }
+                              : d
+                          )
+                        )
+                      }
+                      helperText="Provide a publicly accessible URL to your document (e.g., Google Drive link)"
+                    />
+
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Button
+                        color="error"
+                        onClick={() =>
+                          setDocuments((prev) =>
+                            prev.filter((_, i) => i !== idx)
+                          )
+                        }
+                      >
+                        Remove
+                      </Button>
+                    </Box>
+                  </Paper>
+                ))}
+
+                <Button
+                  variant="outlined"
+                  onClick={() =>
+                    setDocuments((prev) => [
+                      ...prev,
+                      { documentType: 'STUDENT_ID', documentUrl: '' },
+                    ])
+                  }
+                >
+                  Add Document URL
+                </Button>
+              </>
             )}
           </motion.div>
         );
 
-      case 3:
+      /* original file-upload based document verification removed;
+         replaced with URL-based inputs in case 1 above. */
+
+      case 2:
         return (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
@@ -411,14 +415,12 @@ const EnhancedRegister: React.FC = () => {
                   Student ID: {formData.studentId}
                 </Typography>
               )}
+              <Typography variant="body2">
+                Graduation Year: {formData.graduationYear}
+              </Typography>
               {formData.department && (
                 <Typography variant="body2">
                   Department: {formData.department}
-                </Typography>
-              )}
-              {formData.role === 'ALUM' && (
-                <Typography variant="body2">
-                  Graduation Year: {formData.graduationYear}
                 </Typography>
               )}
             </Paper>
@@ -429,11 +431,36 @@ const EnhancedRegister: React.FC = () => {
                   Uploaded Documents
                 </Typography>
                 {documents.length > 0 ? (
-                  documents.map((doc, index) => (
-                    <Typography key={index} variant="body2">
-                      • {doc.documentType.replace('_', ' ')}
-                    </Typography>
-                  ))
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: { xs: 'column', md: 'row' },
+                      gap: 2,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    {documents.map((doc, index) => (
+                      <Box
+                        key={index}
+                        sx={{ mr: { md: 2 }, mb: { xs: 1, md: 0 } }}
+                      >
+                        <Typography variant="body2">
+                          • {doc.documentType.replace('_', ' ')}
+                        </Typography>
+                        {doc.documentUrl && (
+                          <Typography variant="caption" color="text.secondary">
+                            <Link
+                              href={doc.documentUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              View
+                            </Link>
+                          </Typography>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
                     No documents uploaded

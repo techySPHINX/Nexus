@@ -224,6 +224,18 @@ const Navbar: React.FC = () => {
                 {user?.role === 'ADMIN' && (
                   <MenuItem
                     component={Link}
+                    to="/admin/document-verification"
+                    onClick={handleUserMenuClose}
+                  >
+                    <ListItemIcon>
+                      <Assignment />
+                    </ListItemIcon>
+                    Document Verification
+                  </MenuItem>
+                )}
+                {user?.role === 'ADMIN' && (
+                  <MenuItem
+                    component={Link}
                     to="/admin/moderation/subcommunities"
                     onClick={handleUserMenuClose}
                   >
@@ -373,6 +385,36 @@ const Navbar: React.FC = () => {
                   />
                 </ListItem>
               ))}
+              {user?.role === 'ADMIN' && (
+                <ListItem
+                  component={Link}
+                  to="/admin/document-verification"
+                  button
+                  sx={{
+                    mb: 1,
+                    borderRadius: 2,
+                    bgcolor: isActive('/admin/document-verification')
+                      ? 'rgba(255,255,255,0.1)'
+                      : 'transparent',
+                    color: 'white',
+                    '&:hover': {
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+                    <Assignment />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Document Verification"
+                    primaryTypographyProps={{
+                      fontWeight: isActive('/admin/document-verification')
+                        ? 600
+                        : 400,
+                    }}
+                  />
+                </ListItem>
+              )}
             </List>
 
             <Divider
