@@ -5,6 +5,7 @@
 [![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![NestJS](https://img.shields.io/badge/NestJS-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![Prisma](https://img.shields.io/badge/Prisma-3982CE?logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![SendGrid](https://img.shields.io/badge/SendGrid-00A6FF?logo=sendgrid&logoColor=white)](https://sendgrid.com/)
 
 Nexus is a comprehensive social networking platform designed specifically for students and alumni of KIIT University. It provides a secure, feature-rich environment for networking, messaging, professional development, mentorship, and community building.
 
@@ -67,6 +68,7 @@ Nexus is a comprehensive social networking platform designed specifically for st
 - **[JWT](https://jwt.io/)** - Secure token-based authentication
 - **[Bcrypt](https://www.npmjs.com/package/bcrypt)** - Password hashing
 - **[SendGrid](https://sendgrid.com/)** - Email service integration
+ - **[SendGrid](https://sendgrid.com/)** - Email service integration
 - **[Google APIs](https://developers.google.com/)** - Google Drive integration
 - **[Multer](https://www.npmjs.com/package/multer)** - File upload handling
 - **[Swagger](https://swagger.io/)** - API documentation
@@ -75,6 +77,7 @@ Nexus is a comprehensive social networking platform designed specifically for st
 - **[React 18](https://reactjs.org/)** - Modern UI library with hooks
 - **[TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript
 - **[Material-UI (MUI)](https://mui.com/)** - React component library
+- **[Tailwind-CSS](https://tailwindcss.com/)** - CSS Framework
 - **[Framer Motion](https://www.framer.com/motion/)** - Animation library
 - **[React Router](https://reactrouter.com/)** - Client-side routing
 - **[Axios](https://axios-http.com/)** - HTTP client for API calls
