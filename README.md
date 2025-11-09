@@ -11,6 +11,7 @@ Nexus is a comprehensive social networking platform designed specifically for st
 ## 🚀 Features
 
 ### 🔐 Authentication & User Management
+- **Registration** document-based registration (submit document URLs)
 - **JWT-based Authentication** with domain-specific email validation (@kiit.ac.in)
 - **Role-based Access Control** (Student, Alumni, Administrator)
 - **Secure Password Hashing** using bcrypt
@@ -142,8 +143,8 @@ PORT=3000
 NODE_ENV=development
 
 # Email Configuration (SendGrid)
-SENDGRID_API_KEY="your-sendgrid-api-key"
-FROM_EMAIL="noreply@nexus.kiit.ac.in"
+SENDGRID_API_KEY="SG.your-sendgrid-api-key"
+SENDGRID_FROM_EMAIL="noreply@nexus.kiit.ac.in"
 
 # Google Drive Configuration
 GOOGLE_DRIVE_CLIENT_ID="your-google-client-id"
@@ -210,6 +211,8 @@ Nexus/
 │   │   ├── gamification/            # Badges and points
 │   │   ├── notification/            # Notification system
 │   │   ├── email/                    # Email service
+│   │   ├── admin/                    # Admin controllers (document verification)
+│   │   ├── test/                     # Test utilities and scripts
 │   │   ├── files/                    # File upload/management
 │   │   ├── events/                   # Event management
 │   │   ├── engagement/               # Engagement tracking
@@ -229,6 +232,7 @@ Nexus/
 │   │   │   └── Navbar.tsx            # Navigation
 │   │   ├── pages/                    # Page components
 │   │   │   ├── Dashboard.tsx         # Main dashboard
+│   │   │   ├── Admin/                 # Admin pages (document verification)
 │   │   │   ├── ChatPage.tsx          # Chat page
 │   │   │   ├── Connections.tsx       # Connections page
 │   │   │   ├── Profile.tsx           # User profile
