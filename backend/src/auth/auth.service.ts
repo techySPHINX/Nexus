@@ -299,7 +299,7 @@ export class AuthService {
       accountStatus: user.accountStatus || 'PENDING_VERIFICATION',
     };
 
-    const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.jwt.sign(payload, { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' });
     const refreshToken = this.tokenService.generateRefreshToken();
 
     // Store refresh token
@@ -322,7 +322,7 @@ export class AuthService {
         accountStatus: user.accountStatus || 'PENDING_VERIFICATION',
         profileCompleted: !!user.profile,
       },
-      expiresIn: 15 * 60, // 15 minutes in seconds
+      expiresIn: (process.env.JWT_ACCESS_EXPIRY_INT ? parseInt(process.env.JWT_ACCESS_EXPIRY_INT) : 15) * 60, // 15 minutes in seconds
     };
   }
 

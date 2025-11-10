@@ -183,9 +183,13 @@ export class PostService {
       where: whereClause,
       include: {
         author: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
             profile: {
-              include: {
+              select: {
+                avatarUrl: true,
                 skills: true,
               },
             },

@@ -50,6 +50,7 @@ import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
 import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { MySubCommunitiesPage } from './pages/SubCommunity/MySubCommunityPage';
+import { DashboardProvider } from './contexts/DashBoardContext';
 const ProjectsMainPage = lazy(() => import('./pages/Project/ProjectMainPage'));
 const StartupsMainPage = lazy(() => import('./pages/Startup/StartupMainPage'));
 
@@ -141,7 +142,9 @@ const Layout: React.FC = () => {
                 path="/dashboard"
                 element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <DashboardProvider>
+                      <Dashboard />
+                    </DashboardProvider>
                   </ProtectedRoute>
                 }
               />

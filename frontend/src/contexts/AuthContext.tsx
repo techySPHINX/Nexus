@@ -10,7 +10,7 @@ import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
 import { jwtDecode } from 'jwt-decode';
 import { Role } from '@/types/profileType';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   name: string;
