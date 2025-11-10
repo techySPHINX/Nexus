@@ -646,7 +646,7 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
             console.warn('Scheduled load failed for', next, err);
           }
           // small delay to avoid immediate bursts
-          // eslint-disable-next-line no-await-in-loop
+
           await new Promise((r) => setTimeout(r, 50));
         }
       } finally {
