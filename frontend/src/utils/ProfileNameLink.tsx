@@ -25,6 +25,7 @@ interface ProfileNameLinkProps {
   fontSize?: string;
   fontWeight?: number | string;
   avatarSize?: number;
+  badgeSize?: number;
 }
 
 export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
@@ -38,6 +39,7 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
   fontSize = '0.9rem',
   fontWeight = 600,
   avatarSize = 24,
+  badgeSize = 22,
 }) => {
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
@@ -59,7 +61,7 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
       return {
         label: 'Admin',
         color: 'error' as const,
-        icon: <Security fontSize="small" />,
+        icon: <Security sx={{ fontSize: { fontSize } }} />,
         short: 'AD',
       };
     }
@@ -67,14 +69,14 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
       return {
         label: 'Alumni',
         color: 'secondary' as const,
-        icon: <EmojiEvents fontSize="small" />,
+        icon: <EmojiEvents sx={{ fontSize: { fontSize } }} />,
         short: 'AL',
       };
     }
     return {
       label: 'Student',
       color: 'info' as const,
-      icon: <MenuBook fontSize="small" />,
+      icon: <MenuBook sx={{ fontSize: { fontSize } }} />,
       short: 'ST',
     };
   };
@@ -128,8 +130,8 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
             color={roleConfig.color}
             label={roleConfig.short}
             sx={{
-              height: 22,
-              minWidth: 22,
+              height: badgeSize,
+              minWidth: badgeSize,
               borderRadius: '50%',
               px: 0.5,
               fontWeight: 700,
@@ -149,9 +151,9 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
                 variant="outlined"
                 color={roleConfig.color}
                 sx={{
-                  height: 22,
-                  minWidth: 22,
-                  width: 22,
+                  height: badgeSize,
+                  minWidth: badgeSize,
+                  width: badgeSize,
                   borderRadius: '50%',
                   px: 0,
                   '& .MuiChip-icon': {
@@ -178,8 +180,8 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
             color="primary"
             label="YOU"
             sx={{
-              height: 22,
-              minWidth: 22,
+              height: badgeSize,
+              minWidth: badgeSize,
               borderRadius: '50%',
               px: 0.5,
               fontWeight: 700,
@@ -198,8 +200,8 @@ export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: 22,
-                  height: 22,
+                  width: badgeSize,
+                  height: badgeSize,
                   borderRadius: '50%',
                   bgcolor: 'primary.main',
                   color: 'primary.contrastText',
