@@ -2,6 +2,17 @@ import { getErrorMessage } from '@/utils/errorHandler';
 import api from './api';
 
 export const DashBoardService = {
+  getProfileCompletionStats: async () => {
+    try {
+      const response = await api.get(`/profile/me-completion-stats`);
+      console.log('Profile Completion Stats Response:', response);
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        'Failed to get profile completion stats: ' + getErrorMessage(error)
+      );
+    }
+  },
   getConnectionStats: async () => {
     try {
       const response = await api.get(`/connection/stats`);

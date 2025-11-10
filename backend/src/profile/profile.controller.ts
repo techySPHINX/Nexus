@@ -30,6 +30,11 @@ import { RemoveEndorsementDto } from './dto/remove-endorsement.dto';
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
+  @Get('me-completion-stats')
+  async getMyProfileCompletionStats(@GetCurrentUser('userId') userId: string) {
+    return this.profileService.getProfileCompletionStats(userId);
+  }
+
   /**
    * Retrieves the profile of the currently authenticated user.
    * @param userId - The ID of the current user (extracted from JWT).
