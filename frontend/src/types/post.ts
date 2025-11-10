@@ -11,6 +11,7 @@ export interface Post {
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
   createdAt: Date;
   updatedAt: Date;
+  hasVoted?: boolean;
   Vote?: [{ id: string; type: VoteType }];
   author: {
     id: string;
