@@ -1,10 +1,12 @@
+import { Skill } from './profileType';
+
 // src/types/connections.ts
 export interface Profile {
   bio?: string;
   location?: string;
   interests?: string;
   avatarUrl?: string;
-  skills: string[];
+  skills: Skill[];
 }
 
 export interface User {
