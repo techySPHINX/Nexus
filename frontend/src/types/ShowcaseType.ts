@@ -1,3 +1,4 @@
+import { User } from './engagement';
 import { Role } from './profileType';
 
 export enum status {
@@ -130,8 +131,7 @@ export interface CreateCollaborationRequestInterface {
 export interface CollaborationRequestInterface
   extends CreateCollaborationRequestInterface {
   id: string;
-  projectId: string;
-  userId: string;
+  user: User;
   status: CollaborationStatus;
   createdAt: Date;
   updatedAt: Date;

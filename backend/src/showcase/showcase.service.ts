@@ -102,17 +102,98 @@ export class ShowcaseService {
     } as any;
 
     // create a human-readable summary of changes for the project update record
+    const summaries: string[] = [];
+
+    for (const k of changedKeys) {
+      const oldVal = (project as any)[k];
+      const newVal = (updateProjectDto as any)[k];
+
+      // handle tags/skills as array diffs (show only added/removed)
+      if (k === 'tags' || k === 'skills') {
+      const oldArr: any[] = Array.isArray(oldVal) ? oldVal : [];
+      const newArr: any[] = Array.isArray(newVal) ? newVal : [];
+
+      const oldSet = new Set(oldArr.map((x) => JSON.stringify(x)));
+      const newSet = new Set(newArr.map((x) => JSON.stringify(x)));
+
+      const added = newArr.filter((x) => !oldSet.has(JSON.stringify(x)));
+      const removed = oldArr.filter((x) => !newSet.has(JSON.stringify(x)));
+
+      if (added.length > 0) {
+        summaries.push(
+        `${k.charAt(0).toUpperCase() + k.slice(1)} added: ${added
+          .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+          .join(', ')}`,
+        );
+      }
+      if (removed.length > 0) {
+        summaries.push(
+        `${k.charAt(0).toUpperCase() + k.slice(1)} removed: ${removed
+          .map((r) => (typeof r === 'string' ? r : JSON.stringify(r)))
+          .join(', ')}`,
+        );
+      }
+      // if neither, it's an unusual case but fall through to generic
+      if (added.length === 0 && removed.length === 0) {
+        summaries.push(
+        `${k.charAt(0).toUpperCase() + k.slice(1)} changed.`,
+        );
+      }
+      continue;
+      }
+
+      // handle collaboration/seeking fields specially
+      if (k === 'seeking' || k === 'seekingCollaboration') {
+      // if explicitly set to null/undefined or empty array → project no longer seeking collaboration
+      if (newVal === null || newVal === undefined) {
+        summaries.push('Project no longer seeking collaboration');
+        continue;
+      }
+      const oldArr: any[] = Array.isArray(oldVal) ? oldVal : [];
+      const newArr: any[] = Array.isArray(newVal) ? newVal : [];
+
+      if (newArr.length === 0) {
+        summaries.push('Project no longer seeking collaboration');
+        continue;
+      }
+
+      const oldSet = new Set(oldArr.map((x) => JSON.stringify(x)));
+      const newSet = new Set(newArr.map((x) => JSON.stringify(x)));
+
+      const added = newArr.filter((x) => !oldSet.has(JSON.stringify(x)));
+      const removed = oldArr.filter((x) => !newSet.has(JSON.stringify(x)));
+
+      if (added.length > 0) {
+        summaries.push(
+        `Seeking added: ${added
+          .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+          .join(', ')}`,
+        );
+      }
+      if (removed.length > 0) {
+        summaries.push(
+        `Seeking removed: ${removed
+          .map((r) => (typeof r === 'string' ? r : JSON.stringify(r)))
+          .join(', ')}`,
+        );
+      }
+      if (added.length === 0 && removed.length === 0) {
+        summaries.push('Seeking changed.');
+      }
+      continue;
+      }
+
+      // fallback: generic field change message (stringify values to handle objects/arrays)
+      summaries.push(
+      `Field "${k}" changed from "${JSON.stringify(oldVal)}" to "${JSON.stringify(
+        newVal,
+      )}"`,
+      );
+    }
+
     const changeSummary =
-      changedKeys.length > 0
-      ? changedKeys
-        .map((k) => {
-          const oldVal = (project as any)[k];
-          const newVal = (updateProjectDto as any)[k];
-          return `Field "${k}" changed from "${JSON.stringify(
-          oldVal,
-          )}" to "${JSON.stringify(newVal)}"`;
-        })
-        .join('\n')
+      summaries.length > 0
+      ? summaries.join('\n')
       : 'No significant field changes detected.';
 
     // create projectUpdate record alongside updating the project in a transaction
@@ -215,6 +296,32 @@ export class ShowcaseService {
         /\.svg(\?.*)?$/i.test(trimUrl) ||
         trimUrl.includes('image/svg+xml')
       ) {
+        return trimUrl;
+      }
+
+      const lower = trimUrl.toLowerCase();
+
+      // Heuristics to determine if the URL is already optimized / transformed
+      const alreadyOptimized = (() => {
+        // common optimization markers
+        const markers = [
+          /\.webp(\?.*)?$/i, // already webp
+          /(?:\?|&)fm=/i, // format param (imgix, cdn)
+          /(?:\?|&)f_auto=/i,
+          /(?:\?|&)q_auto=/i,
+          /(?:\?|&)auto=/i,
+          /(?:\?|&)w=\d+/i,
+          /(?:\?|&)h=\d+/i,
+          /(?:\?|&)q=\d+/i,
+          /\/upload\/.*(?:f_?|q_?|w_?|h_?|c_?)/i, // cloudinary style
+          /=s\d+(-c)?/i, // googleusercontent size param
+          /c_fill/i, // cloudinary crop
+        ];
+
+        return markers.some((r) => r.test(lower));
+      })();
+
+      if (alreadyOptimized) {
         return trimUrl;
       }
 
@@ -1295,6 +1402,14 @@ export class ShowcaseService {
         data: { status: updateCollaborationRequestDto.status },
       },
     );
+
+    await this.prisma.projectTeamMember.create({
+      data: {
+        projectId: request.projectId,
+        userId: request.userId,
+        role: 'MEMBER',
+      },
+    });
 
     await this.notificationService.create({
       userId: request.userId,
