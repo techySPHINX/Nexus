@@ -9,7 +9,7 @@ import {
   RefreshCw,
   ArrowRight,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, CSSProperties } from 'react';
 import AttachmentIcon from '@mui/icons-material/Attachment';
 import { useNavigate } from 'react-router-dom';
 
@@ -217,8 +217,6 @@ export default function RecentPosts() {
           const authorName = post.author?.name || 'Unknown User';
           const avatarUrl = post.author?.profile?.avatarUrl;
           const avatarChar = authorName.charAt(0).toUpperCase();
-          // const skills =
-          //   post.author?.profile?.skills?.map((skill: any) => skill.name) || [];
 
           return (
             <div
@@ -273,28 +271,21 @@ export default function RecentPosts() {
                   </button>
                 </h3>
               )}
-              <p className="text-gray-700 text-sm mb-2 leading-relaxed">
+              <p
+                className="text-gray-700 text-sm mb-2 leading-relaxed overflow-hidden"
+                style={
+                  {
+                    display: '-webkit-box',
+                    WebkitLineClamp: 3,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'normal',
+                  } as CSSProperties
+                }
+              >
                 {post.content}
               </p>
-
-              {/* Skills
-              {skills.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-3">
-                  {skills.slice(0, 3).map((skill: string, index: number) => (
-                    <span
-                      key={index}
-                      className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full"
-                    >
-                      {skill}
-                    </span>
-                  ))}
-                  {skills.length > 3 && (
-                    <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-                      +{skills.length - 3} more
-                    </span>
-                  )}
-                </div>
-              )} */}
 
               {/* Post Image */}
               {post.imageUrl && (
@@ -306,8 +297,13 @@ export default function RecentPosts() {
 
               {/* Engagement Stats */}
               <div className="flex items-center gap-6 text-sm text-gray-500">
-                <button className="flex items-center gap-2 hover:text-emerald-600 transition-colors group/action">
-                  <Heart className="w-4 h-4 group-hover/action:fill-current" />
+                <button
+                  className="flex items-center gap-2 transition-colors"
+                  aria-pressed={post.hasVoted}
+                >
+                  <Heart
+                    className={`w-4 h-4 ${post.hasVoted ? 'fill-red-600 text-red-600' : 'text-gray-400 hover:text-emerald-600'}`}
+                  />
                   <span>{post._count?.Vote ?? 0}</span>
                 </button>
                 <button className="flex items-center gap-2 hover:text-emerald-600 transition-colors group/action">
