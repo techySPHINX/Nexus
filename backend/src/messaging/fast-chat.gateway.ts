@@ -42,6 +42,8 @@ interface TypingData {
     origin: process.env.FRONTEND_URLS?.split(',') || [
       'http://localhost:3001',
       'http://localhost:3000',
+      'http://localhost:4173',
+      'http://localhost:3002',
     ],
     credentials: true,
   },
