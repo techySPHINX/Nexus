@@ -42,7 +42,7 @@ const Login: React.FC = () => {
 
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (err: unknown) {
       setError(getErrorMessage(err) || 'Failed to log in');
     } finally {

@@ -12,7 +12,7 @@ import { DashBoardService } from '@/services/DashBoardService';
 import { ProjectInterface } from '@/types/ShowcaseType';
 import { ShowcaseService } from '@/services/ShowcaseService';
 import { Post } from '@/types/post';
-import { getFeedService } from '@/services/PostService';
+import { getRecentPostsService } from '@/services/PostService';
 
 interface LoadingState {
   dashboard: boolean;
@@ -20,6 +20,7 @@ interface LoadingState {
   connections: boolean;
   connecting: boolean;
   projects: boolean;
+  profileCompletion: boolean;
   posts: boolean;
 }
 
@@ -29,10 +30,27 @@ interface ErrorState {
   connections: string | null;
   connecting: string | null;
   projects: string | null;
+  profileCompletion: string | null;
   posts: string | null;
 }
 
+interface ProfileCompletionStats {
+  completionPercentage?: number;
+  details?: {
+    avatar: boolean;
+    bio: boolean;
+    location: boolean;
+    branch: boolean;
+    year: boolean;
+    dept: boolean;
+    skillsCount: number;
+    interestsCount: number;
+    courseCount: number;
+  };
+}
+
 type DashboardState = {
+  profileCompletionStats: ProfileCompletionStats;
   connectionStats: ConnectionStats;
   suggestedConnections: ConnectionSuggestion[];
   projects: ProjectInterface[];
@@ -43,6 +61,7 @@ type DashboardState = {
 
 type DashboardActions = {
   refreshDashboard: () => Promise<void>;
+  getProfileCompletionStats: () => Promise<void>;
   getConnectionStats: () => Promise<void>;
   getSuggestedConnections: (limit?: 10) => Promise<void>;
   connectToUser: (userId: string) => Promise<void>;
@@ -62,6 +81,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   const { user } = useAuth();
   const [loading, setLoading] = useState<LoadingState>({
     dashboard: false,
+    profileCompletion: false,
     stats: false,
     connections: false,
     connecting: false,
@@ -70,6 +90,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   });
   const [error, setError] = useState<ErrorState>({
     dashboard: null,
+    profileCompletion: null,
     stats: null,
     connections: null,
     connecting: null,
@@ -92,6 +113,26 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   >([]);
   const [projects, setProjects] = useState<ProjectInterface[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [profileCompletionStats, setProfileCompletionStats] =
+    useState<ProfileCompletionStats>({});
+
+  const getProfileCompletionStats = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading((prev) => ({ ...prev, profileCompletion: true }));
+    try {
+      const response = await DashBoardService.getProfileCompletionStats();
+      console.log('Profile Completion Stats Response:', response);
+      setProfileCompletionStats(response);
+      setError((prev) => ({ ...prev, profileCompletion: null }));
+    } catch (err) {
+      setError((prev) => ({
+        ...prev,
+        profileCompletion: getErrorMessage(err),
+      }));
+    } finally {
+      setLoading((prev) => ({ ...prev, profileCompletion: false }));
+    }
+  }, [user?.id]);
 
   const getConnectionStats = useCallback(async () => {
     if (!user?.id) return;
@@ -162,7 +203,7 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     if (!user?.id) return;
     setLoading((prev) => ({ ...prev, posts: true }));
     try {
-      const response = await getFeedService(1, 5);
+      const response = await getRecentPostsService(1, 6);
       console.log('Suggested Posts Response:', response);
       setPosts(response.posts);
       setError((prev) => ({ ...prev, posts: null }));
@@ -191,11 +232,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     () => ({
       loading,
       error,
+      profileCompletionStats,
       suggestedConnections,
       connectionStats,
       projects,
       posts,
       refreshDashboard,
+      getProfileCompletionStats,
       getConnectionStats,
       getSuggestedConnections,
       getSuggestedProjects,
@@ -205,11 +248,13 @@ export const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     [
       loading,
       error,
+      profileCompletionStats,
       suggestedConnections,
       connectionStats,
       projects,
       posts,
       refreshDashboard,
+      getProfileCompletionStats,
       getConnectionStats,
       getSuggestedConnections,
       connectToUser,
