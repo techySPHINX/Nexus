@@ -23,7 +23,6 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
   onLoadMore,
   initialCount = 6,
   isLoading = false,
-  remainingCount,
 }) => {
   const [showAll, setShowAll] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -39,8 +38,17 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
       setShowAll(false);
       return;
     }
+
+    // If we already have more than the initial count loaded, just expand.
+    if (communities.length > initialCount) {
+      setShowAll(true);
+      return;
+    }
+
+    // Otherwise, if there are more pages available, load the next page and
+    // then expand. For recommended ('all') sections we don't attempt to load
+    // via this button.
     if (hasMore && onLoadMore && typeKey !== 'all') {
-      // if parent provides an external loading flag, prefer that to local state
       if (!isLoading) setIsLoadingMore(true);
       try {
         await onLoadMore();
@@ -50,8 +58,22 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
       } finally {
         if (!isLoading) setIsLoadingMore(false);
       }
-    } else {
-      setShowAll(true);
+      return;
+    }
+
+    // Fallback: just expand
+    setShowAll(true);
+  };
+
+  const handleLoadMore = async () => {
+    if (!onLoadMore) return;
+    if (!isLoading) setIsLoadingMore(true);
+    try {
+      await onLoadMore();
+    } catch (error) {
+      console.error('Failed to load more communities:', error);
+    } finally {
+      if (!isLoading) setIsLoadingMore(false);
     }
   };
 
@@ -113,30 +135,71 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
       </Grid>
 
       {shouldShowMoreButton && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Button
-            onClick={handleShowMore}
-            variant="outlined"
-            sx={{
-              minWidth: '200px',
-              color: 'primary.main',
-              fontWeight: 600,
-              textTransform: 'none',
-              borderRadius: 2,
-            }}
-            startIcon={showAll ? <ExpandLess /> : <ExpandMore />}
-            disabled={!!isLoading || isLoadingMore}
-          >
-            {isLoading || isLoadingMore ? (
-              <CircularProgress size={16} />
-            ) : showAll ? (
-              'Show less'
-            ) : remainingCount !== undefined ? (
-              `Show ${remainingCount} more communities`
-            ) : (
-              `Show more`
-            )}
-          </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
+          {showAll ? (
+            // When expanded, show both "Show less" and "Load more" (if
+            // available). This allows the user to collapse while still
+            // loading additional pages.
+            <>
+              <Button
+                onClick={() => setShowAll(false)}
+                variant="outlined"
+                sx={{
+                  minWidth: '160px',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderRadius: 2,
+                }}
+                startIcon={<ExpandLess />}
+                disabled={!!isLoading}
+              >
+                Show less
+              </Button>
+
+              {hasMore && (
+                <Button
+                  onClick={handleLoadMore}
+                  variant="outlined"
+                  sx={{
+                    minWidth: '160px',
+                    color: 'primary.main',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                  }}
+                  startIcon={<ExpandMore />}
+                  disabled={!!isLoading || isLoadingMore}
+                >
+                  {isLoading || isLoadingMore ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    `Load more`
+                  )}
+                </Button>
+              )}
+            </>
+          ) : (
+            <Button
+              onClick={handleShowMore}
+              variant="outlined"
+              sx={{
+                minWidth: '200px',
+                color: 'primary.main',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderRadius: 2,
+              }}
+              startIcon={<ExpandMore />}
+              disabled={!!isLoading || isLoadingMore}
+            >
+              {isLoading || isLoadingMore ? (
+                <CircularProgress size={16} />
+              ) : (
+                `Show more`
+              )}
+            </Button>
+          )}
         </Box>
       )}
     </Box>

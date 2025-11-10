@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -28,6 +28,8 @@ import { Link } from 'react-router-dom';
 // and renders a SubCommunitySection for the given type. Keeping this
 // at module scope prevents it being recreated on every render (which
 // previously caused repeated API calls).
+// No module-level initiated set any more — we rely on context's loading
+// state and caching to determine whether a section has started loading.
 const LazySection: React.FC<{
   typeId: string;
   title: string;
@@ -35,6 +37,8 @@ const LazySection: React.FC<{
 }> = ({ typeId, title, initialCount = 6 }) => {
   const {
     ensureTypeLoaded,
+    ensureAllSubCommunities,
+    scheduleTypeLoad,
     isLoadingForType,
     hasMoreForType,
     getRemainingForType,
@@ -43,19 +47,139 @@ const LazySection: React.FC<{
     subCommunitiesByType,
   } = useSubCommunity();
 
+  // We'll observe the section wrapper and call ensureTypeLoaded only when
+  // it enters the viewport. This prevents eager loading of every section.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const loadTimeoutRef = useRef<number | null>(null);
+  // prevent scheduling multiple timeouts for the same section instance
+  const scheduledRef = useRef(false);
+  // track whether this section is currently intersecting
+  const isIntersectingRef = useRef(false);
+  // refs holding latest arrays so async callbacks can read up-to-date data
+  const subCommunitiesRef = useRef(subCommunities);
+  const subCommunitiesByTypeRef = useRef(subCommunitiesByType);
+
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      try {
-        if (typeId !== 'all') await ensureTypeLoaded(typeId, initialCount);
-      } catch (err) {
-        if (mounted) console.warn('Failed to load type', typeId, err);
-      }
-    })();
+    subCommunitiesRef.current = subCommunities;
+  }, [subCommunities]);
+
+  useEffect(() => {
+    subCommunitiesByTypeRef.current = subCommunitiesByType;
+  }, [subCommunitiesByType]);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            // Only schedule a load if we don't already have data and the
+            // section isn't currently loading. We also avoid scheduling
+            // multiple timeouts for the same mounted section instance.
+            const displayCommunities =
+              typeId === 'all'
+                ? subCommunities
+                : subCommunitiesByType.filter((subCom: SubCommunity) =>
+                    typeof subCom.type === 'string'
+                      ? subCom.type === typeId
+                      : subCom.type?.name === typeId
+                  );
+
+            const isCurrentlyLoading = isLoadingForType(typeId);
+
+            isIntersectingRef.current = !!entry.isIntersecting;
+
+            if (
+              !scheduledRef.current &&
+              displayCommunities.length === 0 &&
+              !isCurrentlyLoading
+            ) {
+              scheduledRef.current = true;
+              const delay = 100; // 100ms stagger
+              loadTimeoutRef.current = window.setTimeout(async () => {
+                try {
+                  if (typeId === 'all') {
+                    await scheduleTypeLoad('all', initialCount);
+                  } else {
+                    await scheduleTypeLoad(typeId, initialCount);
+                  }
+                } catch (err) {
+                  console.warn('Failed to load type', typeId, err);
+                } finally {
+                  // If, after the fetch, there is still no data for this
+                  // section, allow rescheduling so it can retry later (for
+                  // example when transient network failures occur).
+                  const currentDisplay =
+                    typeId === 'all'
+                      ? subCommunitiesRef.current
+                      : subCommunitiesByTypeRef.current.filter(
+                          (subCom: SubCommunity) =>
+                            typeof subCom.type === 'string'
+                              ? subCom.type === typeId
+                              : subCom.type?.name === typeId
+                        );
+
+                  if (!currentDisplay || currentDisplay.length === 0) {
+                    // no data arrived for this section; allow retry later
+                    scheduledRef.current = false;
+                    // If the element is still intersecting, immediately re-enqueue
+                    // so the queue worker will retry. This avoids waiting for a
+                    // new intersection event which may not happen while the
+                    // element remains visible.
+                    if (isIntersectingRef.current) {
+                      scheduleTypeLoad(typeId, initialCount).catch(() => {});
+                    }
+                  } else {
+                    // we have data now; stop observing this element to avoid
+                    // any further redundant scheduling for this instance.
+                    if (rootRef.current) observer.unobserve(rootRef.current);
+                    scheduledRef.current = true;
+                  }
+                }
+              }, delay) as unknown as number;
+            }
+          } else {
+            // Element left viewport. Clear any pending scheduled load so the
+            // section can be rescheduled on future intersections. This fixes
+            // cases where a quick scroll out/in would leave scheduledRef
+            // stuck and prevent subsequent loads.
+            isIntersectingRef.current = false;
+            if (loadTimeoutRef.current) {
+              clearTimeout(loadTimeoutRef.current);
+              loadTimeoutRef.current = null;
+            }
+            // allow re-scheduling when the element leaves (so future
+            // intersections can re-enqueue work)
+            scheduledRef.current = false;
+          }
+        }
+      },
+      // Use a tight rootMargin so nearby off-screen sections aren't
+      // considered intersecting. A modest threshold means a meaningful
+      // portion of the section must be visible before loading.
+      { root: null, rootMargin: '0px', threshold: 0.25 }
+    );
+
+    observer.observe(el);
     return () => {
-      mounted = false;
+      observer.disconnect();
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
+      }
     };
-  }, [typeId, ensureTypeLoaded, initialCount]);
+  }, [
+    typeId,
+    ensureTypeLoaded,
+    ensureAllSubCommunities,
+    scheduleTypeLoad,
+    initialCount,
+    isLoadingForType,
+    subCommunities,
+    subCommunitiesByType,
+  ]);
 
   const displayCommunities =
     typeId === 'all'
@@ -66,23 +190,73 @@ const LazySection: React.FC<{
             : subCom.type?.name === typeId
         );
 
-  if (displayCommunities.length === 0) return null;
-
   const isLoading = isLoadingForType(typeId);
   const hasMore = hasMoreForType(typeId, initialCount);
   const remainingCount = getRemainingForType(typeId, initialCount);
 
+  // We rely on the context semaphore to serialize actual network requests
+  // (so multiple observers can schedule work but only the semaphore will
+  // allow one network call to proceed at a time). Removing the retrying
+  // effect avoids missed schedules caused by transient global flags.
+
+  // Decide whether we should render the real section. We always render an
+  // outer wrapper with a ref so the IntersectionObserver can observe it even
+  // if there's no data yet. Once we've initiated loading for this type, we
+  // display the section (showing the loader via isLoading). This ensures the
+  // first network call happens only when the section is visible.
+  const hasStartedLoading = isLoading;
+  const shouldRenderSection =
+    displayCommunities.length > 0 || isLoading || hasStartedLoading;
+
   return (
-    <SubCommunitySection
-      title={title}
-      type={typeId}
-      communities={displayCommunities}
-      initialCount={initialCount}
-      onLoadMore={() => loadMoreForType(typeId, initialCount)}
-      hasMore={hasMore}
-      isLoading={isLoading}
-      remainingCount={remainingCount}
-    />
+    <div ref={rootRef}>
+      {shouldRenderSection ? (
+        // If we're loading and have no data yet, render a lightweight
+        // skeleton grid. This provides visual feedback per-section while
+        // network calls are in-flight and avoids rendering the full
+        // SubCommunitySection until we have data.
+        isLoading && displayCommunities.length === 0 ? (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">{title}</h3>
+              <div className="w-20 h-4 bg-emerald-100 rounded animate-pulse" />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-lg border border-emerald-100 p-0 overflow-hidden shadow-sm animate-pulse"
+                >
+                  <div className="h-28 bg-emerald-100" />
+                  <div className="p-4 space-y-2">
+                    <div className="h-4 bg-emerald-100 rounded w-3/5" />
+                    <div className="h-3 bg-emerald-100 rounded w-4/5" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <SubCommunitySection
+            title={title}
+            type={typeId}
+            communities={displayCommunities}
+            initialCount={initialCount}
+            onLoadMore={() => loadMoreForType(typeId, initialCount)}
+            hasMore={hasMore}
+            isLoading={isLoading}
+            remainingCount={remainingCount}
+          />
+        )
+      ) : (
+        // keep an empty placeholder so the observer has something to attach to
+        // Use a larger placeholder so sections below the fold don't all
+        // register as intersecting at once (small placeholders could all
+        // fall inside rootMargin and trigger eager loads).
+        <Box sx={{ minHeight: 160 }} />
+      )}
+    </div>
   );
 };
 
@@ -90,11 +264,11 @@ export const SubCommunitiesPage: React.FC = () => {
   const {
     subCommunities,
     loading,
-    ensureAllSubCommunities,
     ensureTypes,
     error,
     clearError,
     types,
+    sectionLoadInProgress,
   } = useSubCommunity();
 
   const { user } = useAuth();
@@ -114,7 +288,9 @@ export const SubCommunitiesPage: React.FC = () => {
     let mounted = true;
     (async () => {
       try {
-        await Promise.all([ensureAllSubCommunities(), ensureTypes()]);
+        // Only load the available types initially. Individual sections
+        // (including 'all'/recommended) will load when scrolled into view.
+        await ensureTypes();
       } catch (err) {
         if (mounted) console.warn('Failed initial subcommunity load', err);
       }
@@ -122,13 +298,33 @@ export const SubCommunitiesPage: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, [ensureAllSubCommunities, ensureTypes]);
+  }, [ensureTypes]);
 
   useEffect(() => {
     if (error) {
       setSnackbarOpen(true);
     }
   }, [error]);
+
+  // Prevent scrolling while any section is actively loading. This keeps the
+  // viewport stable so users don't scroll past a skeleton while it's loading
+  // and accidentally trigger many sections to queue up.
+  useEffect(() => {
+    // Rely on the global sectionLoadInProgress flag from context which is
+    // set whenever a section-level load is actively running (and cleared
+    // when it finishes). This is more reliable than scanning per-type
+    // flags and avoids races when many observers trigger.
+    const previousOverflow = document.body.style.overflow;
+    if (sectionLoadInProgress) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = previousOverflow || '';
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [sectionLoadInProgress]);
 
   // No async calls during render: we use a small wrapper component below to
   // kick off `ensureTypeLoaded` in a useEffect when a section mounts.
@@ -348,3 +544,5 @@ export const SubCommunitiesPage: React.FC = () => {
     </Box>
   );
 };
+
+export default SubCommunitiesPage;

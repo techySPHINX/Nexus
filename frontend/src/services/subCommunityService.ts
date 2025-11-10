@@ -223,6 +223,48 @@ export const subCommunityService = {
     console.log('Fetched sub-community types:', response.data);
     return response.data;
   },
+  getMyModeratedSubCommunities: async (
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    data: SubCommunity[];
+    pagination: PaginationData;
+  }> => {
+    const params: Record<string, unknown> = { page, limit };
+    const response = await api.get('/sub-community/my/moderated', { params });
+    console.log(
+      "Fetched current user's moderated sub-communities:",
+      response.data
+    );
+    return response.data.moderated;
+  },
+  getMyOwnedSubCommunities: async (
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    data: SubCommunity[];
+    pagination: PaginationData;
+  }> => {
+    const params: Record<string, unknown> = { page, limit };
+    const response = await api.get('/sub-community/my/owned', { params });
+    console.log("Fetched current user's owned sub-communities:", response.data);
+    return response.data.owned;
+  },
+  getMyMemberSubCommunities: async (
+    page: number = 1,
+    limit: number = 20
+  ): Promise<{
+    data: SubCommunity[];
+    pagination: PaginationData;
+  }> => {
+    const params: Record<string, unknown> = { page, limit };
+    const response = await api.get('/sub-community/my/member', { params });
+    console.log(
+      "Fetched current user's member sub-communities:",
+      response.data
+    );
+    return response.data.member;
+  },
   createType: async (data: {
     name: string;
     slug?: string;

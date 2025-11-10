@@ -365,7 +365,7 @@ export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
                   lineHeight: 1.2,
                 }}
               >
-                r/{subCommunity.name}
+                {subCommunity.name}
               </Typography>
             </Box>
 
