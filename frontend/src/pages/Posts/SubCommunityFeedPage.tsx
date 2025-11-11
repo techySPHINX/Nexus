@@ -49,14 +49,77 @@ import {
   Settings,
   Refresh,
 } from '@mui/icons-material';
-import { CreatePostForm } from '../../components/Post/CreatePostForm';
-import { Post } from '../../components/Post/Post';
+import { Post as PostType } from '@/types/post';
+// Lazy-load heavy components so the page renders a skeleton first
+type CreatePostFormProps = {
+  subCommunityId?: string;
+  subCommunityName?: string;
+  onSuccess?: () => void;
+  onError?: (error: unknown) => void;
+  onCancel?: () => void;
+  profile?: { id?: string; avatarUrl?: string | null };
+  userRole?: SubCommunityRole | null;
+};
+
+const CreatePostForm = React.lazy(() =>
+  import('../../components/Post/CreatePostForm').then((mod) => {
+    return {
+      default: (
+        mod as unknown as {
+          CreatePostForm: React.ComponentType<CreatePostFormProps>;
+        }
+      ).CreatePostForm,
+    };
+  })
+) as React.LazyExoticComponent<React.ComponentType<CreatePostFormProps>>;
+
+type PostComponentProps = {
+  post: PostType;
+  onClick?: () => void;
+  onUpdate?: () => void;
+  onDelete?: () => void;
+  showActions?: boolean;
+  isAdminView?: boolean;
+  onApprove?: () => void;
+  onReject?: () => void;
+};
+
+const Post = React.lazy(() =>
+  import('../../components/Post/Post').then((mod) => {
+    return {
+      default: (
+        mod as unknown as {
+          Post: React.ComponentType<PostComponentProps>;
+        }
+      ).Post,
+    };
+  })
+) as React.LazyExoticComponent<React.ComponentType<PostComponentProps>>;
 import { getErrorMessage } from '@/utils/errorHandler';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
-import { SubCommunityRole, SubCommunityMember } from '../../types/subCommunity';
+import {
+  SubCommunityRole,
+  SubCommunityMember,
+  SubCommunity,
+} from '../../types/subCommunity';
 import { Role } from '@/types/profileType';
-import { SubCommunityEditBox } from '@/components/SubCommunity/SubCommunityEditBox';
+const SubCommunityEditBox = React.lazy(() =>
+  import('@/components/SubCommunity/SubCommunityEditBox').then((mod) => {
+    return {
+      default: (
+        mod as unknown as {
+          SubCommunityEditBox: React.ComponentType<{
+            community: SubCommunity;
+            open: boolean;
+            onClose: () => void;
+            onSave: () => void;
+          }>;
+        }
+      ).SubCommunityEditBox,
+    };
+  })
+);
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 
 // Tab panel component
@@ -341,11 +404,38 @@ export const SubCommunityFeedPage: React.FC = () => {
   };
 
   const renderPosts = () => {
+    // Show skeleton loading UI for first page (tailwind/emerald style)
     if (feedLoading && pagination.page === 1) {
       return (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4, py: 4 }}>
-          <CircularProgress size={40} />
-        </Box>
+        <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm transition-shadow mt-4">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Posts</h2>
+            <div className="w-20 h-4 bg-emerald-100 rounded animate-pulse" />
+          </div>
+
+          <div className="space-y-4">
+            {[...Array(3)].map((_, index) => (
+              <div
+                key={index}
+                className="flex gap-4 p-4 rounded-lg border border-gray-200 animate-pulse"
+              >
+                <div className="w-20 h-20 bg-emerald-100 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div className="h-4 bg-emerald-100 rounded w-3/4" />
+                    <div className="h-6 bg-emerald-100 rounded w-16" />
+                  </div>
+                  <div className="h-3 bg-emerald-100 rounded w-full" />
+                  <div className="h-3 bg-emerald-100 rounded w-2/3" />
+                  <div className="flex gap-4 pt-2">
+                    <div className="h-3 bg-emerald-100 rounded w-16" />
+                    <div className="h-3 bg-emerald-100 rounded w-16" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       );
     }
 
@@ -380,21 +470,85 @@ export const SubCommunityFeedPage: React.FC = () => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {subCommunityFeed.map((post) => (
-          <Post
+          <React.Suspense
             key={post.id}
-            post={post}
-            onClick={() =>
-              navigate(`/posts/${post.id}`, {
-                state: { from: `/subcommunities/${id}` },
-              })
+            fallback={
+              <Card sx={{ mb: 3 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    gap: 2,
+                    alignItems: 'center',
+                    p: 2,
+                  }}
+                >
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full animate-pulse" />
+                  <div className="flex-1">
+                    <div className="h-4 bg-emerald-100 rounded w-40 mb-2 animate-pulse" />
+                    <div className="h-3 bg-emerald-100 rounded w-32 animate-pulse" />
+                  </div>
+                  <div className="w-8 h-8 bg-emerald-100 rounded animate-pulse" />
+                </Box>
+
+                <Box sx={{ px: 2 }}>
+                  <div className="w-24 h-5 bg-emerald-100 rounded mt-1 mb-2 animate-pulse" />
+                </Box>
+
+                <CardContent>
+                  <div className="h-4 bg-emerald-100 rounded w-full mb-2 animate-pulse" />
+                  <div className="h-3 bg-emerald-100 rounded w-5/6 mb-3 animate-pulse" />
+                  <div className="h-48 bg-emerald-100 rounded w-full mb-2 animate-pulse" />
+                </CardContent>
+
+                <Box sx={{ px: 2, pb: 2 }}>
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-20 bg-emerald-100 rounded animate-pulse" />
+                    <div className="h-8 w-20 bg-emerald-100 rounded animate-pulse" />
+                    <div className="h-8 w-20 bg-emerald-100 rounded animate-pulse" />
+                  </div>
+                </Box>
+              </Card>
             }
-          />
+          >
+            <Post
+              post={post}
+              onClick={() =>
+                navigate(`/posts/${post.id}`, {
+                  state: { from: `/subcommunities/${id}` },
+                })
+              }
+            />
+          </React.Suspense>
         ))}
       </Box>
     );
   };
 
   const renderMembersTab = () => {
+    if (subCommunityLoading) {
+      // show tailwind-style skeletons while community data is loading
+      return (
+        <div className="bg-white rounded-xl border border-emerald-100 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold">Members</h3>
+            <div className="w-16 h-3 bg-emerald-100 rounded animate-pulse" />
+          </div>
+
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-10 h-10 bg-emerald-100 rounded-full flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="h-4 bg-emerald-100 rounded w-1/3 mb-2" />
+                  <div className="h-3 bg-emerald-100 rounded w-1/4" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     if (
       !currentSubCommunity?.members ||
       currentSubCommunity.members.length === 0
@@ -465,16 +619,30 @@ export const SubCommunityFeedPage: React.FC = () => {
 
   if (subCommunityLoading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '60vh',
-        }}
-      >
-        <CircularProgress size={60} />
-      </Box>
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm w-full max-w-3xl">
+          <div className="flex items-center justify-between mb-4">
+            <div className="h-6 bg-emerald-100 rounded w-1/3 animate-pulse" />
+            <div className="w-20 h-4 bg-emerald-100 rounded animate-pulse" />
+          </div>
+
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="flex gap-4 p-4 rounded-lg border border-gray-200 animate-pulse"
+              >
+                <div className="w-20 h-20 bg-emerald-100 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-emerald-100 rounded w-3/4" />
+                  <div className="h-3 bg-emerald-100 rounded w-2/3" />
+                  <div className="h-3 bg-emerald-100 rounded w-1/2" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -740,7 +908,7 @@ export const SubCommunityFeedPage: React.FC = () => {
                 )}
 
                 {/* Create Post Button (for members) */}
-                {(isMember || !currentSubCommunity.isPrivate) && (
+                {isMember && !currentSubCommunity.isPrivate && (
                   <Button
                     variant="contained"
                     onClick={() => setOpenForm(true)}
@@ -921,14 +1089,23 @@ export const SubCommunityFeedPage: React.FC = () => {
             Create Post in r/{currentSubCommunity.name}
           </DialogTitle>
           <DialogContent sx={{ p: 3, minHeight: '400px' }}>
-            <CreatePostForm
-              subCommunityId={currentSubCommunity.id}
-              subCommunityName={currentSubCommunity.name}
-              onSuccess={handleCreatePostSuccess}
-              onError={handleCreatePostError}
-              onCancel={() => setOpenForm(false)}
-              userRole={userRole}
-            />
+            <React.Suspense
+              fallback={
+                <div className="py-4 space-y-4">
+                  <div className="h-10 bg-emerald-100 rounded w-3/4 animate-pulse" />
+                  <div className="h-40 bg-emerald-100 rounded animate-pulse" />
+                </div>
+              }
+            >
+              <CreatePostForm
+                subCommunityId={currentSubCommunity.id}
+                subCommunityName={currentSubCommunity.name}
+                onSuccess={handleCreatePostSuccess}
+                onError={handleCreatePostError}
+                onCancel={() => setOpenForm(false)}
+                userRole={userRole}
+              />
+            </React.Suspense>
           </DialogContent>
         </Dialog>
       </Box>
@@ -1029,17 +1206,36 @@ export const SubCommunityFeedPage: React.FC = () => {
         </Alert>
       </Snackbar>
 
-      {currentSubCommunity && (
-        <SubCommunityEditBox
-          community={currentSubCommunity}
-          open={editDialogOpen}
-          onClose={() => setEditDialogOpen(false)}
-          onSave={() => {
-            showSnackbar('Community updated successfully!', 'success');
-            getSubCommunity(id!); // Refresh community data
-          }}
-        />
-      )}
+      <React.Suspense
+        fallback={
+          <Dialog
+            open={editDialogOpen}
+            onClose={() => setEditDialogOpen(false)}
+          >
+            <DialogTitle>
+              <div className="h-6 w-1/3 bg-emerald-100 rounded animate-pulse" />
+            </DialogTitle>
+            <DialogContent>
+              <div className="space-y-3 py-2">
+                <div className="h-9 bg-emerald-100 rounded w-full animate-pulse" />
+                <div className="h-32 bg-emerald-100 rounded w-full animate-pulse" />
+              </div>
+            </DialogContent>
+          </Dialog>
+        }
+      >
+        {currentSubCommunity && (
+          <SubCommunityEditBox
+            community={currentSubCommunity}
+            open={editDialogOpen}
+            onClose={() => setEditDialogOpen(false)}
+            onSave={() => {
+              showSnackbar('Community updated successfully!', 'success');
+              getSubCommunity(id!); // Refresh community data
+            }}
+          />
+        )}
+      </React.Suspense>
     </>
   );
 };

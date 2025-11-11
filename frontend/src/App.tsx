@@ -20,10 +20,6 @@ const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const AdminDocumentVerification = lazy(
   () => import('./pages/AdminDocumentVerification')
 );
-
-const DocumentVerification = lazy(
-  () => import('./pages/Admin/DocumentVerification')
-);
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Connections = lazy(() => import('./pages/Connections'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
@@ -50,7 +46,6 @@ import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
 import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
 import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
 import { MySubCommunitiesPage } from './pages/SubCommunity/MySubCommunityPage';
-import { DashboardProvider } from './contexts/DashBoardContext';
 const ProjectsMainPage = lazy(() => import('./pages/Project/ProjectMainPage'));
 const StartupsMainPage = lazy(() => import('./pages/Startup/StartupMainPage'));
 
@@ -132,8 +127,8 @@ const Layout: React.FC = () => {
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<EnhancedRegister />} />
-              <Route path="/register-lazy" element={<Register />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/register-enhanced" element={<EnhancedRegister />} />
               <Route
                 path="/registration-success"
                 element={<RegistrationSuccess />}
@@ -142,9 +137,7 @@ const Layout: React.FC = () => {
                 path="/dashboard"
                 element={
                   <ProtectedRoute>
-                    <DashboardProvider>
-                      <Dashboard />
-                    </DashboardProvider>
+                    <Dashboard />
                   </ProtectedRoute>
                 }
               />
@@ -153,14 +146,6 @@ const Layout: React.FC = () => {
                 element={
                   <AdminRoute>
                     <AdminDocumentVerification />
-                  </AdminRoute>
-                }
-              />
-              <Route
-                path="/admin/document-verification2"
-                element={
-                  <AdminRoute>
-                    <DocumentVerification />
                   </AdminRoute>
                 }
               />
@@ -267,6 +252,36 @@ const Layout: React.FC = () => {
               />
               <Route
                 path="/subcommunities/my"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <MySubCommunitiesPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/subcommunities/my/owned"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <MySubCommunitiesPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/subcommunities/my/moderated"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <MySubCommunitiesPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/subcommunities/my/member"
                 element={
                   <ProtectedRoute>
                     <Suspense fallback={<LoadingSpinner />}>

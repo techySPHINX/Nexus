@@ -55,6 +55,42 @@ export class SubCommunityController {
     });
   }
 
+  // Get current user's communities categorized by role (owned/moderated/member)
+
+  @Get('my/owned')
+  async myOwned(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    const p = page ? Number(page) : 1;
+    const l = limit ? Number(limit) : 6;
+    return this.subCommunityService.findMyOwnedSubCommunities(userId, p, l);
+  }
+
+  @Get('my/moderated')
+  async myModerated(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    const p = page ? Number(page) : 1;
+    const l = limit ? Number(limit) : 6;
+    return this.subCommunityService.findMyModeratedSubCommunities(userId, p, l);
+  }
+
+  @Get('my/member')
+  async myMember(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    const p = page ? Number(page) : 1;
+    const l = limit ? Number(limit) : 6;
+    return this.subCommunityService.findMyMemberSubCommunities(userId, p, l);
+  }
+
+
   @Get(':id')
   async findOne(
     @Param('id') id: string,

@@ -95,6 +95,31 @@ interface SubCommunityContextType {
     limit?: number,
     q?: string
   ) => number | undefined;
+  // Whether any per-section load is currently in progress
+  isAnySectionLoading: () => boolean;
+  // Whether a section-level load is currently in progress (useful for UI)
+  sectionLoadInProgress: boolean;
+  // My communities (owned/moderated/member) with pagination
+  mySubCommunities: {
+    owned: SubCommunityTypeResponse;
+    moderated: SubCommunityTypeResponse;
+    member: SubCommunityTypeResponse;
+  } | null;
+  fetchMySubCommunities: (opts?: {
+    ownedPage?: number;
+    ownedLimit?: number;
+    moderatedPage?: number;
+    moderatedLimit?: number;
+    memberPage?: number;
+    memberLimit?: number;
+  }) => Promise<{
+    owned: SubCommunityTypeResponse;
+    moderated: SubCommunityTypeResponse;
+    member: SubCommunityTypeResponse;
+  }>;
+  // Enqueue a type (or 'all') for scheduled loading. LazySection calls this
+  // to ensure its type will be fetched eventually.
+  scheduleTypeLoad: (type: string, limit?: number) => Promise<void>;
 }
 
 const SubCommunityContext = createContext<SubCommunityContextType>({
@@ -109,6 +134,42 @@ const SubCommunityContext = createContext<SubCommunityContextType>({
   creationRequests: [],
   loading: false,
   error: '',
+  mySubCommunities: null,
+  fetchMySubCommunities: async () => ({
+    owned: {
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 0,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    },
+    moderated: {
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 0,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    },
+    member: {
+      data: [],
+      pagination: {
+        page: 1,
+        limit: 0,
+        total: 0,
+        totalPages: 0,
+        hasNext: false,
+        hasPrev: false,
+      },
+    },
+  }),
 
   // Default actions - all return void
   getAllSubCommunities: async () => {},
@@ -127,6 +188,7 @@ const SubCommunityContext = createContext<SubCommunityContextType>({
   }),
   ensureTypeLoaded: async () => {},
   loadMoreForType: async () => {},
+  scheduleTypeLoad: async () => {},
   createSubCommunity: async () => {},
   updateSubCommunity: async () => {},
   deleteSubCommunity: async () => {},
@@ -148,7 +210,39 @@ const SubCommunityContext = createContext<SubCommunityContextType>({
   isLoadingForType: () => false,
   hasMoreForType: () => false,
   getRemainingForType: () => undefined,
+  isAnySectionLoading: () => false,
+  sectionLoadInProgress: false,
 });
+
+// Simple semaphore to limit concurrent network loads for section fetching.
+// Allows a small number of concurrent `getSubCommunityByType` requests to
+// avoid bursts when many IntersectionObservers fire together.
+class Semaphore {
+  private permits: number;
+  private queue: Array<() => void> = [];
+
+  constructor(maxConcurrent: number) {
+    this.permits = maxConcurrent;
+  }
+
+  acquire(): Promise<() => void> {
+    return new Promise((resolve) => {
+      const tryAcquire = () => {
+        if (this.permits > 0) {
+          this.permits--;
+          resolve(() => {
+            this.permits++;
+            const next = this.queue.shift();
+            if (next) next();
+          });
+        } else {
+          this.queue.push(tryAcquire);
+        }
+      };
+      tryAcquire();
+    });
+  }
+}
 
 export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -169,7 +263,17 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
     SubCommunityCreationRequest[]
   >([]);
   const [loading, setLoading] = useState(false);
+  // When any section-level load is in progress (one at a time due to semaphore)
+  // this flag is true. Consumers can use it to block scrolling or show a
+  // global skeleton indicator.
+  const [sectionLoadInProgress, setSectionLoadInProgress] = useState(false);
   const [error, setErrorState] = useState('');
+  // My communities grouped response (owned/moderated/member)
+  const [mySubCommunities, setMySubCommunities] = useState<{
+    owned: SubCommunityTypeResponse;
+    moderated: SubCommunityTypeResponse;
+    member: SubCommunityTypeResponse;
+  } | null>(null);
   // Idempotent/load guards to avoid duplicate network requests
   const typesFetchPromiseRef = useRef<Promise<SubCommunityType[]> | null>(null);
   const [allLoaded, setAllLoaded] = useState(false);
@@ -194,14 +298,51 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
     setErrorState('');
   }, []);
 
+  const isAnySectionLoading = useCallback(() => {
+    return (
+      sectionLoadInProgress ||
+      Object.values(subCommunityLoadingByType).some((v) => !!v)
+    );
+  }, [sectionLoadInProgress, subCommunityLoadingByType]);
+
+  // Semaphore instance to throttle concurrent section loads. Put in a ref
+  // so it's stable across renders and not recreated.
+  const loadSemaphoreRef = useRef<Semaphore | null>(null);
+
+  if (loadSemaphoreRef.current === null) {
+    // set concurrency to 1 for strict sequential section loads
+    loadSemaphoreRef.current = new Semaphore(1);
+  }
+
+  const safeGetSubCommunityByType = useCallback(
+    async (type: string, page: number, limit: number, q?: string) => {
+      const release = await loadSemaphoreRef.current!.acquire();
+      // mark a section load in progress so UI can block scrolling
+      setSectionLoadInProgress(true);
+      try {
+        return await subCommunityService.getSubCommunityByType(
+          type,
+          page,
+          limit,
+          q
+        );
+      } finally {
+        release();
+        setSectionLoadInProgress(false);
+      }
+    },
+    []
+  );
+
   const ensureAllSubCommunities = useCallback(
     async (forceRefresh = false) => {
       if (!forceRefresh && allLoaded) return;
       if (allFetchPromiseRef.current) return allFetchPromiseRef.current;
-
       const p = (async () => {
         // For the main page, fetch compact summaries to save bandwidth
         setLoading(true);
+        // Acquire semaphore so 'all' loads are serialized with per-type loads
+        const release = await loadSemaphoreRef.current!.acquire();
         try {
           const data = await subCommunityService.getAllSubCommunities({
             compact: true,
@@ -219,6 +360,7 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
           }
           throw err;
         } finally {
+          release();
           setLoading(false);
           allFetchPromiseRef.current = null;
         }
@@ -308,12 +450,7 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setLoading(true);
       try {
-        const response = await subCommunityService.getSubCommunityByType(
-          type,
-          page,
-          limit,
-          q
-        );
+        const response = await safeGetSubCommunityByType(type, page, limit, q);
 
         // Update cache
         setSubCommunityCache((prev) => ({
@@ -356,7 +493,7 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [setError, subCommunityCache]
+    [setError, subCommunityCache, safeGetSubCommunityByType]
   );
 
   // Ensure the first page for a given type is loaded (idempotent)
@@ -472,6 +609,51 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       return undefined;
     },
     [subCommunityCache, subCommunityPages]
+  );
+
+  // A small queue to ensure scheduled section loads are eventually processed.
+  // LazySection components enqueue their type id here; the queue processor
+  // will call `ensureTypeLoaded` (or `ensureAllSubCommunities`) sequentially
+  // so no scheduled load is dropped due to transient flags.
+  const scheduledQueueRef = useRef<string[]>([]);
+  const queueProcessingRef = useRef(false);
+
+  const scheduleTypeLoad = useCallback(
+    async (type: string, limit = 6) => {
+      // Avoid enqueueing duplicates
+      if (scheduledQueueRef.current.includes(type)) return;
+
+      scheduledQueueRef.current.push(type);
+
+      // Kick off processor if not already running
+      if (queueProcessingRef.current) return;
+
+      queueProcessingRef.current = true;
+      try {
+        while (scheduledQueueRef.current.length > 0) {
+          const next = scheduledQueueRef.current.shift()!;
+          try {
+            if (next === 'all') {
+              // Ensure 'all' loads use the compact loader
+              // Acquire semaphore inside ensureAllSubCommunities
+              await ensureAllSubCommunities();
+            } else {
+              await ensureTypeLoaded(next, limit);
+            }
+          } catch (err) {
+            // swallow and continue; retry logic is handled by the enqueuing
+            // source (LazySection will re-enqueue if necessary)
+            console.warn('Scheduled load failed for', next, err);
+          }
+          // small delay to avoid immediate bursts
+
+          await new Promise((r) => setTimeout(r, 50));
+        }
+      } finally {
+        queueProcessingRef.current = false;
+      }
+    },
+    [ensureAllSubCommunities, ensureTypeLoaded]
   );
 
   // NOTE: removed auto-fetch on mount. Consumers should call `ensureTypes()`
@@ -787,6 +969,108 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
     [setError]
   );
 
+  const fetchMySubCommunities = useCallback(
+    async (opts?: {
+      ownedPage?: number;
+      ownedLimit?: number;
+      moderatedPage?: number;
+      moderatedLimit?: number;
+      memberPage?: number;
+      memberLimit?: number;
+    }) => {
+      setLoading(true);
+      // serialize with other section loads to avoid concurrent network bursts
+      const release = await loadSemaphoreRef.current!.acquire();
+      setSectionLoadInProgress(true);
+      try {
+        // Instead of fetching all categories in parallel, only fetch the
+        // categories requested in `opts`. If no opts provided, default to
+        // fetching the 'owned' category only. Calls are performed
+        // sequentially to ensure one-at-a-time behavior.
+        const defaultEmpty = {
+          data: [],
+          pagination: {
+            page: 1,
+            limit: 0,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        } as SubCommunityTypeResponse;
+
+        let ownedResp: SubCommunityTypeResponse | undefined;
+        let moderatedResp: SubCommunityTypeResponse | undefined;
+        let memberResp: SubCommunityTypeResponse | undefined;
+
+        const shouldFetchOwned =
+          !opts ||
+          opts.ownedPage !== undefined ||
+          opts.ownedLimit !== undefined;
+        const shouldFetchModerated =
+          opts?.moderatedPage !== undefined ||
+          opts?.moderatedLimit !== undefined;
+        const shouldFetchMember =
+          opts?.memberPage !== undefined || opts?.memberLimit !== undefined;
+
+        // If no explicit category opts were passed, default to owned only.
+        if (shouldFetchOwned) {
+          ownedResp = await subCommunityService.getMyOwnedSubCommunities(
+            opts?.ownedPage ?? 1,
+            opts?.ownedLimit ?? 6
+          );
+        }
+
+        console.log(ownedResp);
+
+        if (shouldFetchModerated) {
+          moderatedResp =
+            await subCommunityService.getMyModeratedSubCommunities(
+              opts?.moderatedPage ?? 1,
+              opts?.moderatedLimit ?? 6
+            );
+        }
+
+        if (shouldFetchMember) {
+          memberResp = await subCommunityService.getMyMemberSubCommunities(
+            opts?.memberPage ?? 1,
+            opts?.memberLimit ?? 6
+          );
+        }
+
+        // Merge with any existing state so we don't clobber categories that
+        // weren't requested by the caller.
+        const combined = ((prev) => {
+          const existing = prev ?? {
+            owned: defaultEmpty,
+            moderated: defaultEmpty,
+            member: defaultEmpty,
+          };
+          return {
+            owned: ownedResp ?? existing.owned ?? defaultEmpty,
+            moderated: moderatedResp ?? existing.moderated ?? defaultEmpty,
+            member: memberResp ?? existing.member ?? defaultEmpty,
+          };
+        })(mySubCommunities);
+
+        setMySubCommunities(combined);
+        return combined;
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to fetch my sub-communities');
+        } else {
+          setError('Failed to fetch my sub-communities');
+        }
+        throw err;
+      } finally {
+        release();
+        setLoading(false);
+        setSectionLoadInProgress(false);
+      }
+    },
+    [setError, mySubCommunities]
+  );
+
   // Load initial data moved to consumers; use `ensureAllSubCommunities()` instead
 
   const contextValue = useMemo(
@@ -831,6 +1115,15 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       hasMoreForType,
       getRemainingForType,
 
+      sectionLoadInProgress,
+      isAnySectionLoading,
+
+      // my communities
+      mySubCommunities,
+      fetchMySubCommunities,
+      // scheduling
+      scheduleTypeLoad,
+
       // Utilities
       setError,
       clearError,
@@ -867,8 +1160,13 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       ensureTypeLoaded,
       loadMoreForType,
       isLoadingForType,
+      isAnySectionLoading,
       hasMoreForType,
       getRemainingForType,
+      sectionLoadInProgress,
+      mySubCommunities,
+      fetchMySubCommunities,
+      scheduleTypeLoad,
       setError,
       clearError,
     ]

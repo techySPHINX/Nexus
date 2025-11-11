@@ -11,7 +11,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  CircularProgress,
   Alert,
   Container,
   Grid,
@@ -214,9 +213,25 @@ export const SubCommunityJoinRequestModeration: React.FC = () => {
       )}
 
       {loading && joinRequests.length === 0 ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
-          <CircularProgress size={60} />
-        </Box>
+        <div className="flex justify-center py-8">
+          <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm w-full max-w-2xl">
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-4 p-3 rounded-lg border border-gray-200 animate-pulse"
+                >
+                  <div className="w-12 h-12 bg-emerald-100 rounded-full" />
+                  <div className="flex-1">
+                    <div className="h-4 bg-emerald-100 rounded w-1/3 mb-2" />
+                    <div className="h-3 bg-emerald-100 rounded w-1/2" />
+                  </div>
+                  <div className="w-20 h-4 bg-emerald-100 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       ) : joinRequests.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <CheckCircle sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
