@@ -7,7 +7,7 @@ export const securityConfig = {
    */
   cors: {
     development: {
-      origin: ['http://localhost:3001', 'http://localhost:3000'],
+      origin: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:4173', 'http://localhost:3002'],
       credentials: true,
     },
     production: {

@@ -83,16 +83,11 @@ export class ProfileService {
 
     if (completionPercentage === 100) {
       return {
-      totalFields,
-      filledFields,
       completionPercentage,
       };
     }
 
     return {
-      totalFields,
-      filledFields,
-      completionPercentage,
       details: {
       avatar: avatarFilled,
       bio: bioFilled,
@@ -180,32 +175,6 @@ export class ProfileService {
                 subCommunityMemberships: true,
               },
             },
-          },
-        },
-        endorsements: {
-          include: {
-            skill: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            endorser: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                profile: {
-                  select: {
-                    avatarUrl: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
           },
         },
       },
