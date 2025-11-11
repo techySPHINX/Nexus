@@ -15,7 +15,6 @@ import {
 import {
   Edit,
   Delete,
-  Visibility,
   Add,
   Check,
   TrendingUp,
@@ -44,7 +43,7 @@ const StartupCard: React.FC<Props> = ({
 }) => {
   const { user } = useAuth();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
 
   const isOwner = user?.id === startup.founderId;
   const hasFunding = !!startup.fundingGoal;
@@ -283,6 +282,7 @@ const StartupCard: React.FC<Props> = ({
         sx={{
           flex: 1,
           minWidth: 0,
+          cursor: onView ? 'pointer' : 'default',
           padding: { xs: 1.5, sm: 2, lg: 2.5 },
           display: 'flex',
           flexDirection: 'column',
@@ -290,7 +290,7 @@ const StartupCard: React.FC<Props> = ({
         }}
       >
         {/* Top Section: Header and Status */}
-        <Box sx={{ minHeight: { sm: 140 } }}>
+        <Box onClick={onView} sx={{ minHeight: { sm: 140 } }}>
           <Box
             sx={{
               display: 'flex',
@@ -401,21 +401,6 @@ const StartupCard: React.FC<Props> = ({
           )}
 
           {/* View button in main content area for mobile */}
-          <Tooltip title="View Details">
-            <IconButton
-              color="primary"
-              onClick={onView}
-              size="small"
-              sx={{
-                backgroundColor: 'primary.50',
-                '&:hover': {
-                  backgroundColor: 'primary.100',
-                },
-              }}
-            >
-              <Visibility fontSize="small" />
-            </IconButton>
-          </Tooltip>
           {isOwner ? (
             tab !== 0 ? (
               <Box

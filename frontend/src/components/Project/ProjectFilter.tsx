@@ -8,6 +8,10 @@ import {
   Typography,
   Button,
   Stack,
+  Paper,
+  IconButton,
+  Grid,
+  Badge,
 } from '@mui/material';
 import { Close, Search, FilterList } from '@mui/icons-material';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -23,51 +27,31 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
 }) => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [expanded, setExpanded] = useState(false);
-  const [searchActive, setSearchActive] = useState(false);
 
   // Keep localFilters in sync when parent `filters` prop changes
   React.useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
 
-  // Only apply filters when user clicks the button (for dropdown fields)
+  // Centralized apply handler: use current localFilters (including search)
   const handleApplyFilters = () => {
-    onFilterChange({
-      ...filters,
-      status: localFilters.status,
-      sortBy: localFilters.sortBy,
-      tags: localFilters.tags,
-      // skills: localFilters.skills, // add if you have skills
-    });
+    onFilterChange({ ...localFilters, cursor: undefined });
     setExpanded(false);
   };
 
-  // Search applies instantly, but can be cleared
+  // Helper for Apply button near search field
+  const applyFromSearch = () => {
+    onFilterChange({ ...localFilters, cursor: undefined });
+  };
+
+  // Search updates local state only; applying happens when user clicks Apply
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setLocalFilters((prev) => {
-      const next: FilterProjectInterface = {
-        ...prev,
-        search: value,
-        cursor: undefined,
-      };
-      onFilterChange(next);
-      return next;
-    });
-    setSearchActive(!!value);
+    setLocalFilters((prev) => ({ ...prev, search: value, cursor: undefined }));
   };
 
   const handleClearSearch = () => {
-    setLocalFilters((prev) => {
-      const next: FilterProjectInterface = {
-        ...prev,
-        search: '',
-        cursor: undefined,
-      };
-      onFilterChange(next);
-      return next;
-    });
-    setSearchActive(false);
+    setLocalFilters((prev) => ({ ...prev, search: '', cursor: undefined }));
   };
 
   const updateLocalFilter = (
@@ -107,96 +91,110 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
   // Removed unused hasActiveFilters
 
   return (
-    <Box sx={{ mb: 3 }}>
-      {/* Personalize Toggle - outside dropdown, animated */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, gap: 2 }}>
-        <Button
-          variant={localFilters.personalize ? 'contained' : 'outlined'}
-          color={localFilters.personalize ? 'primary' : 'info'}
-          onClick={() => {
-            setLocalFilters((prev) => ({
-              ...prev,
-              personalize: !prev.personalize,
-            }));
-            onFilterChange({
-              ...localFilters,
-              personalize: !localFilters.personalize,
-            });
-          }}
-          sx={{
-            borderRadius: 3,
-            fontWeight: 700,
-            px: 2,
-            py: 1,
-            boxShadow: localFilters.personalize ? 2 : 0,
-            transition: 'all 0.3s',
-            background: localFilters.personalize
-              ? 'linear-gradient(90deg, #1976d2 60%, #64b5f6 100%)'
-              : undefined,
-          }}
-        >
-          {localFilters.personalize ? 'Show All' : 'Personalize'}
-        </Button>
+    <Paper sx={{ mb: 3, p: 2, borderRadius: 3, boxShadow: 2 }} elevation={1}>
+      {/* Personalize Toggle + Search + Filters */}
+      <Grid container spacing={2} alignItems="center" sx={{ mb: 1 }}>
+        <Grid item>
+          <Button
+            variant={localFilters.personalize ? 'contained' : 'outlined'}
+            color={localFilters.personalize ? 'primary' : 'info'}
+            onClick={() => {
+              setLocalFilters((prev) => ({
+                ...prev,
+                personalize: !prev.personalize,
+              }));
+              onFilterChange({
+                ...localFilters,
+                personalize: !localFilters.personalize,
+              });
+            }}
+            sx={{
+              borderRadius: 3,
+              fontWeight: 700,
+              px: 2,
+              py: 1,
+              boxShadow: localFilters.personalize ? 2 : 0,
+              transition: 'all 0.3s',
+            }}
+          >
+            {localFilters.personalize ? 'Show All' : 'Personalize'}
+          </Button>
+        </Grid>
 
-        {/* Quick Search Bar */}
-        <TextField
-          label="Search projects..."
-          value={localFilters.search || ''}
-          onChange={handleSearchChange}
-          fullWidth
-          size="small"
-          InputProps={{
-            startAdornment: <Search sx={{ color: 'text.secondary', mr: 1 }} />,
-            endAdornment: searchActive && (
-              <Button
-                size="small"
-                color="secondary"
-                onClick={handleClearSearch}
-                sx={{ minWidth: 0, px: 1 }}
-              >
-                <Close fontSize="small" />
-              </Button>
-            ),
-          }}
-          sx={{
-            maxWidth: 400,
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-            },
-          }}
-        />
-
-        <Button
-          variant={expanded ? 'contained' : 'outlined'}
-          startIcon={<FilterList />}
-          onClick={() => setExpanded(!expanded)}
-          sx={{ borderRadius: 2 }}
-        >
-          Filters
-          {(localFilters.status ||
-            localFilters.sortBy ||
-            localFilters.tags?.length) && (
-            <Chip
-              label="!"
+        <Grid item xs>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <TextField
+              label="Search projects..."
+              value={localFilters.search || ''}
+              onChange={handleSearchChange}
+              fullWidth
               size="small"
-              color="primary"
-              sx={{ ml: 1, minWidth: 20, height: 20 }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') applyFromSearch();
+              }}
+              InputProps={{
+                startAdornment: (
+                  <Search sx={{ color: 'text.secondary', mr: 1 }} />
+                ),
+                endAdornment: (
+                  <IconButton
+                    size="small"
+                    onClick={handleClearSearch}
+                    aria-label="clear-search"
+                  >
+                    <Close fontSize="small" />
+                  </IconButton>
+                ),
+              }}
+              sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
             />
-          )}
-        </Button>
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={applyFromSearch}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              Apply
+            </Button>
+          </Box>
+        </Grid>
+
+        <Grid item>
+          <Badge
+            badgeContent={
+              Number(!!localFilters.search) +
+              Number(!!localFilters.status) +
+              Number(!!localFilters.sortBy) +
+              (localFilters.tags?.length || 0)
+            }
+            color="primary"
+          >
+            <Button
+              variant={expanded ? 'contained' : 'outlined'}
+              startIcon={<FilterList />}
+              onClick={() => setExpanded(!expanded)}
+              sx={{ borderRadius: 2 }}
+            >
+              Filters
+            </Button>
+          </Badge>
+        </Grid>
 
         {(localFilters.status ||
           localFilters.sortBy ||
           localFilters.tags?.length) && (
-          <Button
-            variant="text"
-            onClick={clearAllFilters}
-            sx={{ color: 'text.secondary' }}
-          >
-            Clear All
-          </Button>
+          <Grid item>
+            <Button
+              variant="text"
+              onClick={clearAllFilters}
+              sx={{ color: 'text.secondary' }}
+            >
+              Clear All
+            </Button>
+          </Grid>
         )}
-      </Box>
+      </Grid>
 
       {/* Expanded Filters */}
       <AnimatePresence>
@@ -345,7 +343,7 @@ const ProjectFilter: React.FC<ProjectFilterProps> = ({
           ))}
         </Box>
       )}
-    </Box>
+    </Paper>
   );
 };
 

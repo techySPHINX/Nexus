@@ -34,6 +34,7 @@ import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { Role } from '@/types/profileType';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import { useNotification } from '@/contexts/NotificationContext';
+import ProjectCollaborationRequestsModal from './ProjectCollaborationRequestsModal';
 
 interface ProjectCardProps {
   project: ProjectInterface;
@@ -63,6 +64,13 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   const [isHovered, setIsHovered] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+  const [imageSrc, setImageSrc] = useState<string | undefined>(
+    project.imageUrl
+  );
+  const [triedProxy, setTriedProxy] = useState(false);
+
+  console.log('Rendering ProjectCard');
 
   // lazy-load UpdateSection so we don't add a hard dependency at top
   const UpdateSection = useMemo(
@@ -73,7 +81,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   // ✅ Memoize image URL to prevent recomputation / re-renders
   const webpUrl = useMemo(() => {
     if (!project.imageUrl) return undefined;
-    console.log('Computing webp URL for', project.imageUrl);
     return project.imageUrl.replace(/\.(jpg|jpeg|png)(\?.*)?$/i, '.webp$2');
   }, [project.imageUrl]);
 
@@ -221,18 +228,43 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             <img
               loading="lazy"
               decoding="async"
-              src={project.imageUrl}
-              srcSet={
-                project.imageUrl
-                  ? `${project.imageUrl} 1x, ${project.imageUrl} 2x`
-                  : undefined
-              }
+              src={imageSrc}
+              crossOrigin="anonymous"
+              referrerPolicy="no-referrer"
+              srcSet={imageSrc ? `${imageSrc} 1x, ${imageSrc} 2x` : undefined}
               sizes="(max-width:600px) 100vw, 50vw"
               alt={project.title}
               onLoad={() => setImgLoaded(true)}
               onError={(e) => {
+                // prevent infinite loop
                 e.currentTarget.onerror = null;
-                e.currentTarget.src = '/default-project.png';
+                // If a CORS proxy is configured and we haven't tried it yet,
+                // attempt to load via the proxy to work around servers that
+                // block cross-origin image loads. Otherwise fall back to a
+                // local default image.
+                const proxy = (import.meta as { env?: Record<string, string> })
+                  .env?.VITE_CORS_PROXY;
+                const original = project.imageUrl;
+                if (
+                  proxy &&
+                  !triedProxy &&
+                  original &&
+                  /^https?:\/\//i.test(original)
+                ) {
+                  try {
+                    setTriedProxy(true);
+                    const proxied = `${proxy.replace(/\/$/, '')}/${encodeURIComponent(
+                      original
+                    )}`;
+                    setImageSrc(proxied);
+                    return;
+                  } catch (err) {
+                    // fall through to default
+                    console.warn('Failed to construct proxied image URL', err);
+                  }
+                }
+
+                setImageSrc('/default-project.png');
                 setImgLoaded(true);
               }}
               style={{
@@ -433,34 +465,50 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                   >
                     Technologies & Tags
                   </Typography>
-                  <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                    {project.tags?.slice(0, 10).map((tag, idx) => (
+                  <Stack
+                    direction="row"
+                    flexWrap="wrap"
+                    sx={{
+                      // constrain tag area so it can't push other content out of view
+                      maxHeight: 100, // ~2 lines of chips at most
+                      overflowY: 'auto',
+                      pt: 2,
+                      pr: 0.5,
+                      // use gap / rowGap to ensure both horizontal and vertical spacing between chips
+                      gap: 1,
+                      rowGap: 1,
+                      // ensure individual children don't carry extra margins (we rely on gap)
+                      '& > *': { margin: 0 },
+                      // subtle scrollbar styling so overflowing tags are discoverable but not ugly
+                      '&::-webkit-scrollbar': { height: 6 },
+                      '&::-webkit-scrollbar-thumb': {
+                        backgroundColor: 'rgba(255,255,255,0.12)',
+                        borderRadius: 99,
+                      },
+                    }}
+                  >
+                    {project.tags?.map((tag, idx) => (
                       <Chip
                         key={idx}
                         label={tag}
                         size="small"
                         sx={{
-                          backgroundColor: 'rgba(255,255,255,0.1)',
+                          backgroundColor: 'rgba(255,255,255,0.08)',
                           color: 'white',
-                          border: '1px solid rgba(255,255,255,0.2)',
-                          mb: 1,
+                          border: '1px solid rgba(255,255,255,0.12)',
+                          borderRadius: 2,
+                          // remove per-chip vertical margin; spacing handled by gap
+                          mb: 0,
+                          // subtle hover affordance
+                          transition:
+                            'transform 150ms ease, background-color 150ms ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            backgroundColor: 'rgba(255,255,255,0.16)',
+                            transform: 'translateY(-2px)',
                           },
                         }}
                       />
                     ))}
-                    {project.tags && project.tags.length > 10 && (
-                      <Chip
-                        label={`+${project.tags.length - 10}`}
-                        size="small"
-                        sx={{
-                          backgroundColor: 'rgba(255,255,255,0.05)',
-                          color: 'rgba(255,255,255,0.7)',
-                          border: '1px solid rgba(255,255,255,0.1)',
-                        }}
-                      />
-                    )}
                   </Stack>
                 </Box>
 
@@ -550,6 +598,19 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                       linkToProfile={false}
                       showAvatar
                     />
+                    {isOwner && (
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRequestsOpen(true);
+                        }}
+                        sx={{ ml: 1, color: 'white' }}
+                        title="View collaboration requests"
+                      >
+                        <Handshake />
+                      </IconButton>
+                    )}
                   </Box>
                 </Box>
 
@@ -585,22 +646,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
                     </Button>
                   </DialogActions>
                 </Dialog>
-
-                {/* Snackbar
-                <Snackbar
-                  open={snackOpen}
-                  autoHideDuration={4000}
-                  onClose={() => setSnackOpen(false)}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                >
-                  <Alert
-                    onClose={() => setSnackOpen(false)}
-                    severity={snackSeverity}
-                    sx={{ width: '100%' }}
-                  >
-                    {snackMsg}
-                  </Alert>
-                </Snackbar> */}
                 {/* Actions */}
                 {!isOwner && (
                   <Stack direction="row" spacing={1} justifyContent="end">
@@ -755,6 +800,12 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               onUpdated={handleUpdateProjectDetails}
             />
           </React.Suspense>
+          {/* Collaboration requests modal for project owners */}
+          <ProjectCollaborationRequestsModal
+            open={requestsOpen}
+            projectId={project.id}
+            onClose={() => setRequestsOpen(false)}
+          />
         </Box>
       </Box>
 

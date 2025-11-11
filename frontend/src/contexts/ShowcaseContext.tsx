@@ -144,6 +144,7 @@ export interface ShowcaseContextType {
     data: CreateCollaborationRequestInterface
   ) => Promise<void>;
   updateStatusCollaboration: (
+    requestId: string,
     projectId: string,
     status: CollaborationStatus
   ) => Promise<void>;
@@ -1591,15 +1592,20 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const updateStatusCollaboration = useCallback(
-    async (projectId: string, status: CollaborationStatus) => {
+    async (
+      requestId: string,
+      projectId: string,
+      status: CollaborationStatus
+    ) => {
       if (!user) {
         setError('User not authenticated');
         return;
       }
       setLoading(true);
       try {
-        await ShowcaseService.updateStatusCollaboration(projectId, status);
-        // Refresh collaboration requests
+        // requestId is the id of the collaboration request; backend expects PUT /showcase/:requestId/collaborate
+        await ShowcaseService.updateStatusCollaboration(requestId, status);
+        // Refresh collaboration requests for the project
         await getCollaborationRequests(projectId);
       } catch (err) {
         setError(

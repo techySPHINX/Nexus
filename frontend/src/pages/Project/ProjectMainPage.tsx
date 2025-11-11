@@ -476,13 +476,13 @@ const ProjectsMainPage: React.FC = () => {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.2 }}
       >
         {/* Header Section */}
         <motion.div
-          initial={{ y: -20, opacity: 0 }}
+          initial={{ y: -8, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.6 }}
+          transition={{ duration: 0.25 }}
         >
           <Box
             sx={{
@@ -564,9 +564,9 @@ const ProjectsMainPage: React.FC = () => {
         {/* Summary Stats (show skeletons while loading to improve FCP) */}
         {user && (
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
+            initial={{ y: 8, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            transition={{ duration: 0.2, delay: 0.05 }}
           >
             <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
               {actionLoading.count ? (
@@ -610,9 +610,9 @@ const ProjectsMainPage: React.FC = () => {
 
         {/* Filter Section */}
         <motion.div
-          initial={{ y: 20, opacity: 0 }}
+          initial={{ y: 8, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ duration: 0.2, delay: 0.08 }}
         >
           <ProjectFilter filters={filters} onFilterChange={setFilters} />
         </motion.div>
@@ -620,9 +620,9 @@ const ProjectsMainPage: React.FC = () => {
         {/* Tabs for different views */}
         {user && (
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
+            initial={{ y: 8, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
+            transition={{ duration: 0.2, delay: 0.1 }}
           >
             <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
               <Tabs

@@ -229,12 +229,11 @@ export const ShowcaseService = {
   },
 
   updateStatusCollaboration: async (
-    projectId: string,
+    requestId: string,
     status: CollaborationStatus
   ) => {
     try {
-      await api.put(`/showcase/${projectId}/collaborate`, { status });
-      const response = await api.put(`/showcase/${projectId}/collaborate`, {
+      const response = await api.put(`/showcase/${requestId}/collaborate`, {
         status,
       });
       return response.data;
