@@ -73,12 +73,6 @@ const StartupGrid: React.FC<Props> = ({
           />
           <Skeleton
             variant="rectangular"
-            width={48}
-            height={26}
-            sx={{ borderRadius: 12 }}
-          />
-          <Skeleton
-            variant="rectangular"
             width={80}
             height={26}
             sx={{ borderRadius: 12 }}
@@ -96,8 +90,9 @@ const StartupGrid: React.FC<Props> = ({
       <Box
         sx={{
           display: 'grid',
-          gap: 2,
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: 3,
+          // show 1 column on extra-small screens, 2 columns on small and up
+          gridTemplateColumns: { xs: 'repeat(1, 1fr)', sm: 'repeat(2, 1fr)' },
         }}
       >
         {skeletons}
