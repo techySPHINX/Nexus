@@ -1184,7 +1184,7 @@ export class ShowcaseService {
   async getStartupById(startupId: string) {
     return this.prisma.startup.findUnique({
       where: { id: startupId },
-      include: { founder: true },
+      select: { description: true, founder: true },
     });
   }
 
