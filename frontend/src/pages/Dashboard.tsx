@@ -124,44 +124,46 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     if (!user?.id || !token) return;
 
+    // Handler functions
+    const handleNewMessage = (message: WebSocketMessage) => {
+      const newMessage = message.data as {
+        id: string;
+        sender?: { name?: string };
+        receiverId: string;
+      };
+      if (newMessage.receiverId === user.id) {
+        setStats((prev) => ({ ...prev, messages: prev.messages + 1 }));
+        showNotificationRef.current?.(
+          `${newMessage.sender?.name || 'Someone'} sent you a message`,
+          'info'
+        );
+      }
+    };
+
+    const handleConnectionRequest = (message: WebSocketMessage) => {
+      const data = message.data as {
+        id: string;
+        sender?: { name?: string };
+      };
+      showNotificationRef.current?.(
+        `${data.sender?.name || 'Someone'} wants to connect with you`,
+        'info'
+      );
+      setStats((prev) => ({
+        ...prev,
+        pendingRequests: prev.pendingRequests + 1,
+      }));
+    };
+
     const initializeWebSocket = async () => {
       try {
         await improvedWebSocketService.connect(user.id, token);
 
-        improvedWebSocketService.on(
-          'NEW_MESSAGE',
-          (message: WebSocketMessage) => {
-            const newMessage = message.data as {
-              id: string;
-              sender?: { name?: string };
-              receiverId: string;
-            };
-            if (newMessage.receiverId === user.id) {
-              setStats((prev) => ({ ...prev, messages: prev.messages + 1 }));
-              showNotificationRef.current?.(
-                `${newMessage.sender?.name || 'Someone'} sent you a message`,
-                'info'
-              );
-            }
-          }
-        );
-
+        // Register event listeners
+        improvedWebSocketService.on('NEW_MESSAGE', handleNewMessage);
         improvedWebSocketService.on(
           'CONNECTION_REQUEST',
-          (message: WebSocketMessage) => {
-            const data = message.data as {
-              id: string;
-              sender?: { name?: string };
-            };
-            showNotificationRef.current?.(
-              `${data.sender?.name || 'Someone'} wants to connect with you`,
-              'info'
-            );
-            setStats((prev) => ({
-              ...prev,
-              pendingRequests: prev.pendingRequests + 1,
-            }));
-          }
+          handleConnectionRequest
         );
       } catch (error) {
         console.error('Failed to initialize WebSocket for dashboard:', error);
@@ -169,7 +171,16 @@ const Dashboard: React.FC = () => {
     };
 
     void initializeWebSocket();
-    return () => improvedWebSocketService.disconnect();
+
+    // Cleanup: Remove event listeners and disconnect
+    return () => {
+      improvedWebSocketService.off('NEW_MESSAGE');
+      improvedWebSocketService.off('CONNECTION_REQUEST');
+      // Only disconnect if this is the last component using the service
+      // In a real app, you might want to check if other components are using it
+      // For now, we'll keep the connection alive for other components
+      // improvedWebSocketService.disconnect();
+    };
   }, [user?.id, token]);
 
   const hasInitRef = useRef(false);
