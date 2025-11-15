@@ -143,7 +143,7 @@ function TabPanel(props: {
   );
 }
 
-export const SubCommunityFeedPage: React.FC = () => {
+const SubCommunityFeedPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
@@ -915,6 +915,7 @@ export const SubCommunityFeedPage: React.FC = () => {
                     size="large"
                     startIcon={<Add />}
                     sx={{
+                      background: 'primary.main',
                       borderRadius: 2,
                       fontWeight: 600,
                       minHeight: '48px', // Fixed height for uniform appearance
@@ -1239,3 +1240,5 @@ export const SubCommunityFeedPage: React.FC = () => {
     </>
   );
 };
+
+export default SubCommunityFeedPage;

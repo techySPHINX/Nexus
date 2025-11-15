@@ -9,6 +9,9 @@ import {
   Alert,
   CircularProgress,
   Grid,
+  Card,
+  CardContent,
+  Skeleton,
 } from '@mui/material';
 import { Search, Add } from '@mui/icons-material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
@@ -217,25 +220,69 @@ const LazySection: React.FC<{
         // SubCommunitySection until we have data.
         isLoading && displayCommunities.length === 0 ? (
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold">{title}</h3>
-              <div className="w-20 h-4 bg-emerald-100 rounded animate-pulse" />
-            </div>
+            <Typography
+              variant="h5"
+              component="h2"
+              sx={{
+                fontWeight: 600,
+                color: 'text.primary',
+                mb: 3,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                paddingBottom: '8px',
+                borderBottom: '2px solid',
+                borderColor: 'primary.main',
+                width: 'fit-content',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  color: 'primary.main',
+                  borderColor: 'primary.dark',
+                  '& .section-chevron': {
+                    transform: 'translateX(4px)',
+                    color: 'primary.dark',
+                  },
+                },
+              }}
+            >
+              {title}
+              <Box
+                component="span"
+                className="section-chevron"
+                sx={{
+                  color: 'primary.main',
+                  fontSize: '1.3em',
+                  fontWeight: 'bold',
+                  transition: 'all 0.2s ease-in-out',
+                }}
+              >
+                ›
+              </Box>
+            </Typography>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <Grid container spacing={2}>
               {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-lg border border-emerald-100 p-0 overflow-hidden shadow-sm animate-pulse"
-                >
-                  <div className="h-28 bg-emerald-100" />
-                  <div className="p-4 space-y-2">
-                    <div className="h-4 bg-emerald-100 rounded w-3/5" />
-                    <div className="h-3 bg-emerald-100 rounded w-4/5" />
-                  </div>
-                </div>
+                <Grid item xs={12} sm={6} md={4} key={i}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      overflow: 'hidden',
+                      boxShadow: 1,
+                    }}
+                  >
+                    <Skeleton
+                      variant="rectangular"
+                      height={112}
+                      animation="pulse"
+                    />
+                    <CardContent>
+                      <Skeleton width="60%" height={20} sx={{ mb: 1 }} />
+                      <Skeleton width="80%" height={16} />
+                    </CardContent>
+                  </Card>
+                </Grid>
               ))}
-            </div>
+            </Grid>
           </div>
         ) : (
           <SubCommunitySection
@@ -260,7 +307,7 @@ const LazySection: React.FC<{
   );
 };
 
-export const SubCommunitiesPage: React.FC = () => {
+const SubCommunitiesPage: React.FC = () => {
   const {
     subCommunities,
     loading,

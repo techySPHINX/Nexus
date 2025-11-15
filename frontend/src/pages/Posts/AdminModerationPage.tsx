@@ -64,7 +64,7 @@ import { SubCommunity } from '../../types/subCommunity';
 //   );
 // }
 
-export const AdminModerationPage: React.FC = () => {
+const AdminModerationPage: React.FC = () => {
   const {
     pendingPosts,
     getPendingPosts,
@@ -577,3 +577,5 @@ export const AdminModerationPage: React.FC = () => {
     </Box>
   );
 };
+
+export default AdminModerationPage;

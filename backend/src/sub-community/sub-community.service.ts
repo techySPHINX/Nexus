@@ -261,7 +261,7 @@ export class SubCommunityService {
               }
             : undefined,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { updatedAt: 'desc' },
       }),
       this.prisma.subCommunity.count({ where }),
     ]);
@@ -281,22 +281,6 @@ export class SubCommunityService {
         hasPrev,
       },
     };
-
-    // const totalPages = Math.ceil(totalCount / limit);
-    // const hasNext = page < totalPages;
-    // const hasPrev = page > 1;
-
-    // return {
-    //   data: subCommunities,
-    //   pagination: {
-    //     page,
-    //     limit,
-    //     total: totalCount,
-    //     totalPages,
-    //     hasNext,
-    //     hasPrev,
-    //   },
-    // };
   }
 
   async findMyOwnedSubCommunities(
