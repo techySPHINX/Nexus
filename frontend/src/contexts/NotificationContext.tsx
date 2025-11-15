@@ -111,14 +111,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     'success' | 'error' | 'info' | 'warning'
   >('info');
 
-  const showNotification = (
-    message: string,
-    severity: 'success' | 'error' | 'info' | 'warning' = 'info'
-  ) => {
-    setNotifMessage(message);
-    setNotifSeverity(severity);
-    setNotifOpen(true);
-  };
+  const showNotification = React.useCallback(
+    (
+      message: string,
+      severity: 'success' | 'error' | 'info' | 'warning' = 'info'
+    ) => {
+      setNotifMessage(message);
+      setNotifSeverity(severity);
+      setNotifOpen(true);
+    },
+    []
+  );
 
   // Update the fetchAllUnreadCounts function
   const fetchAllUnreadCounts = useCallback(async () => {
