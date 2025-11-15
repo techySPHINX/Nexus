@@ -1,9 +1,6 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider } from './contexts/AuthContext';
-import { NavbarProvider } from './contexts/NavbarContext';
 import { useNavbar } from './contexts/NavbarContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -26,49 +23,49 @@ const ChatPage = lazy(() => import('./pages/ChatPage'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Referrals = lazy(() => import('./pages/Referrals'));
 const Files = lazy(() => import('./pages/Files'));
-const Landing = lazy(() => import('./pages/Landing'));
+// const Landing = lazy(() => import('./pages/Landing'));
 const Notification = lazy(() => import('./pages/Notification'));
-import { NotificationProvider } from './contexts/NotificationContext';
-const ProfileProvider = lazy(() => import('./contexts/ProfileContext'));
-import { EngagementProvider } from './contexts/engagementContext';
-import { EngagementService } from './services/engagementService';
-import { PostProvider } from './contexts/PostContext';
-import { SubCommunityProvider } from './contexts/SubCommunityContext';
-import { ShowcaseProvider } from './contexts/ShowcaseContext';
-import { StartupProvider } from './contexts/StartupContext';
-
-// Import components that use named exports (not default exports)
-import { FeedPage } from './pages/Posts/FeedPage';
-import { PostDetailPage } from './pages/Posts/PostDetailPage';
-import { UserPostsPage } from './pages/Posts/UserPostsPage';
-import { SubCommunitiesPage } from './pages/Posts/SubCommunityPage';
-import { SearchResultsPage } from './pages/Posts/SearchResultsPage';
-import { SubCommunityFeedPage } from './pages/Posts/SubCommunityFeedPage';
-import { AdminModerationPage } from './pages/Posts/AdminModerationPage';
-import { MySubCommunitiesPage } from './pages/SubCommunity/MySubCommunityPage';
+const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));
+const PostDetailPage = lazy(() => import('./pages/Posts/PostDetailPage'));
+const UserPostsPage = lazy(() => import('./pages/Posts/UserPostsPage'));
+const SubCommunitiesPage = lazy(
+  () => import('./pages/SubCommunity/SubCommunityPage')
+);
+const SearchResultsPage = lazy(() => import('./pages/Posts/SearchResultsPage'));
+const SubCommunityFeedPage = lazy(
+  () => import('./pages/SubCommunity/SubCommunityFeedPage')
+);
+const AdminModerationPage = lazy(
+  () => import('./pages/Posts/AdminModerationPage')
+);
+const AdminSubCommunityModerationPage = lazy(
+  () => import('./pages/SubCommunity/AdminSubCommunityModerationPage')
+);
+const SubCommunityJoinRequestModeration = lazy(
+  () => import('./pages/SubCommunity/SubCommunityJoinRequestModeration')
+);
+const MySubCommunitiesPage = lazy(
+  () => import('./pages/SubCommunity/MySubCommunityPage')
+);
 const ProjectsMainPage = lazy(() => import('./pages/Project/ProjectMainPage'));
 const StartupsMainPage = lazy(() => import('./pages/Startup/StartupMainPage'));
 
-// Lazy load components for better performance
-// const FeedPage = lazy(() => import('./pages/Posts/FeedPage'));
-// const PostDetailPage = lazy(() => import('./pages/Posts/PostDetailPage'));
-// const UserPostsPage = lazy(() => import('./pages/Posts/UserPostsPage'));
-// const SubCommunitiesPage = lazy(() => import('./pages/Posts/SubCommunityPage'));
-// const SearchResultsPage = lazy(() => import('./pages/Posts/SearchResultsPage'));
-// const SubCommunityFeedPage = lazy(
-//   () => import('./pages/Posts/SubCommunityFeedPage')
-// );
-// const AdminModerationPage = lazy(
-//   () => import('./pages/Posts/AdminModerationPage')
-// );
-
-const AdminSubCommunityModerationPage = lazy(
-  () => import('./pages/Posts/AdminSubCommunityModerationPage')
+// Import context providers
+const ProfileProvider = lazy(() => import('./contexts/ProfileContext'));
+const PostProvider = lazy(() => import('./contexts/PostContext'));
+const SubCommunityProvider = lazy(
+  () => import('./contexts/SubCommunityContext')
 );
-
-const SubCommunityJoinRequestModeration = lazy(
-  () => import('./pages/Posts/SubCommunityJoinRequestModeration')
-);
+const DashboardProvider = lazy(() => import('./contexts/DashBoardContext'));
+import Landing from './pages/Landing';
+import { ShowcaseProvider } from './contexts/ShowcaseContext';
+import { StartupProvider } from './contexts/StartupContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { NavbarProvider } from './contexts/NavbarContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { EngagementProvider } from './contexts/engagementContext';
+import { EngagementService } from './services/engagementService';
 
 // Loading component for Suspense fallback
 const LoadingSpinner: React.FC = () => (
@@ -137,7 +134,9 @@ const Layout: React.FC = () => {
                 path="/dashboard"
                 element={
                   <ProtectedRoute>
-                    <Dashboard />
+                    <DashboardProvider>
+                      <Dashboard />
+                    </DashboardProvider>
                   </ProtectedRoute>
                 }
               />
