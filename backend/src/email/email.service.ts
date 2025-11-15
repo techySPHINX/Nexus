@@ -491,7 +491,6 @@ export class EmailService {
       throw new Error('Failed to send password reset email');
     }
   }
-<<<<<<< HEAD
 
   // ===== Referral notifications =====
   async sendReferralSubmittedToAdmin(

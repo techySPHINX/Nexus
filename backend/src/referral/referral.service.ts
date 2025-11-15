@@ -43,8 +43,8 @@ export class ReferralService {
     if (!user) {
       throw new NotFoundException('User not found.');
     }
-    if (user.role !== Role.ALUM) {
-      throw new ForbiddenException('Only alumni can post referrals.');
+    if (user.role !== Role.ALUM && user.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only alumni and admins can post referrals.');
     }
 
     // Only allow the new fields if present in dto
@@ -184,7 +184,6 @@ export class ReferralService {
     if (location) {
       where.location = { contains: location, mode: 'insensitive' };
     }
-<<<<<<< HEAD
 
     const isAdmin = userRole === Role.ADMIN;
 
@@ -220,6 +219,7 @@ export class ReferralService {
       }
 
       // Exclude expired (past-deadline) referrals for non-admins by default
+      // This prevents students from seeing/applying to expired jobs
       where.deadline = { gt: new Date() };
     } else {
       // Admins can use any status filter and see expired
@@ -227,6 +227,9 @@ export class ReferralService {
         where.status = status;
       }
     }
+
+    // Apply a sensible default page size for non-admins to reduce payloads
+    const defaultTake = !isAdmin && !take ? 20 : take ? Number(take) : undefined;
 
     return this.prisma.referral.findMany({
       where,
@@ -245,7 +248,7 @@ export class ReferralService {
         },
       },
       skip: skip ? Number(skip) : undefined,
-      take: take ? Number(take) : undefined,
+      take: defaultTake,
       orderBy: { createdAt: 'desc' },
     });
   }

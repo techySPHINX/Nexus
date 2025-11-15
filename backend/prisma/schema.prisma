@@ -428,8 +428,6 @@ model Referral {
   alumniId     String
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
-  deadline     DateTime
-  referralLink String?
   applications ReferralApplication[]
   postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
 

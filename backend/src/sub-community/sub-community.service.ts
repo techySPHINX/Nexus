@@ -118,7 +118,7 @@ export class SubCommunityService {
           isPrivate: true,
           owner: { select: { id: true, name: true } },
           _count: { select: { members: true, posts: true } },
-          type: { select: { id: true, name: true } },
+          type: true,
         },
         orderBy: { createdAt: 'desc' },
       });
@@ -130,7 +130,7 @@ export class SubCommunityService {
         where,
         include: {
           owner: { select: { id: true, name: true, role: true } },
-          type: { select: { id: true, name: true } },
+          type: true,
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },
@@ -150,7 +150,7 @@ export class SubCommunityService {
       take: limit,
       include: {
         owner: { select: { id: true, name: true } },
-        type: { select: { id: true, name: true } },
+        type: true,
         _count: { select: { members: true, posts: true } },
       },
       orderBy: { createdAt: 'desc' },
@@ -250,7 +250,7 @@ export class SubCommunityService {
         take: limit,
         include: {
           owner: { select: { id: true, name: true, role: true } },
-          type: { select: { id: true, name: true } },
+          type: true,
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },
@@ -299,7 +299,7 @@ export class SubCommunityService {
         take: ownedLimit,
         include: {
           owner: { select: { id: true, name: true, role: true } },
-          type: { select: { id: true, name: true } },
+          type: true,
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },
@@ -342,7 +342,7 @@ export class SubCommunityService {
         take: moderatedLimit,
         include: {
           owner: { select: { id: true, name: true, role: true } },
-          type: { select: { id: true, name: true } },
+          type: true,
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },
