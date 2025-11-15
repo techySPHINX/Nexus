@@ -491,4 +491,96 @@ export class EmailService {
       throw new Error('Failed to send password reset email');
     }
   }
+
+  // ===== Referral notifications =====
+  async sendReferralSubmittedToAdmin(
+    adminEmail: string,
+    adminName: string,
+    company: string,
+    jobTitle: string,
+    posterName: string,
+  ): Promise<void> {
+    const msg = {
+      to: adminEmail,
+      from: '22053431@kiit.ac.in',
+      subject: 'New Referral Pending Approval',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <h2 style="color: #333;">New Referral Submitted</h2>
+          <p><strong>Job:</strong> ${jobTitle} at ${company}</p>
+          <p><strong>Posted by:</strong> ${posterName}</p>
+          <p>Please review and approve or reject the referral in the admin panel.</p>
+        </div>
+      `,
+    };
+  try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+  }
+
+  async sendReferralStatusEmail(
+    toEmail: string,
+    name: string,
+    jobTitle: string,
+    company: string,
+    status: string,
+  ): Promise<void> {
+    const pretty = status.toString().toUpperCase();
+    const msg = {
+      to: toEmail,
+      from: '22053431@kiit.ac.in',
+      subject: `Your Referral Was ${pretty}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <h2 style="color: #333;">Referral Status Update</h2>
+          <p>Hello ${name},</p>
+          <p>Your referral for <strong>${jobTitle}</strong> at <strong>${company}</strong> has been <strong>${pretty}</strong>.</p>
+        </div>
+      `,
+    };
+  try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+  }
+
+  async sendApplicationSubmittedToAlum(
+    toEmail: string,
+    alumName: string,
+    applicantName: string,
+    jobTitle: string,
+    company: string,
+  ): Promise<void> {
+    const msg = {
+      to: toEmail,
+      from: '22053431@kiit.ac.in',
+      subject: 'New Application Received',
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <h2 style="color: #333;">New Application</h2>
+          <p>Hello ${alumName},</p>
+          <p>${applicantName} has applied for <strong>${jobTitle}</strong> at <strong>${company}</strong>.</p>
+        </div>
+      `,
+    };
+  try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+  }
+
+  async sendApplicationStatusEmail(
+    toEmail: string,
+    applicantName: string,
+    jobTitle: string,
+    company: string,
+    status: string,
+  ): Promise<void> {
+    const pretty = status.toString().toUpperCase();
+    const msg = {
+      to: toEmail,
+      from: '22053431@kiit.ac.in',
+      subject: `Your Application Was ${pretty}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <h2 style="color: #333;">Application Status Update</h2>
+          <p>Hello ${applicantName},</p>
+          <p>Your application for <strong>${jobTitle}</strong> at <strong>${company}</strong> has been <strong>${pretty}</strong>.</p>
+        </div>
+      `,
+    };
+  try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+  }
 }

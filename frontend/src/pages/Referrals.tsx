@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { io, Socket } from 'socket.io-client';
 import {
   Container,
   Grid,
@@ -19,7 +20,6 @@ import {
   MenuItem,
   IconButton,
   Alert,
-  CircularProgress,
   Stack,
   CardActions,
   DialogContentText,
@@ -133,6 +133,12 @@ const Referrals: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const didInit = useRef(false);
+  const socketRef = useRef<Socket | null>(null);
+  const [analytics, setAnalytics] = useState<{
+    totals: { referrals: number; applications: number };
+    referralsByStatus: Record<string, number>;
+    applicationsByStatus: Record<string, number>;
+  } | null>(null);
 
   // Form states
   const [createForm, setCreateForm] = useState<CreateReferralDto>({
@@ -155,25 +161,15 @@ const Referrals: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('🔄 Fetching referrals...');
-      console.log('🔑 Auth token:', localStorage.getItem('token'));
-      console.log('👤 Current user in fetch:', user);
 
       const response = await apiService.referrals.getAll();
-      console.log('📊 Referrals response:', response);
-
       setReferrals(response.data || []);
-      console.log(
-        '✅ Referrals loaded successfully:',
-        response.data?.length || 0
-      );
     } catch (err: unknown) {
-      console.error('❌ Error fetching referrals:', err);
       setError(`Failed to load referrals: ${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const openReferralApplications = async (referralId: string) => {
     try {
@@ -204,18 +200,12 @@ const Referrals: React.FC = () => {
 
   // Fetch referrals and applications
   useEffect(() => {
-    console.log('👤 Current user:', user);
-    console.log('🔑 User role:', user?.role);
-    console.log('🆔 User ID:', user?.id);
-
     if (!user) {
-      console.log('❌ No user found, cannot fetch referrals');
       setError('User not authenticated');
       return;
     }
 
     if (!user.role) {
-      console.log('❌ User has no role, cannot fetch referrals');
       setError('User role not found');
       return;
     }
@@ -225,13 +215,40 @@ const Referrals: React.FC = () => {
     }
     didInit.current = true;
 
-    console.log('✅ User authenticated, fetching referrals...');
     fetchReferrals();
+
+    // If admin, load analytics
+    if (user.role === 'ADMIN') {
+      apiService.referrals
+        .getAnalytics()
+        .then((res) => setAnalytics(res.data))
+        .catch(() => setAnalytics(null));
+    }
+
+    // Establish Socket.IO connection for real-time updates
+    const base = 'http://localhost:3000';
+    const socket = io(base, {
+      transports: ['websocket'],
+      withCredentials: true,
+    });
+    socketRef.current = socket;
+    socket.on('referral.created', () => fetchReferrals());
+    socket.on('referral.updated', () => fetchReferrals());
+    socket.on('referral.deleted', () => fetchReferrals());
+    socket.on('application.created', () => {
+      if (user.role === 'STUDENT' || user.role === 'ALUM') fetchApplications();
+    });
+    socket.on('application.updated', () => {
+      if (user.role === 'STUDENT' || user.role === 'ALUM') fetchApplications();
+    });
 
     if (user.role === 'STUDENT' || user.role === 'ALUM') {
       console.log('🎓 Applicant-capable user, fetching applications...');
       fetchApplications();
     }
+    return () => {
+      socketRef.current?.disconnect();
+    };
   }, [fetchReferrals, user]);
 
   const fetchApplications = async () => {
@@ -443,42 +460,86 @@ const Referrals: React.FC = () => {
     }
   };
 
-  const filteredReferrals = referrals.filter((referral) => {
-    // Students can only see APPROVED referrals (or their own if they created it)
-    if (
-      user?.role === 'STUDENT' &&
-      referral.status !== 'APPROVED' &&
-      referral.alumniId !== user?.id
-    ) {
-      return false;
-    }
+  const filteredReferrals = useMemo(
+    () =>
+      referrals.filter((referral) => {
+        // Students and Alumni can only see APPROVED referrals (or their own if they created it)
+        if (
+          (user?.role === 'STUDENT' || user?.role === 'ALUM') &&
+          referral.status !== 'APPROVED' &&
+          referral.alumniId !== user?.id
+        ) {
+          return false;
+        }
 
-    const matchesStatus =
-      filterStatus === 'ALL' || referral.status === filterStatus;
-    const matchesSearch =
-      referral.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      referral.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      referral.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+        const matchesStatus =
+          filterStatus === 'ALL' || referral.status === filterStatus;
+        const matchesSearch =
+          referral.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          referral.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          referral.location.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesStatus && matchesSearch;
+      }),
+    [referrals, user?.role, user?.id, filterStatus, searchQuery]
+  );
 
-  if (loading) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="400px"
-        >
-          <CircularProgress size={60} />
-        </Box>
-      </Container>
-    );
-  }
+  // Don't block the UI with a full-screen loader; show lightweight skeletons instead
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
+      {/* Subtle top progress indicator */}
+      {loading && referrals.length === 0 && (
+        <Box sx={{ height: 3, bgcolor: 'grey.200', mb: 2 }}>
+          <Box
+            sx={{
+              height: 3,
+              width: '40%',
+              bgcolor: 'primary.main',
+              animation: 'pulse 1.2s ease-in-out infinite',
+            }}
+          />
+        </Box>
+      )}
+      {/* Admin Analytics */}
+      {user?.role === 'ADMIN' && analytics && (
+        <Box
+          sx={{
+            mb: 3,
+            p: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            justifyContent="space-between"
+          >
+            <Stack direction="row" spacing={2}>
+              <Chip
+                label={`Total Referrals: ${analytics.totals.referrals}`}
+                color="primary"
+              />
+              <Chip
+                label={`Total Applications: ${analytics.totals.applications}`}
+                color="secondary"
+              />
+            </Stack>
+            <Stack direction="row" spacing={1}>
+              <Chip
+                label={`Approved: ${analytics.referralsByStatus.APPROVED || 0}`}
+              />
+              <Chip
+                label={`Pending: ${analytics.referralsByStatus.PENDING || 0}`}
+              />
+              <Chip
+                label={`Rejected: ${analytics.referralsByStatus.REJECTED || 0}`}
+              />
+            </Stack>
+          </Stack>
+        </Box>
+      )}
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Typography
@@ -563,7 +624,7 @@ const Referrals: React.FC = () => {
           </Button>
         </Stack>
 
-        {user?.role === 'ALUM' && (
+        {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
           <Button
             variant="contained"
             startIcon={<Add />}
@@ -577,210 +638,304 @@ const Referrals: React.FC = () => {
 
       {/* Referrals Grid */}
       <Grid container spacing={3}>
-        {filteredReferrals.map((referral) => (
-          <Grid item xs={12} md={6} lg={4} key={referral.id}>
-            <motion.div whileHover={{ y: -5 }} transition={{ duration: 0.2 }}>
-              <Card
-                sx={{
-                  height: '100%',
-                  borderRadius: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box
+        {loading && referrals.length === 0
+          ? Array.from({ length: 6 }).map((_, idx) => (
+              <Grid item xs={12} md={6} lg={4} key={`sk-${idx}`}>
+                <Card sx={{ height: '100%', borderRadius: 3 }}>
+                  <CardContent>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        mb: 2,
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: '60%',
+                          height: 28,
+                          bgcolor: 'grey.200',
+                          borderRadius: 1,
+                        }}
+                      />
+                      <Box
+                        sx={{
+                          width: 80,
+                          height: 24,
+                          bgcolor: 'grey.200',
+                          borderRadius: 2,
+                        }}
+                      />
+                    </Box>
+                    <Box
+                      sx={{
+                        width: '40%',
+                        height: 18,
+                        bgcolor: 'grey.100',
+                        borderRadius: 1,
+                        mb: 1,
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        width: '30%',
+                        height: 18,
+                        bgcolor: 'grey.100',
+                        borderRadius: 1,
+                        mb: 1,
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        width: '80%',
+                        height: 14,
+                        bgcolor: 'grey.100',
+                        borderRadius: 1,
+                        mb: 0.5,
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        width: '70%',
+                        height: 14,
+                        bgcolor: 'grey.100',
+                        borderRadius: 1,
+                      }}
+                    />
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))
+          : filteredReferrals.map((referral) => (
+              <Grid item xs={12} md={6} lg={4} key={referral.id}>
+                <motion.div
+                  whileHover={{ y: -5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Card
                     sx={{
+                      height: '100%',
+                      borderRadius: 3,
                       display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      mb: 2,
+                      flexDirection: 'column',
                     }}
                   >
-                    <Box>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                        {referral.jobTitle}
-                      </Typography>
-                      <Typography
-                        variant="subtitle1"
-                        color="primary"
-                        sx={{ fontWeight: 500 }}
-                      >
-                        {referral.company}
-                      </Typography>
-                    </Box>
-                    <Chip
-                      label={referral.status}
-                      color={getStatusColor(referral.status)}
-                      size="small"
-                    />
-                  </Box>
-
-                  <Stack spacing={1} sx={{ mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <LocationOn
-                        sx={{ fontSize: 16, color: 'text.secondary' }}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        {referral.location}
-                      </Typography>
-                    </Box>
-                    {referral.deadline && (
+                    <CardContent sx={{ flexGrow: 1 }}>
                       <Box
-                        sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
-                      >
-                        <Description
-                          sx={{ fontSize: 16, color: 'text.secondary' }}
-                        />
-                        <Typography variant="body2" color="text.secondary">
-                          Deadline:{' '}
-                          {new Date(referral.deadline).toLocaleString()}
-                        </Typography>
-                      </Box>
-                    )}
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Person sx={{ fontSize: 16, color: 'text.secondary' }} />
-                      <Typography variant="body2" color="text.secondary">
-                        Posted by {referral.postedBy.name}
-                      </Typography>
-                    </Box>
-                  </Stack>
-
-                  <Typography
-                    variant="body2"
-                    sx={{ mb: 2, color: 'text.secondary' }}
-                  >
-                    {referral.description.length > 100
-                      ? `${referral.description.substring(0, 100)}...`
-                      : referral.description}
-                  </Typography>
-
-                  <CardActions sx={{ pt: 1, justifyContent: 'space-between' }}>
-                    <Typography variant="caption" color="text.secondary">
-                      {new Date(referral.createdAt).toLocaleDateString()}
-                    </Typography>
-                    <Stack direction="row" spacing={1}>
-                      {referral.referralLink && (
-                        <Button
-                          size="small"
-                          variant="text"
-                          onClick={() =>
-                            window.open(referral.referralLink, '_blank')
-                          }
-                        >
-                          Job Link
-                        </Button>
-                      )}
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={() => {
-                          setSelectedReferral(referral);
-                          setDetailsDialogOpen(true);
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          mb: 2,
                         }}
-                        sx={{ textTransform: 'none' }}
                       >
-                        Details
-                      </Button>
-                      {(user?.role === 'STUDENT' || user?.role === 'ALUM') &&
-                        referral.status === 'APPROVED' && (
-                          <Button
-                            size="small"
-                            variant="contained"
-                            startIcon={<Send />}
-                            disabled={applications.some(
-                              (app) =>
-                                app.referralId === referral.id &&
-                                app.applicantId === user?.id
-                            )}
-                            onClick={() => {
-                              setSelectedReferral(referral);
-                              setApplicationForm({
-                                ...applicationForm,
-                                referralId: referral.id,
-                              });
-                              setApplyDialogOpen(true);
-                            }}
-                            sx={{ borderRadius: 2, textTransform: 'none' }}
+                        <Box>
+                          <Typography
+                            variant="h6"
+                            sx={{ fontWeight: 600, mb: 1 }}
                           >
-                            {applications.some(
-                              (app) =>
-                                app.referralId === referral.id &&
-                                app.applicantId === user?.id
-                            )
-                              ? 'Already Applied'
-                              : 'Apply'}
-                          </Button>
+                            {referral.jobTitle}
+                          </Typography>
+                          <Typography
+                            variant="subtitle1"
+                            color="primary"
+                            sx={{ fontWeight: 500 }}
+                          >
+                            {referral.company}
+                          </Typography>
+                        </Box>
+                        <Chip
+                          label={referral.status}
+                          color={getStatusColor(referral.status)}
+                          size="small"
+                        />
+                      </Box>
+
+                      <Stack spacing={1} sx={{ mb: 2 }}>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
+                          <LocationOn
+                            sx={{ fontSize: 16, color: 'text.secondary' }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {referral.location}
+                          </Typography>
+                        </Box>
+                        {referral.deadline && (
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <Description
+                              sx={{ fontSize: 16, color: 'text.secondary' }}
+                            />
+                            <Typography variant="body2" color="text.secondary">
+                              Deadline:{' '}
+                              {new Date(referral.deadline).toLocaleString()}
+                            </Typography>
+                          </Box>
                         )}
-                      {user?.role === 'ADMIN' &&
-                        referral.status === 'PENDING' && (
-                          <>
+                        <Box
+                          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+                        >
+                          <Person
+                            sx={{ fontSize: 16, color: 'text.secondary' }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            Posted by {referral.postedBy.name}
+                          </Typography>
+                        </Box>
+                      </Stack>
+
+                      <Typography
+                        variant="body2"
+                        sx={{ mb: 2, color: 'text.secondary' }}
+                      >
+                        {referral.description.length > 100
+                          ? `${referral.description.substring(0, 100)}...`
+                          : referral.description}
+                      </Typography>
+
+                      <CardActions
+                        sx={{ pt: 1, justifyContent: 'space-between' }}
+                      >
+                        <Typography variant="caption" color="text.secondary">
+                          {new Date(referral.createdAt).toLocaleDateString()}
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          {referral.referralLink && (
                             <Button
                               size="small"
-                              variant="contained"
-                              color="success"
-                              onClick={() => handleApproveReferral(referral.id)}
+                              variant="text"
+                              onClick={() =>
+                                window.open(referral.referralLink, '_blank')
+                              }
                             >
-                              Approve
+                              Job Link
                             </Button>
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              color="error"
-                              onClick={() => handleRejectReferral(referral.id)}
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                      {user?.id === referral.alumniId && (
-                        <>
+                          )}
                           <Button
                             size="small"
                             variant="outlined"
-                            onClick={() =>
-                              openReferralApplications(referral.id)
-                            }
+                            onClick={() => {
+                              setSelectedReferral(referral);
+                              setDetailsDialogOpen(true);
+                            }}
+                            sx={{ textTransform: 'none' }}
                           >
-                            Applications ({referral.applications?.length ?? 0})
+                            Details
                           </Button>
-                          <IconButton size="small" color="primary">
-                            <Edit />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteReferral(referral.id)}
-                          >
-                            <Delete />
-                          </IconButton>
-                        </>
-                      )}
-                    </Stack>
-                  </CardActions>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Grid>
-        ))}
+                          {(user?.role === 'STUDENT' ||
+                            user?.role === 'ALUM') &&
+                            referral.status === 'APPROVED' && (
+                              <Button
+                                size="small"
+                                variant="contained"
+                                startIcon={<Send />}
+                                disabled={applications.some(
+                                  (app) =>
+                                    app.referralId === referral.id &&
+                                    app.applicantId === user?.id
+                                )}
+                                onClick={() => {
+                                  setSelectedReferral(referral);
+                                  setApplicationForm({
+                                    ...applicationForm,
+                                    referralId: referral.id,
+                                  });
+                                  setApplyDialogOpen(true);
+                                }}
+                                sx={{ borderRadius: 2, textTransform: 'none' }}
+                              >
+                                {applications.some(
+                                  (app) =>
+                                    app.referralId === referral.id &&
+                                    app.applicantId === user?.id
+                                )
+                                  ? 'Already Applied'
+                                  : 'Apply'}
+                              </Button>
+                            )}
+                          {user?.role === 'ADMIN' &&
+                            referral.status === 'PENDING' && (
+                              <>
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color="success"
+                                  onClick={() =>
+                                    handleApproveReferral(referral.id)
+                                  }
+                                >
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="small"
+                                  variant="outlined"
+                                  color="error"
+                                  onClick={() =>
+                                    handleRejectReferral(referral.id)
+                                  }
+                                >
+                                  Reject
+                                </Button>
+                              </>
+                            )}
+                          {user?.id === referral.alumniId && (
+                            <>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                onClick={() =>
+                                  openReferralApplications(referral.id)
+                                }
+                              >
+                                Applications (
+                                {referral.applications?.length ?? 0})
+                              </Button>
+                              <IconButton size="small" color="primary">
+                                <Edit />
+                              </IconButton>
+                              <IconButton
+                                size="small"
+                                color="error"
+                                onClick={() =>
+                                  handleDeleteReferral(referral.id)
+                                }
+                              >
+                                <Delete />
+                              </IconButton>
+                            </>
+                          )}
+                        </Stack>
+                      </CardActions>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </Grid>
+            ))}
       </Grid>
 
       {filteredReferrals.length === 0 && !loading && (
         <Box sx={{ textAlign: 'center', py: 6 }}>
           <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-            {user?.role === 'ALUM'
+            {(user?.role === 'ALUM' || user?.role === 'ADMIN')
               ? 'No referrals posted yet'
               : 'No referrals available'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {user?.role === 'ALUM'
+            {(user?.role === 'ALUM' || user?.role === 'ADMIN')
               ? 'Be the first to post a job referral and help students find opportunities!'
               : searchQuery || filterStatus !== 'ALL'
                 ? 'Try adjusting your search or filters'
                 : 'Check back later for new job opportunities'}
           </Typography>
-          {user?.role === 'ALUM' && (
+          {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
             <Button
               variant="contained"
               startIcon={<Add />}
