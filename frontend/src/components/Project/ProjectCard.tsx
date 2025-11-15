@@ -35,6 +35,7 @@ import { Role } from '@/types/profileType';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import { useNotification } from '@/contexts/NotificationContext';
 import ProjectCollaborationRequestsModal from './ProjectCollaborationRequestsModal';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface ProjectCardProps {
   project: ProjectInterface;
@@ -57,6 +58,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   onCollaborate,
   onViewDetails,
 }) => {
+  const { isDark } = useTheme();
   const { deleteProject, getProjectById, projectById } = useShowcase();
   const { showNotification } = useNotification();
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -69,8 +71,6 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     project.imageUrl
   );
   const [triedProxy, setTriedProxy] = useState(false);
-
-  console.log('Rendering ProjectCard');
 
   // lazy-load UpdateSection so we don't add a hard dependency at top
   const UpdateSection = useMemo(
@@ -157,7 +157,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
     }
     try {
       if (!projectById || projectById.id !== project.id) {
-        await getProjectById(project.id, true, 1);
+        await getProjectById(project.id, true);
       }
     } catch (err) {
       console.error('Failed to fetch project details before update', err);
@@ -270,10 +270,8 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               style={{
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
-                filter: isHovered
-                  ? 'brightness(0.7) blur(2px)'
-                  : 'brightness(0.9)',
+                objectFit: 'fill',
+                filter: `${isDark ? 'brightness(0.4)' : 'brightness(0.8)'}`,
                 opacity: imgLoaded ? 1 : 0,
                 transition:
                   'opacity 0.5s ease, filter 0.4s ease, transform 0.4s ease',
@@ -350,6 +348,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               sx={{
                 fontWeight: 700,
                 mb: 1,
+                color: '#d4d2d2ff',
                 textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
                 lineHeight: 1.2,
               }}

@@ -12,7 +12,7 @@ import {
   Snackbar,
   Alert,
 } from '@mui/material';
-import { Add, TrendingUp, People, Rocket, Refresh } from '@mui/icons-material';
+import { Add, TrendingUp, People, Rocket } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useStartup } from '@/contexts/StartupContext';
 import {
@@ -317,8 +317,14 @@ const StartupMainPage: React.FC = () => {
               sx={{
                 fontWeight: 800,
                 mb: 1,
-                background:
-                  'linear-gradient(135deg, #2b4704ff 0%, #0c9405ff 100%)',
+                color: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? 'text.primary'
+                    : 'text.primary',
+                background: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? 'linear-gradient(90deg, #00C9FF, #92FE9D)'
+                    : 'linear-gradient(90deg, #12720bff 0%, #0cb009ff 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}
@@ -333,59 +339,59 @@ const StartupMainPage: React.FC = () => {
               Discover and support the next generation of innovative startups
             </Typography>
           </Box>
-
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            style={{ display: 'inline-block', marginRight: 1 }}
-          >
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={() => setCreateModalOpen(true)}
-              sx={{
-                borderRadius: 3,
-                px: 3,
-                py: 1.5,
-                fontWeight: 600,
-                background:
-                  'linear-gradient(135deg, #094805ff 0%, #088406ff 100%)',
-              }}
-              size="large"
+          <div>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{ display: 'inline-block', marginRight: 10 }}
             >
-              Startup
-            </Button>
-          </motion.div>
-          <motion.div
-            whileHover={{ scale: 1.03 }}
-            style={{ display: 'inline-block', marginLeft: 1 }}
-          >
-            <Button
-              variant="outlined"
-              onClick={async () => {
-                try {
-                  await refreshTab(activeTab);
-                  setSnackbar({
-                    open: true,
-                    message: 'Refreshed',
-                    severity: 'success',
-                  });
-                } catch (err) {
-                  console.error('Refresh failed', err);
-                  setSnackbar({
-                    open: true,
-                    message: 'Failed to refresh: ' + getErrorMessage(err),
-                    severity: 'error',
-                  });
-                }
-              }}
-              disabled={currentList.loading}
-              sx={{ borderRadius: 3, px: 2, py: 1.2, fontWeight: 600 }}
-              size="large"
+              <Button
+                variant="contained"
+                startIcon={<Add />}
+                onClick={() => setCreateModalOpen(true)}
+                sx={{
+                  borderRadius: 3,
+                  px: 3,
+                  py: 1.5,
+                  fontWeight: 600,
+                  background: 'primary.main',
+                }}
+                size="large"
+              >
+                Startup
+              </Button>
+            </motion.div>
+            <motion.div
+              whileHover={{ scale: 1.03 }}
+              style={{ display: 'inline-block', marginLeft: 1 }}
             >
-              <Refresh />
-            </Button>
-          </motion.div>
+              <Button
+                variant="outlined"
+                onClick={async () => {
+                  try {
+                    await refreshTab(activeTab);
+                    setSnackbar({
+                      open: true,
+                      message: 'Refreshed',
+                      severity: 'success',
+                    });
+                  } catch (err) {
+                    console.error('Refresh failed', err);
+                    setSnackbar({
+                      open: true,
+                      message: 'Failed to refresh: ' + getErrorMessage(err),
+                      severity: 'error',
+                    });
+                  }
+                }}
+                disabled={currentList.loading}
+                sx={{ borderRadius: 3, px: 2, py: 1.2, fontWeight: 600 }}
+                size="large"
+              >
+                Refresh
+              </Button>
+            </motion.div>
+          </div>
         </Box>
 
         {/* Stats Summary */}
@@ -552,18 +558,18 @@ const StartupMainPage: React.FC = () => {
             setCommentValue={setComment}
             onPostComment={submitComment}
             onClose={closeDetails}
-            onFollowToggle={async () => {
-              if (!selectedStartup) return;
-              try {
-                if (selectedStartup.isFollowing) {
-                  await unfollowStartup(selectedStartup.id);
-                } else {
-                  await followStartup(selectedStartup.id);
-                }
-              } catch (err) {
-                console.error('Follow toggle failed', err);
-              }
-            }}
+            // onFollowToggle={async () => {
+            //   if (!selectedStartup) return;
+            //   try {
+            //     if (selectedStartup.isFollowing) {
+            //       await unfollowStartup(selectedStartup.id);
+            //     } else {
+            //       await followStartup(selectedStartup.id);
+            //     }
+            //   } catch (err) {
+            //     console.error('Follow toggle failed', err);
+            //   }
+            // }}
           />
         </Dialog>
 

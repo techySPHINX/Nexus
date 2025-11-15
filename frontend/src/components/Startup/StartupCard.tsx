@@ -44,6 +44,7 @@ const StartupCard: React.FC<Props> = ({
   const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
+  const isDark = theme.palette.mode === 'dark';
 
   const isOwner = user?.id === startup.founderId;
   const hasFunding = !!startup.fundingGoal;
@@ -197,10 +198,10 @@ const StartupCard: React.FC<Props> = ({
         height: '100%',
         position: 'relative',
         gap: 0,
-        border: '1px solid #e5e7eb',
+        border: `1px solid ${theme.palette.divider}`,
         borderRadius: '16px',
-        backgroundColor: 'white',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+        backgroundColor: isDark ? theme.palette.background.paper : 'white',
+        boxShadow: isDark ? theme.shadows[3] : '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
       }}
       className="hover:shadow-lg transition-all"
     >
@@ -220,8 +221,9 @@ const StartupCard: React.FC<Props> = ({
           position: 'relative',
           overflow: 'hidden',
           // light background design: subtle gradient + soft decorative blobs
-          background:
-            'linear-gradient(180deg, rgba(99,102,241,0.04), rgba(59,130,246,0.02))',
+          background: isDark
+            ? 'linear-gradient(180deg, rgba(99,102,241,0.02), rgba(59,130,246,0.01))'
+            : 'linear-gradient(180deg, rgba(99,102,241,0.04), rgba(59,130,246,0.02))',
           // add a faint striped texture for depth
           backgroundImage:
             'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)), repeating-linear-gradient(45deg, rgba(0,0,0,0.01) 0 1px, transparent 1px 8px)',
@@ -267,9 +269,11 @@ const StartupCard: React.FC<Props> = ({
             height: { xs: 60, sm: 80, lg: 100 },
             borderRadius: 2,
             fontSize: { xs: '1.5rem', sm: '2rem' },
-            backgroundColor: 'background.paper',
-            boxShadow: '0 6px 18px rgba(15,23,42,0.06)',
-            border: '1px solid rgba(15,23,42,0.04)',
+            backgroundColor: theme.palette.background.paper,
+            boxShadow: isDark
+              ? '0 6px 18px rgba(0,0,0,0.6)'
+              : '0 6px 18px rgba(15,23,42,0.06)',
+            border: `1px solid ${theme.palette.divider}`,
             zIndex: 1,
           }}
         >
@@ -389,9 +393,13 @@ const StartupCard: React.FC<Props> = ({
                 }}
                 size="small"
                 sx={{
-                  backgroundColor: 'primary.50',
+                  backgroundColor: isDark
+                    ? theme.palette.action.hover
+                    : 'primary.50',
                   '&:hover': {
-                    backgroundColor: 'primary.100',
+                    backgroundColor: isDark
+                      ? theme.palette.action.selected
+                      : 'primary.100',
                   },
                 }}
               >
@@ -451,11 +459,15 @@ const StartupCard: React.FC<Props> = ({
                   fontSize: isMobile ? '0.7rem' : '0.8rem',
                   fontWeight: 600,
                   cursor: 'pointer',
-                  border: startup.isFollowing ? '1px solid #d1d5db' : 'none',
+                  border: startup.isFollowing
+                    ? `1px solid ${theme.palette.divider}`
+                    : 'none',
                   background: startup.isFollowing
-                    ? '#f9fafb'
-                    : 'linear-gradient(to right, #3b82f6, #6366f1)',
-                  color: startup.isFollowing ? '#374151' : '#ffffff',
+                    ? theme.palette.action.selected
+                    : `linear-gradient(to right, ${theme.palette.primary.main}, ${theme.palette.primary.dark})`,
+                  color: startup.isFollowing
+                    ? theme.palette.text.primary
+                    : theme.palette.primary.contrastText,
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',

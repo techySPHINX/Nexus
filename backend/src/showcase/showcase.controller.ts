@@ -71,8 +71,12 @@ export class ShowcaseController {
   }
 
   @Get('project/:id')
-  getProjectById(@Param('id') projectId: string) {
-    return this.showcaseService.getProjectById(projectId);
+  getProjectById(
+    @Param('id') projectId: string,
+    @Query('detailed') detailed?: boolean,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    return this.showcaseService.getProjectById(projectId, detailed, userId);
   }
 
   @Get('project/my/projects')

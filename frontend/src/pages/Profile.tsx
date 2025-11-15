@@ -467,10 +467,25 @@ const Profile: React.FC = () => {
                 />
               )}
               {profile.user._count?.projects > 0 && (
-                <Chip
-                  label={`${profile.user._count?.projects} Projects`}
-                  variant="outlined"
-                />
+                <Tooltip title="View all projects">
+                  <Chip
+                    label={`${profile.user._count?.projects || 0} Projects`}
+                    variant="outlined"
+                    onClick={() => {
+                      navigate(`/users/${profile.user.id}/projects`);
+                    }}
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease-in-out',
+                      '&:hover': {
+                        backgroundColor: 'primary.main',
+                        color: 'green',
+                        borderColor: 'primary.main',
+                        transform: 'scale(1.05)',
+                      },
+                    }}
+                  />
+                </Tooltip>
               )}
               {badges && badges.length > 0 && (
                 <Chip label={`${badges.length} Badges`} variant="outlined" />

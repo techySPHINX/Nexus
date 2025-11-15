@@ -41,6 +41,9 @@ const AdminModerationPage = lazy(
 const AdminSubCommunityModerationPage = lazy(
   () => import('./pages/SubCommunity/AdminSubCommunityModerationPage')
 );
+
+const RouteUnavailable = lazy(() => import('./pages/RouteUnavailable'));
+
 const SubCommunityJoinRequestModeration = lazy(
   () => import('./pages/SubCommunity/SubCommunityJoinRequestModeration')
 );
@@ -49,6 +52,8 @@ const MySubCommunitiesPage = lazy(
 );
 const ProjectsMainPage = lazy(() => import('./pages/Project/ProjectMainPage'));
 const StartupsMainPage = lazy(() => import('./pages/Startup/StartupMainPage'));
+const ProjectIdPage = lazy(() => import('./pages/Project/ProjectIdPage'));
+const UserProjectPage = lazy(() => import('./pages/Project/UserProjectPage'));
 
 // Import context providers
 const ProfileProvider = lazy(() => import('./contexts/ProfileContext'));
@@ -57,15 +62,15 @@ const SubCommunityProvider = lazy(
   () => import('./contexts/SubCommunityContext')
 );
 const DashboardProvider = lazy(() => import('./contexts/DashBoardContext'));
-import Landing from './pages/Landing';
-import { ShowcaseProvider } from './contexts/ShowcaseContext';
-import { StartupProvider } from './contexts/StartupContext';
+const ShowcaseProvider = lazy(() => import('./contexts/ShowcaseContext'));
+const StartupProvider = lazy(() => import('./contexts/StartupContext'));
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { NavbarProvider } from './contexts/NavbarContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { EngagementProvider } from './contexts/engagementContext';
 import { EngagementService } from './services/engagementService';
+import LandingPage2 from './pages/LandingPage2';
 
 // Loading component for Suspense fallback
 const LoadingSpinner: React.FC = () => (
@@ -83,7 +88,7 @@ const LoadingSpinner: React.FC = () => (
 
 // Layout component that handles navbar positioning
 const Layout: React.FC = () => {
-  const { position } = useNavbar();
+  const { position, collapsed } = useNavbar();
 
   return (
     <div className="App">
@@ -91,7 +96,10 @@ const Layout: React.FC = () => {
       <Box
         sx={{
           pt: position === 'top' ? { xs: 7, sm: 8 } : 0,
-          pl: position === 'left' ? { xs: 0, md: '240px' } : 0,
+          pl:
+            position === 'left'
+              ? { xs: 0, md: collapsed ? '80px' : '160px' }
+              : 0,
           minHeight: '100vh',
           bgcolor: 'background.default',
           position: 'relative',
@@ -122,10 +130,10 @@ const Layout: React.FC = () => {
             }
           >
             <Routes>
-              <Route path="/" element={<Landing />} />
+              <Route path="/" element={<LandingPage2 />} />
               <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/register-enhanced" element={<EnhancedRegister />} />
+              <Route path="/register" element={<EnhancedRegister />} />
+              <Route path="/register-enhanced" element={<Register />} />
               <Route
                 path="/registration-success"
                 element={<RegistrationSuccess />}
@@ -161,7 +169,9 @@ const Layout: React.FC = () => {
                 path="/profile"
                 element={
                   <ProtectedRoute>
-                    <Profile />
+                    <ProfileProvider>
+                      <Profile />
+                    </ProfileProvider>
                   </ProtectedRoute>
                 }
               />
@@ -169,7 +179,9 @@ const Layout: React.FC = () => {
                 path="/profile/:userId"
                 element={
                   <ProtectedRoute>
-                    <Profile />
+                    <ProfileProvider>
+                      <Profile />
+                    </ProfileProvider>
                   </ProtectedRoute>
                 }
               />
@@ -203,9 +215,11 @@ const Layout: React.FC = () => {
                 path="/feed"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <FeedPage />
-                    </Suspense>
+                    <PostProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <FeedPage />
+                      </Suspense>
+                    </PostProvider>
                   </ProtectedRoute>
                 }
               />
@@ -213,9 +227,11 @@ const Layout: React.FC = () => {
                 path="/posts/:id"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <PostDetailPage />
-                    </Suspense>
+                    <PostProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <PostDetailPage />
+                      </Suspense>
+                    </PostProvider>
                   </ProtectedRoute>
                 }
               />
@@ -223,9 +239,11 @@ const Layout: React.FC = () => {
                 path="/users/:userId/posts"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <UserPostsPage />
-                    </Suspense>
+                    <PostProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <UserPostsPage />
+                      </Suspense>
+                    </PostProvider>
                   </ProtectedRoute>
                 }
               />
@@ -233,9 +251,11 @@ const Layout: React.FC = () => {
                 path="/subcommunities"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <SubCommunitiesPage />
-                    </Suspense>
+                    <SubCommunityProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <SubCommunitiesPage />
+                      </Suspense>
+                    </SubCommunityProvider>
                   </ProtectedRoute>
                 }
               />
@@ -243,9 +263,13 @@ const Layout: React.FC = () => {
                 path="/subcommunities/:id"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <SubCommunityFeedPage />
-                    </Suspense>
+                    <SubCommunityProvider>
+                      <PostProvider>
+                        <Suspense fallback={<LoadingSpinner />}>
+                          <SubCommunityFeedPage />
+                        </Suspense>
+                      </PostProvider>
+                    </SubCommunityProvider>
                   </ProtectedRoute>
                 }
               />
@@ -253,9 +277,11 @@ const Layout: React.FC = () => {
                 path="/subcommunities/my"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <MySubCommunitiesPage />
-                    </Suspense>
+                    <SubCommunityProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <MySubCommunitiesPage />
+                      </Suspense>
+                    </SubCommunityProvider>
                   </ProtectedRoute>
                 }
               />
@@ -263,9 +289,11 @@ const Layout: React.FC = () => {
                 path="/subcommunities/my/owned"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <MySubCommunitiesPage />
-                    </Suspense>
+                    <SubCommunityProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <MySubCommunitiesPage />
+                      </Suspense>
+                    </SubCommunityProvider>
                   </ProtectedRoute>
                 }
               />
@@ -273,9 +301,11 @@ const Layout: React.FC = () => {
                 path="/subcommunities/my/moderated"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <MySubCommunitiesPage />
-                    </Suspense>
+                    <SubCommunityProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <MySubCommunitiesPage />
+                      </Suspense>
+                    </SubCommunityProvider>
                   </ProtectedRoute>
                 }
               />
@@ -283,9 +313,11 @@ const Layout: React.FC = () => {
                 path="/subcommunities/my/member"
                 element={
                   <ProtectedRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <MySubCommunitiesPage />
-                    </Suspense>
+                    <SubCommunityProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <MySubCommunitiesPage />
+                      </Suspense>
+                    </SubCommunityProvider>
                   </ProtectedRoute>
                 }
               />
@@ -295,6 +327,26 @@ const Layout: React.FC = () => {
                   <ProtectedRoute>
                     <ShowcaseProvider>
                       <ProjectsMainPage />
+                    </ShowcaseProvider>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/projects/:projectId"
+                element={
+                  <ProtectedRoute>
+                    <ShowcaseProvider>
+                      <ProjectIdPage />
+                    </ShowcaseProvider>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users/:userId/projects"
+                element={
+                  <ProtectedRoute>
+                    <ShowcaseProvider>
+                      <UserProjectPage />
                     </ShowcaseProvider>
                   </ProtectedRoute>
                 }
@@ -325,9 +377,11 @@ const Layout: React.FC = () => {
                 path="/admin/moderation"
                 element={
                   <AdminRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <AdminModerationPage />
-                    </Suspense>
+                    <PostProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <AdminModerationPage />
+                      </Suspense>
+                    </PostProvider>
                   </AdminRoute>
                 }
               />
@@ -335,18 +389,22 @@ const Layout: React.FC = () => {
                 path="/admin/moderation/subcommunities"
                 element={
                   <AdminRoute>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <AdminSubCommunityModerationPage />
-                    </Suspense>
+                    <SubCommunityProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <AdminSubCommunityModerationPage />
+                      </Suspense>
+                    </SubCommunityProvider>
                   </AdminRoute>
                 }
               />
               <Route
                 path="/moderation/subcommunities/:id/join-requests"
                 element={
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <SubCommunityJoinRequestModeration />
-                  </Suspense>
+                  <SubCommunityProvider>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <SubCommunityJoinRequestModeration />
+                    </Suspense>
+                  </SubCommunityProvider>
                 }
               />
 
@@ -361,6 +419,7 @@ const Layout: React.FC = () => {
                 </AdminRoute>
               }
             /> */}
+              <Route path="*" element={<RouteUnavailable />} />
             </Routes>
           </Suspense>
         </Box>
@@ -377,17 +436,11 @@ function App() {
       <AuthProvider>
         <NavbarProvider>
           <NotificationProvider>
-            <ProfileProvider>
-              <SubCommunityProvider>
-                <PostProvider>
-                  <EngagementProvider engagementService={engagementService}>
-                    <Router>
-                      <Layout />
-                    </Router>
-                  </EngagementProvider>
-                </PostProvider>
-              </SubCommunityProvider>
-            </ProfileProvider>
+            <EngagementProvider engagementService={engagementService}>
+              <Router>
+                <Layout />
+              </Router>
+            </EngagementProvider>
           </NotificationProvider>
         </NavbarProvider>
       </AuthProvider>
