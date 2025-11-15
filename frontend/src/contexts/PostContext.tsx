@@ -85,7 +85,7 @@ interface PostContextType {
 
 const PostContext = createContext<PostContextType | undefined>(undefined);
 
-export const PostProvider: React.FC<{ children: React.ReactNode }> = ({
+const PostProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { user } = useAuth();
@@ -605,3 +605,5 @@ export const usePosts = () => {
   }
   return context;
 };
+
+export default PostProvider;

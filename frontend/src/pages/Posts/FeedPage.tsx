@@ -18,7 +18,7 @@ import {
 import { CreatePostForm } from '../../components/Post/CreatePostForm';
 import { getErrorMessage } from '@/utils/errorHandler';
 
-export const FeedPage: React.FC = () => {
+const FeedPage: React.FC = () => {
   const { feed, getFeed, pagination, loading, error, clearError } = usePosts();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
@@ -179,3 +179,5 @@ export const FeedPage: React.FC = () => {
     </>
   );
 };
+
+export default FeedPage;

@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 
-export const SearchResultsPage: React.FC = () => {
+const SearchResultsPage: React.FC = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const initialQuery = queryParams.get('q') || '';
@@ -105,3 +105,5 @@ export const SearchResultsPage: React.FC = () => {
     </Box>
   );
 };
+
+export default SearchResultsPage;
