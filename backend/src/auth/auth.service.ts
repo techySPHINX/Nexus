@@ -297,6 +297,7 @@ export class AuthService {
       role: user.role,
       isEmailVerified: user.isEmailVerified || false,
       accountStatus: user.accountStatus || 'PENDING_VERIFICATION',
+      profile: user.profile || null,
     };
 
     const accessToken = this.jwt.sign(payload, { expiresIn: '1hr' });
@@ -321,6 +322,7 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified || false,
         accountStatus: user.accountStatus || 'PENDING_VERIFICATION',
         profileCompleted: !!user.profile,
+        profile: user.profile || null,
       },
       expiresIn: 60 * 60, // 1 hour in seconds
     };

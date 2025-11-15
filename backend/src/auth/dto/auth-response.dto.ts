@@ -12,6 +12,7 @@ export class AuthResponseDto {
     isEmailVerified: boolean;
     accountStatus: string;
     profileCompleted: boolean;
+    profile?: any;
   };
   expiresIn: number;
 }
