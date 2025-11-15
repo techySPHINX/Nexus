@@ -97,12 +97,20 @@ const useConnections = () => {
       setSuggestions((prev) => prev.filter((s) => s.user.id !== userId));
       console.log('✅ useConnections: Connection request sent successfully');
       return true;
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('❌ useConnections: Error sending request:', err);
       // Extract error message from axios error response
       let errorMessage = 'Failed to send connection request';
-      if (err?.response?.data?.message) {
-        errorMessage = err.response.data.message;
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        } else if (axiosError.message) {
+          errorMessage = axiosError.message;
+        }
       } else if (err instanceof Error) {
         errorMessage = err.message;
       }

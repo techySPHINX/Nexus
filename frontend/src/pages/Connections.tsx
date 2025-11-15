@@ -58,13 +58,7 @@ import type {
   ConnectionSuggestion,
 } from '../types/connections';
 import { apiService } from '../services/api';
-import {
-  LocationOn,
-  Work,
-  School,
-  Email,
-  Business,
-} from '@mui/icons-material';
+import { LocationOn, School, Email } from '@mui/icons-material';
 
 const Connections: React.FC = () => {
   const navigate = useNavigate();
@@ -88,7 +82,30 @@ const Connections: React.FC = () => {
     open: boolean;
     userId: string | null;
     loading: boolean;
-    profile: any | null;
+    profile: {
+      name?: string;
+      email?: string;
+      role?: string;
+      bio?: string;
+      location?: string;
+      dept?: string;
+      interests?: string;
+      avatarUrl?: string;
+      skills?: Array<{ name: string } | string>;
+      user?: {
+        name?: string;
+        email?: string;
+        role?: string;
+        profile?: {
+          bio?: string;
+          location?: string;
+          dept?: string;
+          interests?: string;
+          avatarUrl?: string;
+          skills?: Array<{ name: string } | string>;
+        };
+      };
+    } | null;
   }>({ open: false, userId: null, loading: false, profile: null });
 
   // Use the connections hook for real data
@@ -150,7 +167,10 @@ const Connections: React.FC = () => {
     }
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' = 'success') => {
+  const showSnackbar = (
+    message: string,
+    severity: 'success' | 'error' | 'info' = 'success'
+  ) => {
     setSnackbar({ open: true, message, severity });
   };
 
@@ -159,9 +179,16 @@ const Connections: React.FC = () => {
       const success = await respondToRequest(requestId, 'ACCEPTED');
       if (success) {
         showSnackbar('Connection request accepted successfully!', 'success');
-        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+        await fetchAll({
+          page: page + 1,
+          limit: rowsPerPage,
+          role: roleFilter
+            ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+            : undefined,
+          search: searchTerm,
+        });
       }
-    } catch (error) {
+    } catch {
       showSnackbar('Failed to accept connection request', 'error');
     }
   };
@@ -171,9 +198,16 @@ const Connections: React.FC = () => {
       const success = await respondToRequest(requestId, 'REJECTED');
       if (success) {
         showSnackbar('Connection request rejected', 'info');
-        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+        await fetchAll({
+          page: page + 1,
+          limit: rowsPerPage,
+          role: roleFilter
+            ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+            : undefined,
+          search: searchTerm,
+        });
       }
-    } catch (error) {
+    } catch {
       showSnackbar('Failed to reject connection request', 'error');
     }
   };
@@ -183,9 +217,16 @@ const Connections: React.FC = () => {
       const success = await cancelConnection(connectionId);
       if (success) {
         showSnackbar('Connection request cancelled', 'info');
-        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+        await fetchAll({
+          page: page + 1,
+          limit: rowsPerPage,
+          role: roleFilter
+            ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+            : undefined,
+          search: searchTerm,
+        });
       }
-    } catch (error) {
+    } catch {
       showSnackbar('Failed to cancel connection request', 'error');
     }
   };
@@ -196,27 +237,62 @@ const Connections: React.FC = () => {
       if (success) {
         showSnackbar('Connection request sent!', 'success');
         // Remove from suggestions and refresh data
-        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+        await fetchAll({
+          page: page + 1,
+          limit: rowsPerPage,
+          role: roleFilter
+            ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+            : undefined,
+          search: searchTerm,
+        });
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
       // Extract user-friendly error message from axios error response
       let errorMessage = 'Failed to send connection request';
-      
-      if (error?.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error?.message) {
-        errorMessage = error.message;
+
+      if (err && typeof err === 'object' && 'response' in err) {
+        const axiosError = err as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
+        if (axiosError.response?.data?.message) {
+          errorMessage = axiosError.response.data.message;
+        } else if (axiosError.message) {
+          errorMessage = axiosError.message;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
       }
-      
+
       // Handle specific error cases with appropriate messages
-      if (errorMessage.toLowerCase().includes('already pending') || errorMessage.toLowerCase().includes('pending')) {
+      if (
+        errorMessage.toLowerCase().includes('already pending') ||
+        errorMessage.toLowerCase().includes('pending')
+      ) {
         showSnackbar('Connection request is already pending', 'info');
         // Refresh to update the UI
-        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
-      } else if (errorMessage.toLowerCase().includes('already connected') || errorMessage.toLowerCase().includes('connected')) {
+        await fetchAll({
+          page: page + 1,
+          limit: rowsPerPage,
+          role: roleFilter
+            ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+            : undefined,
+          search: searchTerm,
+        });
+      } else if (
+        errorMessage.toLowerCase().includes('already connected') ||
+        errorMessage.toLowerCase().includes('connected')
+      ) {
         showSnackbar('You are already connected with this user', 'info');
         // Refresh to update the UI
-        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+        await fetchAll({
+          page: page + 1,
+          limit: rowsPerPage,
+          role: roleFilter
+            ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+            : undefined,
+          search: searchTerm,
+        });
       } else if (errorMessage.toLowerCase().includes('blocked')) {
         showSnackbar('This connection is blocked', 'error');
       } else if (errorMessage.toLowerCase().includes('yourself')) {
@@ -231,16 +307,24 @@ const Connections: React.FC = () => {
     setConfirmDialog({
       open: true,
       title: 'Remove Connection',
-      message: 'Are you sure you want to remove this connection? This action cannot be undone.',
+      message:
+        'Are you sure you want to remove this connection? This action cannot be undone.',
       onConfirm: async () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }));
         try {
           const success = await removeConnection(connectionId);
           if (success) {
             showSnackbar('Connection removed successfully', 'info');
-            await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+            await fetchAll({
+              page: page + 1,
+              limit: rowsPerPage,
+              role: roleFilter
+                ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+                : undefined,
+              search: searchTerm,
+            });
           }
-        } catch (error) {
+        } catch {
           showSnackbar('Failed to remove connection', 'error');
         }
       },
@@ -248,7 +332,14 @@ const Connections: React.FC = () => {
   };
 
   const handleRefresh = async () => {
-    await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+    await fetchAll({
+      page: page + 1,
+      limit: rowsPerPage,
+      role: roleFilter
+        ? (roleFilter as 'STUDENT' | 'ALUM' | 'ADMIN')
+        : undefined,
+      search: searchTerm,
+    });
     showSnackbar('Connections refreshed', 'success');
   };
 
@@ -263,15 +354,25 @@ const Connections: React.FC = () => {
     setProfileModal({ open: true, userId, loading: true, profile: null });
     try {
       const response = await apiService.profile.get(userId);
-      setProfileModal({ open: true, userId, loading: false, profile: response.data });
-    } catch (error) {
-      console.error('Failed to load profile:', error);
+      setProfileModal({
+        open: true,
+        userId,
+        loading: false,
+        profile: response.data as NonNullable<typeof profileModal.profile>,
+      });
+    } catch (err) {
+      console.error('Failed to load profile:', err);
       setProfileModal({ open: true, userId, loading: false, profile: null });
     }
   };
 
   const handleCloseProfileModal = () => {
-    setProfileModal({ open: false, userId: null, loading: false, profile: null });
+    setProfileModal({
+      open: false,
+      userId: null,
+      loading: false,
+      profile: null,
+    });
   };
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -551,18 +652,28 @@ const Connections: React.FC = () => {
                     sx={{ py: 6 }}
                   >
                     <Box sx={{ textAlign: 'center' }}>
-                      <PeopleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                      <PeopleIcon
+                        sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }}
+                      />
+                      <Typography
+                        variant="h6"
+                        color="text.secondary"
+                        gutterBottom
+                      >
                         {tabValue === 0 && 'No connections yet'}
                         {tabValue === 1 && 'No pending requests'}
                         {tabValue === 2 && 'No sent requests'}
                         {tabValue === 3 && 'No suggestions available'}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {tabValue === 0 && 'Start connecting with others to build your network'}
-                        {tabValue === 1 && 'You have no pending connection requests'}
-                        {tabValue === 2 && 'You have not sent any connection requests'}
-                        {tabValue === 3 && 'Try updating your profile to get better suggestions'}
+                        {tabValue === 0 &&
+                          'Start connecting with others to build your network'}
+                        {tabValue === 1 &&
+                          'You have no pending connection requests'}
+                        {tabValue === 2 &&
+                          'You have not sent any connection requests'}
+                        {tabValue === 3 &&
+                          'Try updating your profile to get better suggestions'}
                       </Typography>
                     </Box>
                   </TableCell>
@@ -582,9 +693,15 @@ const Connections: React.FC = () => {
                               gap: 2,
                             }}
                           >
-                            <Avatar 
-                              sx={{ bgcolor: 'primary.main', cursor: 'pointer' }}
-                              onClick={() => connection.user?.id && handleViewProfile(connection.user.id)}
+                            <Avatar
+                              sx={{
+                                bgcolor: 'primary.main',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() =>
+                                connection.user?.id &&
+                                handleViewProfile(connection.user.id)
+                              }
                             >
                               {connection.user?.name?.charAt(0) || '?'}
                             </Avatar>
@@ -592,8 +709,15 @@ const Connections: React.FC = () => {
                               <Link
                                 component="button"
                                 variant="subtitle2"
-                                sx={{ fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
-                                onClick={() => connection.user?.id && handleViewProfile(connection.user.id)}
+                                sx={{
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() =>
+                                  connection.user?.id &&
+                                  handleViewProfile(connection.user.id)
+                                }
                               >
                                 {connection.user?.name || 'Unknown User'}
                               </Link>
@@ -627,9 +751,21 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {(connection as any).connectedAt || connection.createdAt
+                            {('connectedAt' in connection
+                              ? (
+                                  connection as Connection & {
+                                    connectedAt?: string;
+                                  }
+                                ).connectedAt
+                              : null) || connection.createdAt
                               ? new Date(
-                                  (connection as any).connectedAt || connection.createdAt
+                                  ('connectedAt' in connection
+                                    ? (
+                                        connection as Connection & {
+                                          connectedAt?: string;
+                                        }
+                                      ).connectedAt
+                                    : null) || connection.createdAt
                                 ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
@@ -639,7 +775,10 @@ const Connections: React.FC = () => {
                             <Tooltip title="View Profile">
                               <IconButton
                                 size="small"
-                                onClick={() => connection.user?.id && handleViewProfile(connection.user.id)}
+                                onClick={() =>
+                                  connection.user?.id &&
+                                  handleViewProfile(connection.user.id)
+                                }
                                 sx={{ color: 'primary.main' }}
                               >
                                 <VisibilityIcon />
@@ -684,9 +823,15 @@ const Connections: React.FC = () => {
                               gap: 2,
                             }}
                           >
-                            <Avatar 
-                              sx={{ bgcolor: 'secondary.main', cursor: 'pointer' }}
-                              onClick={() => pendingRequest.requester?.id && handleViewProfile(pendingRequest.requester.id)}
+                            <Avatar
+                              sx={{
+                                bgcolor: 'secondary.main',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() =>
+                                pendingRequest.requester?.id &&
+                                handleViewProfile(pendingRequest.requester.id)
+                              }
                             >
                               {pendingRequest.requester?.name?.charAt(0) || '?'}
                             </Avatar>
@@ -694,8 +839,15 @@ const Connections: React.FC = () => {
                               <Link
                                 component="button"
                                 variant="subtitle2"
-                                sx={{ fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
-                                onClick={() => pendingRequest.requester?.id && handleViewProfile(pendingRequest.requester.id)}
+                                sx={{
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() =>
+                                  pendingRequest.requester?.id &&
+                                  handleViewProfile(pendingRequest.requester.id)
+                                }
                               >
                                 {pendingRequest.requester?.name ||
                                   'Unknown User'}
@@ -721,9 +873,21 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {(pendingRequest as any).requestedAt || pendingRequest.createdAt
+                            {('requestedAt' in pendingRequest
+                              ? (
+                                  pendingRequest as PendingRequest & {
+                                    requestedAt?: string;
+                                  }
+                                ).requestedAt
+                              : null) || pendingRequest.createdAt
                               ? new Date(
-                                  (pendingRequest as any).requestedAt || pendingRequest.createdAt
+                                  ('requestedAt' in pendingRequest
+                                    ? (
+                                        pendingRequest as PendingRequest & {
+                                          requestedAt?: string;
+                                        }
+                                      ).requestedAt
+                                    : null) || pendingRequest.createdAt
                                 ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
@@ -783,9 +947,12 @@ const Connections: React.FC = () => {
                               gap: 2,
                             }}
                           >
-                            <Avatar 
+                            <Avatar
                               sx={{ bgcolor: 'info.main', cursor: 'pointer' }}
-                              onClick={() => pendingSent.recipient?.id && handleViewProfile(pendingSent.recipient.id)}
+                              onClick={() =>
+                                pendingSent.recipient?.id &&
+                                handleViewProfile(pendingSent.recipient.id)
+                              }
                             >
                               {pendingSent.recipient?.name?.charAt(0) || '?'}
                             </Avatar>
@@ -793,8 +960,15 @@ const Connections: React.FC = () => {
                               <Link
                                 component="button"
                                 variant="subtitle2"
-                                sx={{ fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
-                                onClick={() => pendingSent.recipient?.id && handleViewProfile(pendingSent.recipient.id)}
+                                sx={{
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() =>
+                                  pendingSent.recipient?.id &&
+                                  handleViewProfile(pendingSent.recipient.id)
+                                }
                               >
                                 {pendingSent.recipient?.name || 'Unknown User'}
                               </Link>
@@ -819,9 +993,21 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {(pendingSent as any).sentAt || pendingSent.createdAt
+                            {('sentAt' in pendingSent
+                              ? (
+                                  pendingSent as PendingRequest & {
+                                    sentAt?: string;
+                                  }
+                                ).sentAt
+                              : null) || pendingSent.createdAt
                               ? new Date(
-                                  (pendingSent as any).sentAt || pendingSent.createdAt
+                                  ('sentAt' in pendingSent
+                                    ? (
+                                        pendingSent as PendingRequest & {
+                                          sentAt?: string;
+                                        }
+                                      ).sentAt
+                                    : null) || pendingSent.createdAt
                                 ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
@@ -857,9 +1043,15 @@ const Connections: React.FC = () => {
                               gap: 2,
                             }}
                           >
-                            <Avatar 
-                              sx={{ bgcolor: 'success.main', cursor: 'pointer' }}
-                              onClick={() => suggestion.user?.id && handleViewProfile(suggestion.user.id)}
+                            <Avatar
+                              sx={{
+                                bgcolor: 'success.main',
+                                cursor: 'pointer',
+                              }}
+                              onClick={() =>
+                                suggestion.user?.id &&
+                                handleViewProfile(suggestion.user.id)
+                              }
                             >
                               {suggestion.user?.name?.charAt(0) || '?'}
                             </Avatar>
@@ -867,8 +1059,15 @@ const Connections: React.FC = () => {
                               <Link
                                 component="button"
                                 variant="subtitle2"
-                                sx={{ fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
-                                onClick={() => suggestion.user?.id && handleViewProfile(suggestion.user.id)}
+                                sx={{
+                                  fontWeight: 600,
+                                  textDecoration: 'none',
+                                  cursor: 'pointer',
+                                }}
+                                onClick={() =>
+                                  suggestion.user?.id &&
+                                  handleViewProfile(suggestion.user.id)
+                                }
                               >
                                 {suggestion.user?.name || 'Unknown User'}
                               </Link>
@@ -891,11 +1090,18 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Box>
-                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              gutterBottom
+                            >
                               <strong>Score: {suggestion.matchScore}%</strong>
                             </Typography>
                             {suggestion.reasons.length > 0 && (
-                              <Typography variant="caption" color="text.secondary">
+                              <Typography
+                                variant="caption"
+                                color="text.secondary"
+                              >
                                 {suggestion.reasons.slice(0, 3).join(', ')}
                                 {suggestion.reasons.length > 3 && '...'}
                               </Typography>
@@ -907,7 +1113,10 @@ const Connections: React.FC = () => {
                             <Tooltip title="View Profile">
                               <IconButton
                                 size="small"
-                                onClick={() => suggestion.user?.id && handleViewProfile(suggestion.user.id)}
+                                onClick={() =>
+                                  suggestion.user?.id &&
+                                  handleViewProfile(suggestion.user.id)
+                                }
                                 sx={{ color: 'primary.main' }}
                               >
                                 <VisibilityIcon />
@@ -993,7 +1202,6 @@ const Connections: React.FC = () => {
             onClick={confirmDialog.onConfirm}
             color="error"
             variant="contained"
-            autoFocus
           >
             Confirm
           </Button>
@@ -1014,7 +1222,11 @@ const Connections: React.FC = () => {
         }}
       >
         <DialogTitle sx={{ pb: 1 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
+          <Box
+            display="flex"
+            justifyContent="space-between"
+            alignItems="center"
+          >
             <Typography variant="h6">Profile</Typography>
             <IconButton
               size="small"
@@ -1027,15 +1239,28 @@ const Connections: React.FC = () => {
         </DialogTitle>
         <DialogContent dividers>
           {profileModal.loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+            <Box
+              display="flex"
+              justifyContent="center"
+              alignItems="center"
+              py={4}
+            >
               <CircularProgress />
             </Box>
           ) : profileModal.profile ? (
             <Box>
               {/* Profile Header */}
-              <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+              <Box
+                display="flex"
+                flexDirection="column"
+                alignItems="center"
+                mb={3}
+              >
                 <Avatar
-                  src={profileModal.profile.avatarUrl || profileModal.profile.user?.profile?.avatarUrl}
+                  src={
+                    profileModal.profile.avatarUrl ||
+                    profileModal.profile.user?.profile?.avatarUrl
+                  }
                   sx={{
                     width: 100,
                     height: 100,
@@ -1044,14 +1269,26 @@ const Connections: React.FC = () => {
                     fontSize: '2.5rem',
                   }}
                 >
-                  {profileModal.profile.name?.charAt(0) || profileModal.profile.user?.name?.charAt(0) || '?'}
+                  {profileModal.profile.name?.charAt(0) ||
+                    profileModal.profile.user?.name?.charAt(0) ||
+                    '?'}
                 </Avatar>
                 <Typography variant="h5" fontWeight={600} gutterBottom>
-                  {profileModal.profile.name || profileModal.profile.user?.name || 'Unknown User'}
+                  {profileModal.profile.name ||
+                    profileModal.profile.user?.name ||
+                    'Unknown User'}
                 </Typography>
                 <Chip
-                  label={profileModal.profile.role || profileModal.profile.user?.role || 'Unknown'}
-                  color={getRoleColor(profileModal.profile.role || profileModal.profile.user?.role || '')}
+                  label={
+                    profileModal.profile.role ||
+                    profileModal.profile.user?.role ||
+                    'Unknown'
+                  }
+                  color={getRoleColor(
+                    profileModal.profile.role ||
+                      profileModal.profile.user?.role ||
+                      ''
+                  )}
                   size="small"
                   sx={{ mb: 1 }}
                 />
@@ -1061,85 +1298,121 @@ const Connections: React.FC = () => {
 
               {/* Profile Details */}
               <Stack spacing={2}>
-                {profileModal.profile.email || profileModal.profile.user?.email ? (
+                {profileModal.profile.email ||
+                profileModal.profile.user?.email ? (
                   <Box display="flex" alignItems="center" gap={1}>
                     <Email fontSize="small" color="action" />
                     <Typography variant="body2">
-                      {profileModal.profile.email || profileModal.profile.user?.email}
+                      {profileModal.profile.email ||
+                        profileModal.profile.user?.email}
                     </Typography>
                   </Box>
                 ) : null}
 
-                {profileModal.profile.bio || profileModal.profile.user?.profile?.bio ? (
+                {profileModal.profile.bio ||
+                profileModal.profile.user?.profile?.bio ? (
                   <Box>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
                       Bio
                     </Typography>
                     <Typography variant="body2">
-                      {profileModal.profile.bio || profileModal.profile.user?.profile?.bio}
+                      {profileModal.profile.bio ||
+                        profileModal.profile.user?.profile?.bio}
                     </Typography>
                   </Box>
                 ) : null}
 
-                {profileModal.profile.location || profileModal.profile.user?.profile?.location ? (
+                {profileModal.profile.location ||
+                profileModal.profile.user?.profile?.location ? (
                   <Box display="flex" alignItems="center" gap={1}>
                     <LocationOn fontSize="small" color="action" />
                     <Typography variant="body2">
-                      {profileModal.profile.location || profileModal.profile.user?.profile?.location}
+                      {profileModal.profile.location ||
+                        profileModal.profile.user?.profile?.location}
                     </Typography>
                   </Box>
                 ) : null}
 
-                {profileModal.profile.dept || profileModal.profile.user?.profile?.dept ? (
+                {profileModal.profile.dept ||
+                profileModal.profile.user?.profile?.dept ? (
                   <Box display="flex" alignItems="center" gap={1}>
                     <School fontSize="small" color="action" />
                     <Typography variant="body2">
-                      {profileModal.profile.dept || profileModal.profile.user?.profile?.dept}
+                      {profileModal.profile.dept ||
+                        profileModal.profile.user?.profile?.dept}
                     </Typography>
                   </Box>
                 ) : null}
 
-                {profileModal.profile.user?.profile?.skills && profileModal.profile.user.profile.skills.length > 0 ? (
+                {profileModal.profile.user?.profile?.skills &&
+                profileModal.profile.user.profile.skills.length > 0 ? (
                   <Box>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
                       Skills
                     </Typography>
                     <Box display="flex" flexWrap="wrap" gap={1}>
-                      {profileModal.profile.user.profile.skills.map((skill: any, index: number) => (
-                        <Chip
-                          key={index}
-                          label={skill.name || skill}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ))}
+                      {profileModal.profile.user.profile.skills.map(
+                        (skill, index: number) => (
+                          <Chip
+                            key={index}
+                            label={
+                              typeof skill === 'string' ? skill : skill.name
+                            }
+                            size="small"
+                            variant="outlined"
+                          />
+                        )
+                      )}
                     </Box>
                   </Box>
-                ) : profileModal.profile.skills && profileModal.profile.skills.length > 0 ? (
+                ) : profileModal.profile.skills &&
+                  profileModal.profile.skills.length > 0 ? (
                   <Box>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
                       Skills
                     </Typography>
                     <Box display="flex" flexWrap="wrap" gap={1}>
-                      {profileModal.profile.skills.map((skill: any, index: number) => (
-                        <Chip
-                          key={index}
-                          label={skill.name || skill}
-                          size="small"
-                          variant="outlined"
-                        />
-                      ))}
+                      {profileModal.profile.skills.map(
+                        (skill, index: number) => (
+                          <Chip
+                            key={index}
+                            label={
+                              typeof skill === 'string' ? skill : skill.name
+                            }
+                            size="small"
+                            variant="outlined"
+                          />
+                        )
+                      )}
                     </Box>
                   </Box>
                 ) : null}
 
-                {profileModal.profile.interests || profileModal.profile.user?.profile?.interests ? (
+                {profileModal.profile.interests ||
+                profileModal.profile.user?.profile?.interests ? (
                   <Box>
-                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                    <Typography
+                      variant="subtitle2"
+                      color="text.secondary"
+                      gutterBottom
+                    >
                       Interests
                     </Typography>
                     <Typography variant="body2">
-                      {profileModal.profile.interests || profileModal.profile.user?.profile?.interests}
+                      {profileModal.profile.interests ||
+                        profileModal.profile.user?.profile?.interests}
                     </Typography>
                   </Box>
                 ) : null}
