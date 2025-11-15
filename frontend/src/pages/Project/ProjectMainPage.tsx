@@ -61,7 +61,7 @@ const ProjectsMainPage: React.FC = () => {
   const {
     projectCounts,
     allProjects,
-    projectsByUserId,
+    myProjects,
     supportedProjects,
     followedProjects,
     comments,
@@ -162,7 +162,7 @@ const ProjectsMainPage: React.FC = () => {
             currentDataLength = allProjects.data.length;
             break;
           case 1:
-            currentDataLength = projectsByUserId.data.length;
+            currentDataLength = myProjects.data.length;
             break;
           case 2:
             currentDataLength = supportedProjects.data.length;
@@ -194,7 +194,7 @@ const ProjectsMainPage: React.FC = () => {
     getSupportedProjects,
     getFollowedProjects,
     allProjects.data.length,
-    projectsByUserId.data.length,
+    myProjects.data.length,
     supportedProjects.data.length,
     followedProjects.data.length,
     EMPTY_FETCH_TTL,
@@ -206,7 +206,7 @@ const ProjectsMainPage: React.FC = () => {
       case 0:
         return allProjects.pagination;
       case 1:
-        return projectsByUserId.pagination;
+        return myProjects.pagination;
       case 2:
         return supportedProjects.pagination;
       case 3:
@@ -218,7 +218,7 @@ const ProjectsMainPage: React.FC = () => {
     activeTab,
     followedProjects.pagination,
     allProjects.pagination,
-    projectsByUserId.pagination,
+    myProjects.pagination,
     supportedProjects.pagination,
   ]);
 
@@ -274,7 +274,7 @@ const ProjectsMainPage: React.FC = () => {
       case 0:
         return allProjects.data;
       case 1:
-        return projectsByUserId.data;
+        return myProjects.data;
       case 2:
         return supportedProjects.data;
       case 3:
@@ -343,7 +343,7 @@ const ProjectsMainPage: React.FC = () => {
     setSelectedProjectId(project.id);
 
     try {
-      await getProjectById(project.id, forceRefresh, activeTab);
+      await getProjectById(project.id, false, forceRefresh, activeTab);
     } catch (err) {
       console.error('Failed to load project details:', err);
     }
@@ -498,7 +498,20 @@ const ProjectsMainPage: React.FC = () => {
               <Typography
                 variant="h3"
                 component="h1"
-                sx={{ fontWeight: 800, mb: 1, color: 'primary.main' }}
+                sx={{
+                  fontWeight: 800,
+                  mb: 1,
+                  color: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? 'text.primary'
+                      : 'text.primary',
+                  background: (theme) =>
+                    theme.palette.mode === 'dark'
+                      ? 'linear-gradient(90deg, #00C9FF, #92FE9D)'
+                      : 'linear-gradient(90deg, #12720bff 0%, #0cb009ff 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
               >
                 Project Showcase
               </Typography>
@@ -507,7 +520,7 @@ const ProjectsMainPage: React.FC = () => {
                 color="text.secondary"
                 sx={{ fontWeight: 400 }}
               >
-                Discover, support, and collaborate on amazing projects
+                Discover, collaborate and support amazing projects
               </Typography>
             </Box>
 
@@ -579,28 +592,27 @@ const ProjectsMainPage: React.FC = () => {
               ) : (
                 <>
                   <Chip
-                    label={`${counts.all} Total Projects`}
+                    label={`${counts.all ?? 0} Total Projects`}
                     color="primary"
                     variant="filled"
                     sx={{ fontWeight: 600, px: 1 }}
                   />
                   <Chip
-                    label={`${counts.owned} Owned`}
+                    label={`${counts.owned ?? 0} Owned`}
                     color="secondary"
                     variant="filled"
                     sx={{ fontWeight: 600, px: 1 }}
                   />
                   <Chip
-                    label={`${counts.supported} Supported`}
+                    label={`${counts.supported ?? 0} Supported`}
                     color="success"
                     variant="filled"
                     sx={{ fontWeight: 600, px: 1 }}
                   />
                   <Chip
-                    label={`${counts.following} Following`}
-                    color="info"
+                    label={`${counts.following ?? 0} Following`}
                     variant="filled"
-                    sx={{ fontWeight: 600, px: 1 }}
+                    color="info"
                   />
                 </>
               )}
