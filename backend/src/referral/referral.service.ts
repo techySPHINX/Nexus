@@ -184,6 +184,7 @@ export class ReferralService {
     if (location) {
       where.location = { contains: location, mode: 'insensitive' };
     }
+<<<<<<< HEAD
 
     const isAdmin = userRole === Role.ADMIN;
 

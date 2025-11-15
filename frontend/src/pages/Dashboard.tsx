@@ -1,55 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import {
-  Container,
-  Grid,
-  Typography,
-  Box,
-  Avatar,
-  Chip,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Divider,
-  LinearProgress,
-  CircularProgress,
-  Alert,
-  Paper,
-  IconButton,
-} from '@mui/material';
-import {
-  Message,
-  Notifications,
-  LocationOn,
-  Event,
-  Forum,
-  PersonAdd,
-  Assignment,
-  Groups,
-  Schedule,
-  Business,
-  MoreVert,
-} from '@mui/icons-material';
+import React, { useEffect, useState, useRef } from 'react';
+import { Container, Grid, Typography, Box, Chip } from '@mui/material';
+import { Message } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-// import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useShowcase } from '@/contexts/ShowcaseContext';
-import useConnections from '../hooks/useConnections';
+import { useDashboardContext } from '@/contexts/DashBoardContext';
+import { useNotification } from '@/contexts/NotificationContext';
 import { apiService } from '../services/api';
 import { improvedWebSocketService } from '../services/websocket.improved';
 import type { WebSocketMessage } from '../services/websocket.improved';
-import NotificationMenu from '@/components/Notification/NotificationMenu';
-// import type { Connection, ConnectionSuggestion } from '../types/connections';
 
-interface DashboardStats {
-  connections: number;
-  messages: number;
-  pendingRequests: number;
-  profileCompletion: number;
-  upcomingEvents: number;
-  newAlumni: number;
-}
+import NetworkOverview from '../components/DashBoard/NetworkOverview';
+import ProfileStrength from '../components/DashBoard/ProfileStrength';
+import RecommendedProjects from '../components/DashBoard/RecommendedProjects';
+import RecentPosts from '../components/DashBoard/RecentPosts';
+import RecommendedConnection from '../components/DashBoard/RecommendedConnection';
+import UpcomingEvents from '../components/DashBoard/UpcomingEvents';
+import NotificationIndicator from '@/components/Notification/NotificationIndicator';
+import ThemeToggle from '@/components/ThemeToggle';
+import { getErrorMessage } from '@/utils/errorHandler';
+
+type ConnectionStats = {
+  total?: number;
+  recent30Days?: number;
+  pendingReceived?: number;
+  byRole?: { alumni?: number; students?: number };
+};
 
 interface RecentActivity {
   id: string;
@@ -57,151 +31,96 @@ interface RecentActivity {
   title: string;
   description: string;
   timestamp: string;
-  user?: {
-    name: string;
-    avatar: string;
-  };
+  user?: { name: string; avatar: string };
 }
 
-interface UpcomingEvent {
-  id: string;
-  title: string;
-  date: string;
-  location: string;
-  attendees: number;
-}
+const OnView: React.FC<{
+  children: React.ReactNode;
+  placeholderHeight?: number;
+  rootMargin?: string;
+  once?: boolean;
+  threshold?: number;
+}> = ({
+  children,
+  placeholderHeight = 180,
+  rootMargin = '200px',
+  once = true,
+  threshold = 0,
+}) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [visible, setVisible] = useState(false);
 
-interface SuggestedConnection {
-  id: string;
-  name: string;
-  title: string;
-  company: string;
-  avatar: string;
-  matchScore?: number;
-}
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (visible) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting) {
+          setVisible(true);
+          if (once && observer) observer.disconnect();
+        }
+      },
+      { root: null, rootMargin, threshold }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visible, rootMargin, once, threshold]);
+
+  return (
+    <div ref={ref}>
+      {visible ? (
+        children
+      ) : (
+        <Box sx={{ minHeight: placeholderHeight, width: '100%' }} />
+      )}
+    </div>
+  );
+};
 
 const Dashboard: React.FC = () => {
   const { user, token } = useAuth();
-  const navigate = useNavigate();
-  const [stats, setStats] = useState<DashboardStats>({
-    connections: 0,
-    messages: 0,
-    pendingRequests: 0,
-    profileCompletion: 0,
-    upcomingEvents: 0,
-    newAlumni: 0,
-  });
+  const { connectionStats } = useDashboardContext();
+  const { showNotification } = useNotification();
+  const showNotificationRef = useRef(showNotification);
+
+  useEffect(() => {
+    showNotificationRef.current = showNotification;
+  }, [showNotification]);
+
+  const [stats, setStats] = useState<{
+    messages: number;
+    pendingRequests: number;
+  }>({ messages: 0, pendingRequests: 0 });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
     []
   );
-  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [suggestedConnections, setSuggestedConnections] = useState<
-    SuggestedConnection[]
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<
-    Array<{
-      id: string;
-      type: 'message' | 'connection' | 'event';
-      title: string;
-      description: string;
-      timestamp: string;
-    }>
-  >([]);
 
-  // Use the connections hook for real data
-  const {
-    connections,
-    pendingReceived,
-    suggestions,
-    // stats: connectionStats,
-    loading: connectionsLoading,
-    error: connectionsError,
-    fetchAll,
-  } = useConnections();
-
-  const { getAllProjects, allProjects } = useShowcase();
-
-  // Fetch connections data when component mounts
-  useEffect(() => {
-    if (user?.id) {
-      fetchAll({ page: 1, limit: 20 });
-      // Call getAllProjects with the expected signature from the hook (no second boolean arg)
-      getAllProjects();
-      console.log('projects:', allProjects);
-      // Also test the API directly for debugging
-      const testPendingRequests = async () => {
-        try {
-          const response = await apiService.connections.getPendingReceived({
-            page: 1,
-            limit: 10,
-          });
-          console.log('🧪 Direct API test - Pending requests:', response.data);
-        } catch (error) {
-          console.error('🧪 Direct API test failed:', error);
-        }
-      };
-
-      testPendingRequests();
-    }
-  }, [user?.id, fetchAll, getAllProjects, allProjects]);
-
-  interface AppUserProfile {
-    bio?: string;
-    location?: string;
-    skills?: unknown[];
-  }
-  interface AppUser {
-    name?: string;
-    email?: string;
-    role?: string;
-    profile?: AppUserProfile;
-  }
-  const calculateProfileCompletion = React.useCallback(
-    (user: AppUser | null): number => {
-      if (!user) return 0;
-
-      let completed = 0;
-      const total = 6; // Profile completion fields
-
-      if (user.name) completed++;
-      if (user.email) completed++;
-      if (user.role) completed++;
-      if (user.profile?.bio) completed++;
-      if (user.profile?.location) completed++;
-      if (user.profile?.skills && user.profile.skills.length > 0) completed++;
-
-      return Math.round((completed / total) * 100);
-    },
-    []
-  );
-
-  // Fetch real message count
   const fetchMessageCount = async () => {
     try {
       const response = await apiService.messages.getAllConversations();
-      if (response.data) {
-        // Count total messages across all conversations
+      if (response?.data) {
         let totalMessages = 0;
         (response.data as Array<{ latestMessage?: unknown }>).forEach(
           (conv) => {
-            if (conv.latestMessage) {
-              totalMessages++;
-            }
+            if (conv.latestMessage) totalMessages++;
           }
         );
-        setStats((prev) => ({
-          ...prev,
-          messages: totalMessages,
-        }));
+        setStats((prev) => ({ ...prev, messages: totalMessages }));
       }
     } catch {
-      console.log('Could not fetch message count');
+      // noop
     }
   };
 
-  // Initialize WebSocket for real-time updates
   useEffect(() => {
     if (!user?.id || !token) return;
 
@@ -209,7 +128,6 @@ const Dashboard: React.FC = () => {
       try {
         await improvedWebSocketService.connect(user.id, token);
 
-        // Listen for new messages
         improvedWebSocketService.on(
           'NEW_MESSAGE',
           (message: WebSocketMessage) => {
@@ -219,43 +137,15 @@ const Dashboard: React.FC = () => {
               receiverId: string;
             };
             if (newMessage.receiverId === user.id) {
-              // Update message count
-              setStats((prev) => ({
-                ...prev,
-                messages: prev.messages + 1,
-              }));
-
-              // Add to notifications
-              const notification = {
-                id: newMessage.id,
-                type: 'message' as const,
-                title: 'New Message',
-                description: `${newMessage.sender?.name || 'Someone'} sent you a message`,
-                timestamp: new Date().toISOString(),
-              };
-
-              setNotifications((prev) => [notification, ...prev.slice(0, 4)]); // Keep last 5 notifications
-
-              // Add to recent activities
-              setRecentActivities((prev) => [
-                {
-                  id: newMessage.id,
-                  type: 'message',
-                  title: 'New Message',
-                  description: `You received a message from ${newMessage.sender?.name || 'Someone'}`,
-                  timestamp: new Date().toLocaleDateString(),
-                  user: {
-                    name: newMessage.sender?.name || 'Unknown',
-                    avatar: '',
-                  },
-                },
-                ...prev.slice(0, 4), // Keep last 5 activities
-              ]);
+              setStats((prev) => ({ ...prev, messages: prev.messages + 1 }));
+              showNotificationRef.current?.(
+                `${newMessage.sender?.name || 'Someone'} sent you a message`,
+                'info'
+              );
             }
           }
         );
 
-        // Listen for new connections
         improvedWebSocketService.on(
           'CONNECTION_REQUEST',
           (message: WebSocketMessage) => {
@@ -263,17 +153,10 @@ const Dashboard: React.FC = () => {
               id: string;
               sender?: { name?: string };
             };
-            const notification = {
-              id: data.id,
-              type: 'connection' as const,
-              title: 'New Connection Request',
-              description: `${data.sender?.name || 'Someone'} wants to connect with you`,
-              timestamp: new Date().toISOString(),
-            };
-
-            setNotifications((prev) => [notification, ...prev.slice(0, 4)]);
-
-            // Update pending requests count
+            showNotificationRef.current?.(
+              `${data.sender?.name || 'Someone'} wants to connect with you`,
+              'info'
+            );
             setStats((prev) => ({
               ...prev,
               pendingRequests: prev.pendingRequests + 1,
@@ -285,215 +168,85 @@ const Dashboard: React.FC = () => {
       }
     };
 
-    initializeWebSocket();
-
-    return () => {
-      improvedWebSocketService.disconnect();
-    };
+    void initializeWebSocket();
+    return () => improvedWebSocketService.disconnect();
   }, [user?.id, token]);
 
-  // Fetch dashboard data
+  const hasInitRef = useRef(false);
+  const connectionStatsRef = useRef<ConnectionStats | undefined>(
+    connectionStats as ConnectionStats | undefined
+  );
   useEffect(() => {
-    const fetchDashboardData = async () => {
+    connectionStatsRef.current = connectionStats as ConnectionStats | undefined;
+  }, [connectionStats]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    if (hasInitRef.current) return;
+    hasInitRef.current = true;
+
+    const init = async () => {
       try {
-        setLoading(true);
-
-        // Fetch message count
         await fetchMessageCount();
-        await getAllProjects();
-
-        // Update stats with real data from connections
-        setStats((prev) => ({
-          ...prev,
-          connections: connections.length,
-          pendingRequests: pendingReceived.length,
-          profileCompletion: calculateProfileCompletion(user),
-        }));
-
-        console.log('📊 Dashboard stats updated:', {
-          connections: connections.length,
-          pendingReceived: pendingReceived.length,
-          pendingReceivedData: pendingReceived,
-        });
-
-        // Fetch recent activities from API
         try {
           const activitiesResponse =
             await apiService.messages.getAllConversations();
           const activities: RecentActivity[] = [];
 
+          type Conversation = {
+            id: string;
+            participant?: { name?: string };
+            updatedAt: string;
+          };
+
           if (activitiesResponse.data?.conversations) {
-            activitiesResponse.data.conversations
+            (activitiesResponse.data.conversations as Conversation[])
               .slice(0, 3)
-              .forEach(
-                (conv: {
-                  id: string;
-                  participant?: { name?: string };
-                  updatedAt: string;
-                }) => {
-                  activities.push({
-                    id: conv.id,
-                    type: 'message',
-                    title: 'New Message',
-                    description: `You have a conversation with ${conv.participant?.name || 'Unknown'}`,
-                    timestamp: new Date(conv.updatedAt).toLocaleDateString(),
-                    user: {
-                      name: conv.participant?.name || 'Unknown',
-                      avatar: '',
-                    },
-                  });
-                }
+              .forEach((conv) =>
+                activities.push({
+                  id: conv.id,
+                  type: 'message',
+                  title: 'New Message',
+                  description: `You have a conversation with ${conv.participant?.name || 'Unknown'}`,
+                  timestamp: new Date(conv.updatedAt).toLocaleDateString(),
+                  user: {
+                    name: conv.participant?.name || 'Unknown',
+                    avatar: '',
+                  },
+                })
               );
           }
 
-          // Add connection activities
-          if (connections.length > 0) {
-            connections
-              .slice(0, 2)
-              .forEach(
-                (conn: {
-                  id: string;
-                  user?: { name?: string };
-                  createdAt: string;
-                }) => {
-                  activities.push({
-                    id: conn.id,
-                    type: 'connection',
-                    title: 'New Connection',
-                    description: `Connected with ${conn.user?.name || 'Unknown User'}`,
-                    timestamp: new Date(conn.createdAt).toLocaleDateString(),
-                    user: { name: conn.user?.name || 'Unknown', avatar: '' },
-                  });
-                }
-              );
+          const statsSnapshot = connectionStatsRef.current;
+          if (
+            statsSnapshot &&
+            typeof statsSnapshot.total === 'number' &&
+            statsSnapshot.total > 0
+          ) {
+            activities.push({
+              id: `connections-${Date.now()}`,
+              type: 'connection',
+              title: 'Network Update',
+              description: `You have ${statsSnapshot.total} total connections`,
+              timestamp: new Date().toLocaleDateString(),
+            });
           }
 
           setRecentActivities(activities);
-        } catch {
-          console.log('No recent activities available');
+        } catch (err) {
+          showNotificationRef.current?.(getErrorMessage(err), 'error');
         }
-
-        // Fetch upcoming events
-        try {
-          // TODO: Add events API to apiService
-          // const eventsResponse = await apiService.events.getAll();
-          const events: UpcomingEvent[] = [];
-
-          // Mock events data for now
-          events.push({
-            id: '1',
-            title: 'Alumni Meet 2025',
-            date: new Date(
-              Date.now() + 7 * 24 * 60 * 60 * 1000
-            ).toLocaleDateString(),
-            location: 'KIIT Campus',
-            attendees: 150,
-          });
-
-          setUpcomingEvents(events);
-        } catch {
-          console.log('No events available');
-        }
-
-        // Transform suggestions to dashboard format
-        const dashboardSuggestions: SuggestedConnection[] = suggestions
-          .slice(0, 3)
-          .map(
-            (suggestion: {
-              user: {
-                id: string;
-                name: string;
-                profile?: {
-                  bio?: string;
-                  location?: string;
-                  avatarUrl?: string;
-                };
-              };
-            }) => ({
-              id: suggestion.user.id,
-              name: suggestion.user.name,
-              title: suggestion.user.profile?.bio || 'Professional',
-              company: suggestion.user.profile?.location || 'KIIT University',
-              avatar: suggestion.user.profile?.avatarUrl || '',
-              matchScore: Math.floor(Math.random() * 20) + 80, // Mock match score
-            })
-          );
-
-        setSuggestedConnections(dashboardSuggestions);
-      } catch {
-        setError('Failed to load dashboard data');
-        console.error('Dashboard error');
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        showNotificationRef.current?.(getErrorMessage(err), 'error');
       }
     };
 
-    fetchDashboardData();
-  }, [
-    connections,
-    pendingReceived,
-    suggestions,
-    user,
-    calculateProfileCompletion,
-    getAllProjects,
-  ]);
-
-  const quickActions = [
-    {
-      title: 'Post Update',
-      icon: <Forum />,
-      color: 'primary',
-      action: () => navigate('/feed'),
-    },
-    {
-      title: 'Find People',
-      icon: <PersonAdd />,
-      color: 'secondary',
-      action: () => navigate('/connections'),
-    },
-    {
-      title: 'Join Community',
-      icon: <Groups />,
-      color: 'info',
-      action: () => navigate('/community'),
-    },
-    {
-      title: 'Resources',
-      icon: <Assignment />,
-      color: 'success',
-      action: () => navigate('/resources'),
-    },
-  ];
-
-  if (loading || connectionsLoading) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="400px"
-        >
-          <CircularProgress size={60} />
-        </Box>
-      </Container>
-    );
-  }
-
-  if (error || connectionsError) {
-    return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error || connectionsError}
-        </Alert>
-      </Container>
-    );
-  }
+    void init();
+  }, [user?.id]);
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Professional Header */}
-      <Box sx={{ mb: 4 }}>
+      <Box sx={{ mb: 6 }}>
         <Box
           display="flex"
           justifyContent="space-between"
@@ -502,466 +255,104 @@ const Dashboard: React.FC = () => {
           sx={{ flexWrap: 'wrap', gap: 1 }}
         >
           <Typography
-            variant="h4"
+            variant="h3"
             component="h1"
             sx={{
-              fontWeight: 600,
+              fontWeight: 700,
               color: 'text.primary',
+              background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
             }}
           >
-            Welcome back, {user?.name?.split(' ')[0] || 'User'}
+            Welcome back, {user?.name?.split(' ')[0] || 'User'}!
           </Typography>
-          <Box
-            display="flex"
-            alignItems="center"
-            gap={1.5}
-            sx={{ flexWrap: 'wrap', mt: { xs: 1, md: 0 } }}
-          >
+
+          <Box display="flex" alignItems="center" gap={1.5}>
             <Chip
-              icon={<Message />}
+              icon={<Message sx={{ fontSize: 16 }} />}
               label={`${stats.messages} Messages`}
               color="primary"
+              variant="outlined"
               size="small"
             />
-            {notifications.length > 0 && (
-              <Chip
-                icon={<Notifications />}
-                label={`${notifications.length} New`}
-                color="secondary"
-                size="small"
-              />
-            )}
+            <ThemeToggle />
+            <NotificationIndicator />
           </Box>
         </Box>
-        <Typography variant="body1" color="text.secondary">
-          Here's what's happening in your professional network
+
+        <Typography
+          variant="h6"
+          color="text.secondary"
+          sx={{ fontWeight: 400 }}
+        >
+          Here's your alumni network overview
         </Typography>
+
+        {recentActivities.length > 0 && (
+          <Box sx={{ mt: 2 }}>
+            <div className="rounded-lg border p-3 bg-transparent">
+              <h4 className="text-sm font-semibold mb-2">Recent Activity</h4>
+              <ul className="space-y-2 text-sm text-gray-600">
+                {recentActivities.slice(0, 4).map((a) => (
+                  <li key={a.id} className="flex items-start justify-between">
+                    <div>
+                      <div className="font-medium text-gray-900">{a.title}</div>
+                      <div className="text-xs text-gray-500">
+                        {a.description}
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400 ml-4">
+                      {a.timestamp}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </Box>
+        )}
       </Box>
 
       <Grid container spacing={3}>
-        {/* Left Column */}
-        <Grid item xs={12} md={8}>
-          {/* Stats Overview */}
-          <Paper
-            sx={{
-              p: 3,
-              mb: 3,
-              background: 'linear-gradient(135deg, #f8faf8 0%, #ffffff 100%)',
-            }}
-          >
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-              Network Overview
-            </Typography>
-            <Grid container spacing={2}>
-              <Grid item xs={6} sm={3}>
-                <Box textAlign="center">
-                  <Typography
-                    variant="h4"
-                    sx={{ fontWeight: 700, color: 'primary.main' }}
-                  >
-                    {stats.connections}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Connections
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Box textAlign="center">
-                  <Typography
-                    variant="h4"
-                    sx={{ fontWeight: 700, color: 'secondary.main' }}
-                  >
-                    {stats.messages}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Messages
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Box textAlign="center">
-                  <Typography
-                    variant="h4"
-                    sx={{ fontWeight: 700, color: 'warning.main' }}
-                  >
-                    {stats.pendingRequests}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Pending
-                  </Typography>
-                </Box>
-              </Grid>
-              <Grid item xs={6} sm={3}>
-                <Box textAlign="center">
-                  <Typography
-                    variant="h4"
-                    sx={{ fontWeight: 700, color: 'success.main' }}
-                  >
-                    {stats.profileCompletion}%
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    Profile Complete
-                  </Typography>
-                </Box>
-              </Grid>
-            </Grid>
-          </Paper>
+        <Grid item xs={12} lg={8}>
+          <Box sx={{ mb: 3 }}>
+            <OnView placeholderHeight={280}>
+              <NetworkOverview />
+            </OnView>
+          </Box>
 
-          {/* Quick Actions */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-              Quick Actions
-            </Typography>
-            <Grid container spacing={2}>
-              {quickActions.map((action, index) => (
-                <Grid item xs={6} sm={3} key={index}>
-                  <Button
-                    fullWidth
-                    variant="outlined"
-                    startIcon={action.icon}
-                    onClick={action.action}
-                    sx={{
-                      py: 2,
-                      minHeight: '64px', // Fixed height for all buttons
-                      borderColor: 'divider',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      textAlign: 'center',
-                      whiteSpace: 'normal', // Allow text wrapping
-                      lineHeight: 1.2,
-                      '&:hover': {
-                        borderColor: 'primary.main',
-                        backgroundColor: 'rgba(76, 175, 80, 0.04)',
-                      },
-                    }}
-                  >
-                    {action.title}
-                  </Button>
-                </Grid>
-              ))}
-            </Grid>
-          </Paper>
+          <Box sx={{ mb: 3 }}>
+            <OnView placeholderHeight={280} threshold={0.5}>
+              <RecommendedProjects />
+            </OnView>
+          </Box>
 
-          {/* Recent Activity */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={3}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Recent Activity
-              </Typography>
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => navigate('/messages')}
-              >
-                View All
-              </Button>
-            </Box>
-            <List>
-              {recentActivities.length === 0 ? (
-                <ListItem>
-                  <ListItemText
-                    primary="No recent activity"
-                    secondary="Start connecting with people to see activity here"
-                  />
-                </ListItem>
-              ) : (
-                recentActivities.map((activity, index) => (
-                  <React.Fragment key={activity.id}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          {activity.type === 'connection' && <PersonAdd />}
-                          {activity.type === 'message' && <Message />}
-                          {activity.type === 'event' && <Event />}
-                          {activity.type === 'post' && <Forum />}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={activity.title}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {activity.description}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {activity.timestamp}
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {index < recentActivities.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))
-              )}
-            </List>
-          </Paper>
-
-          {/* Recommended Projects */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-              Recommended Projects
-            </Typography>
-            <List>
-              {allProjects.data.length === 0 ? (
-                <ListItem>
-                  <ListItemText
-                    primary="No recommended projects"
-                    secondary="Complete your profile to see recommendations"
-                  />
-                </ListItem>
-              ) : (
-                allProjects.data.map((project) => (
-                  <ListItem key={project.id}>
-                    <ListItemText
-                      primary={project.title}
-                      secondary={project.owner?.name || 'Unknown Owner'}
-                    />
-                  </ListItem>
-                ))
-              )}
-            </List>
-          </Paper>
+          <Box sx={{ mb: 3 }}>
+            <OnView placeholderHeight={280} threshold={0.3}>
+              <RecentPosts />
+            </OnView>
+          </Box>
         </Grid>
 
-        {/* Right Column */}
-        <Grid item xs={12} md={4}>
-          {/* Notifications */}
-          <NotificationMenu
-            open={true}
-            inline={true}
-            handleClose={function (): void {
-              throw new Error('Function not implemented.');
-            }}
-          />
+        <Grid item xs={12} lg={4}>
+          <Box sx={{ mb: 3 }}>
+            <OnView placeholderHeight={280}>
+              <ProfileStrength />
+            </OnView>
+          </Box>
 
-          {/* Recent Posts */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={3}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Recent Posts
-              </Typography>
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => navigate('/feed')}
-              >
-                View All
-              </Button>
-            </Box>
-            <List>
-              <ListItem>
-                <ListItemText
-                  primary="No recent posts"
-                  secondary="Check the feed for latest updates"
-                />
-              </ListItem>
-            </List>
-          </Paper>
+          <Box sx={{ mb: 3 }}>
+            <OnView placeholderHeight={280} threshold={0.5}>
+              <RecommendedConnection />
+            </OnView>
+          </Box>
 
-          {/* Profile Completion */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-              Profile Strength
-            </Typography>
-            <Box sx={{ mb: 2 }}>
-              <Box
-                display="flex"
-                justifyContent="space-between"
-                alignItems="center"
-                mb={1}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  {stats.profileCompletion}% Complete
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {stats.profileCompletion}/100
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={stats.profileCompletion}
-                sx={{ height: 6, borderRadius: 3 }}
-              />
-            </Box>
-            <Button
-              variant="contained"
-              fullWidth
-              onClick={() => navigate('/profile')}
-              sx={{ mt: 2 }}
-            >
-              Complete Profile
-            </Button>
-          </Paper>
-
-          {/* Upcoming Events */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={3}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                Upcoming Events
-              </Typography>
-              <IconButton size="small">
-                <MoreVert />
-              </IconButton>
-            </Box>
-            <List>
-              {upcomingEvents.length === 0 ? (
-                <ListItem>
-                  <ListItemText
-                    primary="No upcoming events"
-                    secondary="Check back later for new events"
-                  />
-                </ListItem>
-              ) : (
-                upcomingEvents.map((event, index) => (
-                  <React.Fragment key={event.id}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'secondary.main' }}>
-                          <Event />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={event.title}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              <Schedule
-                                sx={{
-                                  fontSize: 14,
-                                  mr: 0.5,
-                                  verticalAlign: 'middle',
-                                }}
-                              />
-                              {event.date}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              <LocationOn
-                                sx={{
-                                  fontSize: 14,
-                                  mr: 0.5,
-                                  verticalAlign: 'middle',
-                                }}
-                              />
-                              {event.location}
-                            </Typography>
-                            <Typography
-                              variant="caption"
-                              color="text.secondary"
-                            >
-                              {event.attendees} attendees
-                            </Typography>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {index < upcomingEvents.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))
-              )}
-            </List>
-          </Paper>
-
-          {/* Suggested Connections */}
-          <Paper sx={{ p: 3 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={3}
-            >
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                People You May Know
-              </Typography>
-              <Button
-                variant="text"
-                size="small"
-                onClick={() => navigate('/connections')}
-              >
-                View All
-              </Button>
-            </Box>
-            <List>
-              {suggestedConnections.length === 0 ? (
-                <ListItem>
-                  <ListItemText
-                    primary="No suggestions available"
-                    secondary="Complete your profile to get better suggestions"
-                  />
-                </ListItem>
-              ) : (
-                suggestedConnections.map((person, index) => (
-                  <React.Fragment key={person.id}>
-                    <ListItem sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: 'primary.main' }}>
-                          {person.name.charAt(0)}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={person.name}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {person.title}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              <Business
-                                sx={{
-                                  fontSize: 14,
-                                  mr: 0.5,
-                                  verticalAlign: 'middle',
-                                }}
-                              />
-                              {person.company}
-                            </Typography>
-                            {person.matchScore && (
-                              <Chip
-                                label={`${person.matchScore}% match`}
-                                size="small"
-                                color="primary"
-                                sx={{ mt: 0.5 }}
-                              />
-                            )}
-                          </Box>
-                        }
-                      />
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        sx={{ ml: 1 }}
-                        onClick={() => navigate('/connections')}
-                      >
-                        Connect
-                      </Button>
-                    </ListItem>
-                    {index < suggestedConnections.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))
-              )}
-            </List>
-          </Paper>
+          <Box sx={{ mb: 3 }}>
+            <OnView placeholderHeight={280} threshold={0.3}>
+              <UpcomingEvents />
+            </OnView>
+          </Box>
         </Grid>
       </Grid>
     </Container>

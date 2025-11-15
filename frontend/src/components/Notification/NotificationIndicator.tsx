@@ -3,6 +3,7 @@ import { Badge, IconButton, Tooltip } from '@mui/material';
 import { Notifications as NotificationsIcon } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
 import NotificationMenu from './NotificationMenu';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const NotificationIndicator = () => {
   const { unreadCount, fetchNotifications } = useNotification();
@@ -16,6 +17,8 @@ const NotificationIndicator = () => {
   const handleClose = () => {
     setAnchorEl(null);
   };
+
+  const { isDark } = useTheme();
 
   // Sound effect for new notifications
   // useEffect(() => {
@@ -83,8 +86,26 @@ const NotificationIndicator = () => {
   return (
     <>
       <Tooltip title="Notifications">
-        <IconButton color="inherit" onClick={handleOpen}>
-          <Badge badgeContent={unreadCount} color="error" max={99}>
+        <IconButton
+          color="inherit"
+          onClick={handleOpen}
+          sx={isDark ? { color: 'rgba(255,255,255,0.9)' } : undefined}
+        >
+          <Badge
+            badgeContent={unreadCount}
+            color="error"
+            max={99}
+            sx={
+              isDark
+                ? {
+                    '& .MuiBadge-badge': {
+                      backgroundColor: '#ef4444',
+                      color: '#fff',
+                    },
+                  }
+                : undefined
+            }
+          >
             <NotificationsIcon />
           </Badge>
         </IconButton>

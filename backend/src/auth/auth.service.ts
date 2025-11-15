@@ -66,11 +66,14 @@ export class AuthService {
         email: dto.email,
         name: dto.name,
         role: dto.role,
+        graduationYear: dto.graduationYear || null,
         accountStatus: 'PENDING_DOCUMENT_REVIEW' as any,
         isEmailVerified: false,
         isAccountActive: false,
         profile: {
           create: {
+            studentId: dto.studentId || null,
+            dept: dto.department || null,
             bio: '',
             location: '',
             interests: '',
@@ -294,9 +297,10 @@ export class AuthService {
       role: user.role,
       isEmailVerified: user.isEmailVerified || false,
       accountStatus: user.accountStatus || 'PENDING_VERIFICATION',
+      profile: user.profile || null,
     };
 
-    const accessToken = this.jwt.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.jwt.sign(payload, { expiresIn: '1hr' });
     const refreshToken = this.tokenService.generateRefreshToken();
 
     // Store refresh token
@@ -318,8 +322,9 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified || false,
         accountStatus: user.accountStatus || 'PENDING_VERIFICATION',
         profileCompleted: !!user.profile,
+        profile: user.profile || null,
       },
-      expiresIn: 15 * 60, // 15 minutes in seconds
+      expiresIn: 60 * 60, // 1 hour in seconds
     };
   }
 

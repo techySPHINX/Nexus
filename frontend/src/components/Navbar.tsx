@@ -17,7 +17,9 @@ import {
   Divider,
   useTheme,
   Stack,
+  Tooltip,
 } from '@mui/material';
+import { Grow } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard,
@@ -30,20 +32,26 @@ import {
   Logout,
   Login,
   PersonAdd,
+  ChevronLeft,
+  ChevronRight,
+  LightMode,
+  DarkMode,
 } from '@mui/icons-material';
+import Brightness4 from '@mui/icons-material/Brightness4';
+import Brightness7 from '@mui/icons-material/Brightness7';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useTheme as useAppTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavbar } from '../contexts/NavbarContext';
-import ThemeToggle from './ThemeToggle';
-import NavbarToggle from './NavbarToggle';
-import NotificationIndicator from './Notification/NotificationIndicator';
+// import NavbarToggle from './NavbarToggle';
 
 const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
-  const { position } = useNavbar();
+  const { position, collapsed, toggleCollapsed } = useNavbar();
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const { toggleTheme, isDark } = useAppTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
@@ -83,8 +91,9 @@ const Navbar: React.FC = () => {
       position="fixed"
       sx={{
         zIndex: theme.zIndex.drawer + 1,
-        bgcolor: 'primary.main',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+        bgcolor: theme.palette.primary.main,
+        color: theme.palette.primary.contrastText,
+        boxShadow: '0 2px 12px rgba(2,8,23,0.08)',
       }}
     >
       <Toolbar sx={{ justifyContent: 'space-between' }}>
@@ -96,7 +105,7 @@ const Navbar: React.FC = () => {
             to="/"
             sx={{
               fontWeight: 700,
-              color: 'white',
+              color: 'inherit',
               textDecoration: 'none',
               mr: 4,
               '&:hover': { opacity: 0.8 },
@@ -114,16 +123,16 @@ const Navbar: React.FC = () => {
                   to={item.path}
                   startIcon={item.icon}
                   sx={{
-                    color: 'white',
+                    color: 'inherit',
                     textTransform: 'none',
                     fontWeight: isActive(item.path) ? 600 : 400,
                     bgcolor: isActive(item.path)
-                      ? 'rgba(255,255,255,0.1)'
+                      ? 'rgba(255,255,255,0.06)'
                       : 'transparent',
                     borderRadius: 2,
                     px: 2,
                     '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.2)',
+                      bgcolor: 'rgba(255,255,255,0.08)',
                     },
                   }}
                 >
@@ -138,27 +147,30 @@ const Navbar: React.FC = () => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {user ? (
             <>
-              <NotificationIndicator />
-              <ThemeToggle />
-              <NavbarToggle />
-
-              <IconButton onClick={handleUserMenuOpen} sx={{ color: 'white' }}>
-                <Avatar
-                  sx={{ width: 32, height: 32, bgcolor: 'primary.light' }}
+              <Tooltip title="Account" placement="bottom">
+                <IconButton
+                  onClick={handleUserMenuOpen}
+                  sx={{ color: 'inherit' }}
+                  aria-label="Account menu"
                 >
-                  {user.name?.charAt(0) || 'U'}
-                </Avatar>
-              </IconButton>
+                  <Avatar
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      bgcolor: theme.palette.primary.light,
+                    }}
+                  >
+                    {user.name?.charAt(0) || 'U'}
+                  </Avatar>
+                </IconButton>
+              </Tooltip>
 
               <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
                 onClose={handleUserMenuClose}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
+                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                 PaperProps={{
                   sx: {
                     mt: 1,
@@ -224,6 +236,18 @@ const Navbar: React.FC = () => {
                 {user?.role === 'ADMIN' && (
                   <MenuItem
                     component={Link}
+                    to="/admin/document-verification"
+                    onClick={handleUserMenuClose}
+                  >
+                    <ListItemIcon>
+                      <Assignment />
+                    </ListItemIcon>
+                    Document Verification
+                  </MenuItem>
+                )}
+                {user?.role === 'ADMIN' && (
+                  <MenuItem
+                    component={Link}
                     to="/admin/moderation/subcommunities"
                     onClick={handleUserMenuClose}
                   >
@@ -243,6 +267,34 @@ const Navbar: React.FC = () => {
                   </ListItemIcon>
                   Files
                 </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    toggleTheme();
+                    handleUserMenuClose();
+                  }}
+                >
+                  <ListItemIcon>
+                    <Box
+                      component="span"
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'transform 300ms ease',
+                        transform: isDark
+                          ? 'rotate(20deg) scale(1.05)'
+                          : 'rotate(0deg) scale(1)',
+                      }}
+                    >
+                      {isDark ? (
+                        <LightMode sx={{ color: 'gold' }} />
+                      ) : (
+                        <DarkMode sx={{ color: theme.palette.primary.main }} />
+                      )}
+                    </Box>
+                  </ListItemIcon>
+                  {isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                </MenuItem>
                 <Divider />
                 <MenuItem onClick={handleLogout}>
                   <ListItemIcon>
@@ -254,7 +306,7 @@ const Navbar: React.FC = () => {
             </>
           ) : (
             <>
-              <NavbarToggle />
+              {/* <NavbarToggle /> */}
               <Button
                 component={Link}
                 to="/login"
@@ -309,266 +361,542 @@ const Navbar: React.FC = () => {
   );
 
   // Left Sidebar Component
-  const LeftSidebar = () => (
-    <>
-      <AppBar
-        position="fixed"
-        sx={{
-          width: 280,
-          height: '100vh',
-          left: 0,
-          top: 0,
-          bgcolor: 'primary.main',
-          boxShadow: '2px 0 10px rgba(0,0,0,0.1)',
-          zIndex: theme.zIndex.drawer + 1,
-        }}
-      >
-        <Box sx={{ p: 3, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <Typography
-            variant="h5"
-            component={Link}
-            to="/"
-            sx={{
-              fontWeight: 700,
-              color: 'white',
-              textDecoration: 'none',
-              display: 'block',
-              textAlign: 'center',
-              '&:hover': { opacity: 0.8 },
-            }}
-          >
-            Nexus
-          </Typography>
-        </Box>
-
-        {user ? (
-          <Box sx={{ flex: 1, overflow: 'auto' }}>
-            <List sx={{ px: 2 }}>
-              {navigationItems.map((item) => (
-                <ListItem
-                  key={item.text}
-                  component={Link}
-                  to={item.path}
-                  button
-                  sx={{
-                    mb: 1,
-                    borderRadius: 2,
-                    bgcolor: isActive(item.path)
-                      ? 'rgba(255,255,255,0.1)'
-                      : 'transparent',
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: 'rgba(255,255,255,0.2)',
-                    },
-                  }}
-                >
-                  <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.text}
-                    primaryTypographyProps={{
-                      fontWeight: isActive(item.path) ? 600 : 400,
-                    }}
-                  />
-                </ListItem>
-              ))}
-            </List>
-
-            <Divider
-              sx={{ borderColor: 'rgba(255,255,255,0.1)', mx: 2, my: 2 }}
-            />
-
-            <Box sx={{ p: 2 }}>
-              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                <ThemeToggle />
-                <NavbarToggle />
-              </Stack>
-
-              <NotificationIndicator />
-            </Box>
-          </Box>
-        ) : (
-          <Box sx={{ p: 3, mt: 4 }}>
-            <Stack spacing={2}>
-              <Button
-                component={Link}
-                to="/login"
-                variant="outlined"
-                startIcon={<Login />}
-                fullWidth
-                sx={{
-                  color: 'white',
-                  borderColor: 'white',
-                  textTransform: 'none',
-                  '&:hover': {
-                    borderColor: 'white',
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                  },
-                }}
-              >
-                Login
-              </Button>
-              <Button
-                component={Link}
-                to="/register"
-                variant="contained"
-                startIcon={<PersonAdd />}
-                fullWidth
-                sx={{
-                  bgcolor: 'white',
-                  color: 'primary.main',
-                  textTransform: 'none',
-                  '&:hover': {
-                    bgcolor: 'grey.100',
-                  },
-                }}
-              >
-                Register
-              </Button>
-            </Stack>
-          </Box>
-        )}
-
-        {user && (
-          <Box sx={{ p: 3, borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-            <Box
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                p: 2,
-                borderRadius: 2,
-                bgcolor: 'rgba(255,255,255,0.1)',
-                cursor: 'pointer',
-                '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.2)',
-                },
-              }}
-              onClick={handleUserMenuOpen}
-            >
-              <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.light' }}>
-                {user.name?.charAt(0) || 'U'}
-              </Avatar>
-              <Box sx={{ flex: 1 }}>
-                <Typography
-                  variant="body2"
-                  sx={{ color: 'white', fontWeight: 600 }}
-                >
-                  {user.name || 'User'}
-                </Typography>
-                <Typography
-                  variant="caption"
-                  sx={{ color: 'rgba(255,255,255,0.7)' }}
-                >
-                  {user.role || 'Member'}
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-        )}
-
-        {/* User Menu for Left Sidebar */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleUserMenuClose}
-          PaperProps={{
-            sx: {
-              mt: 1,
-              minWidth: 200,
-              borderRadius: 2,
-              ml: 2,
-            },
-          }}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'right',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
+  const LeftSidebar = () => {
+    const drawerWidth = collapsed ? 80 : 160;
+    return (
+      <>
+        <AppBar
+          position="fixed"
+          sx={{
+            width: drawerWidth,
+            height: '100vh',
+            left: 0,
+            top: 0,
+            borderRadius: '0',
+            bgcolor: theme.palette.primary.main,
+            color: theme.palette.primary.contrastText,
+            boxShadow: '2px 0 12px rgba(2,8,23,0.06)',
+            zIndex: theme.zIndex.drawer + 1,
+            transition: 'width 300ms cubic-bezier(0.4,0,0.2,1)',
+            overflowX: 'hidden',
           }}
         >
-          <MenuItem
-            component={Link}
-            to="/profile"
-            onClick={handleUserMenuClose}
+          <Box
+            sx={{
+              p: 2,
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'space-between',
+            }}
           >
-            <ListItemIcon>
-              <Person />
-            </ListItemIcon>
-            Profile
-          </MenuItem>
-          <MenuItem
-            component={Link}
-            to="/notifications"
-            onClick={handleUserMenuClose}
-          >
-            <ListItemIcon>
-              <Person />
-            </ListItemIcon>
-            Notification
-          </MenuItem>
-          <MenuItem component={Link} to="/feed" onClick={handleUserMenuClose}>
-            <ListItemIcon>
-              <Person />
-            </ListItemIcon>
-            My Feed
-          </MenuItem>
+            <Tooltip title="Nexus" placement="right" arrow>
+              <Typography
+                variant="h6"
+                component={Link}
+                to="/"
+                sx={{
+                  fontWeight: 700,
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  display: 'block',
+                  textAlign: collapsed ? 'center' : 'left',
+                  '&:hover': { opacity: 0.9 },
+                }}
+              >
+                {collapsed ? 'N' : 'Nexus'}
+              </Typography>
+            </Tooltip>
+          </Box>
+
+          {user ? (
+            <Box
+              sx={{
+                flex: 1,
+                overflowY: 'auto',
+                // Custom scrollbar for the sidebar
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: 'rgba(255,255,255,0.12)',
+                  borderRadius: 4,
+                },
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'rgba(255,255,255,0.12) transparent',
+              }}
+            >
+              <List sx={{ px: 1 }}>
+                {navigationItems.map((item) => {
+                  if (collapsed) {
+                    return (
+                      <Tooltip
+                        key={item.text}
+                        title={item.text}
+                        placement="right"
+                        arrow
+                      >
+                        <ListItem
+                          component={Link}
+                          to={item.path}
+                          button
+                          sx={{
+                            mb: 0.5,
+                            borderRadius: 2,
+                            bgcolor: isActive(item.path)
+                              ? 'rgba(255,255,255,0.06)'
+                              : 'transparent',
+                            color: 'inherit',
+                            '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
+                            px: 1,
+                            justifyContent: 'flex-start',
+                            alignItems: 'center',
+                            minHeight: 36,
+                          }}
+                        >
+                          <ListItemIcon
+                            sx={{
+                              color: 'inherit',
+                              minWidth: 32,
+                              justifyContent: 'center',
+                              mr: 1,
+                            }}
+                          >
+                            {item.icon}
+                          </ListItemIcon>
+                        </ListItem>
+                      </Tooltip>
+                    );
+                  }
+
+                  return (
+                    <ListItem
+                      key={item.text}
+                      component={Link}
+                      to={item.path}
+                      button
+                      sx={{
+                        mb: 0.7,
+                        borderRadius: 2,
+                        bgcolor: isActive(item.path)
+                          ? 'rgba(255,255,255,0.06)'
+                          : 'transparent',
+                        color: 'inherit',
+                        '&:hover': {
+                          bgcolor: 'rgba(255,255,255,0.08)',
+                        },
+                        px: 0.5,
+                        justifyContent: 'flex-start',
+                        alignItems: 'center',
+                        minHeight: 36,
+                      }}
+                    >
+                      <ListItemIcon
+                        sx={{
+                          color: 'inherit',
+                          minWidth: 32,
+                          justifyContent: 'center',
+                          mr: 1,
+                        }}
+                      >
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.text}
+                        primaryTypographyProps={{
+                          fontWeight: isActive(item.path) ? 600 : 400,
+                          sx: { fontSize: '0.85rem', color: 'inherit' },
+                        }}
+                        sx={{
+                          opacity: collapsed ? 0 : 1,
+                          maxWidth: collapsed ? 0 : 160,
+                          transition:
+                            'opacity 300ms ease, max-width 320ms ease, transform 300ms ease',
+                          transform: collapsed
+                            ? 'translateX(-6px)'
+                            : 'translateX(0)',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                        }}
+                      />
+                    </ListItem>
+                  );
+                })}
+                {user?.role === 'ADMIN' && (
+                  <ListItem
+                    component={Link}
+                    to="/admin/document-verification"
+                    button
+                    sx={{
+                      mb: 1,
+                      borderRadius: 2,
+                      bgcolor: isActive('/admin/document-verification')
+                        ? 'rgba(255,255,255,0.06)'
+                        : 'transparent',
+                      color: 'inherit',
+                      px: 1,
+                      justifyContent: 'flex-start',
+                      alignItems: 'center',
+                      minHeight: 36,
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 32,
+                        justifyContent: 'center',
+                        mr: 1,
+                      }}
+                    >
+                      <Assignment />
+                    </ListItemIcon>
+                    {!collapsed && (
+                      <ListItemText
+                        primary="Document Verification"
+                        primaryTypographyProps={{
+                          fontWeight: isActive('/admin/document-verification')
+                            ? 600
+                            : 400,
+                        }}
+                        sx={{
+                          opacity: collapsed ? 0 : 1,
+                          maxWidth: collapsed ? 0 : 160,
+                          transition:
+                            'opacity 300ms ease, max-width 320ms ease, transform 300ms ease',
+                          transform: collapsed
+                            ? 'translateX(-6px)'
+                            : 'translateX(0)',
+                          overflow: 'hidden',
+                          whiteSpace: 'nowrap',
+                        }}
+                      />
+                    )}
+                  </ListItem>
+                )}
+              </List>
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                p: 2,
+                mt: 2,
+                display: 'flex',
+                justifyContent: 'center',
+                flexDirection: 'column',
+                gap: 2,
+              }}
+            >
+              {!collapsed ? (
+                <Stack spacing={2}>
+                  <Button
+                    component={Link}
+                    to="/login"
+                    variant="outlined"
+                    startIcon={<Login />}
+                    fullWidth
+                    sx={{
+                      color: 'inherit',
+                      borderColor: 'rgba(255,255,255,0.6)',
+                      textTransform: 'none',
+                      '&:hover': {
+                        borderColor: 'rgba(255,255,255,0.8)',
+                        bgcolor: 'rgba(255,255,255,0.04)',
+                      },
+                    }}
+                  >
+                    Login
+                  </Button>
+                  <Button
+                    component={Link}
+                    to="/register"
+                    variant="contained"
+                    startIcon={<PersonAdd />}
+                    fullWidth
+                    sx={{
+                      bgcolor: theme.palette.background.paper,
+                      color: theme.palette.primary.main,
+                      textTransform: 'none',
+                      '&:hover': { bgcolor: theme.palette.action.hover },
+                    }}
+                  >
+                    Register
+                  </Button>
+                </Stack>
+              ) : (
+                <Box>
+                  <IconButton
+                    component={Link}
+                    to="/login"
+                    sx={{ color: 'inherit', mb: 3 }}
+                    aria-label="Login"
+                  >
+                    <Login />
+                  </IconButton>
+                  <IconButton
+                    component={Link}
+                    to="/register"
+                    sx={{ color: 'inherit' }}
+                    aria-label="Register"
+                  >
+                    <PersonAdd />
+                  </IconButton>
+                </Box>
+              )}
+              {/* Collapse control also present when no user */}
+              <Box sx={{ p: 1, mt: 2 }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: collapsed ? 'center' : 'flex-end',
+                  }}
+                >
+                  {collapsed ? (
+                    <Tooltip title="Expand" placement="right">
+                      <IconButton
+                        onClick={toggleCollapsed}
+                        sx={{ color: 'inherit' }}
+                        aria-label="Expand sidebar"
+                      >
+                        <ChevronRight />
+                      </IconButton>
+                    </Tooltip>
+                  ) : (
+                    <Tooltip title="Collapse" placement="right">
+                      <IconButton
+                        onClick={toggleCollapsed}
+                        sx={{ color: 'inherit' }}
+                        aria-label="Collapse sidebar"
+                      >
+                        <ChevronLeft />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+          )}
+
           {user && (
+            // Anchor the bottom controls absolutely so collapse stays fixed at the bottom
+            <Box
+              sx={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: 16,
+                px: 2,
+                background: 'transparent',
+              }}
+            >
+              {/* Collapse control sits above the user card */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: collapsed ? 'center' : 'flex-end',
+                  mb: 1,
+                }}
+              >
+                {collapsed ? (
+                  <Tooltip title="Expand" placement="right">
+                    <IconButton
+                      onClick={toggleCollapsed}
+                      sx={{ color: 'inherit' }}
+                      aria-label="Expand sidebar"
+                    >
+                      <ChevronRight />
+                    </IconButton>
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Collapse" placement="right">
+                    <IconButton
+                      onClick={toggleCollapsed}
+                      sx={{ color: 'inherit' }}
+                      aria-label="Collapse sidebar"
+                    >
+                      <ChevronLeft />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Box>
+
+              <Box
+                onClick={handleUserMenuOpen}
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: collapsed ? 0 : 1,
+                  p: 1,
+                  borderRadius: 2,
+                  bgcolor: 'rgba(255,255,255,0.04)',
+                  cursor: 'pointer',
+                  justifyContent: 'center',
+                }}
+              >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: collapsed ? 0 : 2,
+                  }}
+                >
+                  <Avatar
+                    src={user.profile?.avatarUrl}
+                    alt={user.name?.charAt(0)}
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      bgcolor: theme.palette.primary.light,
+                    }}
+                  >
+                    {user.name?.charAt(0)}
+                  </Avatar>
+
+                  {!collapsed && (
+                    <Box>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: 'inherit', fontWeight: 800 }}
+                      >
+                        {user.name?.trim().split(/\s+/)[0] || 'User'}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+          )}
+
+          {/* User Menu for Left Sidebar */}
+          <Menu
+            anchorEl={anchorEl}
+            open={Boolean(anchorEl)}
+            onClose={handleUserMenuClose}
+            PaperProps={{
+              sx: { mt: 1, minWidth: 200, borderRadius: 2, ml: 2 },
+            }}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
             <MenuItem
               component={Link}
-              to={`/users/${user.id}/posts`}
+              to="/profile"
               onClick={handleUserMenuClose}
             >
               <ListItemIcon>
                 <Person />
               </ListItemIcon>
-              My Post
+              Profile
             </MenuItem>
-          )}
-          {user?.role === 'ADMIN' && (
             <MenuItem
               component={Link}
-              to="/admin/moderation"
+              to="/notifications"
               onClick={handleUserMenuClose}
             >
               <ListItemIcon>
                 <Person />
               </ListItemIcon>
-              Feed Moderation
+              Notification
             </MenuItem>
-          )}
-          {user?.role === 'ADMIN' && (
-            <MenuItem
-              component={Link}
-              to="/admin/moderation/subcommunities"
-              onClick={handleUserMenuClose}
-            >
+            <MenuItem component={Link} to="/feed" onClick={handleUserMenuClose}>
               <ListItemIcon>
                 <Person />
               </ListItemIcon>
-              SubCommunity Moderation
+              My Feed
             </MenuItem>
-          )}
-          <MenuItem component={Link} to="/files" onClick={handleUserMenuClose}>
-            <ListItemIcon>
-              <Folder />
-            </ListItemIcon>
-            Files
-          </MenuItem>
-          <Divider />
-          <MenuItem onClick={handleLogout}>
-            <ListItemIcon>
-              <Logout />
-            </ListItemIcon>
-            Logout
-          </MenuItem>
-        </Menu>
-      </AppBar>
-    </>
-  );
+            {user && (
+              <MenuItem
+                component={Link}
+                to={`/users/${user.id}/posts`}
+                onClick={handleUserMenuClose}
+              >
+                <ListItemIcon>
+                  <Person />
+                </ListItemIcon>
+                My Post
+              </MenuItem>
+            )}
+            {user?.role === 'ADMIN' && (
+              <MenuItem
+                component={Link}
+                to="/admin/moderation"
+                onClick={handleUserMenuClose}
+              >
+                <ListItemIcon>
+                  <Person />
+                </ListItemIcon>
+                Feed Moderation
+              </MenuItem>
+            )}
+            {user?.role === 'ADMIN' && (
+              <MenuItem
+                component={Link}
+                to="/admin/moderation/subcommunities"
+                onClick={handleUserMenuClose}
+              >
+                <ListItemIcon>
+                  <Person />
+                </ListItemIcon>
+                SubCommunity Moderation
+              </MenuItem>
+            )}
+            <MenuItem
+              component={Link}
+              to="/files"
+              onClick={handleUserMenuClose}
+            >
+              <ListItemIcon>
+                <Folder />
+              </ListItemIcon>
+              Files
+            </MenuItem>
+            <Divider />
+            {/* Theme toggle: animated icon swap */}
+            <MenuItem
+              onClick={() => {
+                toggleTheme();
+                handleUserMenuClose();
+              }}
+            >
+              <ListItemIcon>
+                <Box sx={{ position: 'relative', width: 24, height: 24 }}>
+                  <Grow in={!isDark} timeout={300}>
+                    <Brightness7
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        color: 'warning.main',
+                      }}
+                    />
+                  </Grow>
+                  <Grow in={isDark} timeout={300}>
+                    <Brightness4
+                      sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        color: 'primary.main',
+                      }}
+                    />
+                  </Grow>
+                </Box>
+              </ListItemIcon>
+              Toggle theme
+            </MenuItem>
+            <MenuItem onClick={handleLogout}>
+              <ListItemIcon>
+                <Logout />
+              </ListItemIcon>
+              Logout
+            </MenuItem>
+          </Menu>
+        </AppBar>
+      </>
+    );
+  };
 
   const MobileDrawer = () => (
     <Drawer
@@ -639,7 +967,7 @@ const Navbar: React.FC = () => {
               handleDrawerToggle();
             }}
           >
-            <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.light' }}>
+            <Avatar sx={{ width: 36, height: 36, bgcolor: 'primary.light' }}>
               {user.name?.charAt(0) || 'U'}
             </Avatar>
             <Box sx={{ flex: 1 }}>

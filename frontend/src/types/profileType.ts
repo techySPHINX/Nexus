@@ -5,6 +5,7 @@ export enum Role {
   STUDENT = 'STUDENT',
   ALUM = 'ALUM',
   ADMIN = 'ADMIN',
+  MENTOR = 'MENTOR',
 }
 
 export enum ConnectionStatus {
@@ -156,7 +157,7 @@ export interface Startup {
   status: StartupStatus;
   fundingGoal?: number;
   fundingRaised?: number;
-  monetizationModel?: string;
+  monetizationModel?: string[];
   createdAt: string;
 }
 

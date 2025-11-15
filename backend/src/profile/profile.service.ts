@@ -14,6 +14,95 @@ import { FilterProfilesDto } from './dto/filter-profiles.dto';
 export class ProfileService {
   constructor(private prisma: PrismaService) {}
 
+  async getProfileCompletionStats(userId: string) {
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId: userId },
+      select: {
+        avatarUrl: true,
+        bio: true,
+        location: true,
+        interests: true,
+        branch: true,
+        year: true,
+        course: true,
+        dept: true,
+        _count: {
+          select: {
+            skills: true,
+          },
+        },
+      },
+    });
+
+    if (!profile) throw new NotFoundException('Profile not found');
+
+    const isFilled = (value: unknown) => {
+      if (value === null || value === undefined) return false;
+      if (typeof value !== 'string') return true;
+      return value.trim().length > 0;
+    };
+
+    const avatarFilled = isFilled(profile.avatarUrl);
+    const bioFilled = isFilled(profile.bio);
+    const locationFilled = isFilled(profile.location);
+    const branchFilled = isFilled(profile.branch);
+    const yearFilled = isFilled(profile.year);
+    const deptFilled = isFilled(profile.dept);
+    const skillsCount = profile._count?.skills ?? 0;
+    const skillsFilled = skillsCount > 4;
+
+    const countCsvItems = (val?: string | null) => {
+      if (!val || typeof val !== 'string') return 0;
+      return val
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0).length;
+    };
+
+    const interestsCount = countCsvItems(profile.interests);
+    const courseCount = countCsvItems(profile.course);
+    const interestsFilled = interestsCount > 4;
+    const courseFilled = courseCount > 4;
+
+    const fieldChecks = [
+      avatarFilled,
+      bioFilled,
+      locationFilled,
+      branchFilled,
+      yearFilled,
+      deptFilled,
+      skillsFilled,
+      interestsFilled,
+      courseFilled,
+    ];
+
+    const totalFields = fieldChecks.length;
+    const filledFields = fieldChecks.filter(Boolean).length;
+    const completionPercentage =
+      totalFields === 0 ? 100 : Math.round((filledFields / totalFields) * 100);
+
+    if (completionPercentage === 100) {
+      return {
+      completionPercentage,
+      };
+    }
+
+    return {
+      details: {
+      avatar: avatarFilled,
+      bio: bioFilled,
+      location: locationFilled,
+      branch: branchFilled,
+      year: yearFilled,
+      dept: deptFilled,
+      skillsCount,
+      interestsCount,
+      courseCount,
+      },
+    };
+    
+  }
+
   /**
    * Retrieves a user's profile by their user ID.
    * Includes associated skills, user details, and endorsements.
@@ -57,158 +146,6 @@ export class ProfileService {
             bannerUrl: true,
             createdAt: true,
             description: true,
-            // iconUrl: true, // profiel.avatarUrl is same??
-            // Subcommunities owned
-            // ownedSubCommunities: {
-            //   select: {
-            //     id: true,
-            //     name: true,
-            //     description: true,
-            //     type: true,
-            //     createdAt: true,
-            //     iconUrl: true,
-            //     status: true,
-            //   },
-            // },
-            // // Subcommunity memberships
-            // subCommunityMemberships: {
-            //   select: {
-            //     role: true,
-            //     subCommunity: {
-            //       select: {
-            //         id: true,
-            //         name: true,
-            //         description: true,
-            //         type: true,
-            //         iconUrl: true,
-            //         status: true,
-            //       },
-            //     },
-            //   },
-            // },
-            // // Comments
-            // Comment: {
-            //   select: {
-            //     id: true,
-            //     content: true,
-            //     postId: true,
-            //     createdAt: true,
-            //     post: {
-            //       select: {
-            //         subject: true,
-            //       },
-            //     },
-            //   },
-            //   orderBy: {
-            //     createdAt: 'desc',
-            //   },
-            //   take: 10, // Limit to recent comments
-            // },
-            // // Posts
-            // Post: {
-            //   select: {
-            //     id: true,
-            //     subject: true,
-            //     type: true,
-            //     createdAt: true,
-            //     subCommunity: {
-            //       select: {
-            //         id: true,
-            //         name: true,
-            //       },
-            //     },
-            //     Comment: {
-            //       select: {
-            //         id: true,
-            //       },
-            //     },
-            //     Vote: {
-            //       select: {
-            //         type: true,
-            //       },
-            //     },
-            //   },
-            //   where: { status: 'APPROVED' },
-            //   orderBy: {
-            //     createdAt: 'desc',
-            //   },
-            //   take: 10, // Limit to recent posts
-            // },
-            // // Badges
-            // // badges: {
-            // //   select: {
-            // //     assignedAt: true,
-            // //     badge: {
-            // //       select: {
-            // //         id: true,
-            // //         name: true,
-            // //         icon: true,
-            // //       },
-            // //     },
-            // //   },
-            // //   orderBy: {
-            // //     assignedAt: 'desc',
-            // //   },
-            // // },
-            // // Projects
-            // projects: {
-            //   select: {
-            //     id: true,
-            //     title: true,
-            //     description: true,
-            //     githubUrl: true,
-            //     websiteUrl: true,
-            //     imageUrl: true,
-            //     videoUrl: true,
-            //     tags: true,
-            //     status: true,
-            //     seeking: true,
-            //     skills: true,
-            //     createdAt: true,
-            //     supporters: {
-            //       select: {
-            //         user: {
-            //           select: {
-            //             id: true,
-            //             name: true,
-            //           },
-            //         },
-            //       },
-            //     },
-            //     followers: {
-            //       select: {
-            //         user: {
-            //           select: {
-            //             id: true,
-            //             name: true,
-            //           },
-            //         },
-            //       },
-            //     },
-            //   },
-            //   orderBy: {
-            //     createdAt: 'desc',
-            //   },
-            // },
-            // // Startups
-            // startups: {
-            //   select: {
-            //     id: true,
-            //     name: true,
-            //     description: true,
-            //     imageUrl: true,
-            //     websiteUrl: true,
-            //     status: true,
-            //     fundingGoal: true,
-            //     fundingRaised: true,
-            //     monetizationModel: true,
-            //     createdAt: true,
-            //   },
-            //   orderBy: {
-            //     createdAt: 'desc',
-            //   },
-            // },
-            // User points
             userPoints: {
               select: {
                 points: true,
@@ -226,75 +163,6 @@ export class ProfileService {
                 },
               },
             },
-            // Referrals posted
-            // postedReferrals: {
-            //   select: {
-            //     id: true,
-            //     company: true,
-            //     jobTitle: true,
-            //     description: true,
-            //     requirements: true,
-            //     location: true,
-            //     status: true,
-            //     createdAt: true,
-            //     updatedAt: true,
-            //     applications: {
-            //       select: {
-            //         id: true,
-            //         status: true,
-            //         createdAt: true,
-            //         student: {
-            //           select: {
-            //             id: true,
-            //             name: true,
-            //           },
-            //         },
-            //       },
-            //     },
-            //   },
-            //   orderBy: {
-            //     createdAt: 'desc',
-            //   },
-            // },
-            // // Project updates
-            // projectUpdates: {
-            //   select: {
-            //     id: true,
-            //     title: true,
-            //     content: true,
-            //     createdAt: true,
-            //     project: {
-            //       select: {
-            //         id: true,
-            //         title: true,
-            //       },
-            //     },
-            //   },
-            //   orderBy: {
-            //     createdAt: 'desc',
-            //   },
-            //   take: 10, // Limit to recent updates
-            // },
-            // // Events created
-            // events: {
-            //   select: {
-            //     id: true,
-            //     title: true,
-            //     description: true,
-            //     imageUrl: true,
-            //     registrationLink: true,
-            //     date: true,
-            //     status: true,
-            //     category: true,
-            //     tags: true,
-            //     location: true,
-            //     createdAt: true,
-            //     updatedAt: true,
-            //   },
-            //   orderBy: {
-            //     createdAt: 'desc',
-            //   },
-            // },
             _count: {
               select: {
                 Post: { where: { status: 'APPROVED' } },
@@ -307,32 +175,6 @@ export class ProfileService {
                 subCommunityMemberships: true,
               },
             },
-          },
-        },
-        endorsements: {
-          include: {
-            skill: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
-            endorser: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                profile: {
-                  select: {
-                    avatarUrl: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: 'desc',
           },
         },
       },

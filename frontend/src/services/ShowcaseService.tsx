@@ -229,12 +229,11 @@ export const ShowcaseService = {
   },
 
   updateStatusCollaboration: async (
-    projectId: string,
+    requestId: string,
     status: CollaborationStatus
   ) => {
     try {
-      await api.put(`/showcase/${projectId}/collaborate`, { status });
-      const response = await api.put(`/showcase/${projectId}/collaborate`, {
+      const response = await api.put(`/showcase/${requestId}/collaborate`, {
         status,
       });
       return response.data;
@@ -374,10 +373,10 @@ export const ShowcaseService = {
     pageSize?: number;
   }) => {
     try {
-      console.log('Fetching startups with', filterStartupDto);
       const response = await api.get('/showcase/startup', {
         params: filterStartupDto,
       });
+      console.log('Fetched startups:', response.data);
       return response.data;
     } catch (error) {
       throw new Error('Failed to get startups: ' + getErrorMessage(error));
@@ -394,6 +393,7 @@ export const ShowcaseService = {
       const response = await api.get('/showcase/startup/my', {
         params: filterStartupDto,
       });
+      console.log('Fetched my startups:', response.data);
       return response.data;
     } catch (error) {
       throw new Error('Failed to get my startups: ' + getErrorMessage(error));
@@ -410,6 +410,7 @@ export const ShowcaseService = {
       const response = await api.get('/showcase/startup/followed', {
         params: filterStartupDto,
       });
+      console.log('Fetched followed startups:', response.data);
       return response.data;
     } catch (error) {
       throw new Error(
@@ -422,8 +423,8 @@ export const ShowcaseService = {
     data: Partial<StartupSummary>
   ): Promise<StartupSummary> => {
     try {
-      console.log('Creating startup with data:', data);
       const response = await api.post('/showcase/startup', data);
+      console.log('Created startup:', response.data);
       return response.data;
     } catch (error) {
       throw new Error('Failed to create startup: ' + getErrorMessage(error));
@@ -435,8 +436,8 @@ export const ShowcaseService = {
     data: Partial<StartupSummary>
   ): Promise<StartupSummary> => {
     try {
-      console.log('Updating startup ID:', startupId, 'with data:', data);
       const response = await api.put(`/showcase/startup/${startupId}`, data);
+      console.log('Updated startup:', response.data);
       return response.data;
     } catch (error) {
       throw new Error('Failed to update startup: ' + getErrorMessage(error));
@@ -454,8 +455,8 @@ export const ShowcaseService = {
 
   getStartupById: async (startupId: string): Promise<Startup> => {
     try {
-      console.log('Fetching startup by ID:', startupId);
       const response = await api.get(`/showcase/startup/${startupId}`);
+      console.log('Fetched startup:', response.data);
       return response.data;
     } catch (error) {
       throw new Error('Failed to get startup: ' + getErrorMessage(error));
@@ -501,16 +502,11 @@ export const ShowcaseService = {
 
   getStartupComments: async (startupId: string, page: number = 1) => {
     try {
-      console.log(
-        'Fetching comments for startup ID:',
-        startupId,
-        'page:',
-        page
-      );
       const response = await api.get(
         `/showcase/startup/${startupId}/comments`,
         { params: { page } }
       );
+      console.log('Fetched comments for startup ID:', startupId, 'page:', page);
       return response.data;
     } catch (error) {
       throw new Error(

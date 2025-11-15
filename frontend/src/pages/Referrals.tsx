@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import {
   Container,
@@ -235,6 +235,7 @@ const Referrals: React.FC = () => {
     console.log('✅ User authenticated, fetching referrals...');
     fetchReferrals();
 
+<<<<<<< HEAD
     // If admin, load analytics
     if (user.role === 'ADMIN') {
       apiService.referrals
@@ -484,24 +485,28 @@ const Referrals: React.FC = () => {
     }
   };
 
-  const filteredReferrals = referrals.filter((referral) => {
-    // Students and Alumni can only see APPROVED referrals (or their own if they created it)
-    if (
-      (user?.role === 'STUDENT' || user?.role === 'ALUM') &&
-      referral.status !== 'APPROVED' &&
-      referral.alumniId !== user?.id
-    ) {
-      return false;
-    }
+  const filteredReferrals = useMemo(
+    () =>
+      referrals.filter((referral) => {
+        // Students and Alumni can only see APPROVED referrals (or their own if they created it)
+        if (
+          (user?.role === 'STUDENT' || user?.role === 'ALUM') &&
+          referral.status !== 'APPROVED' &&
+          referral.alumniId !== user?.id
+        ) {
+          return false;
+        }
 
-    const matchesStatus =
-      filterStatus === 'ALL' || referral.status === filterStatus;
-    const matchesSearch =
-      referral.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      referral.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      referral.location.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
-  });
+        const matchesStatus =
+          filterStatus === 'ALL' || referral.status === filterStatus;
+        const matchesSearch =
+          referral.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          referral.jobTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          referral.location.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesStatus && matchesSearch;
+      }),
+    [referrals, user?.role, user?.id, filterStatus, searchQuery]
+  );
 
   if (loading) {
     return (

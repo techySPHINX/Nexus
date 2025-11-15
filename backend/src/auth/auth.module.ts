@@ -24,7 +24,7 @@ import { AuditLogService } from '../common/services/audit-log.service';
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: '15m', // Shorter access token expiry
+          expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m', // Shorter access token expiry
         },
       }),
     }),

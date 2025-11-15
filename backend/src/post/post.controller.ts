@@ -77,6 +77,19 @@ export class PostController {
     });
   }
 
+  @Get('recent')
+  @ApiOperation({ summary: 'Get recent posts' })
+  @ApiResponse({ status: 200, description: 'List of recent posts.' })
+  getRecentPosts(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    const pageNum = page ?? 1;
+    const limitNum = limit ?? 10;
+    return this.postService.getRecentPosts(userId, pageNum, limitNum);
+  }
+
   /**
    * Retrieves the personalized feed for the current authenticated user.
    * @param userId - The ID of the current user (extracted from JWT).

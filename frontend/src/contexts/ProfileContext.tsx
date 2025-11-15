@@ -72,7 +72,7 @@ const ProfileContext = createContext<ProfileContextType>({
   setError: () => {},
 });
 
-export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
+const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { user } = useAuth();
@@ -324,3 +324,5 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 export const useProfile = () => useContext(ProfileContext);
+
+export default ProfileProvider;

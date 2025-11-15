@@ -1,7 +1,8 @@
 import React from 'react';
-import { Grid, Box, Skeleton } from '@mui/material';
+import { Box, Grid, Skeleton } from '@mui/material';
 import StartupCard from './StartupCard';
 import { StartupSummary } from '@/types/StartupType';
+import { motion } from 'framer-motion';
 
 interface Props {
   startups: StartupSummary[];
@@ -13,6 +14,7 @@ interface Props {
   onView?: (startup: StartupSummary) => void | Promise<void>;
   onEdit?: (startup: StartupSummary) => void | Promise<void>;
   onDelete?: (id: string) => void | Promise<void>;
+  tab: number;
 }
 
 const StartupGrid: React.FC<Props> = ({
@@ -22,44 +24,106 @@ const StartupGrid: React.FC<Props> = ({
   onView,
   onEdit,
   onDelete,
+  tab,
 }) => {
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  };
+  const itemVariants = {
+    hidden: { y: 20, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.5,
+      },
+    },
+  };
   if (loading && startups.length === 0) {
-    // show skeletons (a small grid) while loading first page
+    // show skeletons matching the StartupCard layout
     const skeletons = Array.from({ length: 8 }).map((_, i) => (
-      <Grid item xs={12} sm={6} md={4} lg={3} key={`sk-${i}`}>
-        <Box sx={{ p: 0.5 }}>
+      <Box key={`sk-${i}`} sx={{ width: '100%' }}>
+        {/* image/banner */}
+        <Box sx={{ borderRadius: 2, overflow: 'hidden' }}>
+          <Skeleton variant="rectangular" height={140} />
+        </Box>
+
+        {/* avatar + title + subtitle */}
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+          <Skeleton variant="circular" width={40} height={40} />
+          <Box sx={{ ml: 1, flex: 1 }}>
+            <Skeleton width="60%" height={20} />
+            <Skeleton width="40%" height={16} sx={{ mt: 0.5 }} />
+          </Box>
+        </Box>
+
+        {/* tags/chips */}
+        <Box sx={{ display: 'flex', gap: 1, mt: 1, flexWrap: 'wrap' }}>
           <Skeleton
             variant="rectangular"
-            height={160}
-            sx={{ borderRadius: 2 }}
+            width={64}
+            height={26}
+            sx={{ borderRadius: 12 }}
           />
-          <Skeleton width="60%" sx={{ mt: 1 }} />
-          <Skeleton width="40%" />
+          <Skeleton
+            variant="rectangular"
+            width={48}
+            height={26}
+            sx={{ borderRadius: 12 }}
+          />
+          <Skeleton
+            variant="rectangular"
+            width={80}
+            height={26}
+            sx={{ borderRadius: 12 }}
+          />
         </Box>
-      </Grid>
+
+        {/* actions (follow/view) */}
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+          <Skeleton width={90} height={36} sx={{ borderRadius: 18 }} />
+        </Box>
+      </Box>
     ));
 
     return (
-      <Grid container spacing={3}>
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+        }}
+      >
         {skeletons}
-      </Grid>
+      </Box>
     );
   }
 
   return (
-    <Grid container spacing={3}>
-      {startups.map((s) => (
-        <Grid item xs={12} sm={6} md={4} key={s.id}>
-          <StartupCard
-            startup={s}
-            onFollowToggle={onFollowToggle}
-            onView={() => onView?.(s)}
-            onEdit={() => onEdit?.(s)}
-            onDelete={() => onDelete?.(s.id)}
-          />
-        </Grid>
-      ))}
-    </Grid>
+    <motion.div variants={containerVariants} initial="hidden" animate="visible">
+      <Grid container spacing={3}>
+        {startups.map((s) => (
+          <Grid item xs={12} md={6} key={s?.id || Math.random()}>
+            <motion.div variants={itemVariants}>
+              <StartupCard
+                startup={s}
+                onFollowToggle={onFollowToggle}
+                onView={() => onView?.(s)}
+                onEdit={() => onEdit?.(s)}
+                onDelete={() => onDelete?.(s.id)}
+                tab={tab}
+              />
+            </motion.div>
+          </Grid>
+        ))}
+      </Grid>
+    </motion.div>
   );
 };
 

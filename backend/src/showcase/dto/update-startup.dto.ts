@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUrl, IsEnum, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsUrl, IsEnum, IsNumber, IsArray } from 'class-validator';
 import { StartupStatus } from '@prisma/client';
 
 export class UpdateStartupDto {
@@ -31,6 +31,7 @@ export class UpdateStartupDto {
   fundingRaised?: number;
 
   @IsOptional()
-  @IsString()
-  monetizationModel?: string;
+  @IsArray()
+  @IsString({ each: true })
+  monetizationModel?: string[];
 }

@@ -1,4 +1,11 @@
 // StartupType.ts
+export enum StartupStatus {
+  IDEA = 'IDEA',
+  PROTOTYPING = 'PROTOTYPING',
+  BETA = 'BETA',
+  LAUNCHED = 'LAUNCHED',
+}
+
 export interface StartupComment {
   id: string;
   comment: string;
@@ -26,25 +33,41 @@ export interface StartupCommentsResponse {
 export interface StartupSummary {
   id: string;
   name: string;
-  description: string;
   imageUrl?: string;
   websiteUrl?: string;
-  status?: string;
+  status?: StartupStatus;
   founderId?: string;
   createdAt?: string;
   fundingGoal?: number;
   fundingRaised?: number;
-  monetizationModel?: string;
+  monetizationModel?: string[];
   isFollowing?: boolean;
   followersCount?: number;
 }
 
 export interface StartupDetail extends StartupSummary {
+  description: string;
   founder?: {
     id: string;
     name?: string;
     profile?: { avatarUrl?: string };
   };
+}
+
+export interface CreateStartupSummary {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl?: string;
+  websiteUrl?: string;
+  status?: StartupStatus;
+  founderId?: string;
+  createdAt?: string;
+  fundingGoal?: number;
+  fundingRaised?: number;
+  monetizationModel?: string[];
+  isFollowing?: boolean;
+  followersCount?: number;
 }
 
 export default StartupSummary;

@@ -37,9 +37,59 @@ export class SubCommunityController {
   }
 
   @Get()
-  async findAll(@GetCurrentUser('userId') userId: string) {
-    return this.subCommunityService.findAllSubCommunities(userId);
+  async findAll(
+    @Query('compact') compact?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    // parse compact safely from query string
+    const useCompact = compact === undefined ? true : compact === 'true' || compact === '1';
+    // if pagination params provided, parse numbers
+    const p = page ? Number(page) : undefined;
+    const l = limit ? Number(limit) : undefined;
+    return this.subCommunityService.findAllSubCommunities(userId, {
+      compact: useCompact,
+      page: p,
+      limit: l,
+    });
   }
+
+  // Get current user's communities categorized by role (owned/moderated/member)
+
+  @Get('my/owned')
+  async myOwned(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    const p = page ? Number(page) : 1;
+    const l = limit ? Number(limit) : 6;
+    return this.subCommunityService.findMyOwnedSubCommunities(userId, p, l);
+  }
+
+  @Get('my/moderated')
+  async myModerated(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    const p = page ? Number(page) : 1;
+    const l = limit ? Number(limit) : 6;
+    return this.subCommunityService.findMyModeratedSubCommunities(userId, p, l);
+  }
+
+  @Get('my/member')
+  async myMember(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @GetCurrentUser('userId') userId?: string,
+  ) {
+    const p = page ? Number(page) : 1;
+    const l = limit ? Number(limit) : 6;
+    return this.subCommunityService.findMyMemberSubCommunities(userId, p, l);
+  }
+
 
   @Get(':id')
   async findOne(
@@ -52,12 +102,14 @@ export class SubCommunityController {
   @Get('type/:type')
   async findByType(
     @Param('type') type: string,
+    @Query('q') q: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 20,
     @GetCurrentUser('userId') userId: string,
   ) {
     return this.subCommunityService.findSubCommunityByType(
       type,
+      q,
       page,
       limit,
       userId,

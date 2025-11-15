@@ -77,7 +77,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Handle Throttler exceptions
     else if (exception instanceof ThrottlerException) {
       statusCode = HttpStatus.TOO_MANY_REQUESTS;
-      message = 'Too many requests, please try again later';
+      message = 'Too many requests, please slow down';
       error = 'ThrottlerException';
     }
     // Handle unknown errors

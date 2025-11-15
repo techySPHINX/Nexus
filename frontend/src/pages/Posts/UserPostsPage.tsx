@@ -28,7 +28,7 @@ import {
 
 type PostStatusFilter = 'approved' | 'pending' | 'rejected';
 
-export const UserPostsPage: React.FC = () => {
+const UserPostsPage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const { userPosts, getUserPosts, pagination, loading, clearUserPosts } =
     usePosts();
@@ -371,3 +371,5 @@ export const UserPostsPage: React.FC = () => {
     </Box>
   );
 };
+
+export default UserPostsPage;

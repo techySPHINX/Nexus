@@ -1,8 +1,27 @@
-// StartupCard.tsx
 import React from 'react';
 import { StartupSummary } from '@/types/StartupType';
 import { motion } from 'framer-motion';
-import Tooltip from '@mui/material/Tooltip';
+import {
+  Box,
+  Typography,
+  Avatar,
+  LinearProgress,
+  Tooltip,
+  IconButton,
+  Chip,
+  useMediaQuery,
+  useTheme,
+} from '@mui/material';
+import {
+  Edit,
+  Delete,
+  Add,
+  Check,
+  TrendingUp,
+  People,
+  AttachMoney,
+  Language,
+} from '@mui/icons-material';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Props {
@@ -11,6 +30,7 @@ interface Props {
   onView?: () => void;
   onEdit?: (startup: StartupSummary) => void;
   onDelete?: (startupId: string) => void;
+  tab: number;
 }
 
 const StartupCard: React.FC<Props> = ({
@@ -19,323 +39,448 @@ const StartupCard: React.FC<Props> = ({
   onView,
   onEdit,
   onDelete,
+  tab,
 }) => {
   const { user } = useAuth();
-  const getStatusColor = (status: string) => {
-    const colors = {
-      LAUNCHED: {
-        bg: 'bg-emerald-50',
-        text: 'text-emerald-700',
-        border: 'border-emerald-200',
-      },
-      BETA: {
-        bg: 'bg-blue-50',
-        text: 'text-blue-700',
-        border: 'border-blue-200',
-      },
-      PROTOTYPING: {
-        bg: 'bg-amber-50',
-        text: 'text-amber-700',
-        border: 'border-amber-200',
-      },
-      IDEA: {
-        bg: 'bg-slate-50',
-        text: 'text-slate-700',
-        border: 'border-slate-200',
-      },
-    };
-    return colors[status as keyof typeof colors] || colors.IDEA;
-  };
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('lg'));
 
-  const getStatusIcon = (status: string) => {
-    const icons = {
-      LAUNCHED: '🚀',
-      BETA: '🔧',
-      PROTOTYPING: '🛠️',
-      IDEA: '💡',
-    };
-    return icons[status as keyof typeof icons] || '💡';
-  };
-
-  const statusColor = getStatusColor(startup.status || 'IDEA');
-  const statusIcon = getStatusIcon(startup.status || 'IDEA');
   const isOwner = user?.id === startup.founderId;
-
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) return `$${(num / 1000000).toFixed(1)}M`;
-    if (num >= 1000) return `$${(num / 1000).toFixed(1)}K`;
-    return `$${num}`;
-  };
-
+  const hasFunding = !!startup.fundingGoal;
+  const hasMonetization =
+    Array.isArray(startup.monetizationModel) &&
+    startup.monetizationModel.length > 0;
   const fundingProgress = startup.fundingGoal
     ? Math.min(100, ((startup.fundingRaised || 0) / startup.fundingGoal) * 100)
     : 0;
 
-  return (
-    <motion.article
-      // make card focusable and keyboard accessible
-      tabIndex={0}
-      role="button"
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onView?.();
-        }
-      }}
-      className="group bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full hover:shadow-xl transition-all duration-300 hover:border-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300"
-      whileHover={{ y: -4 }}
-      whileTap={{ scale: 0.98 }}
-      layout
-    >
-      {/* Image Section */}
-      <div className="relative overflow-hidden">
-        {startup.imageUrl ? (
-          <img
-            src={startup.imageUrl}
-            alt={startup.name}
-            className="w-full h-40 object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="w-full h-40 bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center">
-            <div className="text-4xl opacity-20">🚀</div>
-          </div>
-        )}
+  const handleFollow = () => onFollowToggle?.(startup, !!startup.isFollowing);
 
-        {/* Status Badge */}
-        <div
-          className={`absolute top-3 left-3 px-3 py-1.5 rounded-full ${statusColor.bg} ${statusColor.text} ${statusColor.border} border backdrop-blur-sm flex items-center gap-1.5 text-xs font-medium`}
+  const getStatusColor = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      LAUNCHED: '#10b981',
+      BETA: '#3b82f6',
+      PROTOTYPING: '#f59e0b',
+      LIVE: '#ef4444',
+      IDEA: '#6b7280',
+    };
+    return statusMap[status.toUpperCase()] || statusMap.IDEA;
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000000) return `₹${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `₹${(num / 1000).toFixed(1)}K`;
+    return `₹${num}`;
+  };
+
+  // Content sections that adjust based on available data
+  const renderContentSections = () => {
+    const sections = [];
+
+    // Always show monetization if available
+    if (hasMonetization) {
+      sections.push(
+        <Box
+          key="monetization"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            mb: 1,
+          }}
         >
-          <span>{statusIcon}</span>
-          <span className="capitalize">
-            {startup.status?.toLowerCase() || 'idea'}
-          </span>
-        </div>
-
-        {/* Owner Actions */}
-        {isOwner && (
-          <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <motion.button
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit?.(startup);
-              }}
-              className="p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm hover:bg-blue-50 hover:text-blue-600 transition-colors duration-200"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                />
-              </svg>
-            </motion.button>
-            <motion.button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete?.(startup.id);
-              }}
-              className="p-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm hover:bg-red-50 hover:text-red-600 transition-colors duration-200"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                />
-              </svg>
-            </motion.button>
-          </div>
-        )}
-      </div>
-
-      {/* Content Section */}
-      <div className="p-5 flex-1 flex flex-col">
-        {/* Title and Basic Info */}
-        <div className="flex-1">
-          <h3 className="font-bold text-lg text-gray-900 leading-tight line-clamp-2 mb-2 group-hover:text-blue-600 transition-colors duration-200">
-            {startup.name}
-          </h3>
-        </div>
-
-        {/* Funding Progress */}
-        {startup.fundingGoal && (
-          <div className="mb-4">
-            <div className="flex justify-between text-xs text-gray-600 mb-2">
-              <span className="font-medium">Funding Progress</span>
-              <span className="font-semibold">
-                {formatNumber(startup.fundingRaised || 0)} /{' '}
-                {formatNumber(startup.fundingGoal)}
-              </span>
-            </div>
-            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-              <motion.div
-                className="bg-gradient-to-r from-green-500 to-emerald-500 h-2 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${fundingProgress}%` }}
-                transition={{ duration: 1, ease: 'easeOut' }}
-              />
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>{fundingProgress.toFixed(1)}% funded</span>
-              <span>
-                {(
-                  ((startup.fundingRaised || 0) / startup.fundingGoal) *
-                  100
-                ).toFixed(1)}
-                %
-              </span>
-            </div>
-          </div>
-        )}
-
-        {/* Stats and Metadata */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <div className="flex items-center gap-4 text-sm text-gray-500">
-            <div className="flex items-center gap-1">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-              <motion.span
-                // animate a subtle pop when followersCount changes
-                key={startup.followersCount ?? 0}
-                initial={{ scale: 1 }}
-                animate={{ scale: [1, 1.12, 1] }}
-                transition={{ duration: 0.35 }}
-                className="font-semibold text-gray-900"
-                aria-live="polite"
-              >
-                {startup.followersCount ?? 0}
-              </motion.span>
-            </div>
-
-            {startup.monetizationModel && (
-              <div className="hidden sm:flex items-center gap-1">
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-                  />
-                </svg>
-                <span className="truncate max-w-[80px]">
-                  {startup.monetizationModel}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* View Button - Always visible */}
-          <motion.button
-            onClick={onView}
-            className="text-sm text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1 transition-colors duration-200"
-            whileHover={{ x: 2 }}
+          <AttachMoney
+            sx={{ fontSize: { xs: 16, sm: 18 }, color: 'success.main' }}
+          />
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: { xs: '0.8rem', sm: '0.9rem' },
+              fontWeight: 500,
+              color: 'text.primary',
+            }}
           >
-            View
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5l7 7-7 7"
-              />
-            </svg>
-          </motion.button>
-        </div>
-      </div>
+            {Array.isArray(startup.monetizationModel)
+              ? startup.monetizationModel.join(', ')
+              : String(startup.monetizationModel || '')}
+          </Typography>
+        </Box>
+      );
+    }
 
-      {/* Action Footer */}
-      {!isOwner && (
-        <div className="px-5 pb-4">
-          <Tooltip title={startup.isFollowing ? 'Unfollow' : 'Follow'} arrow>
-            <motion.button
-              className={`w-full py-2.5 px-4 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2 ${
-                startup.isFollowing
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-200'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-sm hover:shadow-md'
-              }`}
-              onClick={() => onFollowToggle?.(startup, !!startup.isFollowing)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              aria-pressed={!!startup.isFollowing}
-              aria-label={
-                startup.isFollowing ? 'Unfollow startup' : 'Follow startup'
-              }
+    // Always show funding progress if available
+    if (hasFunding) {
+      sections.push(
+        <Box key="funding" sx={{ width: '100%', mb: 1.5 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              mb: 0.5,
+              gap: 1,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <TrendingUp sx={{ fontSize: { xs: 16, sm: 18 } }} />
+              <Typography
+                variant="caption"
+                fontWeight={600}
+                sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+              >
+                Funding
+              </Typography>
+            </Box>
+            <Typography
+              variant="caption"
+              fontWeight={600}
+              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
             >
-              {startup.isFollowing ? (
-                <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Following
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Follow Startup
-                </>
-              )}
-            </motion.button>
+              {formatNumber(startup.fundingRaised || 0)} /{' '}
+              {formatNumber(startup.fundingGoal || 0)}
+            </Typography>
+          </Box>
+          <LinearProgress
+            variant="determinate"
+            value={fundingProgress}
+            sx={{
+              height: { xs: 4, sm: 6 },
+              borderRadius: 3,
+              backgroundColor: 'grey.200',
+              '& .MuiLinearProgress-bar': {
+                borderRadius: 3,
+                backgroundColor: fundingProgress >= 100 ? '#10b981' : '#3b82f6',
+              },
+            }}
+          />
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{
+              display: 'block',
+              textAlign: 'center',
+              mt: 0.5,
+              fontSize: { xs: '0.65rem', sm: '0.7rem' },
+            }}
+          >
+            {fundingProgress.toFixed(1)}% funded
+          </Typography>
+        </Box>
+      );
+    }
+    // Add spacing filler when content is minimal
+    const hasSubstantialContent = hasMonetization || hasFunding;
+    if (!hasSubstantialContent) {
+      sections.push(<Box key="spacer" sx={{ flex: 1, minHeight: '20px' }} />);
+    }
+
+    return sections;
+  };
+
+  const createdDate = startup.createdAt ? new Date(startup.createdAt) : null;
+  const formattedCreated = createdDate
+    ? createdDate.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      })
+    : '';
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        display: 'flex',
+        alignItems: 'stretch',
+        minHeight: '140px',
+        height: '100%',
+        position: 'relative',
+        gap: 0,
+        border: '1px solid #e5e7eb',
+        borderRadius: '16px',
+        backgroundColor: 'white',
+        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1)',
+      }}
+      className="hover:shadow-lg transition-all"
+    >
+      {/* Logo Section - Consistent height */}
+      <Box
+        sx={{
+          width: { xs: '80px', sm: '100px', lg: '120px' },
+          minWidth: { xs: '80px', sm: '100px', lg: '120px' },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: { xs: 1, sm: 2 },
+          borderRight: '1px solid',
+          borderColor: 'divider',
+          borderTopLeftRadius: '16px',
+          borderBottomLeftRadius: '16px',
+          position: 'relative',
+          overflow: 'hidden',
+          // light background design: subtle gradient + soft decorative blobs
+          background:
+            'linear-gradient(180deg, rgba(99,102,241,0.04), rgba(59,130,246,0.02))',
+          // add a faint striped texture for depth
+          backgroundImage:
+            'linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0)), repeating-linear-gradient(45deg, rgba(0,0,0,0.01) 0 1px, transparent 1px 8px)',
+        }}
+      >
+        {/* Decorative soft blobs */}
+        <Box
+          sx={{
+            position: 'absolute',
+            width: { xs: 56, sm: 72, lg: 88 },
+            height: { xs: 56, sm: 72, lg: 88 },
+            borderRadius: '50%',
+            background:
+              'radial-gradient(circle at 30% 30%, rgba(99,102,241,0.12), rgba(99,102,241,0.04) 40%, transparent 60%)',
+            top: -10,
+            left: -10,
+            pointerEvents: 'none',
+            filter: 'blur(6px)',
+            opacity: 0.95,
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            width: { xs: 36, sm: 48, lg: 56 },
+            height: { xs: 36, sm: 48, lg: 56 },
+            borderRadius: '50%',
+            background:
+              'radial-gradient(circle at 70% 70%, rgba(99,102,241,0.08), rgba(59,130,246,0.02) 40%, transparent 60%)',
+            bottom: -8,
+            right: -8,
+            pointerEvents: 'none',
+            filter: 'blur(4px)',
+            opacity: 0.9,
+          }}
+        />
+
+        <Avatar
+          src={startup.imageUrl}
+          alt={startup.name}
+          sx={{
+            width: { xs: 60, sm: 80, lg: 100 },
+            height: { xs: 60, sm: 80, lg: 100 },
+            borderRadius: 2,
+            fontSize: { xs: '1.5rem', sm: '2rem' },
+            backgroundColor: 'background.paper',
+            boxShadow: '0 6px 18px rgba(15,23,42,0.06)',
+            border: '1px solid rgba(15,23,42,0.04)',
+            zIndex: 1,
+          }}
+        >
+          🚀
+        </Avatar>
+      </Box>
+
+      {/* Main Content Section - Flexible but consistent */}
+      <Box
+        sx={{
+          flex: 1,
+          minWidth: 0,
+          cursor: onView ? 'pointer' : 'default',
+          padding: { xs: 1.5, sm: 2, lg: 2.5 },
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* Top Section: Header and Status */}
+        <Box onClick={onView} sx={{ minHeight: { sm: 140 } }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: { xs: 1, sm: 2 },
+              mb: 1.5,
+              flexWrap: 'row',
+              flexDirection: { xs: 'column', lg: 'row' }, // if md then row, else column
+            }}
+          >
+            <Typography
+              variant="h6"
+              fontWeight={700}
+              sx={{
+                fontSize: { xs: '1rem', sm: '1.1rem', lg: '1.25rem' },
+                lineHeight: 1.2,
+                flex: 1,
+                minWidth: 0,
+                wordBreak: 'break-word',
+              }}
+            >
+              {startup.name}
+            </Typography>
+            <Chip
+              label={startup.status ?? 'IDEA'}
+              size="small"
+              sx={{
+                backgroundColor: getStatusColor(startup.status ?? 'IDEA'),
+                color: 'white',
+                fontWeight: 600,
+                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                height: { xs: 24, sm: 28 },
+                '& .MuiChip-label': {
+                  px: { xs: 1, sm: 1.5 },
+                },
+                mt: { xs: 1, md: 0 }, // add top margin when stacked
+              }}
+            />
+          </Box>
+
+          {/* Dynamic Content Sections */}
+          {renderContentSections()}
+        </Box>
+
+        {/* Bottom Section: Followers - Always present for consistency */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            pt: 1,
+            borderTop: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+          <Tooltip title={createdDate ? createdDate.toLocaleString() : ''}>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {createdDate ? `${formattedCreated}` : 'No date'}
+            </Typography>
           </Tooltip>
-        </div>
-      )}
-    </motion.article>
+          <Tooltip title="Followers">
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{
+                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+              }}
+            >
+              <People sx={{ fontSize: { xs: 14, sm: 16 } }} />
+              {startup.followersCount || 0}
+            </Typography>
+          </Tooltip>
+
+          {/* view websiteUrl */}
+          {startup.websiteUrl && (
+            <Tooltip title="Visit Website">
+              <IconButton
+                color="primary"
+                onClick={() => {
+                  if (startup.websiteUrl) {
+                    window.open(startup.websiteUrl, '_blank');
+                  }
+                }}
+                size="small"
+                sx={{
+                  backgroundColor: 'primary.50',
+                  '&:hover': {
+                    backgroundColor: 'primary.100',
+                  },
+                }}
+              >
+                <Language fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+
+          {/* View button in main content area for mobile */}
+          {isOwner ? (
+            tab !== 0 ? (
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: { xs: 0.5, sm: 1 },
+                  flexDirection: 'row',
+                }}
+              >
+                <Tooltip title="Edit">
+                  <IconButton
+                    onClick={() => onEdit?.(startup)}
+                    size={isMobile ? 'small' : 'medium'}
+                    color="info"
+                  >
+                    <Edit fontSize={isMobile ? 'small' : 'medium'} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Delete">
+                  <IconButton
+                    onClick={() => onDelete?.(startup.id)}
+                    size={isMobile ? 'small' : 'medium'}
+                    color="error"
+                  >
+                    <Delete fontSize={isMobile ? 'small' : 'medium'} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            ) : (
+              <Box
+                sx={{
+                  display: 'flex',
+                  gap: { xs: 0.5, sm: 1 },
+                  width: 100,
+                  flexDirection: 'row',
+                }}
+              ></Box>
+            )
+          ) : (
+            <Tooltip title={startup.isFollowing ? 'Unfollow' : 'Follow'}>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleFollow}
+                style={{
+                  borderRadius: '20px',
+                  padding: isMobile ? '6px 12px' : '8px 16px',
+                  fontSize: isMobile ? '0.7rem' : '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: startup.isFollowing ? '1px solid #d1d5db' : 'none',
+                  background: startup.isFollowing
+                    ? '#f9fafb'
+                    : 'linear-gradient(to right, #3b82f6, #6366f1)',
+                  color: startup.isFollowing ? '#374151' : '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  minWidth: isMobile ? 'auto' : '100px',
+                  justifyContent: 'center',
+                  height: isMobile ? '32px' : '36px',
+                }}
+              >
+                {startup.isFollowing ? (
+                  <>
+                    <Check fontSize={isMobile ? 'small' : 'medium'} />
+                    {!isMobile}
+                  </>
+                ) : (
+                  <>
+                    <Add fontSize={isMobile ? 'small' : 'medium'} />
+                    {!isMobile && 'Follow'}
+                  </>
+                )}
+              </motion.button>
+            </Tooltip>
+          )}
+        </Box>
+      </Box>
+    </motion.div>
   );
 };
 

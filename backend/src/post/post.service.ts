@@ -108,6 +108,92 @@ export class PostService {
     });
   }
 
+  async getRecentPosts(userId: string, page = 1, limit = 6) {
+    // coerce inputs to numbers to avoid NaN when called with string query params
+    page = Number(page) || 1;
+    limit = Number(limit) || 6;
+
+    if (!Number.isInteger(page) || !Number.isInteger(limit) || page < 1 || limit < 1 || limit > 50) {
+      throw new BadRequestException('Invalid pagination parameters');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const skip = (page - 1) * limit;
+
+    // Remove explicit subCommunityId: null filter so posts from any community are considered.
+    const whereClause: any = { status: PostStatus.APPROVED, subCommunityId: null, authorId: { not: userId } };
+
+    const [posts, total] = await Promise.all([
+      this.prisma.post.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          subject: true,
+          content: true,
+          imageUrl: true,
+          type: true,
+          createdAt: true,
+          author: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              profile: {
+                select: { avatarUrl: true },
+              },
+            },
+          },
+          _count: {
+            select: {
+              Vote: true,
+              Comment: true,
+            },
+          },
+          Vote: {
+            where: { userId, targetType: VoteTargetType.POST },
+            select: { type: true },
+          }
+        },
+      }),
+      this.prisma.post.count({ where: whereClause }),
+    ]);
+
+    if(!posts){
+      throw new NotFoundException('Posts not found');
+    }
+
+    const isVotedPosts = posts.map((post) => {
+      const hasVoted = !!(post as any).Vote?.[0]?.type;
+      const rest = { ...(post as any) };
+      delete rest.Vote;
+      return {
+        ...rest,
+        hasVoted,
+      };
+    });
+
+    return {
+      posts: isVotedPosts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
+
   /**
    * Retrieves a personalized feed of approved posts for a user.
    * Posts are ranked based on connections, interests, skills, and engagement.
@@ -160,6 +246,7 @@ export class PostService {
     const whereClause: any = {
       status: PostStatus.APPROVED,
       subCommunityId: null, // Ensure only non-subcommunity posts appear on the main feed
+      authorId: { not: userId },
     };
 
     if (subCommunityId) {
@@ -264,13 +351,29 @@ export class PostService {
       throw new BadRequestException('Invalid pagination parameters');
     }
 
-    // Check if the user is a member of the sub-community
-    const member = await this.prisma.subCommunityMember.findFirst({
+    // First check sub-community visibility. If it's private, ensure the user is a member.
+    const subCommunity = await this.prisma.subCommunity.findUnique({
+      where: { id: subCommunityId },
+      select: { isPrivate: true },
+    });
+
+    if (!subCommunity) {
+      throw new NotFoundException('Sub-community not found');
+    }
+
+    let member = null;
+    if (subCommunity.isPrivate) {
+      // Private sub-community: user must be a member
+      member = await this.prisma.subCommunityMember.findFirst({
       where: {
         userId: userId,
         subCommunityId: subCommunityId,
       },
-    });
+      });
+    } else {
+      // Public sub-community: treat as implicitly accessible (avoid blocking later member check)
+      member = { userId, subCommunityId };
+    }
 
     if (!member) {
       throw new ForbiddenException(

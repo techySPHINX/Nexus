@@ -13,6 +13,7 @@ model User {
   password                              String?                       @db.VarChar(255)
   name                                  String?
   role                                  Role                          @default(STUDENT)
+  graduationYear                        Int?
   description                           String?
   iconUrl                               String?
   bannerUrl                             String?
@@ -65,9 +66,9 @@ model User {
   postedReferrals                       Referral[]                    @relation("PostedReferrals")
   refreshTokens                         RefreshToken[]
   securityEvents                        SecurityEvent[]
-  startups                              Startup[]
   startupComment                        StartupComment[]
   startupFollowers                      StartupFollower[]
+  startups                              Startup[]
   userPoints                            UserPoints?
   userSessions                          UserSession[]
   verificationDocuments                 VerificationDocument[]
@@ -111,34 +112,34 @@ model Project {
 }
 
 model Startup {
-  id                String        @id @default(uuid())
+  id                String            @id @default(uuid())
   name              String
   description       String
   imageUrl          String
   websiteUrl        String
   founderId         String
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  status            StartupStatus @default(IDEA)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  status            StartupStatus     @default(IDEA)
   fundingGoal       Float?
   fundingRaised     Float?
-  monetizationModel String?
-  founder           User          @relation(fields: [founderId], references: [id])
+  monetizationModel String[]
   startupComment    StartupComment[]
   startupFollower   StartupFollower[]
+  founder           User              @relation(fields: [founderId], references: [id])
 
   @@index([createdAt])
   @@map("startups")
 }
 
 model StartupComment {
-  id         String   @id @default(uuid())
-  startupId  String
-  userId     String
-  comment    String
-  createdAt  DateTime @default(now())
-  startup    Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [userId], references: [id])
+  id        String   @id @default(uuid())
+  startupId String
+  userId    String
+  comment   String
+  createdAt DateTime @default(now())
+  startup   Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([createdAt])
   @@map("startup_comments")
@@ -253,6 +254,7 @@ model Feedback {
 model Profile {
   id           String        @id @default(uuid())
   userId       String        @unique
+  studentId    String?
   bio          String?
   location     String?       @db.VarChar(100)
   interests    String?
@@ -426,6 +428,8 @@ model Referral {
   alumniId     String
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
+  deadline     DateTime
+  referralLink String?
   applications ReferralApplication[]
   postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
 
@@ -535,14 +539,23 @@ model SubCommunity {
   status                        SubCommunityStatus           @default(ACTIVE)
   ownerId                       String
   subCommunityCreationRequestId String?                      @unique
-  type                          String                       @default("OTHER")
+  typeId                        String?
   reports                       ContentReport[]
   flairs                        Flair[]
   joinRequests                  JoinRequest[]
   owner                         User                         @relation("OwnedSubCommunities", fields: [ownerId], references: [id])
   creationRequest               SubCommunityCreationRequest? @relation(fields: [subCommunityCreationRequestId], references: [id])
+  type                          SubCommunityType?            @relation(fields: [typeId], references: [id], onDelete: Cascade)
   members                       SubCommunityMember[]
   posts                         Post[]
+}
+
+model SubCommunityType {
+  id             String         @id @default(cuid())
+  name           String         @unique @db.VarChar(50)
+  subCommunities SubCommunity[]
+
+  @@map("sub_community_types")
 }
 
 model SubCommunityMember {

@@ -21,6 +21,19 @@ import {
 export class SubCommunityService {
   constructor(private prisma: PrismaService) {}
 
+  private async getOrCreateTypeId(typeName?: string) {
+    if (!typeName) return null;
+    const name = typeName.toUpperCase();
+    let type = await this.prisma.subCommunityType.findUnique({
+      where: { name },
+    });
+    if (!type) {
+      type = await this.prisma.subCommunityType.create({
+        data: { name },
+      });
+    }
+    return type.id;
+  }
   async createSubCommunityInternal(data: {
     name: string;
     description: string;
@@ -29,15 +42,17 @@ export class SubCommunityService {
     ownerId: string;
     subCommunityCreationRequestId?: string;
   }) {
+    const typeId = await this.getOrCreateTypeId(data.type);
     const subCommunity = await this.prisma.subCommunity.create({
       data: {
         name: data.name,
         description: data.description,
-        type: data.type, // Add type
+        typeId,
         isPrivate: data.isPrivate,
         ownerId: data.ownerId,
         subCommunityCreationRequestId: data.subCommunityCreationRequestId,
       },
+      include: { owner: true },
     });
 
     // Add the owner as a member with OWNER role
@@ -45,7 +60,7 @@ export class SubCommunityService {
       data: {
         userId: data.ownerId,
         subCommunityId: subCommunity.id,
-        role: 'OWNER',
+        role: SubCommunityRole.OWNER,
       },
     });
 
@@ -53,38 +68,69 @@ export class SubCommunityService {
   }
 
   async createSubCommunity(dto: CreateSubCommunityDto) {
+    const typeId = dto.typeId || (await this.getOrCreateTypeId(dto.type));
     const subCommunity = await this.prisma.subCommunity.create({
       data: {
         name: dto.name,
         description: dto.description,
-        type: dto.type, // Add type
+        typeId,
         isPrivate: dto.isPrivate,
         ownerId: dto.ownerId,
       },
+      include: { owner: true },
     });
 
     await this.prisma.subCommunityMember.create({
       data: {
         userId: dto.ownerId,
         subCommunityId: subCommunity.id,
-        role: 'OWNER',
+        role: SubCommunityRole.OWNER,
       },
     });
 
     return subCommunity;
   }
 
-  async findAllSubCommunities(userId: string) {
+  async findAllSubCommunities(
+    userId: string | undefined,
+    options?: { compact?: boolean; page?: number; limit?: number },
+  ) {
     const where: Prisma.SubCommunityWhereInput = {
       OR: [{ isPrivate: false }, { members: { some: { userId } } }],
     };
 
-    // If userId is provided, include membership info
+    const compact = options?.compact ?? true;
+    const page = options?.page ?? 1;
+    const limit = options?.limit ?? 50;
+    const skip = (page - 1) * limit;
+
+    if (compact) {
+      // Return a compact summary to minimize bandwidth: only essential fields
+      return this.prisma.subCommunity.findMany({
+        where,
+        skip,
+        take: limit,
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          iconUrl: true,
+          isPrivate: true,
+          owner: { select: { id: true, name: true } },
+          _count: { select: { members: true, posts: true } },
+          type: { select: { id: true, name: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+    }
+
+    // full include when not compact
     if (userId) {
       return this.prisma.subCommunity.findMany({
         where,
         include: {
           owner: { select: { id: true, name: true, role: true } },
+          type: { select: { id: true, name: true } },
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },
@@ -92,18 +138,36 @@ export class SubCommunityService {
             where: { userId },
             select: { userId: true, role: true },
           },
+          posts: true,
         },
       });
     }
+
+    // If no userId provided, return public sub-communities with summary fields
+    return this.prisma.subCommunity.findMany({
+      where,
+      skip,
+      take: limit,
+      include: {
+        owner: { select: { id: true, name: true } },
+        type: { select: { id: true, name: true } },
+        _count: { select: { members: true, posts: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async findOneSubCommunity(id: string, userId?: string) {
     const subCommunity = await this.prisma.subCommunity.findUnique({
       where: { id },
       include: {
-        owner: { select: { id: true, name: true } },
+        owner: { select: { id: true, name: true, role: true, profile: { select: { avatarUrl: true } } } },
         members: {
-          include: {
+          select: {
+            id: true,
+            createdAt: true,
+            userId: true,
+            role: true,
             user: {
               select: {
                 id: true,
@@ -114,7 +178,7 @@ export class SubCommunityService {
             },
           },
         },
-        posts: { orderBy: { createdAt: 'desc' } },
+        type: { select: { id: true, name: true } },
         _count: {
           select: { members: true, posts: { where: { status: 'APPROVED' } } },
         },
@@ -143,23 +207,40 @@ export class SubCommunityService {
   // Service implementation
   async findSubCommunityByType(
     type: string,
+    q: string | undefined,
     page: number = 1,
     limit: number = 20,
     userId?: string,
   ) {
     const skip = (page - 1) * limit;
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found.');
+    let user = null;
+    if (userId) {
+      user = await this.prisma.user.findUnique({ where: { id: userId } });
+      if (!user) {
+        throw new NotFoundException('User not found.');
+      }
     }
 
     // For "ALL" type, return all subcommunities
-    const where =
-      type.toUpperCase() === 'ALL' ? {} : { type: type.toUpperCase() };
+    const whereBase =
+      type.toUpperCase() === 'ALL'
+        ? {}
+        : ({ type: { is: { name: type.toUpperCase() } } } as any);
+
+    const where = q
+      ? {
+          AND: [
+            whereBase,
+            {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+          ],
+        }
+      : whereBase;
 
     // Find sub-communities and total count, and mark if user is a member
     const [subCommunities, totalCount] = await Promise.all([
@@ -169,6 +250,7 @@ export class SubCommunityService {
         take: limit,
         include: {
           owner: { select: { id: true, name: true, role: true } },
+          type: { select: { id: true, name: true } },
           _count: {
             select: { members: true, posts: { where: { status: 'APPROVED' } } },
           },
@@ -179,7 +261,7 @@ export class SubCommunityService {
               }
             : undefined,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { updatedAt: 'desc' },
       }),
       this.prisma.subCommunity.count({ where }),
     ]);
@@ -199,23 +281,147 @@ export class SubCommunityService {
         hasPrev,
       },
     };
-
-    // const totalPages = Math.ceil(totalCount / limit);
-    // const hasNext = page < totalPages;
-    // const hasPrev = page > 1;
-
-    // return {
-    //   data: subCommunities,
-    //   pagination: {
-    //     page,
-    //     limit,
-    //     total: totalCount,
-    //     totalPages,
-    //     hasNext,
-    //     hasPrev,
-    //   },
-    // };
   }
+
+  async findMyOwnedSubCommunities(
+    userId: string | undefined,
+      ownedPage: number,
+      ownedLimit: number,
+  ) {
+    if (!userId) {
+      throw new NotFoundException('User not found');
+    }
+
+    const [ownedData, ownedTotal] = await Promise.all([
+      this.prisma.subCommunity.findMany({
+        where: { ownerId: userId },
+        skip: (ownedPage - 1) * ownedLimit,
+        take: ownedLimit,
+        include: {
+          owner: { select: { id: true, name: true, role: true } },
+          type: { select: { id: true, name: true } },
+          _count: {
+            select: { members: true, posts: { where: { status: 'APPROVED' } } },
+          },
+          members: {
+            where: { userId },
+            select: { userId: true, role: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.subCommunity.count({ where: { ownerId: userId } }),
+    ]);
+
+    const makePagination = (page: number, limit: number, total: number) => {
+      const totalPages = Math.ceil(total / limit) || 1;
+      return {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      };
+    };
+
+    return {
+      owned: { data: ownedData, pagination: makePagination(ownedPage, ownedLimit, ownedTotal) },
+    };
+  }
+
+  async findMyModeratedSubCommunities(userId: string | undefined, moderatedPage: number, moderatedLimit: number) {
+    if(!userId) {
+      throw new NotFoundException('User not found');
+    }
+
+    const [moderatedData, moderatedTotal] = await Promise.all([
+      this.prisma.subCommunity.findMany({
+        where: { members: { some: { userId, role: 'MODERATOR' } } },
+        skip: (moderatedPage - 1) * moderatedLimit,
+        take: moderatedLimit,
+        include: {
+          owner: { select: { id: true, name: true, role: true } },
+          type: { select: { id: true, name: true } },
+          _count: {
+            select: { members: true, posts: { where: { status: 'APPROVED' } } },
+          },
+          members: {
+            where: { userId },
+            select: { userId: true, role: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.subCommunity.count({
+        where: { members: { some: { userId, role: 'MODERATOR' } } },
+      }),
+    ]);
+
+    const makePagination = (page: number, limit: number, total: number) => {
+      const totalPages = Math.ceil(total / limit) || 1;
+      return {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      };
+    };
+
+    return {
+moderated: { data: moderatedData, pagination: makePagination(moderatedPage, moderatedLimit, moderatedTotal) },
+    };
+  };
+
+  async findMyMemberSubCommunities( userId: string | undefined, memberPage: number, memberLimit: number) {
+
+    const [memberData, memberTotal] = await Promise.all([
+      this.prisma.subCommunity.findMany({
+      where: {
+        members: { some: { userId } },
+        NOT: { ownerId: userId }, // exclude sub-communities owned by the user
+      },
+      skip: (memberPage - 1) * memberLimit,
+      take: memberLimit,
+      include: {
+        owner: { select: { id: true, name: true, role: true } },
+        type: { select: { id: true, name: true } },
+        _count: {
+        select: { members: true, posts: { where: { status: 'APPROVED' } } },
+        },
+        members: {
+        where: { userId },
+        select: { userId: true, role: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.subCommunity.count({
+      where: {
+        members: { some: { userId } },
+        NOT: { ownerId: userId }, // ensure count matches filtered results
+      },
+      }),
+    ]);
+
+    const makePagination = (page: number, limit: number, total: number) => {
+      const totalPages = Math.ceil(total / limit) || 1;
+      return {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      };
+    };
+
+    return {
+      member: { data: memberData, pagination: makePagination(memberPage, memberLimit, memberTotal) },
+    };
+  };
 
   async updateSubCommunity(
     id: string,

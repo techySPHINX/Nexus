@@ -6,11 +6,13 @@ import { SubCommunity } from '../../types/subCommunity';
 
 interface SubCommunitySectionProps {
   title: string;
-  type: string;
+  type: string | { id: string; name: string };
   communities: SubCommunity[];
   hasMore?: boolean;
   onLoadMore?: () => void;
   initialCount?: number;
+  isLoading?: boolean;
+  remainingCount?: number | undefined;
 }
 
 export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
@@ -20,9 +22,12 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
   hasMore = false,
   onLoadMore,
   initialCount = 6,
+  isLoading = false,
 }) => {
   const [showAll, setShowAll] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const typeKey = typeof type === 'string' ? type : type.name?.toLowerCase();
 
   const displayedCommunities = showAll
     ? communities
@@ -34,18 +39,41 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
       return;
     }
 
-    if (hasMore && onLoadMore && type !== 'all') {
-      setIsLoadingMore(true);
+    // If we already have more than the initial count loaded, just expand.
+    if (communities.length > initialCount) {
+      setShowAll(true);
+      return;
+    }
+
+    // Otherwise, if there are more pages available, load the next page and
+    // then expand. For recommended ('all') sections we don't attempt to load
+    // via this button.
+    if (hasMore && onLoadMore && typeKey !== 'all') {
+      if (!isLoading) setIsLoadingMore(true);
       try {
         await onLoadMore();
         setShowAll(true);
       } catch (error) {
         console.error('Failed to load more communities:', error);
       } finally {
-        setIsLoadingMore(false);
+        if (!isLoading) setIsLoadingMore(false);
       }
-    } else {
-      setShowAll(true);
+      return;
+    }
+
+    // Fallback: just expand
+    setShowAll(true);
+  };
+
+  const handleLoadMore = async () => {
+    if (!onLoadMore) return;
+    if (!isLoading) setIsLoadingMore(true);
+    try {
+      await onLoadMore();
+    } catch (error) {
+      console.error('Failed to load more communities:', error);
+    } finally {
+      if (!isLoading) setIsLoadingMore(false);
     }
   };
 
@@ -54,7 +82,7 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
 
   // Don't show "Show more" for recommended (type 'all')
   const shouldShowMoreButton =
-    type !== 'all' && (hasMore || communities.length > initialCount);
+    typeKey !== 'all' && (hasMore || communities.length > initialCount);
 
   return (
     <Box sx={{ mb: 4 }}>
@@ -107,28 +135,71 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
       </Grid>
 
       {shouldShowMoreButton && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-          <Button
-            onClick={handleShowMore}
-            variant="outlined"
-            sx={{
-              minWidth: '200px',
-              color: 'primary.main',
-              fontWeight: 600,
-              textTransform: 'none',
-              borderRadius: 2,
-            }}
-            startIcon={showAll ? <ExpandLess /> : <ExpandMore />}
-            disabled={isLoadingMore}
-          >
-            {isLoadingMore ? (
-              <CircularProgress size={16} />
-            ) : showAll ? (
-              'Show less'
-            ) : (
-              `Show ${communities.length - initialCount} more communities`
-            )}
-          </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3, gap: 2 }}>
+          {showAll ? (
+            // When expanded, show both "Show less" and "Load more" (if
+            // available). This allows the user to collapse while still
+            // loading additional pages.
+            <>
+              <Button
+                onClick={() => setShowAll(false)}
+                variant="outlined"
+                sx={{
+                  minWidth: '160px',
+                  color: 'primary.main',
+                  fontWeight: 600,
+                  textTransform: 'none',
+                  borderRadius: 2,
+                }}
+                startIcon={<ExpandLess />}
+                disabled={!!isLoading}
+              >
+                Show less
+              </Button>
+
+              {hasMore && (
+                <Button
+                  onClick={handleLoadMore}
+                  variant="outlined"
+                  sx={{
+                    minWidth: '160px',
+                    color: 'primary.main',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    borderRadius: 2,
+                  }}
+                  startIcon={<ExpandMore />}
+                  disabled={!!isLoading || isLoadingMore}
+                >
+                  {isLoading || isLoadingMore ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    `Load more`
+                  )}
+                </Button>
+              )}
+            </>
+          ) : (
+            <Button
+              onClick={handleShowMore}
+              variant="outlined"
+              sx={{
+                minWidth: '200px',
+                color: 'primary.main',
+                fontWeight: 600,
+                textTransform: 'none',
+                borderRadius: 2,
+              }}
+              startIcon={<ExpandMore />}
+              disabled={!!isLoading || isLoadingMore}
+            >
+              {isLoading || isLoadingMore ? (
+                <CircularProgress size={16} />
+              ) : (
+                `Show more`
+              )}
+            </Button>
+          )}
         </Box>
       )}
     </Box>

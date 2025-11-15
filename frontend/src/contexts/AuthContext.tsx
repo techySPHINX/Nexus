@@ -8,8 +8,9 @@ import React, {
 import axios from 'axios';
 import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
 import { jwtDecode } from 'jwt-decode';
+import { Role } from '@/types/profileType';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   name: string;
@@ -50,6 +51,14 @@ interface AuthResponse {
   user: User;
 }
 
+enum DocumentTypes {
+  STUDENT_ID = 'STUDENT_ID',
+  TRANSCRIPT = 'TRANSCRIPT',
+  DEGREE_CERTIFICATE = 'DEGREE_CERTIFICATE',
+  ALUMNI_CERTIFICATE = 'ALUMNI_CERTIFICATE',
+  EMPLOYMENT_PROOF = 'EMPLOYMENT_PROOF',
+}
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -58,8 +67,21 @@ interface AuthContextType {
     email: string,
     password: string,
     name: string,
-    role: string
+    role: Role,
+    documents: { documentType: DocumentTypes; documentUrl: string }[],
+    department?: string,
+    graduationYear?: number,
+    studentId?: string
   ) => Promise<void>;
+  registerWithDocuments: (
+    email: string,
+    name: string,
+    role: Role,
+    documents: { documentType: string; documentUrl: string }[],
+    department?: string,
+    graduationYear?: number,
+    studentId?: string
+  ) => Promise<string>;
   logout: () => void;
   loading: boolean;
 }
@@ -179,6 +201,46 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const registerWithDocuments = async (
+    email: string,
+    name: string,
+    role: Role,
+    documents: { documentType: string; documentUrl: string }[],
+    department?: string,
+    graduationYear?: number,
+    studentId?: string
+  ) => {
+    try {
+      const payload: Record<string, unknown> = {
+        email,
+        name,
+        role,
+        documents,
+      };
+
+      if (department) payload.department = department;
+      if (graduationYear) payload.graduationYear = graduationYear;
+      if (studentId) payload.studentId = studentId;
+
+      const response = await axios.post(
+        '/auth/register-with-documents',
+        payload
+      );
+      return response?.data?.message || 'Registration submitted successfully';
+    } catch (error: unknown) {
+      let message = 'Registration failed. Please try again.';
+      if (
+        axios.isAxiosError(error) &&
+        error.response &&
+        error.response.data &&
+        typeof error.response.data.message === 'string'
+      ) {
+        message = error.response.data.message;
+      }
+      throw new Error(message);
+    }
+  };
+
   const register = async (
     email: string,
     password: string,
@@ -266,6 +328,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     login,
     register,
+    registerWithDocuments,
     logout,
     loading,
   };

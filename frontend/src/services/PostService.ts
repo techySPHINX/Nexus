@@ -58,6 +58,25 @@ export async function createPostService(
   }
 }
 
+export async function getRecentPostsService(page?: number, limit?: number) {
+  try {
+    const { data } = await api.get('/posts/recent', {
+      params: {
+        page,
+        limit,
+      },
+    });
+    return data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to fetch recent posts'
+      );
+    }
+    throw new Error('Failed to fetch recent posts');
+  }
+}
+
 export async function getFeedService(page?: number, limit?: number) {
   try {
     const { data } = await api.get('/posts/feed', {

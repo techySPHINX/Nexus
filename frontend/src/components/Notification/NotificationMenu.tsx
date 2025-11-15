@@ -3,22 +3,25 @@ import {
   Popover,
   Box,
   Typography,
-  Chip,
   Button,
   CircularProgress,
   Alert,
   List,
-  ListItem,
   ListItemText,
   Divider,
   Snackbar,
   ClickAwayListener,
   Paper,
+  Avatar,
+  ListItemButton,
+  ListItemAvatar,
 } from '@mui/material';
 import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
-import React, { useState } from 'react';
 import CheckIcon from '@mui/icons-material/Check';
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
+import React, { useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
 interface NotificationMenuProps {
@@ -37,7 +40,6 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
   anchorEl = null,
   handleClose,
   open = false,
-  inline = false,
 }) => {
   const {
     markAsRead,
@@ -49,7 +51,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
     error,
   } = useNotification();
   const navigate = useNavigate();
-
+  const { isDark } = useTheme();
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
@@ -104,44 +106,68 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
   const isOpen = isAnchored ? Boolean(anchorEl) : open;
 
   // Inline-specific style adjustments per request
-  const headerBg = inline ? 'white' : 'primary.main';
-  const headerColor = inline ? 'text.primary' : 'white';
-  const markAllSx = inline ? { color: 'primary.main' } : { color: 'white' };
-  const unreadChipSx = inline
-    ? { ml: 1, backgroundColor: 'primary.main', color: 'white' }
-    : { ml: 1, color: 'white' };
-  const contentFontSize = inline ? '0.9rem' : undefined;
-  const titleFontSize = inline ? '1rem' : undefined;
-  const primaryTextSx = inline
-    ? { fontWeight: 'bold', fontSize: '0.9rem', color: 'text.primary' }
-    : { fontWeight: 'bold' };
-  const secondaryTextSx = inline ? { fontSize: '0.75rem' } : undefined;
+  // Use theme-aware palette values so dark mode looks correct
+  const headerBg = isDark ? 'primary.dark' : 'primary.main';
+  const headerColor = 'primary.contrastText';
+  const markAllSx = { color: 'primary.contrastText', fontSize: '0.8rem' };
+  // const unreadChipSx = {
+  //   ml: 1,
+  //   color: 'primary.contrastText',
+  //   bgcolor: 'primary.main',
+  // };
+  const contentFontSize = '0.95rem';
+  const titleFontSize = '1rem';
+  const primaryTextSx = {
+    fontWeight: 'bold',
+    fontSize: '0.95rem',
+    color: 'text.primary',
+  };
+  const secondaryTextSx = { fontSize: '0.85rem' };
 
   const content = (
     <Box
       sx={{
-        width: 350,
-        maxHeight: '80vh',
+        width: '60vh',
+        maxHeight: '70vh',
         display: 'flex',
         flexDirection: 'column',
-        bgcolor: inline ? 'white' : undefined,
-        color: inline ? 'text.primary' : undefined,
+        bgcolor: (theme) => theme.palette.background.paper,
+        color: (theme) => theme.palette.text.primary,
+        border: '1px solid',
+        borderColor: 'divider',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
+        borderRadius: '16px',
         fontSize: contentFontSize,
       }}
       role="dialog"
       aria-label="Notifications"
     >
-      <Box sx={{ p: 2, bgcolor: headerBg, color: headerColor }}>
+      <Box
+        sx={{
+          p: '0.7rem',
+          bgcolor: headerBg,
+          color: headerColor,
+          borderRadius: '16px 16px 0 0',
+        }}
+      >
         <Box display="flex" justifyContent="space-between" alignItems="center">
-          <Typography variant="h6" sx={{ fontSize: titleFontSize }}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontSize: titleFontSize,
+              width: '30vh',
+              paddingLeft: '1rem',
+              color: 'inherit',
+            }}
+          >
             Notifications
-            {unreadCount > 0 && (
+            {/* {unreadCount > 0 && (
               <Chip
                 label={`${unreadCount} unread`}
                 size="small"
                 sx={unreadChipSx}
               />
-            )}
+            )} */}
           </Typography>
           {unreadCount > 0 && (
             <Button
@@ -156,7 +182,19 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
         </Box>
       </Box>
 
-      <Box sx={{ flex: 1, overflow: 'auto' }}>
+      <Box
+        sx={{
+          flex: 1,
+          overflow: 'auto',
+          // custom thin scrollbar that matches the theme
+          '&::-webkit-scrollbar': { width: 8 },
+          '&::-webkit-scrollbar-track': { background: 'transparent' },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: (theme) => theme.palette.divider,
+            borderRadius: 8,
+          },
+        }}
+      >
         {loading ? (
           <Box display="flex" justifyContent="center" p={3}>
             <CircularProgress size={24} />
@@ -166,23 +204,58 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
             {error}
           </Alert>
         ) : unreadNotifications.length === 0 ? (
-          <Box p={3} textAlign="center">
-            <Typography color="text.secondary">
-              No unread notifications
+          <Box
+            p={1}
+            textAlign="center"
+            display="flex"
+            flexDirection="column"
+            alignItems="center"
+            gap={1}
+          >
+            <Avatar
+              sx={{
+                bgcolor: 'transparent',
+                color: 'primary.main',
+                width: 56,
+                height: 56,
+                boxShadow: 'none',
+              }}
+            >
+              <NotificationsNoneOutlinedIcon fontSize="large" />
+            </Avatar>
+            <Typography variant="subtitle1" sx={{ mt: 0.5 }}>
+              You're all caught up
+            </Typography>
+            <Typography color="text.secondary" sx={{ fontSize: '0.9rem' }}>
+              No unread notifications at the moment
             </Typography>
           </Box>
         ) : (
           <List disablePadding>
             {unreadNotifications.slice(0, 5).map((notification) => (
               <React.Fragment key={notification.id}>
-                <ListItem
-                  button
+                <ListItemButton
                   onClick={() => handleNotificationClick(notification.id)}
                   sx={{
+                    alignItems: 'flex-start',
+                    py: 1.25,
+                    px: 2,
                     bgcolor: 'action.hover',
                     '&:hover': { bgcolor: 'action.selected' },
                   }}
                 >
+                  <ListItemAvatar sx={{ minWidth: 44 }}>
+                    <Avatar
+                      sx={{
+                        bgcolor: 'primary.light',
+                        color: 'primary.contrastText',
+                        width: 40,
+                        height: 40,
+                      }}
+                    >
+                      <NotificationsNoneOutlinedIcon fontSize="small" />
+                    </Avatar>
+                  </ListItemAvatar>
                   <ListItemText
                     primary={notification.message}
                     secondary={formatDistanceToNow(
@@ -194,31 +267,44 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
                     primaryTypographyProps={{
                       sx: primaryTextSx,
                       noWrap: false,
-                      textOverflow: 'ellipsis',
+                      style: { whiteSpace: 'normal' },
                     }}
-                    secondaryTypographyProps={{ sx: secondaryTextSx }}
+                    secondaryTypographyProps={{
+                      sx: {
+                        color: 'text.secondary',
+                        ...(secondaryTextSx || {}),
+                      },
+                    }}
                   />
-                </ListItem>
-                <Divider />
+                </ListItemButton>
+                <Divider component="li" />
               </React.Fragment>
             ))}
           </List>
         )}
       </Box>
-      {!inline && (
-        <Box sx={{ p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
-          <Button
-            fullWidth
-            variant="outlined"
-            onClick={() => {
-              navigate('/notifications');
-              handleClose();
-            }}
-          >
-            View all
-          </Button>
-        </Box>
-      )}
+      <Box
+        sx={{
+          p: 0.5,
+          justifyContent: 'center',
+          display: 'flex',
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          height: '45px',
+        }}
+      >
+        <Button
+          fullWidth
+          size="small"
+          sx={{ color: 'text.primary' }}
+          onClick={() => {
+            navigate('/notifications');
+            handleClose();
+          }}
+        >
+          View all
+        </Button>
+      </Box>
     </Box>
   );
 
@@ -239,8 +325,8 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
           }}
           sx={{
             '& .MuiPaper-root': {
-              width: 350,
-              maxHeight: '80vh',
+              width: '60vh',
+              maxHeight: '70vh',
               display: 'flex',
               flexDirection: 'column',
             },
@@ -249,34 +335,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
           {content}
         </Popover>
       ) : (
-        isOpen &&
-        (inline ? (
-          // Inline variant: occupies space in the document flow
-          <Box
-            sx={{
-              width: 350,
-              maxHeight: '80vh',
-              display: 'flex',
-              flexDirection: 'column',
-              // allow it to grow/shrink like a normal element
-              mb: 2,
-              bgcolor: 'white',
-              color: 'text.primary',
-              fontSize: contentFontSize,
-              // border + shadow on all sides when inline
-              border: '1px solid',
-              borderColor: 'divider',
-              boxShadow:
-                '0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.04)',
-              borderRadius: 1,
-            }}
-            role="region"
-            aria-label="Notifications (inline)"
-          >
-            {content}
-          </Box>
-        ) : (
-          // Fixed floating panel variant (existing behavior)
+        isOpen && (
           <ClickAwayListener onClickAway={handleClose}>
             <Paper
               elevation={6}
@@ -284,8 +343,8 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
                 position: 'fixed',
                 top: 64,
                 right: 16,
-                width: 350,
-                maxHeight: '80vh',
+                width: '60vh',
+                maxHeight: '70vh',
                 display: 'flex',
                 flexDirection: 'column',
                 zIndex: (theme) => theme.zIndex.modal,
@@ -294,7 +353,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
               {content}
             </Paper>
           </ClickAwayListener>
-        ))
+        )
       )}
 
       <Snackbar
