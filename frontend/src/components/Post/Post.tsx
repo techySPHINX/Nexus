@@ -23,6 +23,7 @@ import {
   DialogActions,
   Snackbar,
   Alert,
+  Tooltip,
 } from '@mui/material';
 import {
   MoreVert,
@@ -41,6 +42,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Post as PostType } from '@/types/post';
 import { VoteType } from '@/types/engagement';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface PostProps {
   post: PostType;
@@ -64,6 +66,7 @@ export const Post: React.FC<PostProps> = ({
   onClick,
 }) => {
   const { user, token } = useAuth();
+  const { showNotification } = useNotification();
   const {
     approvePost,
     rejectPost,
@@ -527,8 +530,21 @@ export const Post: React.FC<PostProps> = ({
           </IconButton>
           <Typography variant="body2">{post?._count?.Comment || 0}</Typography>
 
-          <IconButton>
-            <Share />
+          <IconButton
+            onClick={() => {
+              return navigator.clipboard
+                .writeText(`${window.location.origin}/posts/${post.id}`)
+                .then(() =>
+                  showNotification?.('Post URL copied to clipboard', 'success')
+                )
+                .catch(() =>
+                  showNotification?.('Failed to copy post URL', 'error')
+                );
+            }}
+          >
+            <Tooltip title="Share Post">
+              <Share />
+            </Tooltip>
           </IconButton>
         </CardActions>
       )}

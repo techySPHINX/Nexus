@@ -14,6 +14,10 @@ import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
 import Card from '@mui/material/Card';
 import { useAuth } from '@/contexts/AuthContext';
+import Tooltip from '@mui/material/Tooltip/Tooltip';
+import { IconButton } from '@mui/material';
+import { useNotification } from '@/contexts/NotificationContext';
+import { Share } from '@mui/icons-material';
 
 export default function RecommendedProjects() {
   const {
@@ -26,6 +30,7 @@ export default function RecommendedProjects() {
     },
     getSuggestedProjects,
   } = useDashboardContext();
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -121,8 +126,8 @@ export default function RecommendedProjects() {
     : 'text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full';
 
   const statContainerClass = isDark
-    ? 'flex items-center gap-4 text-xs text-neutral-300 mt-3'
-    : 'flex items-center gap-4 text-xs text-gray-500 mt-3';
+    ? 'flex items-center justify-between gap-4 text-xs text-neutral-300'
+    : 'flex items-center justify-between gap-4 text-xs text-gray-500';
 
   const getStatusColorClass = (status: string) => {
     if (!isDark) return getStatusColor(status);
@@ -398,36 +403,71 @@ export default function RecommendedProjects() {
               />
 
               {/* Stats */}
-              <div className={statContainerClass}>
-                <div className="flex items-center gap-1">
-                  {(() => {
-                    const isSupported = project.supporters?.some(
-                      (s) => s.userId === user?.id
-                    );
-                    return (
-                      <Heart
-                        className={`w-4 h-4 ${isSupported ? 'fill-red-600 text-red-600' : isDark ? 'text-neutral-400 hover:text-emerald-300' : 'text-gray-400 hover:text-emerald-600'}`}
-                      />
-                    );
-                  })()}
-                  <span>{project._count?.supporters || 0} supporters</span>
+              <div className={`${statContainerClass} mt-3`}>
+                <div className={statContainerClass}>
+                  <div className="flex items-center gap-1">
+                    {(() => {
+                      const isSupported = project.supporters?.some(
+                        (s) => s.userId === user?.id
+                      );
+                      return (
+                        <Heart
+                          className={`w-4 h-4 ${isSupported ? 'fill-red-600 text-red-600' : isDark ? 'text-neutral-400 hover:text-emerald-300' : 'text-gray-400 hover:text-emerald-600'}`}
+                        />
+                      );
+                    })()}
+                    <span>{project._count?.supporters || 0} supporters</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {(() => {
+                      const isFollowing = project.followers?.some(
+                        (f) => f.userId === user?.id
+                      );
+                      return (
+                        <Users
+                          className={`w-3.5 h-3.5 ${isFollowing ? 'color-emerald-600 fill-emerald-600' : 'text-gray-400'}`}
+                        />
+                      );
+                    })()}
+                    <span>{project._count?.followers || 0} followers</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>{formatDate(project.createdAt)}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  {(() => {
-                    const isFollowing = project.followers?.some(
-                      (f) => f.userId === user?.id
-                    );
-                    return (
-                      <Users
-                        className={`w-3.5 h-3.5 ${isFollowing ? 'color-emerald-600 fill-emerald-600' : 'text-gray-400'}`}
+                <div>
+                  <Tooltip title="Share">
+                    <IconButton
+                      className="w-3.5 h-3.5"
+                      onClick={() => {
+                        return navigator.clipboard
+                          .writeText(
+                            `${window.location.origin}/projects/${project.id}`
+                          )
+                          .then(() =>
+                            showNotification?.(
+                              'Project URL copied to clipboard',
+                              'success'
+                            )
+                          )
+                          .catch(() =>
+                            showNotification?.(
+                              'Failed to copy project URL',
+                              'error'
+                            )
+                          );
+                      }}
+                    >
+                      <Share
+                        sx={{
+                          width: 15,
+                          height: 15,
+                          color: isDark ? '#9ca3af' : '#6b7280',
+                        }}
                       />
-                    );
-                  })()}
-                  <span>{project._count?.followers || 0} followers</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>{formatDate(project.createdAt)}</span>
+                    </IconButton>
+                  </Tooltip>
                 </div>
               </div>
             </div>

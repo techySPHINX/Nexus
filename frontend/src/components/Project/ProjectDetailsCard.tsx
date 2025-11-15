@@ -1,4 +1,3 @@
-// ProjectDetailModal.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Dialog,
@@ -26,8 +25,6 @@ import {
   Tooltip,
   Grid,
   useTheme,
-  Snackbar,
-  Alert,
   alpha,
 } from '@mui/material';
 import {
@@ -50,8 +47,8 @@ import {
   CheckCircle,
   RocketLaunch,
   Share,
-  Bookmark,
-  BookmarkBorder,
+  // Bookmark,
+  // BookmarkBorder,
   TrendingUp,
 } from '@mui/icons-material';
 import { AddCircle, Delete } from '@mui/icons-material';
@@ -70,6 +67,7 @@ import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 const UpdateSection = React.lazy(() => import('./UpdateSection'));
 import { apiService } from '@/services/api';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface ProjectDetailModalProps {
   project: ProjectDetailInterface;
@@ -217,17 +215,13 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   onDelete,
 }) => {
   const { teamMembers, updates, actionLoading } = useShowcase();
+  const { showNotification } = useNotification();
   const theme = useTheme();
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
-  const [snackOpen, setSnackOpen] = useState(false);
-  const [snackMsg, setSnackMsg] = useState('');
-  const [snackSeverity, setSnackSeverity] = useState<
-    'success' | 'error' | 'info' | 'warning'
-  >('success');
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
-  const [isBookmarked, setIsBookmarked] = useState(false);
+  // const [isBookmarked, setIsBookmarked] = useState(false);
 
   // Fix scroll jumping by maintaining tab content height
   const tabContentRef = useRef<HTMLDivElement>(null);
@@ -259,42 +253,36 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
   const handleSupportClick = async () => {
     try {
       await onSupport(isSupported);
-      setSnackMsg(isSupported ? 'Removed support' : 'Supported project');
-      setSnackSeverity('success');
-      setSnackOpen(true);
+      showNotification?.(
+        isSupported ? 'Project unsupported' : 'Project supported',
+        'success'
+      );
     } catch (err) {
       console.error(err);
-      setSnackMsg('Support action failed');
-      setSnackSeverity('error');
-      setSnackOpen(true);
+      showNotification?.('Support action failed', 'error');
     }
   };
 
   const handleFollowClick = async () => {
     try {
       await onFollow(isFollowing);
-      setSnackMsg(isFollowing ? 'Unfollowed' : 'Following project');
-      setSnackSeverity('success');
-      setSnackOpen(true);
+      showNotification?.(
+        isFollowing ? 'Project unfollowed' : 'Project followed',
+        'success'
+      );
     } catch (err) {
       console.error(err);
-      setSnackMsg('Follow action failed');
-      setSnackSeverity('error');
-      setSnackOpen(true);
+      showNotification?.('Follow action failed', 'error');
     }
   };
 
   const handleRefreshClick = async () => {
     try {
       await onRefresh();
-      setSnackMsg('Refreshed');
-      setSnackSeverity('success');
-      setSnackOpen(true);
+      showNotification?.('Project refreshed', 'success');
     } catch (err) {
       console.error(err);
-      setSnackMsg('Refresh failed');
-      setSnackSeverity('error');
-      setSnackOpen(true);
+      showNotification?.('Refresh failed', 'error');
     }
   };
 
@@ -302,15 +290,11 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     setDeleting(true);
     try {
       await onDelete();
-      setSnackMsg('Project deleted');
-      setSnackSeverity('success');
-      setSnackOpen(true);
+      showNotification?.('Project deleted', 'success');
       setConfirmDeleteOpen(false);
     } catch (err) {
       console.error(err);
-      setSnackMsg('Delete failed');
-      setSnackSeverity('error');
-      setSnackOpen(true);
+      showNotification?.('Delete failed', 'error');
     } finally {
       setDeleting(false);
     }
@@ -685,7 +669,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                   </Box>
 
                   <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Tooltip title="Bookmark">
+                    {/* <Tooltip title="Bookmark">
                       <IconButton
                         onClick={() => setIsBookmarked(!isBookmarked)}
                       >
@@ -695,9 +679,25 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
                           <BookmarkBorder />
                         )}
                       </IconButton>
-                    </Tooltip>
+                    </Tooltip> */}
                     <Tooltip title="Share">
-                      <IconButton>
+                      <IconButton
+                        onClick={() => {
+                          navigator.clipboard
+                            .writeText(
+                              `${window.location.origin}/projects/${project.id}`
+                            )
+                            .then(() => {
+                              showNotification?.(
+                                'Project URL copied to clipboard',
+                                'success'
+                              );
+                            })
+                            .catch(() => {
+                              showNotification?.('Failed to copy URL', 'error');
+                            });
+                        }}
+                      >
                         <Share />
                       </IconButton>
                     </Tooltip>
@@ -1455,9 +1455,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
             onUpdated={() => {
               onRefresh();
               setUpdateModalOpen(false);
-              setSnackMsg('Project updated successfully');
-              setSnackSeverity('success');
-              setSnackOpen(true);
+              showNotification?.('Project updated successfully', 'success');
             }}
           />
         </React.Suspense>
@@ -1491,16 +1489,6 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackOpen}
-        autoHideDuration={4000}
-        onClose={() => setSnackOpen(false)}
-      >
-        <Alert onClose={() => setSnackOpen(false)} severity={snackSeverity}>
-          {snackMsg}
-        </Alert>
-      </Snackbar>
     </Dialog>
   );
 };
