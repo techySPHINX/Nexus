@@ -28,6 +28,13 @@ import {
   IconButton,
   Tooltip,
   TablePagination,
+  Snackbar,
+  Link,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import type { SelectChangeEvent } from '@mui/material/Select';
 import {
@@ -40,6 +47,8 @@ import {
   Block as BlockIcon,
   Message as MessageIcon,
   PersonAdd as PersonAddIcon,
+  Refresh as RefreshIcon,
+  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import useConnections from '../hooks/useConnections';
@@ -48,6 +57,14 @@ import type {
   PendingRequest,
   ConnectionSuggestion,
 } from '../types/connections';
+import { apiService } from '../services/api';
+import {
+  LocationOn,
+  Work,
+  School,
+  Email,
+  Business,
+} from '@mui/icons-material';
 
 const Connections: React.FC = () => {
   const navigate = useNavigate();
@@ -56,6 +73,23 @@ const Connections: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean;
+    message: string;
+    severity: 'success' | 'error' | 'info';
+  }>({ open: false, message: '', severity: 'success' });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, title: '', message: '', onConfirm: () => {} });
+  const [profileModal, setProfileModal] = useState<{
+    open: boolean;
+    userId: string | null;
+    loading: boolean;
+    profile: any | null;
+  }>({ open: false, userId: null, loading: false, profile: null });
 
   // Use the connections hook for real data
   const {
@@ -70,6 +104,7 @@ const Connections: React.FC = () => {
     respondToRequest,
     sendRequest,
     removeConnection,
+    cancelConnection,
   } = useConnections();
 
   // Fetch data when component mounts or filters change
@@ -115,20 +150,106 @@ const Connections: React.FC = () => {
     }
   };
 
+  const showSnackbar = (message: string, severity: 'success' | 'error' | 'info' = 'success') => {
+    setSnackbar({ open: true, message, severity });
+  };
+
   const handleAcceptRequest = async (requestId: string) => {
-    await respondToRequest(requestId, 'ACCEPTED');
+    try {
+      const success = await respondToRequest(requestId, 'ACCEPTED');
+      if (success) {
+        showSnackbar('Connection request accepted successfully!', 'success');
+        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+      }
+    } catch (error) {
+      showSnackbar('Failed to accept connection request', 'error');
+    }
   };
 
   const handleRejectRequest = async (requestId: string) => {
-    await respondToRequest(requestId, 'REJECTED');
+    try {
+      const success = await respondToRequest(requestId, 'REJECTED');
+      if (success) {
+        showSnackbar('Connection request rejected', 'info');
+        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+      }
+    } catch (error) {
+      showSnackbar('Failed to reject connection request', 'error');
+    }
+  };
+
+  const handleCancelRequest = async (connectionId: string) => {
+    try {
+      const success = await cancelConnection(connectionId);
+      if (success) {
+        showSnackbar('Connection request cancelled', 'info');
+        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+      }
+    } catch (error) {
+      showSnackbar('Failed to cancel connection request', 'error');
+    }
   };
 
   const handleConnect = async (userId: string) => {
-    await sendRequest(userId);
+    try {
+      const success = await sendRequest(userId);
+      if (success) {
+        showSnackbar('Connection request sent!', 'success');
+        // Remove from suggestions and refresh data
+        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+      }
+    } catch (error: any) {
+      // Extract user-friendly error message from axios error response
+      let errorMessage = 'Failed to send connection request';
+      
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Handle specific error cases with appropriate messages
+      if (errorMessage.toLowerCase().includes('already pending') || errorMessage.toLowerCase().includes('pending')) {
+        showSnackbar('Connection request is already pending', 'info');
+        // Refresh to update the UI
+        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+      } else if (errorMessage.toLowerCase().includes('already connected') || errorMessage.toLowerCase().includes('connected')) {
+        showSnackbar('You are already connected with this user', 'info');
+        // Refresh to update the UI
+        await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+      } else if (errorMessage.toLowerCase().includes('blocked')) {
+        showSnackbar('This connection is blocked', 'error');
+      } else if (errorMessage.toLowerCase().includes('yourself')) {
+        showSnackbar('Cannot connect to yourself', 'error');
+      } else {
+        showSnackbar(errorMessage, 'error');
+      }
+    }
   };
 
   const handleRemoveConnection = async (connectionId: string) => {
-    await removeConnection(connectionId);
+    setConfirmDialog({
+      open: true,
+      title: 'Remove Connection',
+      message: 'Are you sure you want to remove this connection? This action cannot be undone.',
+      onConfirm: async () => {
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+        try {
+          const success = await removeConnection(connectionId);
+          if (success) {
+            showSnackbar('Connection removed successfully', 'info');
+            await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+          }
+        } catch (error) {
+          showSnackbar('Failed to remove connection', 'error');
+        }
+      },
+    });
+  };
+
+  const handleRefresh = async () => {
+    await fetchAll({ page: page + 1, limit: rowsPerPage, role: roleFilter as any, search: searchTerm });
+    showSnackbar('Connections refreshed', 'success');
   };
 
   const handleSendMessage = (userId: string) => {
@@ -136,6 +257,21 @@ const Connections: React.FC = () => {
     if (userId) {
       navigate(`/messages?user=${userId}`);
     }
+  };
+
+  const handleViewProfile = async (userId: string) => {
+    setProfileModal({ open: true, userId, loading: true, profile: null });
+    try {
+      const response = await apiService.profile.get(userId);
+      setProfileModal({ open: true, userId, loading: false, profile: response.data });
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+      setProfileModal({ open: true, userId, loading: false, profile: null });
+    }
+  };
+
+  const handleCloseProfileModal = () => {
+    setProfileModal({ open: false, userId: null, loading: false, profile: null });
   };
 
   const handleChangePage = (_event: unknown, newPage: number) => {
@@ -173,7 +309,7 @@ const Connections: React.FC = () => {
       case 2:
         return ['Recipient', 'Role', 'Sent', 'Status', 'Actions'];
       case 3:
-        return ['User', 'Role', 'Reason', 'Mutual Connections', 'Actions'];
+        return ['User', 'Role', 'Match Details', 'Actions'];
       default:
         return [];
     }
@@ -235,6 +371,15 @@ const Connections: React.FC = () => {
             Manage and grow your professional network
           </Typography>
         </Box>
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={handleRefresh}
+          disabled={connectionsLoading}
+          sx={{ minWidth: { xs: '100%', sm: 'auto' } }}
+        >
+          Refresh
+        </Button>
 
         {/* Stats Cards */}
         {stats && (
@@ -403,11 +548,23 @@ const Connections: React.FC = () => {
                   <TableCell
                     colSpan={getTableHeaders().length}
                     align="center"
-                    sx={{ py: 4 }}
+                    sx={{ py: 6 }}
                   >
-                    <Typography variant="body1" color="text.secondary">
-                      No data available
-                    </Typography>
+                    <Box sx={{ textAlign: 'center' }}>
+                      <PeopleIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                      <Typography variant="h6" color="text.secondary" gutterBottom>
+                        {tabValue === 0 && 'No connections yet'}
+                        {tabValue === 1 && 'No pending requests'}
+                        {tabValue === 2 && 'No sent requests'}
+                        {tabValue === 3 && 'No suggestions available'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {tabValue === 0 && 'Start connecting with others to build your network'}
+                        {tabValue === 1 && 'You have no pending connection requests'}
+                        {tabValue === 2 && 'You have not sent any connection requests'}
+                        {tabValue === 3 && 'Try updating your profile to get better suggestions'}
+                      </Typography>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -425,19 +582,25 @@ const Connections: React.FC = () => {
                               gap: 2,
                             }}
                           >
-                            <Avatar sx={{ bgcolor: 'primary.main' }}>
+                            <Avatar 
+                              sx={{ bgcolor: 'primary.main', cursor: 'pointer' }}
+                              onClick={() => connection.user?.id && handleViewProfile(connection.user.id)}
+                            >
                               {connection.user?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
-                              <Typography
+                              <Link
+                                component="button"
                                 variant="subtitle2"
-                                sx={{ fontWeight: 600 }}
+                                sx={{ fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => connection.user?.id && handleViewProfile(connection.user.id)}
                               >
                                 {connection.user?.name || 'Unknown User'}
-                              </Typography>
+                              </Link>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
+                                display="block"
                               >
                                 {connection.user?.email || 'No email'}
                               </Typography>
@@ -464,15 +627,24 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {connection.createdAt
+                            {(connection as any).connectedAt || connection.createdAt
                               ? new Date(
-                                  connection.createdAt
+                                  (connection as any).connectedAt || connection.createdAt
                                 ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
                         </TableCell>
                         <TableCell>
                           <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Tooltip title="View Profile">
+                              <IconButton
+                                size="small"
+                                onClick={() => connection.user?.id && handleViewProfile(connection.user.id)}
+                                sx={{ color: 'primary.main' }}
+                              >
+                                <VisibilityIcon />
+                              </IconButton>
+                            </Tooltip>
                             <Tooltip title="Send Message">
                               <IconButton
                                 size="small"
@@ -512,20 +684,26 @@ const Connections: React.FC = () => {
                               gap: 2,
                             }}
                           >
-                            <Avatar sx={{ bgcolor: 'secondary.main' }}>
+                            <Avatar 
+                              sx={{ bgcolor: 'secondary.main', cursor: 'pointer' }}
+                              onClick={() => pendingRequest.requester?.id && handleViewProfile(pendingRequest.requester.id)}
+                            >
                               {pendingRequest.requester?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
-                              <Typography
+                              <Link
+                                component="button"
                                 variant="subtitle2"
-                                sx={{ fontWeight: 600 }}
+                                sx={{ fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => pendingRequest.requester?.id && handleViewProfile(pendingRequest.requester.id)}
                               >
                                 {pendingRequest.requester?.name ||
                                   'Unknown User'}
-                              </Typography>
+                              </Link>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
+                                display="block"
                               >
                                 {pendingRequest.requester?.email || 'No email'}
                               </Typography>
@@ -543,9 +721,9 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {pendingRequest.createdAt
+                            {(pendingRequest as any).requestedAt || pendingRequest.createdAt
                               ? new Date(
-                                  pendingRequest.createdAt
+                                  (pendingRequest as any).requestedAt || pendingRequest.createdAt
                                 ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
@@ -605,19 +783,25 @@ const Connections: React.FC = () => {
                               gap: 2,
                             }}
                           >
-                            <Avatar sx={{ bgcolor: 'info.main' }}>
+                            <Avatar 
+                              sx={{ bgcolor: 'info.main', cursor: 'pointer' }}
+                              onClick={() => pendingSent.recipient?.id && handleViewProfile(pendingSent.recipient.id)}
+                            >
                               {pendingSent.recipient?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
-                              <Typography
+                              <Link
+                                component="button"
                                 variant="subtitle2"
-                                sx={{ fontWeight: 600 }}
+                                sx={{ fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => pendingSent.recipient?.id && handleViewProfile(pendingSent.recipient.id)}
                               >
                                 {pendingSent.recipient?.name || 'Unknown User'}
-                              </Typography>
+                              </Link>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
+                                display="block"
                               >
                                 {pendingSent.recipient?.email || 'No email'}
                               </Typography>
@@ -635,9 +819,9 @@ const Connections: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" color="text.secondary">
-                            {pendingSent.createdAt
+                            {(pendingSent as any).sentAt || pendingSent.createdAt
                               ? new Date(
-                                  pendingSent.createdAt
+                                  (pendingSent as any).sentAt || pendingSent.createdAt
                                 ).toLocaleDateString()
                               : 'N/A'}
                           </Typography>
@@ -650,7 +834,7 @@ const Connections: React.FC = () => {
                             <IconButton
                               size="small"
                               onClick={() =>
-                                handleRejectRequest(pendingSent.id)
+                                handleCancelRequest(pendingSent.id)
                               }
                               sx={{ color: 'error.main' }}
                             >
@@ -673,19 +857,25 @@ const Connections: React.FC = () => {
                               gap: 2,
                             }}
                           >
-                            <Avatar sx={{ bgcolor: 'success.main' }}>
+                            <Avatar 
+                              sx={{ bgcolor: 'success.main', cursor: 'pointer' }}
+                              onClick={() => suggestion.user?.id && handleViewProfile(suggestion.user.id)}
+                            >
                               {suggestion.user?.name?.charAt(0) || '?'}
                             </Avatar>
                             <Box>
-                              <Typography
+                              <Link
+                                component="button"
                                 variant="subtitle2"
-                                sx={{ fontWeight: 600 }}
+                                sx={{ fontWeight: 600, textDecoration: 'none', cursor: 'pointer' }}
+                                onClick={() => suggestion.user?.id && handleViewProfile(suggestion.user.id)}
                               >
                                 {suggestion.user?.name || 'Unknown User'}
-                              </Typography>
+                              </Link>
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
+                                display="block"
                               >
                                 {suggestion.user?.email || 'No email'}
                               </Typography>
@@ -700,31 +890,46 @@ const Connections: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            {suggestion.reasons.join(', ')}
-                          </Typography>
+                          <Box>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              <strong>Score: {suggestion.matchScore}%</strong>
+                            </Typography>
+                            {suggestion.reasons.length > 0 && (
+                              <Typography variant="caption" color="text.secondary">
+                                {suggestion.reasons.slice(0, 3).join(', ')}
+                                {suggestion.reasons.length > 3 && '...'}
+                              </Typography>
+                            )}
+                          </Box>
                         </TableCell>
                         <TableCell>
-                          <Typography variant="body2" color="text.secondary">
-                            Match Score: {suggestion.matchScore}%
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            size="small"
-                            startIcon={<PersonAddIcon />}
-                            onClick={() => handleConnect(suggestion.user.id)}
-                            variant="contained"
-                            color="primary"
-                            sx={{
-                              minHeight: '32px', // Fixed height for uniform appearance
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            Connect
-                          </Button>
+                          <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Tooltip title="View Profile">
+                              <IconButton
+                                size="small"
+                                onClick={() => suggestion.user?.id && handleViewProfile(suggestion.user.id)}
+                                sx={{ color: 'primary.main' }}
+                              >
+                                <VisibilityIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Button
+                              size="small"
+                              startIcon={<PersonAddIcon />}
+                              onClick={() => handleConnect(suggestion.user.id)}
+                              variant="contained"
+                              color="primary"
+                              disabled={connectionsLoading}
+                              sx={{
+                                minHeight: '32px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              Connect
+                            </Button>
+                          </Box>
                         </TableCell>
                       </TableRow>
                     );
@@ -745,6 +950,224 @@ const Connections: React.FC = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmDialog.open}
+        onClose={() => setConfirmDialog({ ...confirmDialog, open: false })}
+        aria-labelledby="confirm-dialog-title"
+        aria-describedby="confirm-dialog-description"
+      >
+        <DialogTitle id="confirm-dialog-title">
+          {confirmDialog.title}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText id="confirm-dialog-description">
+            {confirmDialog.message}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setConfirmDialog({ ...confirmDialog, open: false })}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDialog.onConfirm}
+            color="error"
+            variant="contained"
+            autoFocus
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Profile Preview Modal */}
+      <Dialog
+        open={profileModal.open}
+        onClose={handleCloseProfileModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Typography variant="h6">Profile</Typography>
+            <IconButton
+              size="small"
+              onClick={handleCloseProfileModal}
+              sx={{ color: 'text.secondary' }}
+            >
+              <CloseIcon />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent dividers>
+          {profileModal.loading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : profileModal.profile ? (
+            <Box>
+              {/* Profile Header */}
+              <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+                <Avatar
+                  src={profileModal.profile.avatarUrl || profileModal.profile.user?.profile?.avatarUrl}
+                  sx={{
+                    width: 100,
+                    height: 100,
+                    mb: 2,
+                    bgcolor: 'primary.main',
+                    fontSize: '2.5rem',
+                  }}
+                >
+                  {profileModal.profile.name?.charAt(0) || profileModal.profile.user?.name?.charAt(0) || '?'}
+                </Avatar>
+                <Typography variant="h5" fontWeight={600} gutterBottom>
+                  {profileModal.profile.name || profileModal.profile.user?.name || 'Unknown User'}
+                </Typography>
+                <Chip
+                  label={profileModal.profile.role || profileModal.profile.user?.role || 'Unknown'}
+                  color={getRoleColor(profileModal.profile.role || profileModal.profile.user?.role || '')}
+                  size="small"
+                  sx={{ mb: 1 }}
+                />
+              </Box>
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Profile Details */}
+              <Stack spacing={2}>
+                {profileModal.profile.email || profileModal.profile.user?.email ? (
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Email fontSize="small" color="action" />
+                    <Typography variant="body2">
+                      {profileModal.profile.email || profileModal.profile.user?.email}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                {profileModal.profile.bio || profileModal.profile.user?.profile?.bio ? (
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Bio
+                    </Typography>
+                    <Typography variant="body2">
+                      {profileModal.profile.bio || profileModal.profile.user?.profile?.bio}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                {profileModal.profile.location || profileModal.profile.user?.profile?.location ? (
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <LocationOn fontSize="small" color="action" />
+                    <Typography variant="body2">
+                      {profileModal.profile.location || profileModal.profile.user?.profile?.location}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                {profileModal.profile.dept || profileModal.profile.user?.profile?.dept ? (
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <School fontSize="small" color="action" />
+                    <Typography variant="body2">
+                      {profileModal.profile.dept || profileModal.profile.user?.profile?.dept}
+                    </Typography>
+                  </Box>
+                ) : null}
+
+                {profileModal.profile.user?.profile?.skills && profileModal.profile.user.profile.skills.length > 0 ? (
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Skills
+                    </Typography>
+                    <Box display="flex" flexWrap="wrap" gap={1}>
+                      {profileModal.profile.user.profile.skills.map((skill: any, index: number) => (
+                        <Chip
+                          key={index}
+                          label={skill.name || skill}
+                          size="small"
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                ) : profileModal.profile.skills && profileModal.profile.skills.length > 0 ? (
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Skills
+                    </Typography>
+                    <Box display="flex" flexWrap="wrap" gap={1}>
+                      {profileModal.profile.skills.map((skill: any, index: number) => (
+                        <Chip
+                          key={index}
+                          label={skill.name || skill}
+                          size="small"
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                  </Box>
+                ) : null}
+
+                {profileModal.profile.interests || profileModal.profile.user?.profile?.interests ? (
+                  <Box>
+                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                      Interests
+                    </Typography>
+                    <Typography variant="body2">
+                      {profileModal.profile.interests || profileModal.profile.user?.profile?.interests}
+                    </Typography>
+                  </Box>
+                ) : null}
+              </Stack>
+            </Box>
+          ) : (
+            <Box textAlign="center" py={4}>
+              <Typography variant="body2" color="text.secondary">
+                Failed to load profile information
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => {
+              if (profileModal.userId) {
+                navigate(`/profile/${profileModal.userId}`);
+                handleCloseProfileModal();
+              }
+            }}
+            variant="outlined"
+            fullWidth
+          >
+            View Full Profile
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
