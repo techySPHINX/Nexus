@@ -20,6 +20,8 @@ import {
 } from '@/types/StartupType';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { AnimatePresence, motion } from 'framer-motion';
+import { alpha, useTheme as useMuiTheme } from '@mui/material/styles';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface Props {
   startup: StartupDetailType | null;
@@ -31,7 +33,7 @@ interface Props {
   setCommentValue: (v: string) => void;
   onPostComment: () => void;
   onClose: () => void;
-  onFollowToggle: () => Promise<void> | void;
+  // onFollowToggle: () => Promise<void> | void;
 }
 
 const StartupDetail: React.FC<Props> = ({
@@ -44,8 +46,11 @@ const StartupDetail: React.FC<Props> = ({
   setCommentValue,
   onPostComment,
   onClose,
-  onFollowToggle,
+  // onFollowToggle,
 }) => {
+  const { isDark } = useTheme();
+  const muiTheme = useMuiTheme();
+
   if (!startup) return null;
 
   return (
@@ -56,8 +61,10 @@ const StartupDetail: React.FC<Props> = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          bgcolor:
-            'linear-gradient(90deg, rgba(59,130,246,0.05), rgba(99,102,241,0.05))',
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark'
+              ? theme.palette.background.paper
+              : 'linear-gradient(90deg, rgba(59,130,246,0.05), rgba(99,102,241,0.05))',
           py: 2,
           px: 3,
         }}
@@ -69,7 +76,9 @@ const StartupDetail: React.FC<Props> = ({
               width: 72,
               height: 72,
               borderRadius: 3,
-              boxShadow: '0 4px 14px rgba(99,102,241,0.2)',
+              boxShadow: isDark
+                ? muiTheme.shadows[4]
+                : '0 4px 14px rgba(99,102,241,0.2)',
             }}
           />
           <Box>
@@ -104,7 +113,18 @@ const StartupDetail: React.FC<Props> = ({
       </DialogTitle>
 
       {/* CONTENT */}
-      <DialogContent sx={{ px: 3, pt: 3, pb: 1 }}>
+      <DialogContent
+        sx={{
+          px: 3,
+          pt: 5,
+          pb: 1,
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark'
+              ? theme.palette.background.paper
+              : 'linear-gradient(90deg, rgba(2, 10, 22, 0.05), rgba(63, 63, 103, 0.05))',
+          color: muiTheme.palette.text.primary,
+        }}
+      >
         {/* Chips Section */}
         <Stack
           direction="row"
@@ -143,29 +163,54 @@ const StartupDetail: React.FC<Props> = ({
 
         {/* Description */}
         <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="body1"
-            sx={{
-              lineHeight: 1.7,
-              color: 'text.primary',
-              fontSize: { xs: '0.95rem', sm: '1rem' },
-              display: '-webkit-box',
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              WebkitLineClamp: showFullDescription ? 'unset' : 4,
-            }}
-          >
-            {startup.description || 'No description provided.'}
-          </Typography>
+          {startup.description ? (
+            (() => {
+              const paragraphs = startup.description
+                .split(/\r?\n/)
+                .map((p) => p.trim())
+                .filter(Boolean);
+              const hasMore = paragraphs.length > 1;
+              const displayed = showFullDescription
+                ? startup.description
+                : paragraphs[0] || '';
 
-          {startup.description && (
-            <Button
-              size="small"
-              onClick={() => setShowFullDescription((s) => !s)}
-              sx={{ mt: 0.5 }}
+              return (
+                <>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      lineHeight: 1.7,
+                      color: 'text.primary',
+                      fontSize: { xs: '0.95rem', sm: '1rem' },
+                      whiteSpace: 'pre-line',
+                    }}
+                  >
+                    {displayed}
+                  </Typography>
+
+                  {hasMore && (
+                    <Button
+                      size="small"
+                      onClick={() => setShowFullDescription((s) => !s)}
+                      sx={{ mt: 0.5 }}
+                    >
+                      {showFullDescription ? 'Show less' : 'Read more'}
+                    </Button>
+                  )}
+                </>
+              );
+            })()
+          ) : (
+            <Typography
+              variant="body1"
+              sx={{
+                lineHeight: 1.7,
+                color: 'text.primary',
+                fontSize: { xs: '0.95rem', sm: '1rem' },
+              }}
             >
-              {showFullDescription ? 'Show less' : 'Read more'}
-            </Button>
+              No description provided.
+            </Typography>
           )}
         </Box>
 
@@ -185,7 +230,9 @@ const StartupDetail: React.FC<Props> = ({
             overflowY: 'auto',
             pr: 1,
             borderRadius: 2,
-            bgcolor: 'rgba(250,250,255,0.5)',
+            bgcolor: isDark
+              ? alpha(muiTheme.palette.background.paper, 0.06)
+              : 'rgba(250,250,255,0.5)',
           }}
         >
           {commentsLoading ? (
@@ -207,7 +254,9 @@ const StartupDetail: React.FC<Props> = ({
                       display: 'flex',
                       gap: 2,
                       py: 2,
-                      borderBottom: '1px solid rgba(0,0,0,0.05)',
+                      borderBottom: isDark
+                        ? `1px solid ${muiTheme.palette.divider}`
+                        : '1px solid rgba(0,0,0,0.05)',
                       opacity: comment.pending ? 0.6 : 1,
                     }}
                   >
@@ -281,7 +330,10 @@ const StartupDetail: React.FC<Props> = ({
             sx={{
               '& .MuiOutlinedInput-root': {
                 borderRadius: 2,
-                backgroundColor: 'rgba(255,255,255,0.6)',
+                backgroundColor: (theme) =>
+                  theme.palette.mode === 'dark'
+                    ? alpha(theme.palette.background.paper, 0.04)
+                    : 'rgba(255,255,255,0.6)',
               },
             }}
             onKeyPress={(e) => {
@@ -298,7 +350,9 @@ const StartupDetail: React.FC<Props> = ({
             sx={{
               minWidth: { xs: '100%', sm: 120 },
               borderRadius: 2,
-              boxShadow: '0 4px 14px rgba(99,102,241,0.25)',
+              boxShadow: isDark
+                ? muiTheme.shadows[3]
+                : '0 4px 14px rgba(99,102,241,0.25)',
               textTransform: 'none',
               fontWeight: 600,
             }}
@@ -313,26 +367,29 @@ const StartupDetail: React.FC<Props> = ({
         sx={{
           px: 3,
           py: 2,
-          background: 'rgba(99,102,241,0.03)',
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark'
+              ? theme.palette.background.paper
+              : 'rgba(99,102,241,0.03)',
           justifyContent: 'space-between',
-          borderTop: '1px solid rgba(0,0,0,0.05)',
+          borderTop: (theme) => `1px solid ${theme.palette.divider}`,
         }}
       >
         <Button onClick={onClose} sx={{ borderRadius: 2 }}>
           Close
         </Button>
         <Button
-          variant={startup.isFollowing ? 'outlined' : 'contained'}
-          onClick={onFollowToggle}
-          sx={{
-            borderRadius: 2,
-            minWidth: 120,
-            transition: 'all 0.25s ease',
-            textTransform: 'none',
-            fontWeight: 600,
-          }}
+          variant={'outlined'}
+          // onClick={onFollowToggle}
+          // sx={{
+          //   borderRadius: 2,
+          //   minWidth: 120,
+          //   transition: 'all 0.25s ease',
+          //   textTransform: 'none',
+          //   fontWeight: 600,
+          // }}
         >
-          {startup.isFollowing ? 'Unfollow' : 'Follow'}
+          {startup.isFollowing ? 'Following' : 'Not Following'}
         </Button>
       </DialogActions>
     </>

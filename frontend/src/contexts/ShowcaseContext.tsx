@@ -57,6 +57,7 @@ export interface ShowcaseContextType {
   allProjects: PaginatedProjectsInterface;
   // projects: ProjectInterface[];
   projectsByUserId: PaginatedProjectsInterface;
+  myProjects: PaginatedProjectsInterface;
   supportedProjects: PaginatedProjectsInterface;
   followedProjects: PaginatedProjectsInterface;
   projectsCache: Map<string, ProjectCache>;
@@ -111,6 +112,7 @@ export interface ShowcaseContextType {
   ) => Promise<void>;
   getProjectById: (
     projectId: string,
+    detailed?: boolean,
     forceRefresh?: boolean,
     tab?: number
   ) => Promise<void>;
@@ -179,6 +181,10 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
     data: [],
     pagination: { nextCursor: undefined, hasNext: false },
   },
+  myProjects: {
+    data: [],
+    pagination: { nextCursor: undefined, hasNext: false },
+  },
   supportedProjects: {
     data: [],
     pagination: { nextCursor: undefined, hasNext: false },
@@ -244,7 +250,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   fetchAllTypes: async () => {},
 });
 
-export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
+const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [loading, setLoading] = useState<boolean>(false);
@@ -286,6 +292,10 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         hasNext: false,
       },
     });
+  const [myProjects, setMyProjects] = useState<PaginatedProjectsInterface>({
+    data: [],
+    pagination: { nextCursor: undefined, hasNext: false },
+  });
   const [supportedProjects, setSupportedProjects] =
     useState<PaginatedProjectsInterface>({
       data: [],
@@ -377,7 +387,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         if (mounted && fol) setFollowedProjects(fol);
 
         const my = await restoreSmallList(SHOWCASE_MYPROJECTS_KEY);
-        if (mounted && my) setProjectsByUserId(my);
+        if (mounted && my) setMyProjects(my);
 
         // mark rehydration complete so callers can wait briefly for caches
         if (rehydrateResolveRef.current) rehydrateResolveRef.current();
@@ -402,7 +412,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         saveSmallList(SHOWCASE_ALLPROJECTS_KEY, allProjects);
         saveSmallList(SHOWCASE_SUPPORTED_KEY, supportedProjects);
         saveSmallList(SHOWCASE_FOLLOWED_KEY, followedProjects);
-        saveSmallList(SHOWCASE_MYPROJECTS_KEY, projectsByUserId);
+        saveSmallList(SHOWCASE_MYPROJECTS_KEY, myProjects);
       } catch (err) {
         console.error('Failed to persist small lists', err);
       }
@@ -415,7 +425,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => {
       if (t) window.clearTimeout(t);
     };
-  }, [allProjects, supportedProjects, followedProjects, projectsByUserId]);
+  }, [allProjects, supportedProjects, followedProjects, myProjects]);
 
   // Cache management functions
   const getCachedProject = useCallback(
@@ -530,7 +540,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           total: prev.total + 1,
           owned: prev.owned + 1,
         }));
-        setProjectsByUserId((prev) => ({
+        setMyProjects((prev) => ({
           data: [response, ...prev.data],
           pagination: prev.pagination,
         }));
@@ -601,7 +611,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           total: prev.total - 1,
           owned: prev.owned - 1,
         }));
-        setProjectsByUserId((prev) => ({
+        setMyProjects((prev) => ({
           ...prev,
           data: prev.data.filter((p) => p.id !== projectId),
           pagination: prev.pagination,
@@ -720,7 +730,12 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Enhanced getProjectById with caching
   const getProjectById = useCallback(
-    async (projectId: string, forceRefresh: boolean = false, tab?: number) => {
+    async (
+      projectId: string,
+      detailed?: boolean,
+      forceRefresh: boolean = false,
+      tab?: number
+    ) => {
       if (!user) {
         setError('User not authenticated');
         return;
@@ -759,11 +774,14 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           tab === 0
             ? allProjects.data.find((proj) => proj.id === projectId)
             : tab === 1
-              ? projectsByUserId.data.find((proj) => proj.id === projectId)
+              ? myProjects.data.find((proj) => proj.id === projectId)
               : tab === 2
                 ? supportedProjects.data.find((proj) => proj.id === projectId)
                 : followedProjects.data.find((proj) => proj.id === projectId);
-        const details = await ShowcaseService.getProjectById(projectId);
+        const details = await ShowcaseService.getProjectById(
+          projectId,
+          detailed
+        );
 
         const fullProject: ProjectDetailInterface = {
           ...(existingProject || {}),
@@ -841,7 +859,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       user,
       getCachedProject,
       allProjects.data,
-      projectsByUserId.data,
+      myProjects.data,
       supportedProjects.data,
       followedProjects.data,
       setCachedProject,
@@ -875,8 +893,8 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
         // If not loading more and we already have data for the same owner, skip fetch
         if (
-          projectsByUserId.data.length > 0 &&
-          projectsByUserId.data[0]?.owner?.id === targetOwnerId
+          myProjects.data.length > 0 &&
+          myProjects.data[0]?.owner?.id === targetOwnerId
         ) {
           return;
         }
@@ -888,7 +906,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           const response =
             await ShowcaseService.getMyProjects(filterProjectDto);
           if (loadMore) {
-            setProjectsByUserId((prev) => ({
+            setMyProjects((prev) => ({
               data: [...prev.data, ...response.data],
               pagination: response.pagination,
             }));
@@ -897,7 +915,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
             //   pagination: response.pagination,
             // }));
           } else {
-            setProjectsByUserId({
+            setMyProjects({
               data: response.data,
               pagination: response.pagination,
             });
@@ -925,7 +943,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user, projectsByUserId]
+    [user, myProjects]
   );
 
   const getSupportedProjects = useCallback(
@@ -1946,6 +1964,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       projectCounts,
       allProjects,
       projectsByUserId,
+      myProjects,
       supportedProjects,
       followedProjects,
       projectsCache,
@@ -2000,6 +2019,7 @@ export const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       projectCounts,
       allProjects,
       projectsByUserId,
+      myProjects,
       supportedProjects,
       followedProjects,
       projectsCache,
@@ -2063,4 +2083,5 @@ export const useShowcase = (): ShowcaseContextType => {
   return context;
 };
 
-export default ShowcaseContext;
+export { ShowcaseContext };
+export default ShowcaseProvider;

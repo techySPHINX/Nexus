@@ -99,7 +99,7 @@ export const StartupContext = React.createContext<StartupContextType>({
   refreshTab: async () => {},
 });
 
-export const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
+const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   type RawStartup = StartupSummary & { startupFollower?: { userId: string }[] };
@@ -446,6 +446,30 @@ export const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
   const getStartupById = useCallback(async (id: string) => {
     try {
       const data = await ShowcaseService.getStartupById(id);
+      if (!data) return null;
+
+      // try to find a lightweight startup entry in our lists and prefer its fields,
+      // but take the description from the API response (data)
+      const listStartup =
+        allDataRef.current.find((s) => s.id === id) ||
+        mineDataRef.current.find((s) => s.id === id) ||
+        followedDataRef.current.find((s) => s.id === id);
+
+      if (listStartup) {
+        const merged: StartupDetail = {
+          // copy fields from the cached list entry
+          ...listStartup,
+          // ensure description comes from the API response
+          description:
+            data.description ??
+            (listStartup as StartupDetail).description ??
+            '',
+          founder: data.founder || (listStartup as StartupDetail).founder,
+          // if API returns additional detail fields you want to keep, you can merge them here
+        };
+        return merged;
+      }
+
       return data || null;
     } catch (err) {
       console.error('Failed to get startup by id', err);
@@ -835,3 +859,5 @@ export const useStartup = (): StartupContextType => {
   }
   return context;
 };
+
+export default StartupProvider;

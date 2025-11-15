@@ -14,6 +14,8 @@ import { useTheme } from '@/contexts/ThemeContext';
 import Card from '@mui/material/Card';
 import AttachmentIcon from '@mui/icons-material/Attachment';
 import { useNavigate } from 'react-router-dom';
+import { useNotification } from '@/contexts/NotificationContext';
+import { Tooltip } from '@mui/material';
 
 export default function RecentPosts() {
   const {
@@ -25,6 +27,7 @@ export default function RecentPosts() {
   const navigate = useNavigate();
 
   const { isDark } = useTheme();
+  const { showNotification } = useNotification();
 
   const containerClasses = isDark
     ? 'rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow bg-neutral-900 border-neutral-700 text-neutral-100'
@@ -44,8 +47,8 @@ export default function RecentPosts() {
     ? 'text-neutral-300 text-sm mb-2 leading-relaxed'
     : 'text-gray-700 text-sm mb-2 leading-relaxed';
   const postStatClass = isDark
-    ? 'flex items-center gap-6 text-sm text-neutral-400'
-    : 'flex items-center gap-6 text-sm text-gray-500';
+    ? 'flex items-center justify-between gap-6 text-sm text-neutral-400'
+    : 'flex items-center justify-between gap-6 text-sm text-gray-500';
 
   const getPostTypeColorClass = (type: string) => {
     if (!isDark) return getPostTypeColor(type);
@@ -374,27 +377,43 @@ export default function RecentPosts() {
 
               {/* Engagement Stats */}
               <div className={postStatClass}>
-                <button
-                  className="flex items-center gap-2 transition-colors"
-                  aria-pressed={post.hasVoted}
-                >
-                  <Heart
-                    className={`w-4 h-4 ${post.hasVoted ? 'fill-red-600 text-red-600' : isDark ? 'text-neutral-400 hover:text-sky-300' : 'text-gray-400 hover:text-emerald-600'}`}
-                  />
-                  <span>{post._count?.Vote ?? 0}</span>
-                </button>
-                <button
-                  className={`flex items-center gap-2 transition-colors ${isDark ? 'hover:text-sky-300' : 'hover:text-emerald-600'} group/action`}
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>{post._count?.Comment ?? 0}</span>
-                </button>
-                <button
-                  className={`flex items-center gap-2 transition-colors ${isDark ? 'hover:text-sky-300' : 'hover:text-emerald-600'} group/action`}
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>Share</span>
-                </button>
+                <div className={postStatClass}>
+                  <button
+                    className="flex items-center gap-2 transition-colors"
+                    aria-pressed={post.hasVoted}
+                  >
+                    <Heart
+                      className={`w-4 h-4 ${post.hasVoted ? 'fill-red-600 text-red-600' : isDark ? 'text-neutral-400 hover:text-sky-300' : 'text-gray-400 hover:text-emerald-600'}`}
+                    />
+                    <span>{post._count?.Vote ?? 0}</span>
+                  </button>
+                  <button
+                    className={`flex items-center gap-2 transition-colors ${isDark ? 'hover:text-sky-300' : 'hover:text-emerald-600'} group/action`}
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>{post._count?.Comment ?? 0}</span>
+                  </button>
+                </div>
+                <Tooltip title="Share Post">
+                  <button
+                    className={`flex items-center gap-2 transition-colors ${isDark ? 'hover:text-sky-300' : 'hover:text-emerald-600'} group/action`}
+                    onClick={() => {
+                      return navigator.clipboard
+                        .writeText(`${window.location.origin}/posts/${post.id}`)
+                        .then(() =>
+                          showNotification?.(
+                            'Post URL copied to clipboard',
+                            'success'
+                          )
+                        )
+                        .catch(() =>
+                          showNotification?.('Failed to copy post URL', 'error')
+                        );
+                    }}
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </button>
+                </Tooltip>
                 {/* {post.score && (
                   <div className="ml-auto flex items-center gap-1 text-xs text-gray-400">
                     <span>Score:</span>
