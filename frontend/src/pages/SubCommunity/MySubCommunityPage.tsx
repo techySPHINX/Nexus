@@ -42,7 +42,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-export const MySubCommunitiesPage: React.FC = () => {
+const MySubCommunitiesPage: React.FC = () => {
   const { user } = useAuth();
   const { loading } = useSubCommunity();
   const navigate = useNavigate();
@@ -514,3 +514,5 @@ export const MySubCommunitiesPage: React.FC = () => {
     </Box>
   );
 };
+
+export default MySubCommunitiesPage;
