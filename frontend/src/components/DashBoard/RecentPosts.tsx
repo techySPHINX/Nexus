@@ -9,7 +9,9 @@ import {
   RefreshCw,
   ArrowRight,
 } from 'lucide-react';
-import { useEffect, useState, CSSProperties } from 'react';
+import { useEffect, useState, CSSProperties, useRef } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
+import Card from '@mui/material/Card';
 import AttachmentIcon from '@mui/icons-material/Attachment';
 import { useNavigate } from 'react-router-dom';
 
@@ -22,15 +24,55 @@ export default function RecentPosts() {
   } = useDashboardContext();
   const navigate = useNavigate();
 
+  const { isDark } = useTheme();
+
+  const containerClasses = isDark
+    ? 'rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow bg-neutral-900 border-neutral-700 text-neutral-100'
+    : 'bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow';
+
   const [refreshing, setRefreshing] = useState(false);
+
+  // Dark-mode variants for post items
+  const postCardClass = isDark
+    ? 'border-b border-neutral-700 pb-5 last:border-0 last:pb-0 group hover:bg-neutral-800 rounded-lg p-3 -m-3 transition-all'
+    : 'border-b border-gray-200 pb-5 last:border-0 last:pb-0 group hover:bg-gray-50/50 rounded-lg p-3 -m-3 transition-all';
+
+  const postTitleClass = isDark
+    ? 'font-semibold text-neutral-100 text-sm mb-2'
+    : 'font-semibold text-gray-900 text-sm mb-2';
+  const postContentClass = isDark
+    ? 'text-neutral-300 text-sm mb-2 leading-relaxed'
+    : 'text-gray-700 text-sm mb-2 leading-relaxed';
+  const postStatClass = isDark
+    ? 'flex items-center gap-6 text-sm text-neutral-400'
+    : 'flex items-center gap-6 text-sm text-gray-500';
+
+  const getPostTypeColorClass = (type: string) => {
+    if (!isDark) return getPostTypeColor(type);
+    switch (type) {
+      case 'UPDATE':
+        return 'bg-blue-900 text-blue-300';
+      case 'DISCUSSION':
+        return 'bg-sky-900 text-sky-300';
+      case 'QUESTION':
+        return 'bg-purple-900 text-purple-300';
+      default:
+        return 'bg-neutral-800 text-neutral-300';
+    }
+  };
 
   const renderPosts = posts;
 
+  // Fetch posts once on mount (guarded) to avoid repeated network calls
+  const postsInitRef = useRef(false);
   useEffect(() => {
+    if (postsInitRef.current) return;
+    postsInitRef.current = true;
     if (renderPosts.length === 0) {
       getSuggestedPosts();
     }
-  }, [getSuggestedPosts, renderPosts.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -89,10 +131,10 @@ export default function RecentPosts() {
   // Skeleton Loading
   if (postsLoading && renderPosts.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+      <Card className={containerClasses}>
         <div className="flex items-center justify-between mb-6">
-          <div className="h-7 w-32 bg-emerald-100 rounded animate-pulse" />
-          <div className="h-5 w-20 bg-emerald-100 rounded animate-pulse" />
+          <div className="h-7 w-32 bg-neutral-700 rounded animate-pulse" />
+          <div className="h-5 w-20 bg-neutral-700 rounded animate-pulse" />
         </div>
         <div className="space-y-5">
           {[...Array(3)].map((_, index) => (
@@ -101,32 +143,40 @@ export default function RecentPosts() {
               className="border-b border-gray-200 pb-5 last:border-0 last:pb-0 animate-pulse"
             >
               <div className="flex gap-3 mb-3">
-                <div className="w-10 h-10 bg-emerald-100 rounded-full flex-shrink-0" />
+                <div className="w-10 h-10 bg-neutral-700 rounded-full flex-shrink-0" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-emerald-100 rounded w-24" />
-                  <div className="h-3 bg-emerald-100 rounded w-32" />
+                  <div className="h-4 bg-neutral-700 rounded w-24" />
+                  <div className="h-3 bg-neutral-700 rounded w-32" />
                 </div>
               </div>
-              <div className="h-4 bg-emerald-100 rounded w-full mb-2" />
-              <div className="h-3 bg-emerald-100 rounded w-3/4 mb-4" />
+              <div className="h-4 bg-neutral-700 rounded w-full mb-2" />
+              <div className="h-3 bg-neutral-700 rounded w-3/4 mb-4" />
               <div className="flex gap-6">
-                <div className="h-4 bg-emerald-100 rounded w-12" />
-                <div className="h-4 bg-emerald-100 rounded w-12" />
-                <div className="h-4 bg-emerald-100 rounded w-12" />
+                <div className="h-4 bg-neutral-700 rounded w-12" />
+                <div className="h-4 bg-neutral-700 rounded w-12" />
+                <div className="h-4 bg-neutral-700 rounded w-12" />
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Error State
   if (postsError && renderPosts.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-rose-100 p-6 shadow-sm">
+      <Card className={containerClasses}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Recent Posts</h2>
+          <h2
+            className={
+              isDark
+                ? 'text-xl font-bold text-neutral-100'
+                : 'text-xl font-bold text-gray-900'
+            }
+          >
+            Recent Posts
+          </h2>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -158,20 +208,28 @@ export default function RecentPosts() {
             {refreshing ? 'Refreshing...' : 'Try Again'}
           </button>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Empty State
   if (!renderPosts || renderPosts.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+      <Card className={containerClasses}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Recent Posts</h2>
+          <h2
+            className={
+              isDark
+                ? 'text-xl font-bold text-neutral-100'
+                : 'text-xl font-bold text-gray-900'
+            }
+          >
+            Recent Posts
+          </h2>
         </div>
         <div className="text-center py-8">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <MessageCircle className="w-8 h-8 text-emerald-600" />
+          <div className="w-16 h-16 bg-neutral-700 rounded-full flex items-center justify-center mx-auto mb-3">
+            <MessageCircle className="w-8 h-8 text-sky-400" />
           </div>
           <h3 className="font-semibold text-gray-900 mb-2">No posts yet</h3>
           <p className="text-sm text-gray-600 mb-4">
@@ -181,20 +239,32 @@ export default function RecentPosts() {
             Create Post
           </button>
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+    <Card className={containerClasses}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Recent Posts</h2>
+        <h2
+          className={
+            isDark
+              ? 'text-xl font-bold text-neutral-100'
+              : 'text-xl font-bold text-gray-900'
+          }
+        >
+          Recent Posts
+        </h2>
         <div className="flex items-center gap-2">
           <button
             onClick={handleRefresh}
             disabled={refreshing || postsLoading}
-            className="text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
+            className={
+              isDark
+                ? 'text-sky-300 hover:text-sky-200 transition-colors disabled:opacity-50'
+                : 'text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50'
+            }
             title="Refresh posts"
           >
             <RefreshCw
@@ -203,7 +273,11 @@ export default function RecentPosts() {
           </button>
           <button
             onClick={() => navigate('/feed')}
-            className="text-emerald-600 hover:text-emerald-700 font-medium text-sm flex items-center gap-1 transition-colors"
+            className={
+              isDark
+                ? 'text-sky-300 hover:text-sky-200 font-medium text-sm flex items-center gap-1 transition-colors'
+                : 'text-emerald-600 hover:text-emerald-700 font-medium text-sm flex items-center gap-1 transition-colors'
+            }
           >
             View All
             <ArrowRight className="w-4 h-4" />
@@ -219,10 +293,7 @@ export default function RecentPosts() {
           const avatarChar = authorName.charAt(0).toUpperCase();
 
           return (
-            <div
-              key={post.id}
-              className="border-b border-gray-200 pb-5 last:border-0 last:pb-0 group hover:bg-gray-50/50 rounded-lg p-3 -m-3 transition-all"
-            >
+            <div key={post.id} className={postCardClass}>
               {/* Author Header */}
               <div className="flex gap-3 mb-3">
                 <div className="flex-shrink-0">
@@ -242,12 +313,14 @@ export default function RecentPosts() {
                   <ProfileNameLink user={post.author} badgeSize={20} />
                   <div className="flex items-center gap-2 mt-1">
                     <span
-                      className={`text-xs font-medium px-2 py-1 rounded-full ${getPostTypeColor(post.type)}`}
+                      className={`text-xs font-medium px-2 py-1 rounded-full ${getPostTypeColorClass(post.type)}`}
                     >
                       {getPostTypeLabel(post.type)}
                     </span>
                     <Clock className="w-3 h-3 text-gray-400" />
-                    <p className="text-xs text-gray-500 flex items-center gap-2">
+                    <p
+                      className={`text-xs ${isDark ? 'text-neutral-400' : 'text-gray-500'} flex items-center gap-2`}
+                    >
                       <span>{formatDate(post.createdAt)}</span>
                     </p>
                     {/* {post.isUrgent && (
@@ -261,18 +334,22 @@ export default function RecentPosts() {
 
               {/* Post Content */}
               {post.subject && (
-                <h3 className="font-semibold text-gray-900 text-sm mb-2">
+                <h3 className={postTitleClass}>
                   <button
                     type="button"
                     onClick={() => navigate(`/posts/${post.id}`)}
-                    className="hover:text-emerald-600 text-left p-0 m-0"
+                    className={
+                      isDark
+                        ? 'hover:text-sky-600 text-left p-0 m-0'
+                        : 'hover:text-emerald-600 text-left p-0 m-0'
+                    }
                   >
                     {post.subject}
                   </button>
                 </h3>
               )}
               <p
-                className="text-gray-700 text-sm mb-2 leading-relaxed overflow-hidden"
+                className={postContentClass}
                 style={
                   {
                     display: '-webkit-box',
@@ -296,21 +373,25 @@ export default function RecentPosts() {
               )}
 
               {/* Engagement Stats */}
-              <div className="flex items-center gap-6 text-sm text-gray-500">
+              <div className={postStatClass}>
                 <button
                   className="flex items-center gap-2 transition-colors"
                   aria-pressed={post.hasVoted}
                 >
                   <Heart
-                    className={`w-4 h-4 ${post.hasVoted ? 'fill-red-600 text-red-600' : 'text-gray-400 hover:text-emerald-600'}`}
+                    className={`w-4 h-4 ${post.hasVoted ? 'fill-red-600 text-red-600' : isDark ? 'text-neutral-400 hover:text-sky-300' : 'text-gray-400 hover:text-emerald-600'}`}
                   />
                   <span>{post._count?.Vote ?? 0}</span>
                 </button>
-                <button className="flex items-center gap-2 hover:text-emerald-600 transition-colors group/action">
+                <button
+                  className={`flex items-center gap-2 transition-colors ${isDark ? 'hover:text-sky-300' : 'hover:text-emerald-600'} group/action`}
+                >
                   <MessageCircle className="w-4 h-4" />
                   <span>{post._count?.Comment ?? 0}</span>
                 </button>
-                <button className="flex items-center gap-2 hover:text-emerald-600 transition-colors group/action">
+                <button
+                  className={`flex items-center gap-2 transition-colors ${isDark ? 'hover:text-sky-300' : 'hover:text-emerald-600'} group/action`}
+                >
                   <Share2 className="w-4 h-4" />
                   <span>Share</span>
                 </button>
@@ -327,6 +408,6 @@ export default function RecentPosts() {
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }

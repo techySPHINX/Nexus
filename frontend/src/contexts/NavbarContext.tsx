@@ -14,6 +14,8 @@ interface NavbarContextType {
   position: NavbarPosition;
   togglePosition: () => void;
   setPosition: (position: NavbarPosition) => void;
+  collapsed: boolean;
+  toggleCollapsed: () => void;
 }
 
 const NavbarContext = createContext<NavbarContextType | undefined>(undefined);
@@ -32,6 +34,7 @@ interface NavbarProviderProps {
 
 export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
   const [position, setPosition] = useState<NavbarPosition>('top');
+  const [collapsed, setCollapsed] = useState<boolean>(false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -40,11 +43,15 @@ export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
     const savedPosition = localStorage.getItem(
       'navbarPosition'
     ) as NavbarPosition;
+    const savedCollapsed = localStorage.getItem('navbarCollapsed');
     if (
       savedPosition &&
       (savedPosition === 'top' || savedPosition === 'left')
     ) {
       setPosition(savedPosition);
+    }
+    if (savedCollapsed) {
+      setCollapsed(savedCollapsed === 'true');
     }
   }, []);
 
@@ -64,6 +71,12 @@ export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
     localStorage.setItem('navbarPosition', newPosition);
   };
 
+  const toggleCollapsed = () => {
+    const newCollapsed = !collapsed;
+    setCollapsed(newCollapsed);
+    localStorage.setItem('navbarCollapsed', newCollapsed ? 'true' : 'false');
+  };
+
   const handleSetPosition = (newPosition: NavbarPosition) => {
     setPosition(newPosition);
     localStorage.setItem('navbarPosition', newPosition);
@@ -75,6 +88,8 @@ export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
         position,
         togglePosition,
         setPosition: handleSetPosition,
+        collapsed,
+        toggleCollapsed,
       }}
     >
       {children}

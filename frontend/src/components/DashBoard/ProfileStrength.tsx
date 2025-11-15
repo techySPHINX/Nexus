@@ -1,6 +1,8 @@
 import { useDashboardContext } from '@/contexts/DashBoardContext';
 import { CheckCircle2, Circle, AlertCircle, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
+import Card from '@mui/material/Card';
 
 interface ProfileCompletionItem {
   label: string;
@@ -18,13 +20,13 @@ export default function ProfileStrength() {
     loading: { profileCompletion: loadingProfileCompletion },
   } = useDashboardContext();
 
-  const [refreshing, setRefreshing] = useState(false);
+  const { isDark } = useTheme();
 
-  useEffect(() => {
-    if (!profileCompletionStats) {
-      getProfileCompletionStats();
-    }
-  }, [getProfileCompletionStats, profileCompletionStats]);
+  const containerClasses = isDark
+    ? 'rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow bg-neutral-900 border-neutral-700 text-neutral-100'
+    : 'bg-white rounded-xl border border-emerald-100 p-6 shadow-sm';
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -215,8 +217,14 @@ export default function ProfileStrength() {
   // Loading state
   if (loadingProfileCompletion && !profileCompletionStats) {
     return (
-      <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">
+      <Card className={containerClasses}>
+        <h3
+          className={
+            isDark
+              ? 'text-lg font-bold text-neutral-100 mb-4'
+              : 'text-lg font-bold text-gray-900 mb-4'
+          }
+        >
           Profile Strength
         </h3>
         <div className="animate-pulse space-y-4">
@@ -235,16 +243,24 @@ export default function ProfileStrength() {
           ))}
           <div className="h-10 bg-emerald-100 rounded-lg mt-5"></div>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Error state
   if (profileCompletionError) {
     return (
-      <div className="bg-white rounded-xl border border-rose-100 p-6 shadow-sm">
+      <Card className={containerClasses}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Profile Strength</h3>
+          <h3
+            className={
+              isDark
+                ? 'text-lg font-bold text-neutral-100'
+                : 'text-lg font-bold text-gray-900'
+            }
+          >
+            Profile Strength
+          </h3>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -276,16 +292,24 @@ export default function ProfileStrength() {
             {refreshing ? 'Refreshing...' : 'Try Again'}
           </button>
         </div>
-      </div>
+      </Card>
     );
   }
 
   // Profile is 100% complete
   if (isProfileComplete) {
     return (
-      <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm">
+      <Card className={containerClasses}>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold text-gray-900">Profile Strength</h3>
+          <h3
+            className={
+              isDark
+                ? 'text-lg font-bold text-neutral-100'
+                : 'text-lg font-bold text-gray-900'
+            }
+          >
+            Profile Strength
+          </h3>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
@@ -301,10 +325,22 @@ export default function ProfileStrength() {
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
             <CheckCircle2 className="w-8 h-8 text-emerald-600" />
           </div>
-          <h4 className="font-bold text-gray-900 text-lg mb-2">
+          <h4
+            className={
+              isDark
+                ? 'font-bold text-emerald-100 text-lg mb-2'
+                : 'font-bold text-gray-900 text-lg mb-2'
+            }
+          >
             Profile Complete!
           </h4>
-          <p className="text-sm text-gray-600 mb-4">
+          <p
+            className={
+              isDark
+                ? 'text-sm text-neutral-300 mb-4'
+                : 'text-sm text-gray-600 mb-4'
+            }
+          >
             Your profile is fully optimized for networking and opportunities
           </p>
           <div className="w-full bg-emerald-200 rounded-full h-2.5 mb-2">
@@ -313,7 +349,13 @@ export default function ProfileStrength() {
               style={{ width: '100%' }}
             />
           </div>
-          <p className="text-xs text-emerald-600 font-semibold">
+          <p
+            className={
+              isDark
+                ? 'text-xs text-emerald-200 font-semibold'
+                : 'text-xs text-emerald-600 font-semibold'
+            }
+          >
             {completed}/{totalRequired} • 100% Complete
           </p>
         </div>
@@ -324,56 +366,93 @@ export default function ProfileStrength() {
         >
           View Profile
         </button>
-      </div>
+      </Card>
     );
   }
 
   // No data state (should not happen with proper API, but as fallback)
-  // if (!profileCompletionStats?.details) {
-  //   return (
-  //     <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm">
-  //       <div className="flex items-center justify-between mb-4">
-  //         <h3 className="text-lg font-bold text-gray-900">Profile Strength</h3>
-  //         <button
-  //           onClick={handleRefresh}
-  //           disabled={refreshing}
-  //           className="text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
-  //         >
-  //           <RefreshCw
-  //             className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
-  //           />
-  //         </button>
-  //       </div>
-  //       <div className="text-center py-8">
-  //         <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-  //           <Circle className="w-8 h-8 text-emerald-600" />
-  //         </div>
-  //         <h4 className="font-bold text-gray-900 text-lg mb-2">
-  //           Profile Incomplete
-  //         </h4>
-  //         <p className="text-sm text-gray-600 mb-4">
-  //           Start building your profile to unlock networking features
-  //         </p>
-  //         <button
-  //           onClick={() => (window.location.href = '/profile/edit')}
-  //           className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
-  //         >
-  //           Start Building Profile
-  //         </button>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (!profileCompletionStats?.details) {
+    console.log('profileCompletionStats', profileCompletionStats);
+    return (
+      <Card className={containerClasses}>
+        <div className="flex items-center justify-between mb-4">
+          <h3
+            className={
+              isDark
+                ? 'text-lg font-bold text-neutral-100'
+                : 'text-lg font-bold text-gray-900'
+            }
+          >
+            Profile Strength
+          </h3>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className={
+              isDark
+                ? 'text-sky-300 hover:text-sky-200 transition-colors disabled:opacity-50 flex items-center gap-1'
+                : 'text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-1'
+            }
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+            />
+          </button>
+        </div>
+        <div className="text-center py-8">
+          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Circle className="w-8 h-8 text-emerald-600" />
+          </div>
+          <h4
+            className={
+              isDark
+                ? 'font-bold text-neutral-100 text-lg mb-2'
+                : 'font-bold text-gray-900 text-lg mb-2'
+            }
+          >
+            Profile Incomplete
+          </h4>
+          <p
+            className={
+              isDark
+                ? 'text-sm text-neutral-300 mb-4'
+                : 'text-sm text-gray-600 mb-4'
+            }
+          >
+            Start building your profile to unlock networking features
+          </p>
+          <button
+            onClick={() => (window.location.href = '/profile')}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+          >
+            Start Building Profile
+          </button>
+        </div>
+      </Card>
+    );
+  }
 
   // Profile is incomplete - show progress
   return (
-    <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm">
+    <Card className={containerClasses}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-gray-900">Profile Strength</h3>
+        <h3
+          className={
+            isDark
+              ? 'text-lg font-bold text-neutral-100'
+              : 'text-lg font-bold text-gray-900'
+          }
+        >
+          Profile Strength
+        </h3>
         <button
           onClick={handleRefresh}
           disabled={refreshing || loadingProfileCompletion}
-          className="text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
+          className={
+            isDark
+              ? 'text-sky-300 hover:text-sky-200 transition-colors disabled:opacity-50 flex items-center gap-1'
+              : 'text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50 flex items-center gap-1'
+          }
           title="Refresh profile stats"
         >
           <RefreshCw
@@ -385,16 +464,32 @@ export default function ProfileStrength() {
       {/* Progress Bar */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">
+          <span
+            className={
+              isDark
+                ? 'text-sm font-medium text-gray-300'
+                : 'text-sm font-medium text-gray-700'
+            }
+          >
             {percentage}% Complete
           </span>
-          <span className="text-xs text-emerald-600 font-semibold">
+          <span
+            className={
+              isDark
+                ? 'text-xs text-sky-600 font-semibold'
+                : 'text-xs text-emerald-600 font-semibold'
+            }
+          >
             {completed}/{totalRequired}
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2.5">
           <div
-            className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2.5 rounded-full transition-all duration-500"
+            className={
+              isDark
+                ? 'bg-gradient-to-r from-sky-400 to-sky-500 h-2.5 rounded-full transition-all duration-500'
+                : 'bg-gradient-to-r from-emerald-500 to-emerald-600 h-2.5 rounded-full transition-all duration-500'
+            }
             style={{ width: `${percentage}%` }}
           />
         </div>
@@ -405,18 +500,36 @@ export default function ProfileStrength() {
         {items.map((item) => (
           <div key={item.label} className="flex items-center gap-3">
             {item.completed ? (
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+              <CheckCircle2
+                className={
+                  isDark
+                    ? 'w-5 h-5 text-sky-100 flex-shrink-0'
+                    : 'w-5 h-5 text-emerald-600 flex-shrink-0'
+                }
+              />
             ) : (
-              <Circle className="w-5 h-5 text-gray-300 flex-shrink-0" />
+              <Circle
+                className={
+                  isDark
+                    ? 'w-5 h-5 text-neutral-500 flex-shrink-0'
+                    : 'w-5 h-5 text-gray-300 flex-shrink-0'
+                }
+              />
             )}
             <div className="flex-1 min-w-0">
               <span
-                className={`text-sm ${item.completed ? 'text-gray-900 font-medium' : 'text-gray-500'}`}
+                className={`text-sm ${item.completed ? (isDark ? 'text-neutral-400 font-medium' : 'text-gray-900 font-medium') : isDark ? 'text-neutral-300' : 'text-gray-500'}`}
               >
                 {item.label}
               </span>
               {item.type === 'count' && !item.completed && (
-                <p className="text-xs text-gray-400 mt-1">
+                <p
+                  className={
+                    isDark
+                      ? 'text-xs text-neutral-300 mt-1'
+                      : 'text-xs text-gray-400 mt-1'
+                  }
+                >
                   {item.currentCount}/{item.requiredCount} required
                 </p>
               )}
@@ -427,12 +540,22 @@ export default function ProfileStrength() {
 
       {/* Action Button */}
       <button
-        onClick={() => (window.location.href = '/profile/edit')}
-        className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+        onClick={() => (window.location.href = '/profile')}
+        className={
+          isDark
+            ? 'w-full px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2'
+            : 'w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2'
+        }
       >
         Complete Profile
         {percentage > 0 && (
-          <span className="text-xs bg-emerald-700 px-2 py-1 rounded-full">
+          <span
+            className={
+              isDark
+                ? 'text-xs bg-sky-700 px-2 py-1 rounded-full'
+                : 'text-xs bg-emerald-700 px-2 py-1 rounded-full'
+            }
+          >
             {percentage}%
           </span>
         )}
@@ -440,10 +563,16 @@ export default function ProfileStrength() {
 
       {/* Tip */}
       {percentage < 50 && (
-        <p className="text-xs text-gray-500 text-center mt-3">
-          Complete your profile to get 2x more connection requests
+        <p
+          className={
+            isDark
+              ? 'text-xs text-neutral-400 text-center mt-3'
+              : 'text-xs text-gray-500 text-center mt-3'
+          }
+        >
+          Complete your profile to get Recommended connection requests
         </p>
       )}
-    </div>
+    </Card>
   );
 }

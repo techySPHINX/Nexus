@@ -39,6 +39,20 @@ export const DashBoardService = {
     }
   },
 
+  getRecentPostsService: async (page?: number, limit?: number) => {
+    try {
+      const data = await api.get('/posts/recent', {
+        params: {
+          page,
+          limit,
+        },
+      });
+      return data.data;
+    } catch (err) {
+      throw new Error('Failed to fetch recent posts: ' + getErrorMessage(err));
+    }
+  },
+
   connectToUser: async (userId: string) => {
     try {
       await api.post(`/connection/send`, {

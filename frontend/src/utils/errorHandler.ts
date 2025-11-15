@@ -47,6 +47,33 @@ const extractBackendMessage = (data?: ApiErrorResponse): string | undefined => {
 };
 
 export const getErrorMessage = (err: unknown): string => {
+  const dbMsg = "Can't reach database server";
+
+  const containsDbMsg = (e: unknown): boolean => {
+    if (typeof e === 'string') return e.includes(dbMsg);
+    if (e instanceof Error && typeof e.message === 'string')
+      return e.message.includes(dbMsg);
+    if (axios.isAxiosError(e)) {
+      if (typeof e.message === 'string' && e.message.includes(dbMsg))
+        return true;
+      const respData = e.response?.data as ApiErrorResponse | undefined;
+      const backend = extractBackendMessage(respData);
+      if (backend && backend.includes(dbMsg)) return true;
+    }
+    if (typeof e === 'object' && e !== null) {
+      const obj = e as { message?: unknown; details?: unknown };
+      if (typeof obj.message === 'string' && obj.message.includes(dbMsg))
+        return true;
+      if (obj.details && typeof obj.details === 'object') {
+        const backend = extractBackendMessage(obj.details as ApiErrorResponse);
+        if (backend && backend.includes(dbMsg)) return true;
+      }
+    }
+    return false;
+  };
+
+  if (containsDbMsg(err)) return dbMsg;
+
   if (axios.isAxiosError(err)) {
     const responseData = err.response?.data as ApiErrorResponse | undefined;
     const backendMsg = extractBackendMessage(responseData);

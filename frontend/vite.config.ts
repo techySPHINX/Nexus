@@ -39,7 +39,12 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       outDir: 'dist',
       sourcemap: mode === 'development',
       minify: 'terser',
-      target: 'es2015',
+      // Use a modern target so esbuild / Vite can emit top-level await
+      target: 'es2022',
+      // Ensure esbuild also targets the same environment
+      esbuild: {
+        target: 'es2022',
+      },
       chunkSizeWarningLimit: 1000,
       terserOptions: {
         compress: {
