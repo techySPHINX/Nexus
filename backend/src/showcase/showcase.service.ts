@@ -565,29 +565,62 @@ export class ShowcaseService {
     };
   }
 
-  async getProjectById(projectId: string) {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        githubUrl: true,
-        imageUrl: true,
-        videoUrl: true,
-        websiteUrl: true,
-        skills: true,
-        updatedAt: true,
-        seeking: true,
-        _count: {
-          select: {
-            comments: true,
-            teamMembers: true,
-            updates: true,
+  async getProjectById(projectId: string, detailed?: boolean, userId?: string) {
+    let project;
+    if(!detailed) {
+      project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          githubUrl: true,
+          imageUrl: true,
+          videoUrl: true,
+          websiteUrl: true,
+          skills: true,
+          updatedAt: true,
+          seeking: true,
+          _count: {
+            select: {
+              comments: true,
+              teamMembers: true,
+              updates: true,
+            },
+          }
+        },
+      });
+    } else {
+      project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        include: {
+          owner: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              profile: { select: { avatarUrl: true } },
+            },
           },
-        }
-      },
-    });
+          followers: {
+            where: { userId },
+            select: { userId: true },
+          },
+          supporters: {
+            where: { userId },
+            select: { userId: true },
+          },
+          _count: {
+            select: {
+              supporters: true,
+              followers: true,
+              comments: true,
+              collaborationRequests: true,
+            },
+          },
+        },
+      });
+    }
 
     if (!project) return null;
 

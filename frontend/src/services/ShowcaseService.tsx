@@ -9,10 +9,9 @@ import {
 } from '@/types/ShowcaseType';
 import api from './api';
 import { getErrorMessage } from '@/utils/errorHandler';
-import { Startup } from '@/types/profileType';
-import { StartupSummary } from '@/types/StartupType';
+import { StartupDetail, StartupSummary } from '@/types/StartupType';
 
-export const ShowcaseService = {
+const ShowcaseService = {
   createProject: async (data: CreateProjectInterface) => {
     try {
       const response = await api.post('/showcase/project', data);
@@ -75,9 +74,12 @@ export const ShowcaseService = {
     }
   },
 
-  getProjectById: async (projectId: string) => {
+  getProjectById: async (projectId: string, detailed?: boolean) => {
     try {
-      const response = await api.get(`/showcase/project/${projectId}`);
+      const response = await api.get(`/showcase/project/${projectId}`, {
+        params: { detailed },
+      });
+      console.log('Fetched project by ID:', response.data);
       return response.data;
     } catch (error) {
       throw new Error(
@@ -453,7 +455,7 @@ export const ShowcaseService = {
     }
   },
 
-  getStartupById: async (startupId: string): Promise<Startup> => {
+  getStartupById: async (startupId: string): Promise<StartupDetail> => {
     try {
       const response = await api.get(`/showcase/startup/${startupId}`);
       console.log('Fetched startup:', response.data);
@@ -515,3 +517,5 @@ export const ShowcaseService = {
     }
   },
 };
+
+export { ShowcaseService };
