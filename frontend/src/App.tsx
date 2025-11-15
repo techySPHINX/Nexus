@@ -29,7 +29,7 @@ const Files = lazy(() => import('./pages/Files'));
 const Landing = lazy(() => import('./pages/Landing'));
 const Notification = lazy(() => import('./pages/Notification'));
 import { NotificationProvider } from './contexts/NotificationContext';
-import { ProfileProvider } from './contexts/ProfileContext';
+const ProfileProvider = lazy(() => import('./contexts/ProfileContext'));
 import { EngagementProvider } from './contexts/engagementContext';
 import { EngagementService } from './services/engagementService';
 import { PostProvider } from './contexts/PostContext';
