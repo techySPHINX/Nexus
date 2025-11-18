@@ -20,7 +20,7 @@ import { FilterMessagesDto } from './dto/filter-messages.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('messages')
 export class MessagingController {
-  constructor(private readonly messagingService: MessagingService) {}
+  constructor(private readonly messagingService: MessagingService) { }
 
   /**
    * Sends a new message from the current user to a specified recipient.
@@ -62,5 +62,24 @@ export class MessagingController {
   @Get('conversations/all')
   getAllConversations(@GetCurrentUser('userId') userId: string) {
     return this.messagingService.getAllConversations(userId);
+  }
+
+  /**
+   * Syncs messages for offline users.
+   * Retrieves all messages sent after the specified timestamp.
+   * @param userId - The ID of the authenticated user.
+   * @param lastMessageTimestamp - ISO timestamp of the last message the user has.
+   * @returns A promise that resolves to an array of new messages.
+   */
+  @Get('sync')
+  syncMessages(
+    @GetCurrentUser('userId') userId: string,
+    @Query('lastMessageTimestamp') lastMessageTimestamp: string,
+  ) {
+    const timestamp = lastMessageTimestamp
+      ? new Date(lastMessageTimestamp)
+      : new Date(0); // Beginning of time if not provided
+
+    return this.messagingService.syncMessages(userId, timestamp);
   }
 }

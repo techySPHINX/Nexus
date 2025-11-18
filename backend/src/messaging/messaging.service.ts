@@ -20,7 +20,7 @@ export class MessagingService {
     private prisma: PrismaService,
     @Inject(forwardRef(() => ImprovedMessagingGateway))
     private messagingGateway: ImprovedMessagingGateway,
-  ) {}
+  ) { }
 
   /**
    * Sends a new message from a sender to a receiver.
@@ -235,5 +235,225 @@ export class MessagingService {
     });
 
     return conversations;
+  }
+
+  /**
+   * Records a read receipt for a message.
+   * Creates a ReadReceipt entry if one doesn't already exist.
+   * @param userId - The ID of the user who read the message.
+   * @param messageId - The ID of the message that was read.
+   * @returns A promise that resolves to the created read receipt.
+   * @throws {NotFoundException} If the message is not found.
+   * @throws {ForbiddenException} If the user is not the receiver of the message.
+   */
+  async markMessageAsRead(userId: string, messageId: string) {
+    // Verify the message exists and the user is the receiver
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (message.receiverId !== userId) {
+      throw new ForbiddenException(
+        'You can only mark messages addressed to you as read',
+      );
+    }
+
+    // Check if read receipt already exists
+    const existingReceipt = await this.prisma.readReceipt.findUnique({
+      where: {
+        messageId_userId: {
+          messageId,
+          userId,
+        },
+      },
+    });
+
+    if (existingReceipt) {
+      return existingReceipt; // Already marked as read
+    }
+
+    // Create the read receipt
+    const readReceipt = await this.prisma.readReceipt.create({
+      data: {
+        messageId,
+        userId,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return readReceipt;
+  }
+
+  /**
+   * Edits an existing message.
+   * Only the sender can edit their own messages.
+   * @param userId - The ID of the user editing the message.
+   * @param messageId - The ID of the message to edit.
+   * @param content - The new content for the message.
+   * @returns A promise that resolves to the updated message.
+   * @throws {NotFoundException} If the message is not found.
+   * @throws {ForbiddenException} If the user is not the sender of the message.
+   */
+  async editMessage(userId: string, messageId: string, content: string) {
+    // Verify the message exists and the user is the sender
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (message.senderId !== userId) {
+      throw new ForbiddenException('You can only edit your own messages');
+    }
+
+    if (message.deletedAt) {
+      throw new ForbiddenException('Cannot edit a deleted message');
+    }
+
+    // Update the message
+    const updatedMessage = await this.prisma.message.update({
+      where: { id: messageId },
+      data: {
+        content,
+        isEdited: true,
+        editedAt: new Date(),
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return updatedMessage;
+  }
+
+  /**
+   * Soft deletes a message.
+   * Only the sender can delete their own messages.
+   * @param userId - The ID of the user deleting the message.
+   * @param messageId - The ID of the message to delete.
+   * @returns A promise that resolves to the soft-deleted message.
+   * @throws {NotFoundException} If the message is not found.
+   * @throws {ForbiddenException} If the user is not the sender of the message.
+   */
+  async deleteMessage(userId: string, messageId: string) {
+    // Verify the message exists and the user is the sender
+    const message = await this.prisma.message.findUnique({
+      where: { id: messageId },
+    });
+
+    if (!message) {
+      throw new NotFoundException('Message not found');
+    }
+
+    if (message.senderId !== userId) {
+      throw new ForbiddenException('You can only delete your own messages');
+    }
+
+    if (message.deletedAt) {
+      throw new ForbiddenException('Message is already deleted');
+    }
+
+    // Soft delete the message
+    const deletedMessage = await this.prisma.message.update({
+      where: { id: messageId },
+      data: {
+        deletedAt: new Date(),
+        content: 'This message has been deleted',
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return deletedMessage;
+  }
+
+  /**
+   * Retrieves messages sent after a specific timestamp.
+   * Used for syncing offline users with new messages.
+   * @param userId - The ID of the user requesting sync.
+   * @param lastMessageTimestamp - The timestamp of the last message the user has.
+   * @returns A promise that resolves to an array of new messages.
+   */
+  async syncMessages(userId: string, lastMessageTimestamp: Date) {
+    const messages = await this.prisma.message.findMany({
+      where: {
+        AND: [
+          {
+            OR: [{ senderId: userId }, { receiverId: userId }],
+          },
+          {
+            timestamp: {
+              gt: lastMessageTimestamp,
+            },
+          },
+        ],
+      },
+      orderBy: { timestamp: 'asc' },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        receiver: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+        readReceipts: {
+          select: {
+            userId: true,
+            readAt: true,
+          },
+        },
+      },
+    });
+
+    return messages;
   }
 }

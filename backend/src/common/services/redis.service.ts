@@ -11,21 +11,28 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly logger: WinstonLoggerService) { }
 
   async onModuleInit() {
-    const redisConfig = {
-      host: process.env.REDIS_HOST || 'localhost',
-      port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      db: parseInt(process.env.REDIS_DB || '0'),
-      retryStrategy: (times: number) => {
-        const delay = Math.min(times * 50, 2000);
-        return delay;
-      },
-      maxRetriesPerRequest: 3,
-    };
-
-    this.client = new Redis(redisConfig);
-    this.subscriber = new Redis(redisConfig);
-    this.publisher = new Redis(redisConfig);
+    const redisUrl = process.env.REDIS_URL;
+    let client, subscriber, publisher;
+    if (redisUrl) {
+      client = new Redis(redisUrl);
+      subscriber = new Redis(redisUrl);
+      publisher = new Redis(redisUrl);
+    } else {
+      const redisConfig = {
+        url: process.env.REDIS_URL,
+        retryStrategy: (times: number) => {
+          const delay = Math.min(times * 50, 2000);
+          return delay;
+        },
+        maxRetriesPerRequest: 3,
+      };
+      client = new Redis(redisConfig);
+      subscriber = new Redis(redisConfig);
+      publisher = new Redis(redisConfig);
+    }
+    this.client = client;
+    this.subscriber = subscriber;
+    this.publisher = publisher;
 
     this.client.on('connect', () => {
       this.logger.log('✅ Redis client connected', 'RedisService');

@@ -37,16 +37,9 @@ import { improvedWebSocketService } from '../services/websocket.improved';
 import ChatBox from '../components/ChatBox';
 import { apiService } from '../services/api';
 import type { WebSocketMessage } from '../services/websocket.improved';
-
-interface Message {
-  id: string;
-  content: string;
-  senderId: string;
-  receiverId: string;
-  timestamp: string;
-  createdAt: string;
-  isRead?: boolean;
-}
+import { useMessagingStore } from '../store/messaging.store';
+import type { Message } from '../store/messaging.store';
+import { initializeFCM } from '../config/firebase-config';
 
 interface Conversation {
   id: string;
@@ -62,12 +55,34 @@ interface Conversation {
 
 const ChatPage: React.FC = () => {
   const { user, token } = useAuth();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+
+  // Zustand store selectors
+  const {
+    // messages: storeMessages,
+    // conversations: storeConversations,
+    onlineUsers,
+    typingUsers: storeTypingUsers,
+    setCurrentUser,
+    // setSelectedConversation: setStoreSelectedConversation,
+    addMessage,
+    updateMessageByTempId,
+    markMessageAsRead,
+    editMessage,
+    deleteMessage,
+    loadConversations: loadStoreConversations,
+    setUserOnline,
+    setUserOffline,
+    setUserTyping,
+    setUserStoppedTyping,
+    syncMessages,
+    addConversation,
+    updateConversation,
+    clearUnreadCount,
+  } = useMessagingStore();
+
+  // Local UI state
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [isTyping] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<
     'disconnected' | 'connecting' | 'connected' | 'reconnecting'
@@ -85,6 +100,10 @@ const ChatPage: React.FC = () => {
     location?: string;
   }
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  // Local state for conversations and messages
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  // const [isTyping, setIsTyping] = useState(false); // Not used
   const [searching, setSearching] = useState(false);
   const [unreadMessages, setUnreadMessages] = useState<Set<string>>(new Set());
   const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(
@@ -104,12 +123,153 @@ const ChatPage: React.FC = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Get messages for selected conversation from store
+  // Removed redeclaration of messages to fix error
+
+  // Get conversations from store
+  // const conversations = storeConversations;
+
+  // Get typing users from store
+  const typingUsers = storeTypingUsers;
+
   // Request notification permission
   useEffect(() => {
     if (Notification.permission === 'default') {
       Notification.requestPermission();
     }
   }, []);
+
+  // ===== Initialize FCM for Push Notifications =====
+  useEffect(() => {
+    if (!user?.id || !token) return;
+
+    const setupFCM = async () => {
+      try {
+        await initializeFCM(token);
+        console.log('✅ FCM initialized');
+      } catch (error) {
+        console.error('❌ Error initializing FCM:', error);
+        // FCM is optional, don't block app
+      }
+    };
+
+    setupFCM();
+  }, [user?.id, token]);
+
+  // ===== Load conversations from IndexedDB and sync with API =====
+  useEffect(() => {
+    if (!user?.id || !token) return;
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        setCurrentUser(user.id);
+
+        // Load conversations from IndexedDB first (fast)
+        await loadStoreConversations();
+
+        // Load conversations from API
+        const response = await apiService.messages.getAllConversations();
+        const apiConversations = response.data;
+
+        // Add conversations to store
+        type ApiConversation = {
+          conversationId: string;
+          otherUser: {
+            id: string;
+            name: string;
+            email: string;
+            profile?: { avatarUrl?: string };
+          };
+          latestMessage?: Message;
+        };
+
+        for (const conv of apiConversations as ApiConversation[]) {
+          await addConversation({
+            id: conv.conversationId,
+            otherUser: {
+              id: conv.otherUser.id,
+              name: conv.otherUser.name,
+              email: conv.otherUser.email,
+              profilePicture: conv.otherUser.profile?.avatarUrl,
+            },
+            lastMessage: conv.latestMessage,
+            unreadCount: 0,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+
+        // Sync messages from server
+        await syncMessages(user.id, token);
+
+        console.log('✅ Data loaded and synced');
+      } catch (error) {
+        console.error('❌ Error loading data:', error);
+        setError('Failed to load conversations');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [user?.id, token]);
+
+  // ===== Send Read Receipts When Conversation Opens  =====
+  useEffect(() => {
+    if (
+      !selectedConversation?.id ||
+      !user?.id ||
+      connectionStatus !== 'connected'
+    )
+      return;
+
+    const sendReadReceipts = async () => {
+      try {
+        // Get messages for this conversation
+        const conversationMessages = messages || [];
+
+        // Find unread messages where current user is the receiver
+        const unreadMessages = conversationMessages.filter(
+          (msg) =>
+            msg.receiverId === user.id && !msg.isRead && msg.status !== 'failed' // Only filter out failed messages
+        );
+
+        if (unreadMessages.length === 0) return;
+
+        console.log(
+          `📬 Marking ${unreadMessages.length} messages as read in conversation ${selectedConversation.id}`
+        );
+
+        // Mark each message as read in store
+        for (const msg of unreadMessages) {
+          markMessageAsRead(selectedConversation.id, msg.id);
+
+          // Send read receipt to backend via WebSocket
+          improvedWebSocketService.send('MESSAGE_READ', {
+            messageId: msg.id,
+            conversationId: selectedConversation.id,
+            userId: user.id,
+          });
+        }
+
+        // Clear unread count for this conversation
+        await clearUnreadCount(selectedConversation.id);
+
+        console.log(`✅ Sent ${unreadMessages.length} read receipts`);
+      } catch (error) {
+        console.error('❌ Error sending read receipts:', error);
+      }
+    };
+
+    sendReadReceipts();
+  }, [
+    selectedConversation?.id,
+    user?.id,
+    connectionStatus,
+    messages,
+    markMessageAsRead,
+    clearUnreadCount,
+  ]);
 
   // Load conversations from API
   const loadConversations = useCallback(async () => {
@@ -156,9 +316,13 @@ const ChatPage: React.FC = () => {
               receiverId: conv.latestMessage.receiverId,
               timestamp: conv.latestMessage.timestamp,
               createdAt: conv.latestMessage.createdAt,
+              status: 'sent', // Default to sent if not provided
             }
           : undefined,
-        unreadCount: 0, // TODO: Implement unread count from API
+        unreadCount:
+          (conv as any).unreadCount !== undefined
+            ? (conv as any).unreadCount
+            : 0, // Implement unread count from API if available
       }));
 
       // Deduplicate conversations by otherUser.id
@@ -270,129 +434,175 @@ const ChatPage: React.FC = () => {
         });
         await improvedWebSocketService.connect(user.id, token);
 
-        // Set up event listeners
+        // ===== NEW MESSAGE EVENT =====
         improvedWebSocketService.on(
           'NEW_MESSAGE',
-          (message: WebSocketMessage) => {
+          async (message: WebSocketMessage) => {
             console.log('📨 New message received:', message);
-            const newMessage = message.data as {
-              id: string;
-              content: string;
-              senderId: string;
-              receiverId: string;
-              timestamp: string;
-              createdAt: string;
-              sender?: { name?: string };
-            };
+            const newMessage = message.data as Message;
 
-            // Check if this is a message for the current user
+            // Add to store
+            const conversationId =
+              newMessage.receiverId === user.id
+                ? `${user.id}-${newMessage.senderId}`
+                : `${user.id}-${newMessage.receiverId}`;
+
+            await addMessage({
+              ...newMessage,
+              status: 'delivered',
+            });
+
+            // Update conversation
+            await updateConversation(conversationId, {
+              lastMessage: newMessage,
+              updatedAt: newMessage.timestamp,
+            });
+
+            // Show notification for received messages
             if (newMessage.receiverId === user.id) {
-              // Add to unread messages
-              setUnreadMessages((prev) => new Set([...prev, newMessage.id]));
-
-              // Update unread count for this conversation
-              const conversationKey = `${user.id}-${newMessage.senderId}`;
-              console.log(
-                `📨 New message from ${newMessage.senderId}, updating unread count for key: ${conversationKey}`
-              );
-              setUnreadCounts((prev) => {
-                const newMap = new Map(prev);
-                const currentCount = newMap.get(conversationKey) || 0;
-                newMap.set(conversationKey, currentCount + 1);
-                console.log(
-                  `📊 Updated unread count for ${conversationKey}: ${currentCount} -> ${currentCount + 1}`
-                );
-                return newMap;
-              });
-
-              // Add notification
               const notification = {
                 id: newMessage.id,
                 type: 'message' as const,
                 title: 'New Message',
-                message: `${newMessage.sender?.name || 'Someone'}: ${newMessage.content}`,
+                message: newMessage.content,
                 timestamp: new Date().toISOString(),
                 senderId: newMessage.senderId,
-                conversationId: conversationKey,
+                conversationId,
               };
 
-              setNotifications((prev) => [notification, ...prev.slice(0, 9)]); // Keep last 10 notifications
+              setNotifications((prev) => [notification, ...prev.slice(0, 9)]);
 
-              // Show browser notification if permission granted
               if (Notification.permission === 'granted') {
                 new Notification('New Message', {
-                  body: notification.message,
+                  body: newMessage.content,
                   icon: '/favicon.ico',
                 });
               }
             }
-
-            // Add to messages if it's for the current conversation
-            if (
-              selectedConversation &&
-              (newMessage.senderId === selectedConversation.otherUser.id ||
-                newMessage.receiverId === selectedConversation.otherUser.id)
-            ) {
-              setMessages((prev) => [...prev, newMessage]);
-            }
-
-            // Also update the conversations list to show the latest message
-            setConversations((prev) =>
-              prev
-                .map((conv) => {
-                  const otherUserId = conv.otherUser.id;
-                  if (
-                    newMessage.senderId === otherUserId ||
-                    newMessage.receiverId === otherUserId
-                  ) {
-                    return {
-                      ...conv,
-                      lastMessage: {
-                        id: newMessage.id,
-                        content: newMessage.content,
-                        senderId: newMessage.senderId,
-                        receiverId: newMessage.receiverId,
-                        timestamp: newMessage.timestamp,
-                        createdAt: newMessage.createdAt,
-                        isRead: false, // Mark as unread for the receiver
-                      },
-                      unreadCount:
-                        conv.unreadCount +
-                        (newMessage.receiverId === user.id ? 1 : 0),
-                    };
-                  }
-                  return conv;
-                })
-                .sort((a, b) => {
-                  if (!a.lastMessage || !b.lastMessage) return 0;
-                  return (
-                    new Date(b.lastMessage.timestamp).getTime() -
-                    new Date(a.lastMessage.timestamp).getTime()
-                  );
-                })
-            );
           }
         );
 
+        // ===== MESSAGE_SENT EVENT =====
+        improvedWebSocketService.on(
+          'MESSAGE_SENT',
+          async (message: WebSocketMessage) => {
+            console.log('✅ Message sent confirmation:', message);
+            const data = message.data as {
+              tempId: string;
+              messageId: string;
+              timestamp: string;
+            };
+
+            // Update message from 'sending' to 'sent'
+            await updateMessageByTempId(data.tempId, {
+              id: data.messageId,
+              status: 'sent',
+              timestamp: data.timestamp,
+            });
+          }
+        );
+
+        // ===== MESSAGE_READ_UPDATE EVENT  =====
+        improvedWebSocketService.on(
+          'MESSAGE_READ_UPDATE',
+          async (message: WebSocketMessage) => {
+            console.log('👁️ Message read update:', message);
+            const data = message.data as {
+              messageId: string;
+              readBy: string;
+              readAt: string;
+            };
+
+            // Update message status to 'read'
+            await markMessageAsRead(data.messageId, data.readAt);
+          }
+        );
+
+        // ===== MESSAGE_EDITED EVENT =====
+        improvedWebSocketService.on(
+          'MESSAGE_EDITED',
+          async (message: WebSocketMessage) => {
+            console.log('✏️ Message edited:', message);
+            const data = message.data as {
+              messageId: string;
+              newContent: string;
+              editedAt: string;
+            };
+
+            // Update message content and mark as edited
+            await editMessage(data.messageId, data.newContent, data.editedAt);
+          }
+        );
+
+        // ===== MESSAGE_DELETED EVENT (Todo #5) =====
+        improvedWebSocketService.on(
+          'MESSAGE_DELETED',
+          async (message: WebSocketMessage) => {
+            console.log('🗑️ Message deleted:', message);
+            const data = message.data as {
+              messageId: string;
+              deletedAt: string;
+            };
+
+            // Update message to show it's deleted
+            await deleteMessage(data.messageId, data.deletedAt);
+          }
+        );
+
+        // ===== USER_PRESENCE_UPDATE EVENT (Todo #6) =====
+        improvedWebSocketService.on(
+          'USER_PRESENCE_UPDATE',
+          async (message: WebSocketMessage) => {
+            console.log('👤 User presence update:', message);
+            const data = message.data as {
+              userId: string;
+              isOnline: boolean;
+              lastSeen?: string;
+            };
+
+            if (data.isOnline) {
+              setUserOnline(data.userId);
+            } else {
+              setUserOffline(data.userId, data.lastSeen);
+            }
+          }
+        );
+
+        // ===== TYPING_START EVENT =====
         improvedWebSocketService.on(
           'TYPING_START',
           (message: WebSocketMessage) => {
             console.log('⌨️ User started typing:', message);
             const data = message.data as { userId: string };
-            setTypingUsers((prev) => new Set([...prev, data.userId]));
+            setUserTyping(data.userId);
           }
         );
 
+        // ===== TYPING_STOP EVENT =====
         improvedWebSocketService.on(
           'TYPING_STOP',
           (message: WebSocketMessage) => {
             console.log('⌨️ User stopped typing:', message);
-            setTypingUsers((prev) => {
-              const newSet = new Set(prev);
-              const data = message.data as { userId: string };
-              newSet.delete(data.userId);
-              return newSet;
-            });
+            const data = message.data as { userId: string };
+            setUserStoppedTyping(data.userId);
+          }
+        );
+
+        // ===== ERROR EVENT =====
+        improvedWebSocketService.on('ERROR', (message: WebSocketMessage) => {
+          console.error('❌ WebSocket error:', message);
+          const data = message.data as { code: string; message: string };
+          setError(data.message || 'An error occurred');
+        });
+
+        // ===== FORCE_DISCONNECT EVENT =====
+        improvedWebSocketService.on(
+          'FORCE_DISCONNECT',
+          (message: WebSocketMessage) => {
+            console.warn('⚠️ Forced disconnect:', message);
+            const data = message.data as { reason: string };
+            setError(`Disconnected: ${data.reason}`);
+            improvedWebSocketService.disconnect();
           }
         );
 
@@ -479,7 +689,7 @@ const ChatPage: React.FC = () => {
       unreadCount: 0,
     };
 
-    setConversations((prev) => [newConversation, ...prev]);
+    setConversations((prev: Conversation[]) => [newConversation, ...prev]);
     setSelectedConversation(newConversation);
     setMessages([]);
     setNewConversationOpen(false);
@@ -535,7 +745,8 @@ const ChatPage: React.FC = () => {
           receiverId: msg.receiverId,
           timestamp: msg.timestamp,
           createdAt: msg.createdAt,
-          isRead: msg.senderId === user?.id || !unreadMessages.has(msg.id), // Mark as read if sent by user or not in unread set
+          status: 'sent', // Default to sent
+          isRead: msg.senderId === user?.id || !unreadMessages.has(msg.id),
         }));
 
         // Reverse the order so oldest messages appear at bottom (normal chat order)
@@ -575,41 +786,57 @@ const ChatPage: React.FC = () => {
     async (content: string) => {
       if (!selectedConversation || !user?.id) return;
 
+      // ===== Optimistic UI Implementation  =====
+
+      // Generate temporary ID for optimistic update
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const timestamp = new Date().toISOString();
+
+      // Create optimistic message
+      const optimisticMessage: Message = {
+        id: tempId,
+        content,
+        senderId: user.id,
+        receiverId: selectedConversation.otherUser.id,
+        timestamp,
+        createdAt: timestamp,
+        status: 'sending', // Shows clock icon
+        tempId,
+      };
+
       try {
-        // Send message via API
-        const response = await apiService.messages.send(
+        // Add message to store immediately (optimistic UI)
+        await addMessage(optimisticMessage);
+
+        // Update conversation with latest message
+        await updateConversation(selectedConversation.id, {
+          lastMessage: optimisticMessage,
+          updatedAt: timestamp,
+        });
+
+        // Send message via WebSocket (NOT API - WebSocket is faster and real-time)
+        improvedWebSocketService.send('NEW_MESSAGE', {
+          tempId,
           content,
-          selectedConversation.otherUser.id
-        );
-        const sentMessage = response.data;
+          receiverId: selectedConversation.otherUser.id,
+          conversationId: selectedConversation.id,
+          timestamp,
+        });
 
-        // Transform API response to match our interface
-        const message: Message = {
-          id: sentMessage.id,
-          content: sentMessage.content,
-          senderId: sentMessage.senderId,
-          receiverId: sentMessage.receiverId,
-          timestamp: sentMessage.timestamp,
-          createdAt: sentMessage.createdAt,
-        };
-
-        // Add message to local state immediately for optimistic UI
-        setMessages((prev) => [...prev, message]);
-
-        // Update conversation list with latest message
-        setConversations((prev) =>
-          prev.map((conv) =>
-            conv.id === selectedConversation.id
-              ? { ...conv, lastMessage: message }
-              : conv
-          )
-        );
+        // The MESSAGE_SENT event handler will update tempId -> real messageId
+        // and change status from 'sending' -> 'sent'
       } catch (error) {
         console.error('❌ Error sending message:', error);
         setError('Failed to send message. Please try again.');
+
+        // Update message status to 'failed' on error
+        await addMessage({
+          ...optimisticMessage,
+          status: 'failed',
+        });
       }
     },
-    [selectedConversation, user?.id]
+    [selectedConversation, user?.id, addMessage, updateConversation]
   );
 
   // Handle typing indicators
@@ -623,6 +850,55 @@ const ChatPage: React.FC = () => {
       );
     },
     [selectedConversation, user?.id]
+  );
+
+  // ===== Handle Message Editing  =====
+  const handleEditMessage = useCallback(
+    async (messageId: string, newContent: string) => {
+      if (!selectedConversation || !user?.id) return;
+
+      try {
+        // Update message in store
+        await editMessage(selectedConversation.id, messageId, newContent);
+
+        // Send edit event via WebSocket
+        improvedWebSocketService.send('EDIT_MESSAGE', {
+          messageId,
+          conversationId: selectedConversation.id,
+          newContent,
+        });
+
+        console.log(`✏️ Message ${messageId} edited`);
+      } catch (error) {
+        console.error('❌ Error editing message:', error);
+        setError('Failed to edit message. Please try again.');
+      }
+    },
+    [selectedConversation, user?.id, editMessage]
+  );
+
+  // ===== Handle Message Deletion (Todo #12) =====
+  const handleDeleteMessage = useCallback(
+    async (messageId: string) => {
+      if (!selectedConversation || !user?.id) return;
+
+      try {
+        // Update message in store
+        await deleteMessage(selectedConversation.id, messageId);
+
+        // Send delete event via WebSocket
+        improvedWebSocketService.send('DELETE_MESSAGE', {
+          messageId,
+          conversationId: selectedConversation.id,
+        });
+
+        console.log(`🗑️ Message ${messageId} deleted`);
+      } catch (error) {
+        console.error('❌ Error deleting message:', error);
+        setError('Failed to delete message. Please try again.');
+      }
+    },
+    [selectedConversation, user?.id, deleteMessage]
   );
 
   // Auto-scroll to bottom when new messages arrive
@@ -683,22 +959,41 @@ const ChatPage: React.FC = () => {
           </IconButton>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          {/* ===== Enhanced Connection Status Indicator (Todo #10) ===== */}
           <Chip
             icon={<ChatIcon />}
             label={`${connectionStatus.charAt(0).toUpperCase() + connectionStatus.slice(1)}`}
-            color={connectionStatus === 'connected' ? 'success' : 'default'}
+            color={
+              connectionStatus === 'connected'
+                ? 'success'
+                : connectionStatus === 'connecting' ||
+                    connectionStatus === 'reconnecting'
+                  ? 'warning'
+                  : 'error'
+            }
             size="small"
+            variant={connectionStatus === 'connected' ? 'filled' : 'outlined'}
           />
-          {error && (
-            <Alert severity="error" sx={{ flex: 1 }}>
-              {error}
-              <Button onClick={() => setError(null)} size="small">
-                Dismiss
-              </Button>
-            </Alert>
-          )}
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={() => setNewConversationOpen(true)}
+            size="small"
+            sx={{ borderRadius: 2 }}
+          >
+            New Chat
+          </Button>
         </Box>
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+          <Button onClick={() => setError(null)} size="small" sx={{ ml: 2 }}>
+            Dismiss
+          </Button>
+        </Alert>
+      )}
 
       <Grid container spacing={3}>
         {/* Conversations List */}
@@ -851,10 +1146,12 @@ const ChatPage: React.FC = () => {
               messages={messages}
               onSendMessage={handleSendMessage}
               onTyping={handleTyping}
-              isTyping={isTyping}
               typingUsers={typingUsers}
               loading={loading}
               messagesEndRef={messagesEndRef}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onlineUsers={onlineUsers}
             />
           </motion.div>
         </Grid>

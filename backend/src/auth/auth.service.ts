@@ -33,7 +33,7 @@ export class AuthService {
     private readonly emailVerificationService: EmailVerificationService,
     private readonly rateLimitService: RateLimitService,
     private readonly documentVerificationService: DocumentVerificationService,
-  ) {}
+  ) { }
 
   /**
    * Enhanced registration with document verification for students/alumni

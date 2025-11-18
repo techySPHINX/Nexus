@@ -3,15 +3,18 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
-import { IoAdapter } from '@nestjs/platform-socket.io';
+import { RedisIoAdapter } from './common/adapters/redis-io.adapter';
 import { getCorsConfig, securityConfig } from './common/config/security.config';
 import { WinstonLoggerService } from './common/logger/winston-logger.service';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
+import helmet from 'helmet';
+import * as compression from 'compression';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
+    bodyParser: true,
   });
 
   // Get Winston logger from the DI container
@@ -24,9 +27,29 @@ async function bootstrap() {
     'Bootstrap',
   );
 
-  // Configure WebSocket adapter
-  app.useWebSocketAdapter(new IoAdapter(app));
-  loggerService.log('✅ WebSocket adapter configured', 'Bootstrap');
+  // ============================================
+  // SECURITY: Helmet - Security Headers
+  // ============================================
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+        },
+      },
+      crossOriginEmbedderPolicy: false, // Allow embedding for WebSocket
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      hsts: {
+        maxAge: 31536000, // 1 year
+        includeSubDomains: true,
+        preload: true,
+      },
+    }),
+  );
+  loggerService.log('✅ Helmet security headers enabled', 'Bootstrap');
 
   app.enableCors({
     origin: ['http://localhost:3001', 'http://localhost:4173', 'http://localhost:3002'],
@@ -39,8 +62,64 @@ async function bootstrap() {
 
   // Global Validation Pipe with sanitization
   app.useGlobalPipes(new ValidationPipe(securityConfig.validation));
+  // ============================================
+  // PERFORMANCE: Compression (gzip/brotli)
+  // ============================================
+  app.use(
+    compression({
+      filter: (req, res) => {
+        // Don't compress responses for WebSocket upgrade requests
+        if (req.headers['upgrade']) {
+          return false;
+        }
+        // Use compression for everything else
+        return compression.filter(req, res);
+      },
+      level: 6, // Balanced compression level (0-9)
+      threshold: 1024, // Only compress responses > 1KB
+      memLevel: 8, // Memory level for compression (1-9)
+    }),
+  );
   loggerService.log(
-    '✅ Global validation pipe with sanitization enabled',
+    '✅ Response compression enabled (gzip/brotli)',
+    'Bootstrap',
+  );
+
+  // ============================================
+  // WEBSOCKET: Redis Adapter for Horizontal Scalability
+  // ============================================
+  const redisIoAdapter = new RedisIoAdapter(app);
+  await redisIoAdapter.connectToRedis();
+  app.useWebSocketAdapter(redisIoAdapter);
+  loggerService.log(
+    '✅ WebSocket adapter configured with Redis (multi-server support)',
+    'Bootstrap',
+  );
+
+  // ============================================
+  // SECURITY: CORS - Cross-Origin Resource Sharing
+  // ============================================
+  const corsConfig = getCorsConfig();
+  app.enableCors(corsConfig);
+  loggerService.log(
+    `✅ CORS configured for origins: ${corsConfig.origin}`,
+    'Bootstrap',
+  );
+
+  // ============================================
+  // VALIDATION: Global Validation Pipe with Auto-Transformation
+  // ============================================
+  app.useGlobalPipes(
+    new ValidationPipe({
+      ...securityConfig.validation,
+      transform: true, // Enable auto-transformation of payloads
+      transformOptions: {
+        enableImplicitConversion: true, // Auto-convert string to number, etc.
+      },
+    }),
+  );
+  loggerService.log(
+    '✅ Global validation pipe with auto-transformation enabled',
     'Bootstrap',
   );
 
