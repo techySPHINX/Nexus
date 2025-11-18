@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
 export interface WebSocketMessage {
   type:
@@ -69,7 +70,7 @@ export class ImprovedWebSocketService {
   // Connection status listeners
   private statusListeners: Set<(status: ConnectionStatus) => void> = new Set();
 
-  constructor(baseUrl: string = 'http://localhost:3000') {
+  constructor(baseUrl: string = BACKEND_URL) {
     this.url = baseUrl;
   }
 

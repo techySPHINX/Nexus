@@ -58,9 +58,7 @@ const UserProjectPage = lazy(() => import('./pages/Project/UserProjectPage'));
 // Import context providers
 const ProfileProvider = lazy(() => import('./contexts/ProfileContext'));
 const PostProvider = lazy(() => import('./contexts/PostContext'));
-const SubCommunityProvider = lazy(
-  () => import('./contexts/SubCommunityContext')
-);
+import { SubCommunityProvider } from './contexts/SubCommunityContext';
 const DashboardProvider = lazy(() => import('./contexts/DashBoardContext'));
 const ShowcaseProvider = lazy(() => import('./contexts/ShowcaseContext'));
 const StartupProvider = lazy(() => import('./contexts/StartupContext'));
@@ -251,11 +249,9 @@ const Layout: React.FC = () => {
                 path="/subcommunities"
                 element={
                   <ProtectedRoute>
-                    <SubCommunityProvider>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <SubCommunitiesPage />
-                      </Suspense>
-                    </SubCommunityProvider>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <SubCommunitiesPage />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />
@@ -263,13 +259,11 @@ const Layout: React.FC = () => {
                 path="/subcommunities/:id"
                 element={
                   <ProtectedRoute>
-                    <SubCommunityProvider>
-                      <PostProvider>
-                        <Suspense fallback={<LoadingSpinner />}>
-                          <SubCommunityFeedPage />
-                        </Suspense>
-                      </PostProvider>
-                    </SubCommunityProvider>
+                    <PostProvider>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <SubCommunityFeedPage />
+                      </Suspense>
+                    </PostProvider>
                   </ProtectedRoute>
                 }
               />
@@ -277,11 +271,9 @@ const Layout: React.FC = () => {
                 path="/subcommunities/my"
                 element={
                   <ProtectedRoute>
-                    <SubCommunityProvider>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <MySubCommunitiesPage />
-                      </Suspense>
-                    </SubCommunityProvider>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <MySubCommunitiesPage />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />
@@ -289,11 +281,9 @@ const Layout: React.FC = () => {
                 path="/subcommunities/my/owned"
                 element={
                   <ProtectedRoute>
-                    <SubCommunityProvider>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <MySubCommunitiesPage />
-                      </Suspense>
-                    </SubCommunityProvider>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <MySubCommunitiesPage />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />
@@ -301,11 +291,9 @@ const Layout: React.FC = () => {
                 path="/subcommunities/my/moderated"
                 element={
                   <ProtectedRoute>
-                    <SubCommunityProvider>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <MySubCommunitiesPage />
-                      </Suspense>
-                    </SubCommunityProvider>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <MySubCommunitiesPage />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />
@@ -313,11 +301,9 @@ const Layout: React.FC = () => {
                 path="/subcommunities/my/member"
                 element={
                   <ProtectedRoute>
-                    <SubCommunityProvider>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <MySubCommunitiesPage />
-                      </Suspense>
-                    </SubCommunityProvider>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <MySubCommunitiesPage />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />
@@ -326,7 +312,9 @@ const Layout: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <ShowcaseProvider>
-                      <ProjectsMainPage />
+                      <ProfileProvider>
+                        <ProjectsMainPage />
+                      </ProfileProvider>
                     </ShowcaseProvider>
                   </ProtectedRoute>
                 }
@@ -389,22 +377,18 @@ const Layout: React.FC = () => {
                 path="/admin/moderation/subcommunities"
                 element={
                   <AdminRoute>
-                    <SubCommunityProvider>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <AdminSubCommunityModerationPage />
-                      </Suspense>
-                    </SubCommunityProvider>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <AdminSubCommunityModerationPage />
+                    </Suspense>
                   </AdminRoute>
                 }
               />
               <Route
                 path="/moderation/subcommunities/:id/join-requests"
                 element={
-                  <SubCommunityProvider>
-                    <Suspense fallback={<LoadingSpinner />}>
-                      <SubCommunityJoinRequestModeration />
-                    </Suspense>
-                  </SubCommunityProvider>
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <SubCommunityJoinRequestModeration />
+                  </Suspense>
                 }
               />
 
@@ -438,7 +422,13 @@ function App() {
           <NotificationProvider>
             <EngagementProvider engagementService={engagementService}>
               <Router>
-                <Layout />
+                <Suspense fallback={<LoadingSpinner />}>
+                  {/* Keep a single SubCommunityProvider mounted for the whole app so
+                      sub-community state isn't re-created on every route change. */}
+                  <SubCommunityProvider>
+                    <Layout />
+                  </SubCommunityProvider>
+                </Suspense>
               </Router>
             </EngagementProvider>
           </NotificationProvider>
