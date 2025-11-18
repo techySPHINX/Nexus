@@ -47,7 +47,7 @@ interface SearchUser {
   email: string;
   profilePicture?: string;
 }
-interface Conversation extends Omit<StoreConversation, 'updatedAt'> {}
+// Removed empty interface Conversation
 
 const ChatPage: React.FC = () => {
   const { user, token } = useAuth();
@@ -77,14 +77,16 @@ const ChatPage: React.FC = () => {
   const [searching, setSearching] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const selectedConversation: Conversation | null = selectedConversationId
-    ? (conversations.find(
-        (c) => c.id === selectedConversationId
-      ) as Conversation) || null
+  const selectedConversation: StoreConversation | null = selectedConversationId
+    ? conversations.find((c) => c.id === selectedConversationId) || null
     : null;
-  const messages: Message[] = selectedConversationId
-    ? storeMessages.get(selectedConversationId) || []
-    : [];
+  const messages: Message[] = React.useMemo(
+    () =>
+      selectedConversationId
+        ? storeMessages.get(selectedConversationId) || []
+        : [],
+    [selectedConversationId, storeMessages]
+  );
 
   useEffect(() => {
     if (!user?.id) return;
@@ -105,7 +107,9 @@ const ChatPage: React.FC = () => {
     (async () => {
       try {
         await initializeFCM(token);
-      } catch {}
+      } catch {
+        // Ignore FCM initialization errors
+      }
     })();
   }, [token]);
   useEffect(() => {
@@ -134,11 +138,12 @@ const ChatPage: React.FC = () => {
           updatedAt: incoming.timestamp,
         });
       }
-      if (selectedConversationId === convId)
+      if (selectedConversationId === convId) {
         await addMessage({
           ...incoming,
           status: incoming.status || 'delivered',
         });
+      }
     };
     const handleSent = async (ws: WebSocketMessage) => {
       const d = ws.data as {
@@ -277,7 +282,7 @@ const ChatPage: React.FC = () => {
     setSearchQuery('');
     setSearchResults([]);
   };
-  const handleConversationSelect = (c: Conversation) => {
+  const handleConversationSelect = (c: StoreConversation) => {
     setSelectedConversation(c.id);
     loadMessagesForConversation(c.id);
     clearUnreadCount(c.id);
@@ -424,9 +429,7 @@ const ChatPage: React.FC = () => {
                         key={c.id}
                         button
                         selected={selectedConversationId === c.id}
-                        onClick={() =>
-                          handleConversationSelect(c as Conversation)
-                        }
+                        onClick={() => handleConversationSelect(c)}
                         sx={{
                           '&:hover': { backgroundColor: 'action.hover' },
                           '&.Mui-selected': {

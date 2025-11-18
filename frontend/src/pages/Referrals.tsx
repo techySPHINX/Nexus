@@ -924,12 +924,12 @@ const Referrals: React.FC = () => {
         <Box sx={{ textAlign: 'center', py: 6 }}>
           <Work sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
-            {(user?.role === 'ALUM' || user?.role === 'ADMIN')
+            {user?.role === 'ALUM' || user?.role === 'ADMIN'
               ? 'No referrals posted yet'
               : 'No referrals available'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {(user?.role === 'ALUM' || user?.role === 'ADMIN')
+            {user?.role === 'ALUM' || user?.role === 'ADMIN'
               ? 'Be the first to post a job referral and help students find opportunities!'
               : searchQuery || filterStatus !== 'ALL'
                 ? 'Try adjusting your search or filters'

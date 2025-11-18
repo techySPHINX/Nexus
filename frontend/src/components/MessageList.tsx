@@ -75,13 +75,13 @@ const MessageList: React.FC<MessageListProps> = ({
   onLoadMore,
   hasMore = false,
 }) => {
-  // ===== State for Edit/Delete Dialogs (Todos #11 & #12) =====
+  // ===== State for Edit/Delete Dialogs =====
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState('');
   const [deleteMessageId, setDeleteMessageId] = useState<string | null>(null);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  // ===== Infinite Scroll Setup (Todo #15) =====
+  // ===== Infinite Scroll Setup =====
   const parentRef = useRef<HTMLDivElement>(null);
 
   // Virtualizer for efficient rendering of large message lists
@@ -404,7 +404,6 @@ const MessageList: React.FC<MessageListProps> = ({
         <DialogTitle>Edit Message</DialogTitle>
         <DialogContent>
           <TextField
-            autoFocus
             margin="dense"
             label="Message"
             type="text"
