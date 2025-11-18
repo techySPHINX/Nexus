@@ -8,10 +8,12 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
   cors: {
-    origin: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:4173', 'http://localhost:3002'],
+    origin:  process.env.ALLOWED_ORIGIN || "https://localhost:3001",
     credentials: true,
   },
 });
+
+console.log('Cors allowed origin:', process.env.ALLOWED_ORIGIN || "https://localhost:3001");
 
 // Middleware
 app.use(cors());

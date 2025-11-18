@@ -580,6 +580,7 @@ export class ShowcaseService {
           websiteUrl: true,
           skills: true,
           updatedAt: true,
+          seekingCollaboration: true,
           seeking: true,
           _count: {
             select: {
@@ -674,6 +675,7 @@ export class ShowcaseService {
         tags: true,
         status: true,
         seeking: true,
+        seekingCollaboration: true,
         createdAt: true,
         updatedAt: true,
         owner: {
