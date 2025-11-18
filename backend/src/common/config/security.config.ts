@@ -7,11 +7,11 @@ export const securityConfig = {
    */
   cors: {
     development: {
-      origin: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:4173', 'http://localhost:3002'],
+      origin: process.env.ALLOWED_ORIGIN || "https://localhost:3001",
       credentials: true,
     },
     production: {
-      origin: process.env.ALLOWED_ORIGINS?.split(',') || [],
+      origin: process.env.ALLOWED_ORIGIN || "https://localhost:3001",
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

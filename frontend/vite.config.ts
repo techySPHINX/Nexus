@@ -1,8 +1,12 @@
-import { defineConfig, type ConfigEnv } from 'vite';
+import { defineConfig, loadEnv, type ConfigEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig(({ mode }: ConfigEnv) => {
+  // Load all .env variables
+  const env = loadEnv(mode, process.cwd(), '');
+  console.log('Vite env variables:', env.VITE_BACKEND_URL);
+
   const isAnalyze = mode === 'analyze';
 
   return {
@@ -29,7 +33,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       cors: true,
       proxy: {
         '/api': {
-          target: 'http://localhost:3000',
+          target: env.VITE_BACKEND_URL,
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
         },
@@ -40,10 +44,10 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       sourcemap: mode === 'development',
       minify: 'terser',
       // Use a modern target so esbuild / Vite can emit top-level await
-      target: 'es2022',
+      target: 'es2017',
       // Ensure esbuild also targets the same environment
       esbuild: {
-        target: 'es2022',
+        target: 'es2017',
       },
       chunkSizeWarningLimit: 1000,
       terserOptions: {
@@ -56,10 +60,10 @@ export default defineConfig(({ mode }: ConfigEnv) => {
         output: {
           manualChunks(id: string) {
             if (id.includes('node_modules')) {
-              if (id.includes('react')) return 'vendor-react';
-              if (id.includes('axios')) return 'vendor-axios';
-              if (id.includes('chart.js') || id.includes('recharts'))
-                return 'vendor-charts';
+              //   if (id.includes('react')) return 'vendor-react';
+              //   if (id.includes('axios')) return 'vendor-axios';
+              //   if (id.includes('chart.js') || id.includes('recharts'))
+              //     return 'vendor-charts';
               return 'vendor';
             }
             // Split only your **feature code**
@@ -80,8 +84,9 @@ export default defineConfig(({ mode }: ConfigEnv) => {
             if (id.toLowerCase().includes('home')) return 'home-features';
             if (id.toLowerCase().includes('components'))
               return 'shared-components';
+            // return 'NodeVendors';
             // Let Vite handle all node_modules safely
-            return undefined;
+            return 'others';
           },
           chunkFileNames: `assets/[name]-[hash].js`,
           assetFileNames: `assets/[name]-[hash].[ext]`,

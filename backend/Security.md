@@ -83,7 +83,7 @@ Add these to your `.env` file:
 
 ```env
 NODE_ENV=development
-ALLOWED_ORIGINS=http://localhost:3001,http://localhost:3000
+ALLOWED_ORIGIN=http://localhost:3001
 THROTTLE_TTL=60
 THROTTLE_LIMIT=10
 ```
@@ -317,7 +317,7 @@ curl -H "Origin: http://malicious.com" http://localhost:3000/auth/test
 
 ### Issue: CORS blocking legitimate requests
 
-**Solution:** Add your origin to `ALLOWED_ORIGINS` in .env
+**Solution:** Add your origin to `ALLOWED_ORIGIN` in .env
 
 ---
 

@@ -244,7 +244,7 @@ class Semaphore {
   }
 }
 
-const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
+export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [subCommunities, setSubCommunities] = useState<SubCommunity[]>([]);
@@ -1188,5 +1188,3 @@ export const useSubCommunity = () => {
   }
   return context;
 };
-
-export default SubCommunityProvider;
