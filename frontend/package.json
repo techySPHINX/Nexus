@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "nexus-frontend",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,9 +9,12 @@
     "@mui/icons-material": "^5.14.19",
     "@mui/lab": "^5.0.0-alpha.155",
     "@mui/material": "^5.14.20",
+    "@tanstack/react-virtual": "^3.13.12",
     "axios": "^1.6.2",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
+    "dexie": "^4.2.1",
+    "firebase": "^12.5.0",
     "framer-motion": "^10.16.16",
     "jwt-decode": "^4.0.0",
     "localforage": "^1.10.0",
@@ -22,7 +25,8 @@
     "react-lazy-load-image-component": "^1.6.3",
     "react-router-dom": "^6.20.1",
     "socket.io-client": "^4.8.1",
-    "use-sound": "^5.0.0"
+    "use-sound": "^5.0.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.16",

@@ -70,7 +70,6 @@ const ProjectIdPage: React.FC = () => {
       if (isFollowing) await unfollowProject(projectById.id);
       else await followProject(projectById.id);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.error(e);
     }
   };

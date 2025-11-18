@@ -18,7 +18,7 @@ export class EmailService {
   private getBaseTemplate(content: string, subject: string): any {
     return {
       to: '',
-      from: { 
+      from: {
         email: process.env.SENDGRID_EMAIL_FROM || 'noreply@nexus.com',
         name: 'Nexus Platform'
       },
@@ -247,7 +247,7 @@ export class EmailService {
    */
   async sendOtp(dto: SendOtpDto): Promise<void> {
     const { email, otp, name } = dto;
-    
+
     const content = `
       <h1 class="greeting">Welcome to Nexus, ${name}! 👋</h1>
       <p class="message">We're excited to have you on board. To complete your registration, please use the following verification code:</p>
@@ -513,7 +513,11 @@ export class EmailService {
         </div>
       `,
     };
-  try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+    try {
+      await sendgrid.send(msg);
+    } catch {
+      // non-blocking
+    }
   }
 
   async sendReferralStatusEmail(
@@ -536,7 +540,11 @@ export class EmailService {
         </div>
       `,
     };
-  try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+    try {
+      await sendgrid.send(msg);
+    } catch {
+      // non-blocking
+    }
   }
 
   async sendApplicationSubmittedToAlum(
@@ -558,7 +566,11 @@ export class EmailService {
         </div>
       `,
     };
-  try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+    try {
+      await sendgrid.send(msg);
+    } catch {
+      // non-blocking
+    }
   }
 
   async sendApplicationStatusEmail(
@@ -581,6 +593,10 @@ export class EmailService {
         </div>
       `,
     };
-  try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+    try {
+      await sendgrid.send(msg);
+    } catch {
+      // non-blocking
+    }
   }
 }

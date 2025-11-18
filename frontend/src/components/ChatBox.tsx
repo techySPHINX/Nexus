@@ -7,6 +7,7 @@ import {
   Avatar,
   Divider,
   CircularProgress,
+  Badge,
 } from '@mui/material';
 import { Person as PersonIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -40,10 +41,13 @@ interface ChatBoxProps {
   messages: Message[];
   onSendMessage: (content: string) => void;
   onTyping: (isTyping: boolean) => void;
-  isTyping: boolean;
+  isTyping?: boolean;
   typingUsers: Set<string>;
   loading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement>;
+  onEditMessage?: (messageId: string, newContent: string) => void;
+  onDeleteMessage?: (messageId: string) => void;
+  onlineUsers?: Set<string>;
 }
 
 /**
@@ -64,6 +68,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   typingUsers,
   loading,
   messagesEndRef,
+  onEditMessage,
+  onDeleteMessage,
+  onlineUsers,
 }) => {
   if (!conversation) {
     return (
@@ -109,13 +116,31 @@ const ChatBox: React.FC<ChatBoxProps> = ({
             backgroundColor: 'background.paper',
           }}
         >
-          <Avatar
-            src={conversation.otherUser.profilePicture}
-            alt={conversation.otherUser.name}
-            sx={{ width: 40, height: 40 }}
+          {/* ===== Avatar with Online/Offline Badge (Todo #10) ===== */}
+          <Badge
+            overlap="circular"
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            variant="dot"
+            sx={{
+              '& .MuiBadge-dot': {
+                backgroundColor: onlineUsers?.has(conversation.otherUser.id)
+                  ? 'success.main'
+                  : 'grey.400',
+                width: 12,
+                height: 12,
+                borderRadius: '50%',
+                border: '2px solid white',
+              },
+            }}
           >
-            {conversation.otherUser.name.charAt(0)}
-          </Avatar>
+            <Avatar
+              src={conversation.otherUser.profilePicture}
+              alt={conversation.otherUser.name}
+              sx={{ width: 40, height: 40 }}
+            >
+              {conversation.otherUser.name.charAt(0)}
+            </Avatar>
+          </Badge>
           <Box sx={{ flex: 1 }}>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               {conversation.otherUser.name}
@@ -166,6 +191,8 @@ const ChatBox: React.FC<ChatBoxProps> = ({
               messages={messages}
               conversation={conversation}
               messagesEndRef={messagesEndRef}
+              onEditMessage={onEditMessage}
+              onDeleteMessage={onDeleteMessage}
             />
           )}
         </Box>

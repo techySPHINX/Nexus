@@ -52,6 +52,9 @@ model User {
   mentorshipRequestsAsMentor            MentorshipRequest[]           @relation("MentorshipRequestMentor")
   receivedMessages                      Message[]                     @relation("ReceivedMessages")
   sentMessages                          Message[]                     @relation("SentMessages")
+  readReceipts                          ReadReceipt[]                 @relation("ReadReceipts")
+  fcmDeviceToken                        String?
+  publicEncryptionKey                   String?
   Notification                          Notification[]
   Post                                  Post[]
   profile                               Profile?
@@ -336,15 +339,35 @@ model Connection {
 }
 
 model Message {
-  id         String   @id @default(uuid())
-  content    String
-  timestamp  DateTime @default(now())
-  senderId   String
-  receiverId String
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  id               String        @id @default(uuid())
+  content          String
+  timestamp        DateTime      @default(now())
+  senderId         String
+  receiverId       String
+  isEdited         Boolean       @default(false)
+  editedAt         DateTime?
+  deletedAt        DateTime?
+  isEncrypted      Boolean       @default(false)
+  encryptionKeyId  String?
+  receiver         User          @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender           User          @relation("SentMessages", fields: [senderId], references: [id])
+  readReceipts     ReadReceipt[]
 
   @@map("message")
+}
+
+model ReadReceipt {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  readAt    DateTime @default(now())
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation("ReadReceipts", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+  @@map("read_receipts")
 }
 
 model Notification {

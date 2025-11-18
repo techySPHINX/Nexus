@@ -7,6 +7,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Post,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -14,6 +15,7 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
 
 /**
  * Controller for handling user-related requests.
@@ -22,7 +24,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   /**
    * Retrieves all users. Requires ADMIN role.
@@ -73,5 +75,29 @@ export class UserController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.userService.remove(id);
+  }
+
+  /**
+   * Registers a Firebase Cloud Messaging (FCM) device token for push notifications.
+   * @param userId - The ID of the authenticated user.
+   * @param deviceToken - The FCM device token from the client.
+   * @returns A promise that resolves to the updated user object.
+   */
+  @Post('fcm/register')
+  registerFcmToken(
+    @GetCurrentUser('userId') userId: string,
+    @Body('deviceToken') deviceToken: string,
+  ) {
+    return this.userService.registerFcmToken(userId, deviceToken);
+  }
+
+  /**
+   * Unregisters a Firebase Cloud Messaging (FCM) device token.
+   * @param userId - The ID of the authenticated user.
+   * @returns A promise that resolves to the updated user object.
+   */
+  @Post('fcm/unregister')
+  unregisterFcmToken(@GetCurrentUser('userId') userId: string) {
+    return this.userService.unregisterFcmToken(userId);
   }
 }
