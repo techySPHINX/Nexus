@@ -159,8 +159,14 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
       } as CreateProjectInterface);
       setSelectedSkill(project.skills || []);
       setSelectedType(project.tags || []);
-      setSeekingCollaboration(!!project.seeking && project.seeking.length > 0);
-      setSeekingSkills(project.seeking || []);
+      // Normalize seeking values to strings (some backends may return nulls)
+      const normalizedSeeking = (project.seeking || [])
+        .filter(Boolean)
+        .map((s) => String(s));
+      setSeekingCollaboration(normalizedSeeking.length > 0);
+      setSeekingSkills(normalizedSeeking);
+      // Clear any pending debounced edits so they don't overwrite the initialized form
+      setPending({});
     } else {
       setFormData(EMPTY_FORM); // Use EMPTY_FORM directly since it's now properly typed
       setSelectedSkill([]);
@@ -186,12 +192,20 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
   }, [SeekingSkills]);
 
   useEffect(() => {
+    // When user disables "Looking for collaborators?" we must clear both
+    // the seeking field on the form and the local SeekingSkills state.
+    // Important:
+    // - Do NOT include `formData` in the deps (that would re-run the
+    //   effect whenever the form changes and can cause unexpected loops).
+    // - setState is async; don't rely on the value of `formData` immediately
+    //   after calling setFormData() (use another effect to observe changes).
     if (!seekingCollaboration) {
-      console.log('Collaboration not sought, clearing seeking skills');
+      // clear the UI selection
+      setSeekingSkills([]);
+      // clear the form value (use functional update to avoid stale closures)
       setFormData((prev) => ({ ...prev, seeking: undefined }));
-      // console.log('Form data after clearing seeking:', formData);
     }
-  }, [setFormData, seekingCollaboration]);
+  }, [seekingCollaboration, setFormData, setSeekingSkills]);
 
   // Function to handle skill selection changes
   const handleSkillsChange = useCallback((_event: any, newSkills: string[]) => {
@@ -425,19 +439,14 @@ const ProjectModal: React.FC<ProjectModalProps> = ({
           : {}),
         ...(formData.imageUrl ? { imageUrl: formData.imageUrl.trim() } : {}),
         ...(formData.videoUrl ? { videoUrl: formData.videoUrl.trim() } : {}),
-        ...(seekingCollaboration && formData.seeking
-          ? {
-              seeking: Array.isArray(formData.seeking)
-                ? formData.seeking
-                : (formData.seeking as string).trim().length > 0
-                  ? [(formData.seeking as string).trim()]
-                  : undefined,
-            }
+        // For submission prefer the controlled SeekingSkills state (which backs the Autocomplete)
+        ...(seekingCollaboration && SeekingSkills && SeekingSkills.length > 0
+          ? { seeking: SeekingSkills }
           : { seeking: undefined }),
       };
       onSubmit(cleanedData);
     },
-    [formData, onSubmit, seekingCollaboration]
+    [formData, onSubmit, seekingCollaboration, SeekingSkills]
   );
 
   // First, make sure you have the getProxiedImageUrl function defined:

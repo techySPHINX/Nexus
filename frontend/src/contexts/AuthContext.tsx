@@ -10,6 +10,9 @@ import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
 import { jwtDecode } from 'jwt-decode';
 import { Role } from '@/types/profileType';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+axios.defaults.baseURL = BACKEND_URL;
+
 export interface User {
   id: string;
   email: string;
@@ -106,7 +109,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // Configure axios defaults
-  axios.defaults.baseURL = 'http://localhost:3000';
+  axios.defaults.baseURL = BACKEND_URL;
 
   // Check for stored token on app load || app refresh
   useEffect(() => {
@@ -184,6 +187,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(user);
 
       localStorage.setItem('token', accessToken);
+      console.log('Setting auth header with token:', accessToken);
+      console.log('backend url', BACKEND_URL);
+      console.log('VITE_BACKEND_URL', import.meta.env.VITE_BACKEND_URL);
 
       axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
     } catch (error: unknown) {

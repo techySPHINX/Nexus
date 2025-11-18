@@ -513,7 +513,11 @@ export class EmailService {
         </div>
       `,
     };
-    try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+    try {
+      await sendgrid.send(msg);
+    } catch {
+      // non-blocking
+    }
   }
 
   async sendReferralStatusEmail(
@@ -536,7 +540,11 @@ export class EmailService {
         </div>
       `,
     };
-    try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+    try {
+      await sendgrid.send(msg);
+    } catch {
+      // non-blocking
+    }
   }
 
   async sendApplicationSubmittedToAlum(
@@ -558,7 +566,11 @@ export class EmailService {
         </div>
       `,
     };
-    try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+    try {
+      await sendgrid.send(msg);
+    } catch {
+      // non-blocking
+    }
   }
 
   async sendApplicationStatusEmail(
@@ -581,6 +593,10 @@ export class EmailService {
         </div>
       `,
     };
-    try { await sendgrid.send(msg); } catch { /* non-blocking */ }
+    try {
+      await sendgrid.send(msg);
+    } catch {
+      // non-blocking
+    }
   }
 }

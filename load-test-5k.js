@@ -1,5 +1,6 @@
 const io = require('socket.io-client');
 const { performance } = require('perf_hooks');
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
 /**
  * Comprehensive Load Test for Redis-backed Chat System
@@ -9,7 +10,7 @@ const { performance } = require('perf_hooks');
 class ChatLoadTest {
   constructor(options = {}) {
     this.options = {
-      serverUrl: options.serverUrl || 'http://localhost:3000',
+      serverUrl: options.serverUrl || BACKEND_URL,
       namespace: options.namespace || '/ws',
       maxConnections: options.maxConnections || 5000,
       rampUpTime: options.rampUpTime || 60, // seconds

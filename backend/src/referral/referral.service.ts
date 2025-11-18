@@ -11,10 +11,9 @@ import { UpdateReferralDto } from './dto/update-referral.dto';
 import { UpdateReferralApplicationDto } from './dto/update-referral-application.dto';
 import { FilterReferralsDto } from './dto/filter-referrals.dto';
 import { FilterReferralApplicationsDto } from './dto/filter-referral-applications.dto';
-import {
-  NotificationService,
-  NotificationType,
-} from 'src/notification/notification.service';
+import { NotificationService, NotificationType } from 'src/notification/notification.service';
+import { EmailService } from 'src/email/email.service';
+import { ReferralGateway } from './referral.gateway';
 
 /**
  * Service for managing job referrals and referral applications.
@@ -25,6 +24,8 @@ export class ReferralService {
   constructor(
     private prisma: PrismaService,
     private notificationService: NotificationService,
+    private emailService: EmailService,
+    private gateway: ReferralGateway,
   ) {}
 
   // Referral methods
@@ -42,8 +43,8 @@ export class ReferralService {
     if (!user) {
       throw new NotFoundException('User not found.');
     }
-    if (user.role !== Role.ALUM) {
-      throw new ForbiddenException('Only alumni can post referrals.');
+    if (user.role !== Role.ALUM && user.role !== Role.ADMIN) {
+      throw new ForbiddenException('Only alumni and admins can post referrals.');
     }
 
     // Only allow the new fields if present in dto
@@ -97,6 +98,28 @@ export class ReferralService {
         message: `New referral pending approval: ${referral.jobTitle} at ${referral.company} by ${referral.postedBy.name}`,
         type: NotificationType.REFERRAL_STATUS_UPDATE,
       });
+    }
+
+    // Broadcast and email notifications
+    this.gateway.emitReferralCreated({ id: referral.id, status: referral.status });
+    try {
+      const adminEmails = await this.prisma.user.findMany({
+        where: { role: Role.ADMIN },
+        select: { email: true, name: true },
+      });
+      for (const a of adminEmails) {
+        if (a.email) {
+          await this.emailService.sendReferralSubmittedToAdmin(
+            a.email,
+            a.name || 'Admin',
+            referral.company,
+            referral.jobTitle,
+            referral.postedBy.name || 'Alumni',
+          );
+        }
+      }
+    } catch {
+      // non-blocking
     }
 
     return referral;
@@ -161,28 +184,52 @@ export class ReferralService {
     if (location) {
       where.location = { contains: location, mode: 'insensitive' };
     }
-    if (status) {
-      where.status = status;
-    } else {
-      // If no status filter provided:
-      // - Admins see all referrals
-      // - Students/ALUMs only see APPROVED referrals (unless they created it)
-      // - Non-authenticated users only see APPROVED
-      if (userRole !== Role.ADMIN) {
-        if (userId) {
-          // Show APPROVED referrals OR user's own referrals (regardless of status)
-          // This allows creators to see their own referrals even if pending/rejected
-          where.OR = [
+
+    const isAdmin = userRole === Role.ADMIN;
+
+    if (!isAdmin) {
+      // Always enforce visibility for non-admins
+      // - Only APPROVED referrals, unless the requester is the creator
+      // - If a non-admin explicitly requests a non-APPROVED status, restrict to their own referrals only
+      const visibilityOr: any[] = [{ status: ReferralStatus.APPROVED }];
+      if (userId) visibilityOr.push({ alumniId: userId });
+
+      if (status) {
+        if (status === ReferralStatus.APPROVED) {
+          // Respect explicit APPROVED filter; still allow own approved items via OR
+          where.AND = [
+            { OR: visibilityOr },
             { status: ReferralStatus.APPROVED },
-            { alumniId: userId },
           ];
         } else {
-          // Not logged in - only show APPROVED
-          where.status = ReferralStatus.APPROVED;
+          // Non-admin asking for non-approved -> only allow their own items of that status
+          if (userId) {
+            where.AND = [
+              { alumniId: userId },
+              { status },
+            ];
+          } else {
+            // Unauthenticated/non-owner cannot view non-approved, force APPROVED instead
+            where.status = ReferralStatus.APPROVED;
+          }
         }
+      } else {
+        // No status provided -> show APPROVED or own (any status)
+        where.OR = visibilityOr;
       }
-      // If admin, no status filter - they see everything
+
+      // Exclude expired (past-deadline) referrals for non-admins by default
+      // This prevents students from seeing/applying to expired jobs
+      where.deadline = { gt: new Date() };
+    } else {
+      // Admins can use any status filter and see expired
+      if (status) {
+        where.status = status;
+      }
     }
+
+    // Apply a sensible default page size for non-admins to reduce payloads
+    const defaultTake = !isAdmin && !take ? 20 : take ? Number(take) : undefined;
 
     return this.prisma.referral.findMany({
       where,
@@ -201,7 +248,7 @@ export class ReferralService {
         },
       },
       skip: skip ? Number(skip) : undefined,
-      take: take ? Number(take) : undefined,
+      take: defaultTake,
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -297,7 +344,24 @@ export class ReferralService {
         message: `Your referral for ${referral.jobTitle} at ${referral.company} has been ${statusMessage}.`,
         type: NotificationType.REFERRAL_STATUS_UPDATE,
       });
+
+      // Email alumnus about status change
+      try {
+        const alum = await this.prisma.user.findUnique({ where: { id: referral.alumniId } });
+        if (alum?.email) {
+          await this.emailService.sendReferralStatusEmail(
+            alum.email,
+            alum.name || 'Alumni',
+            referral.jobTitle,
+            referral.company,
+            updatedReferral.status,
+          );
+        }
+  } catch {}
     }
+
+    // Broadcast update
+    this.gateway.emitReferralUpdated({ id: updatedReferral.id, status: updatedReferral.status });
 
     return updatedReferral;
   }
@@ -331,6 +395,7 @@ export class ReferralService {
     }
 
     await this.prisma.referral.delete({ where: { id: referralId } });
+    this.gateway.emitReferralDeleted({ id: referralId });
     return { message: 'Referral deleted successfully.' };
   }
 
@@ -403,6 +468,23 @@ export class ReferralService {
       message: `${user.name} has applied for your referral: ${referral.jobTitle} at ${referral.company}.`,
       type: NotificationType.REFERRAL_APPLICATION,
     });
+
+    // Email the alum
+    try {
+      const alum = await this.prisma.user.findUnique({ where: { id: referral.alumniId } });
+      if (alum?.email) {
+        await this.emailService.sendApplicationSubmittedToAlum(
+          alum.email,
+          alum.name || 'Alumni',
+          user.name || 'Applicant',
+          referral.jobTitle,
+          referral.company,
+        );
+      }
+  } catch {}
+
+    // Broadcast
+    this.gateway.emitApplicationCreated({ id: application.id, referralId: application.referralId });
 
     return application;
   }
@@ -523,7 +605,24 @@ export class ReferralService {
         message: `Your application for ${application.referral.jobTitle} at ${application.referral.company} has been ${dto.status}.`,
         type: NotificationType.REFERRAL_APPLICATION_STATUS_UPDATE,
       });
+
+      // Email applicant
+      try {
+        const applicant = await this.prisma.user.findUnique({ where: { id: application.applicantId } });
+        if (applicant?.email) {
+          await this.emailService.sendApplicationStatusEmail(
+            applicant.email,
+            applicant.name || 'Applicant',
+            application.referral.jobTitle,
+            application.referral.company,
+            dto.status,
+          );
+        }
+  } catch {}
     }
+
+    // Broadcast
+    this.gateway.emitApplicationUpdated({ id: updatedApplication.id, status: updatedApplication.status });
 
     return updatedApplication;
   }
@@ -597,5 +696,28 @@ export class ReferralService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  // Analytics for admin dashboard
+  async getAnalytics() {
+    const [totalReferrals, byStatus, totalApps, appsByStatus] = await Promise.all([
+      this.prisma.referral.count(),
+      this.prisma.referral.groupBy({ by: ['status'], _count: { _all: true } }),
+      this.prisma.referralApplication.count(),
+      this.prisma.referralApplication.groupBy({ by: ['status'], _count: { _all: true } }),
+    ]);
+
+    const statusCounts = Object.fromEntries(
+      byStatus.map((row) => [row.status, row._count._all]),
+    );
+    const appStatusCounts = Object.fromEntries(
+      appsByStatus.map((row) => [row.status, row._count._all]),
+    );
+
+    return {
+      totals: { referrals: totalReferrals, applications: totalApps },
+      referralsByStatus: statusCounts,
+      applicationsByStatus: appStatusCounts,
+    };
   }
 }

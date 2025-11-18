@@ -1,14 +1,49 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+console.log('API BASE URL:', BACKEND_URL);
 
 // Create axios instance with default config
 const api: AxiosInstance = axios.create({
-  baseURL: 'http://localhost:3000',
+  baseURL: BACKEND_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Simple in-memory cache for GET responses (per-session, per-user)
+type MemoryCacheEntry = { data: unknown; ts: number; ttl: number };
+const memoryCache = new Map<string, MemoryCacheEntry>();
+
+const getUserCacheKeyPart = () => {
+  try {
+    const userRaw = localStorage.getItem('user');
+    if (!userRaw) return 'anon';
+    const user = JSON.parse(userRaw);
+    return `${user?.id || 'anon'}:${user?.role || 'UNKNOWN'}`;
+  } catch {
+    return 'anon';
+  }
+};
+
+function cacheGetOrFetch<T>(
+  key: string,
+  fetcher: () => Promise<AxiosResponse<T>>,
+  ttlMs = 30000
+): Promise<AxiosResponse<T>> {
+  const now = Date.now();
+  const entry = memoryCache.get(key) as
+    | (MemoryCacheEntry & { data: T })
+    | undefined;
+  if (entry && now - entry.ts < entry.ttl) {
+    return Promise.resolve({ data: entry.data } as AxiosResponse<T>);
+  }
+  return fetcher().then((resp) => {
+    memoryCache.set(key, { data: resp.data as T, ts: now, ttl: ttlMs });
+    return resp;
+  });
+}
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
@@ -82,15 +117,51 @@ export const apiService = {
       limit: number;
       role?: 'STUDENT' | 'ALUM' | 'ADMIN';
       search?: string;
-    }) => api.get('/connection', { params: { page, limit, role, search } }),
-    getStats: () => api.get('/connection/stats'),
-    getPendingReceived: ({ page, limit }: { page: number; limit: number }) =>
-      api.get('/connection/pending/received', { params: { page, limit } }),
-    getPendingSent: ({ page, limit }: { page: number; limit: number }) =>
-      api.get('/connection/pending/sent', { params: { page, limit } }),
-    getStatus: (userId: string) => api.get(`/connection/status/${userId}`),
-    getSuggestions: ({ limit }: { limit: number }) =>
-      api.get('/connection/suggestions', { params: { limit } }),
+    }) => {
+      const key = `connections:getAll:${getUserCacheKeyPart()}:${page}:${limit}:${role || ''}:${search || ''}`;
+      return cacheGetOrFetch(
+        key,
+        () => api.get('/connection', { params: { page, limit, role, search } }),
+        20000
+      );
+    },
+    getStats: () => {
+      const key = `connections:stats:${getUserCacheKeyPart()}`;
+      return cacheGetOrFetch(key, () => api.get('/connection/stats'), 20000);
+    },
+    getPendingReceived: ({ page, limit }: { page: number; limit: number }) => {
+      const key = `connections:pendingReceived:${getUserCacheKeyPart()}:${page}:${limit}`;
+      return cacheGetOrFetch(
+        key,
+        () =>
+          api.get('/connection/pending/received', { params: { page, limit } }),
+        20000
+      );
+    },
+    getPendingSent: ({ page, limit }: { page: number; limit: number }) => {
+      const key = `connections:pendingSent:${getUserCacheKeyPart()}:${page}:${limit}`;
+      return cacheGetOrFetch(
+        key,
+        () => api.get('/connection/pending/sent', { params: { page, limit } }),
+        20000
+      );
+    },
+    getStatus: (userId: string) => {
+      const key = `connections:status:${getUserCacheKeyPart()}:${userId}`;
+      return cacheGetOrFetch(
+        key,
+        () => api.get(`/connection/status/${userId}`),
+        20000
+      );
+    },
+    getSuggestions: ({ limit }: { limit: number }) => {
+      const key = `connections:suggestions:${getUserCacheKeyPart()}:${limit}`;
+      return cacheGetOrFetch(
+        key,
+        () => api.get('/connection/suggestions', { params: { limit } }),
+        20000
+      );
+    },
     send: (recipientId: string) =>
       api.post('/connection/send', { recipientId }),
     updateStatus: (connectionId: string, status: string) =>
@@ -99,6 +170,21 @@ export const apiService = {
       api.delete(`/connection/cancel/${connectionId}`),
     remove: (connectionId: string) =>
       api.delete(`/connection/remove/${connectionId}`),
+    prefetch: (limit: number = 10) => {
+      // Warm up common queries for instant navigation
+      return Promise.allSettled([
+        apiService.connections.getAll({
+          page: 1,
+          limit,
+          role: undefined,
+          search: undefined,
+        }),
+        apiService.connections.getStats(),
+        apiService.connections.getPendingReceived({ page: 1, limit }),
+        apiService.connections.getPendingSent({ page: 1, limit }),
+        apiService.connections.getSuggestions({ limit }),
+      ]);
+    },
   },
 
   // Message endpoints
@@ -120,7 +206,18 @@ export const apiService = {
   // Referral endpoints
   referrals: {
     create: (data: unknown) => api.post('/referral', data),
-    getAll: () => api.get('/referral'),
+    // Cached list fetch with short TTL for snap navigation
+    getAll: (opts?: { force?: boolean }) => {
+      const key = `referrals:list:${getUserCacheKeyPart()}`;
+      if (opts?.force) memoryCache.delete(key);
+      return cacheGetOrFetch(key, () => api.get('/referral'), 30000);
+    },
+    prefetch: () => {
+      const key = `referrals:list:${getUserCacheKeyPart()}`;
+      return cacheGetOrFetch(key, () => api.get('/referral'), 30000).catch(
+        () => undefined
+      );
+    },
     getById: (id: string) => api.get(`/referral/${id}`),
     update: (id: string, data: unknown) => api.put(`/referral/${id}`, data),
     delete: (id: string) => api.delete(`/referral/${id}`),
@@ -138,6 +235,7 @@ export const apiService = {
     updateApplicationStatus: (id: string, status: string) =>
       api.put(`/referral/applications/${id}/status`, { status }),
     getMyApplications: () => api.get('/referral/applications/my'),
+    getAnalytics: () => api.get('/referral/analytics'),
   },
 
   // Files endpoints
@@ -181,12 +279,22 @@ export const apiService = {
   posts: {
     create: (userId: string, data: unknown) =>
       api.post(`/posts/${userId}`, data),
-    getAll: () => api.get('/posts'),
+    getAll: (opts?: { force?: boolean }) => {
+      const key = `posts:all:${getUserCacheKeyPart()}`;
+      if (opts?.force) memoryCache.delete(key);
+      return cacheGetOrFetch(key, () => api.get('/posts'), 20000);
+    },
     getByUser: (userId: string) => api.get(`/posts/user/${userId}`),
     update: (id: string, userId: string, data: unknown) =>
       api.patch(`/posts/${id}/user/${userId}`, data),
     delete: (id: string, userId: string) =>
       api.delete(`/posts/${id}/user/${userId}`),
+    prefetch: () =>
+      cacheGetOrFetch(
+        `posts:all:${getUserCacheKeyPart()}`,
+        () => api.get('/posts'),
+        20000
+      ).catch(() => undefined),
   },
 
   // Engagement endpoints

@@ -12,7 +12,7 @@ import { useAuth } from './AuthContext';
 import { DashBoardService } from '@/services/DashBoardService';
 import { ProjectInterface } from '@/types/ShowcaseType';
 import { Post } from '@/types/post';
-const { ShowcaseService } = await import('@/services/ShowcaseService');
+import { ShowcaseService } from '@/services/ShowcaseService';
 
 interface LoadingState {
   dashboard: boolean;

@@ -38,13 +38,13 @@ export class ReferralController {
   // Referral Endpoints
 
   /**
-   * Creates a new job referral. Only accessible by ALUMs.
+   * Creates a new job referral. Only accessible by ALUMs and ADMINs.
    * @param userId - The ID of the authenticated user creating the referral.
    * @param dto - The data for creating the referral.
    * @returns A promise that resolves to the created referral.
    */
   @Post()
-  @Roles(Role.ALUM)
+  @Roles(Role.ALUM, Role.ADMIN)
   async createReferral(
     @GetCurrentUser('userId') userId: string,
     @Body() dto: CreateReferralDto,
@@ -71,6 +71,16 @@ export class ReferralController {
     // If user is not authenticated, userId and userRole will be undefined
     // Service will handle this and show only APPROVED referrals
     return this.referralService.getFilteredReferrals(filterDto, userId, userRole);
+  }
+
+  /**
+   * Returns analytics for referrals and applications (admin only).
+   */
+  @Get('analytics')
+  @Roles(Role.ADMIN)
+  @SkipThrottle()
+  async getAnalytics() {
+    return this.referralService.getAnalytics();
   }
 
   /**
@@ -161,17 +171,6 @@ export class ReferralController {
   }
 
   /**
-   * Retrieves a single referral application by its ID.
-   * @param id - The ID of the referral application to retrieve.
-   * @returns A promise that resolves to the referral application object.
-   */
-  @Get('applications/:id')
-  @SkipThrottle()
-  async getReferralApplicationById(@Param('id') id: string) {
-    return this.referralService.getReferralApplicationById(id);
-  }
-
-  /**
    * Retrieves a list of referral applications based on provided filters. Only accessible by ADMINs.
    * @param filterDto - DTO containing filters for referral application search.
    * @returns A promise that resolves to an array of filtered referral applications.
@@ -185,8 +184,28 @@ export class ReferralController {
     return this.referralService.getFilteredReferralApplications(filterDto);
   }
 
+  // Get user's own applications
+  // MUST come before @Get('applications/:id') to avoid route conflicts
+  @Get('applications/my')
+  @Roles(Role.STUDENT, Role.ALUM)
+  @SkipThrottle()
+  async getMyApplications(@GetCurrentUser('userId') userId: string) {
+    return this.referralService.getMyApplications(userId);
+  }
+
   /**
-   * Updates the status of a referral application. Only accessible by ADMINs.
+   * Retrieves a single referral application by its ID.
+   * @param id - The ID of the referral application to retrieve.
+   * @returns A promise that resolves to the referral application object.
+   */
+  @Get('applications/:id')
+  @SkipThrottle()
+  async getReferralApplicationById(@Param('id') id: string) {
+    return this.referralService.getReferralApplicationById(id);
+  }
+
+  /**
+   * Updates the status of a referral application. Only accessible by ADMINs and ALUMs.
    * @param userId - The ID of the authenticated user updating the status.
    * @param id - The ID of the referral application to update.
    * @param dto - The data to update the application status with.
@@ -204,14 +223,6 @@ export class ReferralController {
       id,
       dto,
     );
-  }
-
-  // Get user's own applications
-  @Get('applications/my')
-  @Roles(Role.STUDENT, Role.ALUM)
-  @SkipThrottle()
-  async getMyApplications(@GetCurrentUser('userId') userId: string) {
-    return this.referralService.getMyApplications(userId);
   }
 
   // Get applications for a specific referral (for alumni)

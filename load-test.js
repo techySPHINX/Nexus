@@ -1,6 +1,7 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
 import { WebSocket } from 'k6/experimental/websockets';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
 // Test configuration
 export const options = {
@@ -20,8 +21,8 @@ export const options = {
   },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:3000';
-const WS_URL = __ENV.WS_URL || 'ws://localhost:3000';
+const BASE_URL = BACKEND_URL;
+const WS_URL = BACKEND_URL.replace(/^http/, 'ws');
 
 // Test data
 const users = [

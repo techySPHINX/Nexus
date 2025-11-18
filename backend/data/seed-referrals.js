@@ -1,4 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient, ReferralStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -15,22 +15,31 @@ async function seedReferrals() {
       return;
     }
 
-    // Find an alumni user
+    // Find alumni and admin users
     const alumni = users.find((user) => user.role === 'ALUM');
-    if (!alumni) {
-      console.log('❌ No alumni users found. Creating one...');
+    const admin = users.find((user) => user.role === 'ADMIN');
+    const creator = alumni || admin || users.find((user) => user.role === 'ALUM' || user.role === 'ADMIN') || users[0];
+
+    if (!creator) {
+      console.log('❌ No alumni or admin users found. Creating one...');
+      const { hash } = await import('bcrypt');
+      const hashedPassword = await hash('password123', 10);
       const newAlumni = await prisma.user.create({
         data: {
           email: 'alumni@test.com',
-          password: 'hashedpassword', // In real app, this would be hashed
+          password: hashedPassword,
           name: 'Test Alumni',
           role: 'ALUM',
+          isEmailVerified: true,
+          isAccountActive: true,
+          accountStatus: 'ACTIVE',
         },
       });
       console.log('✅ Created alumni user:', newAlumni.email);
+      creator.id = newAlumni.id;
     }
 
-    // Create sample referrals
+    // Create sample referrals with different statuses
     const sampleReferrals = [
       {
         company: 'TechCorp Inc.',
@@ -42,7 +51,8 @@ async function seedReferrals() {
         location: 'San Francisco, CA',
         deadline: new Date('2025-12-31T23:59:59.000Z'),
         referralLink: 'https://techcorp.com/careers/software-engineer',
-        alumniId: alumni?.id || users[0].id,
+        alumniId: creator.id,
+        status: ReferralStatus.APPROVED, // Approved - visible to everyone
       },
       {
         company: 'DataFlow Solutions',
@@ -54,7 +64,8 @@ async function seedReferrals() {
         location: 'New York, NY',
         deadline: new Date('2025-11-30T23:59:59.000Z'),
         referralLink: 'https://dataflow.com/jobs/data-scientist',
-        alumniId: alumni?.id || users[0].id,
+        alumniId: creator.id,
+        status: ReferralStatus.APPROVED, // Approved - visible to everyone
       },
       {
         company: 'StartupXYZ',
@@ -65,17 +76,68 @@ async function seedReferrals() {
           '2+ years PM experience, User Research, Agile, Analytics tools',
         location: 'Remote',
         deadline: new Date('2026-01-15T23:59:59.000Z'),
-        alumniId: alumni?.id || users[0].id,
+        alumniId: creator.id,
+        status: ReferralStatus.PENDING, // Pending - only visible to admin and creator
+      },
+      {
+        company: 'CloudTech Systems',
+        jobTitle: 'DevOps Engineer',
+        description:
+          'Looking for an experienced DevOps engineer to manage our cloud infrastructure and CI/CD pipelines.',
+        requirements:
+          '5+ years experience, AWS, Docker, Kubernetes, Terraform, CI/CD',
+        location: 'Seattle, WA',
+        deadline: new Date('2025-12-15T23:59:59.000Z'),
+        referralLink: 'https://cloudtech.com/careers/devops',
+        alumniId: creator.id,
+        status: ReferralStatus.APPROVED, // Approved - visible to everyone
+      },
+      {
+        company: 'AI Innovations',
+        jobTitle: 'Machine Learning Engineer',
+        description:
+          'Join our AI team to build cutting-edge machine learning models and deploy them at scale.',
+        requirements:
+          'PhD or Masters in ML, Python, PyTorch, TensorFlow, MLOps',
+        location: 'Boston, MA',
+        deadline: new Date('2026-02-28T23:59:59.000Z'),
+        alumniId: creator.id,
+        status: ReferralStatus.PENDING, // Pending - only visible to admin and creator
+      },
+      {
+        company: 'FinTech Global',
+        jobTitle: 'Full Stack Developer',
+        description:
+          'Build scalable financial applications using modern web technologies.',
+        requirements:
+          '4+ years experience, React, Node.js, PostgreSQL, TypeScript',
+        location: 'London, UK',
+        deadline: new Date('2025-12-20T23:59:59.000Z'),
+        referralLink: 'https://fintech.com/careers/fullstack',
+        alumniId: creator.id,
+        status: ReferralStatus.APPROVED, // Approved - visible to everyone
       },
     ];
 
     for (const referralData of sampleReferrals) {
-      const referral = await prisma.referral.create({
-        data: referralData,
-      });
-      console.log(
-        `✅ Created referral: ${referral.jobTitle} at ${referral.company}`,
-      );
+      try {
+        const referral = await prisma.referral.create({
+          data: referralData,
+          include: {
+            postedBy: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+          },
+        });
+        console.log(
+          `✅ Created referral: ${referral.jobTitle} at ${referral.company} (Status: ${referral.status})`,
+        );
+      } catch (error) {
+        console.error(`❌ Error creating referral ${referralData.jobTitle}:`, error.message);
+      }
     }
 
     console.log('🎉 Referrals seeded successfully!');

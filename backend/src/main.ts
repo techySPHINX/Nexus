@@ -52,9 +52,12 @@ async function bootstrap() {
   loggerService.log('✅ Helmet security headers enabled', 'Bootstrap');
 
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:4173', 'http://localhost:3002'],
+    origin: process.env.ALLOWED_ORIGIN || "https://localhost:3001",
     credentials: true,
   });
+
+  console.log('Cors allowed origin:', process.env.ALLOWED_ORIGIN || "https://localhost:3001");
+  loggerService.log('✅ CORS configured', 'Bootstrap');
 
   // CORS - Configure Cross-Origin Resource Sharing
   app.enableCors(getCorsConfig());
