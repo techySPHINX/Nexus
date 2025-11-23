@@ -51,6 +51,7 @@ import {
   CheckCircle,
   Cancel,
   Download,
+  OpenInNew,
   Person,
   CalendarToday,
   Description,
@@ -447,6 +448,17 @@ const DocumentVerification: React.FC = () => {
           <Tooltip title="Download">
             <IconButton size="small" onClick={() => handleDownload(doc)}>
               <Download />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Open in new tab">
+            <IconButton
+              component="a"
+              href={doc.documentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="small"
+            >
+              <OpenInNew />
             </IconButton>
           </Tooltip>
           {doc.status === 'PENDING' && (
@@ -936,6 +948,17 @@ const DocumentVerification: React.FC = () => {
                             <Download />
                           </IconButton>
                         </Tooltip>
+                        <Tooltip title="Open in new tab">
+                          <IconButton
+                            component="a"
+                            href={doc.documentUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            size="small"
+                          >
+                            <OpenInNew />
+                          </IconButton>
+                        </Tooltip>
                         {doc.status === 'PENDING' && (
                           <>
                             <Tooltip title="Approve">
@@ -1191,6 +1214,17 @@ const DocumentVerification: React.FC = () => {
               onClick={() => handleDownload(activeDoc)}
             >
               Download
+            </Button>
+          )}
+          {activeDoc && (
+            <Button
+              component="a"
+              href={activeDoc.documentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              startIcon={<OpenInNew />}
+            >
+              Open in new tab
             </Button>
           )}
         </DialogActions>
