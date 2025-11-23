@@ -433,46 +433,54 @@ const SubCommunitiesPage: React.FC = () => {
           Communities
         </Typography>
 
-        <Button
-          component={Link}
-          to="/subcommunities/my"
-          variant="contained"
-          color="primary"
-          startIcon={<Add />}
+        <Box
           sx={{
-            borderRadius: 2,
-            boxShadow: 1,
-            fontWeight: 600,
-            px: 3,
-            py: 1.2,
-            minWidth: 170,
-            ml: { xs: 0, sm: 2 },
-            mb: { xs: 1, sm: 0 },
-            textTransform: 'none',
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: 1,
           }}
         >
-          My Communities
-        </Button>
+          <Button
+            component={Link}
+            to="/subcommunities/my"
+            variant="contained"
+            color="primary"
+            sx={{
+              borderRadius: 2,
+              boxShadow: 1,
+              fontWeight: 600,
+              px: 3,
+              py: 1.2,
+              minWidth: 170,
+              ml: { xs: 0, sm: 2 },
+              mb: { xs: 1, sm: 0 },
+              textTransform: 'none',
+            }}
+          >
+            My Communities
+          </Button>
 
-        {(isAdmin || isAlum) && (
-          <Button
-            variant="outlined"
-            startIcon={<Add />}
-            onClick={() => setRequestDialogOpen(true)}
-            sx={{ borderRadius: 2 }}
-          >
-            Request New Community
-          </Button>
-        )}
-        {isAdmin && (
-          <Button
-            variant="outlined"
-            onClick={() => setManageTypesOpen(true)}
-            sx={{ borderRadius: 2, ml: 1 }}
-          >
-            Manage Types
-          </Button>
-        )}
+          {(isAdmin || isAlum) && (
+            <Button
+              variant="outlined"
+              startIcon={<Add />}
+              onClick={() => setRequestDialogOpen(true)}
+              sx={{ borderRadius: 2 }}
+            >
+              Request New Community
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              variant="outlined"
+              onClick={() => setManageTypesOpen(true)}
+              sx={{ borderRadius: 2 }}
+            >
+              Manage Types
+            </Button>
+          )}
+        </Box>
       </Box>
 
       {/* Search Bar */}
