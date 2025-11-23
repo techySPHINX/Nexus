@@ -232,7 +232,6 @@ const ProjectsMainPage: React.FC = () => {
     try {
       const nextFilters = {
         ...filters,
-        pageSize: 9,
         cursor: currentPagination.nextCursor,
       };
 
