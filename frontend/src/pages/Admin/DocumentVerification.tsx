@@ -31,6 +31,7 @@ import {
   CheckCircle,
   Cancel,
   Download,
+  OpenInNew,
   Person,
   School,
   Work,
@@ -66,6 +67,12 @@ const AdminDocumentVerification: React.FC = () => {
   const [adminComments, setAdminComments] = useState('');
   const [rejectionReason, setRejectionReason] = useState('');
   const [filter, setFilter] = useState('all');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewType, setPreviewType] = useState<
+    'pdf' | 'image' | 'other' | null
+  >(null);
+  const [previewFileName, setPreviewFileName] = useState<string>('');
   // stats removed — server doesn't provide document-stats endpoint; UI will show list only
 
   useEffect(() => {
@@ -122,6 +129,20 @@ const AdminDocumentVerification: React.FC = () => {
       console.error(`Failed to ${dialogType} document:`, error);
       alert(`Failed to ${dialogType} document. Please try again.`);
     }
+  };
+
+  const openPreview = (document: Document) => {
+    const url = document.documentUrl;
+    const fileName = url.split('/').pop() || 'document';
+    const lower = url.split('?')[0].toLowerCase();
+    let type: 'pdf' | 'image' | 'other' = 'other';
+    if (lower.endsWith('.pdf')) type = 'pdf';
+    else if (lower.match(/\.(jpg|jpeg|png|gif|bmp|webp)$/)) type = 'image';
+
+    setPreviewUrl(url);
+    setPreviewType(type);
+    setPreviewFileName(fileName);
+    setPreviewOpen(true);
   };
 
   const getDocumentTypeLabel = (type: string) => {
@@ -276,22 +297,33 @@ const AdminDocumentVerification: React.FC = () => {
                     <Box display="flex" gap={1}>
                       <Tooltip title="View Document">
                         <IconButton
-                          onClick={() =>
-                            window.open(document.documentUrl, '_blank')
-                          }
+                          onClick={() => openPreview(document)}
                           size="small"
                         >
                           <Visibility />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Download">
+                      <Tooltip title="Download / Open in new tab">
+                        {/* Render as anchor to open in new tab safely */}
                         <IconButton
-                          onClick={() =>
-                            window.open(document.documentUrl, '_blank')
-                          }
+                          component="a"
+                          href={document.documentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           size="small"
                         >
                           <Download />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Open in new tab">
+                        <IconButton
+                          component="a"
+                          href={document.documentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="small"
+                        >
+                          <OpenInNew />
                         </IconButton>
                       </Tooltip>
                       {document.status === 'PENDING' && (
@@ -402,6 +434,78 @@ const AdminDocumentVerification: React.FC = () => {
             >
               {dialogType === 'approve' ? 'Approve' : 'Reject'}
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Preview Dialog */}
+        <Dialog
+          open={previewOpen}
+          onClose={() => setPreviewOpen(false)}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle>
+            {previewFileName} — {activeDocument?.user?.name || ''}
+          </DialogTitle>
+          <DialogContent dividers sx={{ p: 2 }}>
+            {previewUrl && previewType === 'pdf' && (
+              <Box sx={{ width: '100%', height: '75vh' }}>
+                <iframe
+                  src={previewUrl}
+                  title={previewFileName}
+                  width="100%"
+                  height="100%"
+                  style={{ border: 'none' }}
+                />
+              </Box>
+            )}
+
+            {previewUrl && previewType === 'image' && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
+                <img
+                  src={previewUrl}
+                  alt={previewFileName}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '70vh',
+                    objectFit: 'contain',
+                  }}
+                />
+              </Box>
+            )}
+
+            {previewUrl && previewType === 'other' && (
+              <Box sx={{ p: 2 }}>
+                <Typography variant="body2">
+                  Preview not available for this file type.
+                </Typography>
+                <Button
+                  component="a"
+                  href={previewUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  sx={{ mt: 2 }}
+                  startIcon={<OpenInNew />}
+                >
+                  Open in new tab
+                </Button>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setPreviewOpen(false)}>Close</Button>
+            {previewUrl && (
+              <Button
+                component="a"
+                href={previewUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="contained"
+                startIcon={<OpenInNew />}
+              >
+                Open in new tab
+              </Button>
+            )}
           </DialogActions>
         </Dialog>
       </motion.div>
