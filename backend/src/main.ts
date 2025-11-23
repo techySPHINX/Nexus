@@ -92,7 +92,13 @@ async function bootstrap() {
   // WEBSOCKET: Redis Adapter for Horizontal Scalability
   // ============================================
   const redisIoAdapter = new RedisIoAdapter(app);
-  await redisIoAdapter.connectToRedis();
+  // Connect to Redis for Socket.IO adapter but don't block application startup.
+  // If Redis is slow or unavailable, connecting can hang; run connect in background.
+  redisIoAdapter.connectToRedis().catch((err) => {
+    // Use the Nest logger to surface the error but continue startup
+    const fallbackLogger = new WinstonLoggerService();
+    fallbackLogger.error('Redis adapter background connection failed', err?.stack || String(err), 'Bootstrap');
+  });
   app.useWebSocketAdapter(redisIoAdapter);
   loggerService.log(
     '✅ WebSocket adapter configured with Redis (multi-server support)',

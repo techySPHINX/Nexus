@@ -118,8 +118,8 @@ export default function RecommendedProjects() {
     : 'group flex gap-4 p-4 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all cursor-pointer';
 
   const titleClass = isDark
-    ? 'font-semibold text-neutral-100 group-hover:text-neutral-300 transition-colors line-clamp-1'
-    : 'font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors line-clamp-1';
+    ? 'font-semibold text-neutral-100 hover:text-sky-300 transition-colors line-clamp-1'
+    : 'font-semibold text-gray-900 hover:text-emerald-600 transition-colors line-clamp-1';
 
   const tagClass = isDark
     ? 'text-xs px-2 py-1 bg-neutral-800 text-neutral-200 rounded-full'
@@ -347,7 +347,15 @@ export default function RecommendedProjects() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between mb-1">
-                <h3 className={titleClass}>{project.title}</h3>
+                <h3>
+                  <button
+                    type="button"
+                    onClick={() => navigate(`/projects/${project.id}`)}
+                    className={`${titleClass} bg-transparent p-0 m-0 text-left w-full`}
+                  >
+                    {project.title}
+                  </button>
+                </h3>
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   <span
                     className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColorClass(project.status)}`}

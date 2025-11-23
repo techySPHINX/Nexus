@@ -357,6 +357,31 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const loadingRef = React.useRef(loading);
   const projectsCacheRef = React.useRef(projectsCache);
   const commentsCacheRef = React.useRef(commentsCache);
+  // Keep track of last-used filters so we can detect when callers pass new filters
+  const lastAllProjectsFilterRef = React.useRef<
+    FilterProjectInterface | undefined
+  >(undefined);
+  const lastProjectsByUserFilterRef = React.useRef<
+    FilterProjectInterface | undefined
+  >(undefined);
+  const lastSupportedProjectsFilterRef = React.useRef<
+    FilterProjectInterface | undefined
+  >(undefined);
+  const lastFollowedProjectsFilterRef = React.useRef<
+    FilterProjectInterface | undefined
+  >(undefined);
+
+  // Helper to normalize filters for equality checks (ignore pagination cursor)
+  const normalizeFilterForCompare = React.useCallback(
+    (f?: FilterProjectInterface) => {
+      if (!f) return {};
+      const copy = { ...f };
+      if ('cursor' in copy) delete copy.cursor;
+      if ('pageSize' in copy) delete copy.pageSize;
+      return copy;
+    },
+    []
+  );
   const rehydrateResolveRef = React.useRef<(() => void) | null>(null);
   const rehydratePromiseRef = React.useRef<Promise<void>>(
     new Promise((res) => {
@@ -678,6 +703,15 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       // Use refs for pagination and loading
       const currentPagination = paginationRef.current;
       const isLoading = loadingRef.current;
+      // compute filter keys so we can detect when callers pass new filters
+      const lastFilter = lastAllProjectsFilterRef.current;
+      const currentNorm = normalizeFilterForCompare(filterProjectDto);
+      const lastNorm = normalizeFilterForCompare(lastFilter);
+      const currentFilterKey = JSON.stringify(currentNorm || {});
+      const lastFilterKey = JSON.stringify(lastNorm || {});
+      // by default preserve loadMore behavior; if filters changed we should
+      // not attempt to loadMore the previous list — treat as fresh load
+      const doLoadMore = loadMore && currentFilterKey === lastFilterKey;
       // Wait briefly for cache rehydration so we can use restored projects list
       if (!loadMore && !forceLoad) {
         try {
@@ -690,9 +724,11 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         // If we already have projects (rehydrated), avoid refetch on initial mount
-        if (allProjects.data.length > 0) return;
+        // unless the filters have changed since we last fetched.
+        if (allProjects.data.length > 0 && currentFilterKey === lastFilterKey)
+          return;
       }
-      if (loadMore && (isLoading || !currentPagination.hasNext)) {
+      if (doLoadMore && (isLoading || !currentPagination.hasNext)) {
         return;
       }
 
@@ -701,7 +737,7 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         console.log('getting project');
         const response = await ShowcaseService.getAllProjects(filterProjectDto);
 
-        if (loadMore) {
+        if (doLoadMore) {
           setAllProjects((prev) => ({
             data: [...prev.data, ...response.data],
             pagination: response.pagination,
@@ -714,6 +750,12 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
             data: response.data,
             pagination: response.pagination,
           });
+          // remember the filter used for this set so subsequent calls
+          // can decide whether to refetch when callers pass new filters
+          // store normalized filter (without cursor) so future comparisons ignore pagination
+          lastAllProjectsFilterRef.current = normalizeFilterForCompare(
+            filterProjectDto as FilterProjectInterface
+          );
           // setProjects({
           //   pagination: response.pagination,
           //   data: response.data,
@@ -725,7 +767,7 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user, allProjects] // pagination and loading handled via refs
+    [user, normalizeFilterForCompare, allProjects.data.length] // pagination and loading handled via refs
   );
 
   // Enhanced getProjectById with caching
@@ -880,6 +922,14 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const targetOwnerId = ownerId ?? user.id;
 
+      // compute filter keys to detect changes and control loadMore behavior
+      const lastFilter = lastProjectsByUserFilterRef.current;
+      const currentNorm = normalizeFilterForCompare(filterProjectDto);
+      const lastNorm = normalizeFilterForCompare(lastFilter);
+      const currentFilterKey = JSON.stringify(currentNorm || {});
+      const lastFilterKey = JSON.stringify(lastNorm || {});
+      const doLoadMore = loadMore && currentFilterKey === lastFilterKey;
+
       // Wait briefly for cache rehydration so we can use restored my-projects list
       if (!loadMore && !forceLoad) {
         try {
@@ -891,10 +941,12 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           /* ignore */
         }
 
-        // If not loading more and we already have data for the same owner, skip fetch
+        // If not loading more and we already have data for the same owner and
+        // filters haven't changed, skip fetch
         if (
           myProjects.data.length > 0 &&
-          myProjects.data[0]?.owner?.id === targetOwnerId
+          myProjects.data[0]?.owner?.id === targetOwnerId &&
+          currentFilterKey === lastFilterKey
         ) {
           return;
         }
@@ -905,7 +957,7 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         if (targetOwnerId === user.id) {
           const response =
             await ShowcaseService.getMyProjects(filterProjectDto);
-          if (loadMore) {
+          if (doLoadMore) {
             setMyProjects((prev) => ({
               data: [...prev.data, ...response.data],
               pagination: response.pagination,
@@ -919,13 +971,16 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
               data: response.data,
               pagination: response.pagination,
             });
+            lastProjectsByUserFilterRef.current = normalizeFilterForCompare(
+              filterProjectDto as FilterProjectInterface
+            );
           }
         } else {
           const response = await ShowcaseService.getProjectsByOwner(
             targetOwnerId,
             filterProjectDto
           );
-          if (loadMore) {
+          if (doLoadMore) {
             setProjectsByUserId((prev) => ({
               data: [...prev.data, ...response.data],
               pagination: response.pagination,
@@ -935,6 +990,9 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
               data: response.data,
               pagination: response.pagination,
             });
+            lastProjectsByUserFilterRef.current = normalizeFilterForCompare(
+              filterProjectDto as FilterProjectInterface
+            );
           }
         }
       } catch (err) {
@@ -943,7 +1001,7 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user, myProjects]
+    [user, normalizeFilterForCompare, myProjects.data]
   );
 
   const getSupportedProjects = useCallback(
@@ -957,6 +1015,14 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
+      // compute filter keys to detect changes and control loadMore behavior
+      const lastFilter = lastSupportedProjectsFilterRef.current;
+      const currentNorm = normalizeFilterForCompare(filterProjectDto);
+      const lastNorm = normalizeFilterForCompare(lastFilter);
+      const currentFilterKey = JSON.stringify(currentNorm || {});
+      const lastFilterKey = JSON.stringify(lastNorm || {});
+      const doLoadMore = loadMore && currentFilterKey === lastFilterKey;
+
       // Wait briefly for cache rehydration so we can use restored supported list
       if (!loadMore && !forceLoad) {
         try {
@@ -968,12 +1034,15 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           /* ignore */
         }
 
-        // Skip fetch if not loading more and we already have data
-        if (supportedProjects.data.length > 0) return;
+        // Skip fetch if not loading more and we already have data and filters unchanged
+        if (
+          supportedProjects.data.length > 0 &&
+          currentFilterKey === lastFilterKey
+        )
+          return;
       }
-
       // If loading more but there's no next page, skip
-      if (loadMore && !supportedProjects.pagination.hasNext) {
+      if (doLoadMore && !supportedProjects.pagination.hasNext) {
         return;
       }
 
@@ -981,7 +1050,7 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         const response =
           await ShowcaseService.getSupportedProjects(filterProjectDto);
-        if (loadMore) {
+        if (doLoadMore) {
           setSupportedProjects((prev: PaginatedProjectsInterface) => ({
             data: [
               ...prev.data,
@@ -1004,6 +1073,9 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
             })),
             pagination: response.pagination,
           });
+          lastSupportedProjectsFilterRef.current = normalizeFilterForCompare(
+            filterProjectDto as FilterProjectInterface
+          );
         }
       } catch (err) {
         setError(
@@ -1013,7 +1085,12 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user, supportedProjects]
+    [
+      user,
+      normalizeFilterForCompare,
+      supportedProjects.pagination.hasNext,
+      supportedProjects.data.length,
+    ]
   );
 
   const getFollowedProjects = useCallback(
@@ -1027,6 +1104,14 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
+      // compute filter keys to detect changes and control loadMore behavior
+      const lastFilter = lastFollowedProjectsFilterRef.current;
+      const currentNorm = normalizeFilterForCompare(filterProjectDto);
+      const lastNorm = normalizeFilterForCompare(lastFilter);
+      const currentFilterKey = JSON.stringify(currentNorm || {});
+      const lastFilterKey = JSON.stringify(lastNorm || {});
+      const doLoadMore = loadMore && currentFilterKey === lastFilterKey;
+
       // Wait briefly for cache rehydration so we can use restored followed list
       if (!loadMore && !forceLoad) {
         try {
@@ -1038,12 +1123,16 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
           /* ignore */
         }
 
-        // Skip fetch if not loading more and we already have data
-        if (followedProjects.data.length > 0) return;
+        // Skip fetch if not loading more and we already have data and filters unchanged
+        if (
+          followedProjects.data.length > 0 &&
+          currentFilterKey === lastFilterKey
+        )
+          return;
       }
 
       // If loading more but there's no next page, skip
-      if (loadMore && !followedProjects.pagination.hasNext) {
+      if (doLoadMore && !followedProjects.pagination.hasNext) {
         return;
       }
 
@@ -1051,7 +1140,7 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
       try {
         const response =
           await ShowcaseService.getFollowedProjects(filterProjectDto);
-        if (loadMore) {
+        if (doLoadMore) {
           setFollowedProjects((prev) => ({
             data: [
               ...prev.data,
@@ -1074,6 +1163,9 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
             })),
             pagination: response.pagination,
           });
+          lastFollowedProjectsFilterRef.current = normalizeFilterForCompare(
+            filterProjectDto as FilterProjectInterface
+          );
         }
       } catch (err) {
         setError(
@@ -1083,7 +1175,12 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
         setLoading(false);
       }
     },
-    [user, followedProjects]
+    [
+      user,
+      normalizeFilterForCompare,
+      followedProjects.pagination.hasNext,
+      followedProjects.data.length,
+    ]
   );
 
   // Add project sharing function

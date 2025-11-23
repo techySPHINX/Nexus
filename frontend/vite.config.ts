@@ -16,7 +16,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       strictPort: true,
       host: true,
     },
-    base: './', // <--- ✅ Add this line
+    base: '/', // <--- ✅ Add this line
     plugins: [
       react(),
       isAnalyze &&

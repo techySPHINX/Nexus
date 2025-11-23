@@ -26,7 +26,7 @@ export class CreatePostDto {
    */
   @IsOptional()
   @IsString()
-  imageFile?: string;
+  imageUrl?: string;
 
   /**
    * Optional. The type of the post (e.g., "UPDATE", "ANNOUNCEMENT").

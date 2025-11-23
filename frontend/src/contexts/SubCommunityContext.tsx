@@ -784,9 +784,11 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
           joinRequestId,
           dto
         );
+        // Merge updated fields onto existing request to preserve related
+        // nested data (e.g. `user`) when the backend response omits it.
         setJoinRequests((prev: JoinRequest[]) =>
           prev.map((jr: JoinRequest) =>
-            jr.id === joinRequestId ? updated : jr
+            jr.id === joinRequestId ? { ...jr, ...updated } : jr
           )
         );
       } catch (err: unknown) {

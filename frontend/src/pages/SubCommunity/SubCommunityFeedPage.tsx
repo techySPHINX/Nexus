@@ -28,6 +28,7 @@ import {
   Divider,
   Card,
   CardContent,
+  Skeleton,
   Tooltip,
 } from '@mui/material';
 import {
@@ -281,8 +282,8 @@ const SubCommunityFeedPage: React.FC = () => {
       const errorMessage = getErrorMessage(error);
       showSnackbar(errorMessage, 'error');
     } finally {
-      getSubCommunity(id);
-      getSubCommunityFeed(id, 1);
+      // Avoid re-fetching the entire community and feed to keep UX snappy.
+      // We already updated local state and refreshed pending requests above.
     }
   };
 
@@ -407,35 +408,109 @@ const SubCommunityFeedPage: React.FC = () => {
     // Show skeleton loading UI for first page (tailwind/emerald style)
     if (feedLoading && pagination.page === 1) {
       return (
-        <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm transition-shadow mt-4">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">Posts</h2>
-            <div className="w-20 h-4 bg-emerald-100 rounded animate-pulse" />
-          </div>
+        <Box
+          sx={{
+            bgcolor: 'background.paper',
+            borderRadius: 2,
+            border: 1,
+            borderColor: 'divider',
+            p: 3,
+            mt: 4,
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 3,
+            }}
+          >
+            <Typography variant="h6">Posts</Typography>
+            <Skeleton
+              variant="rectangular"
+              width={80}
+              height={24}
+              sx={{ borderRadius: 1 }}
+              animation="wave"
+            />
+          </Box>
 
-          <div className="space-y-4">
+          <Box sx={{ display: 'grid', gap: 2 }}>
             {[...Array(3)].map((_, index) => (
-              <div
+              <Box
                 key={index}
-                className="flex gap-4 p-4 rounded-lg border border-gray-200 animate-pulse"
+                sx={{
+                  display: 'flex',
+                  gap: 2,
+                  p: 2,
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                }}
               >
-                <div className="w-20 h-20 bg-emerald-100 rounded-lg flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div className="h-4 bg-emerald-100 rounded w-3/4" />
-                    <div className="h-6 bg-emerald-100 rounded w-16" />
-                  </div>
-                  <div className="h-3 bg-emerald-100 rounded w-full" />
-                  <div className="h-3 bg-emerald-100 rounded w-2/3" />
-                  <div className="flex gap-4 pt-2">
-                    <div className="h-3 bg-emerald-100 rounded w-16" />
-                    <div className="h-3 bg-emerald-100 rounded w-16" />
-                  </div>
-                </div>
-              </div>
+                <Skeleton
+                  variant="circular"
+                  width={80}
+                  height={80}
+                  animation="wave"
+                />
+                <Box sx={{ flex: 1 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      mb: 1,
+                    }}
+                  >
+                    <Skeleton
+                      variant="text"
+                      width="70%"
+                      height={24}
+                      animation="wave"
+                    />
+                    <Skeleton
+                      variant="rectangular"
+                      width={64}
+                      height={24}
+                      sx={{ borderRadius: 1 }}
+                      animation="wave"
+                    />
+                  </Box>
+                  <Skeleton
+                    variant="text"
+                    width="100%"
+                    height={16}
+                    animation="wave"
+                  />
+                  <Skeleton
+                    variant="text"
+                    width="66%"
+                    height={16}
+                    animation="wave"
+                  />
+                  <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                    <Skeleton
+                      variant="rectangular"
+                      width={80}
+                      height={32}
+                      sx={{ borderRadius: 1 }}
+                      animation="wave"
+                    />
+                    <Skeleton
+                      variant="rectangular"
+                      width={80}
+                      height={32}
+                      sx={{ borderRadius: 1 }}
+                      animation="wave"
+                    />
+                  </Box>
+                </Box>
+              </Box>
             ))}
-          </div>
-        </div>
+          </Box>
+        </Box>
       );
     }
 
@@ -475,37 +550,95 @@ const SubCommunityFeedPage: React.FC = () => {
             fallback={
               <Card sx={{ mb: 3 }}>
                 <Box
-                  sx={{
-                    display: 'flex',
-                    gap: 2,
-                    alignItems: 'center',
-                    p: 2,
-                  }}
+                  sx={{ display: 'flex', gap: 2, alignItems: 'center', p: 2 }}
                 >
-                  <div className="w-12 h-12 bg-emerald-100 rounded-full animate-pulse" />
-                  <div className="flex-1">
-                    <div className="h-4 bg-emerald-100 rounded w-40 mb-2 animate-pulse" />
-                    <div className="h-3 bg-emerald-100 rounded w-32 animate-pulse" />
-                  </div>
-                  <div className="w-8 h-8 bg-emerald-100 rounded animate-pulse" />
+                  <Skeleton
+                    variant="circular"
+                    width={48}
+                    height={48}
+                    animation="wave"
+                  />
+                  <Box sx={{ flex: 1 }}>
+                    <Skeleton
+                      variant="text"
+                      width="40%"
+                      height={20}
+                      animation="wave"
+                      sx={{ mb: 0.5 }}
+                    />
+                    <Skeleton
+                      variant="text"
+                      width="30%"
+                      height={16}
+                      animation="wave"
+                    />
+                  </Box>
+                  <Skeleton
+                    variant="circular"
+                    width={32}
+                    height={32}
+                    animation="wave"
+                  />
                 </Box>
 
                 <Box sx={{ px: 2 }}>
-                  <div className="w-24 h-5 bg-emerald-100 rounded mt-1 mb-2 animate-pulse" />
+                  <Skeleton
+                    variant="rectangular"
+                    width={120}
+                    height={28}
+                    sx={{ borderRadius: 1, my: 1 }}
+                    animation="wave"
+                  />
                 </Box>
 
                 <CardContent>
-                  <div className="h-4 bg-emerald-100 rounded w-full mb-2 animate-pulse" />
-                  <div className="h-3 bg-emerald-100 rounded w-5/6 mb-3 animate-pulse" />
-                  <div className="h-48 bg-emerald-100 rounded w-full mb-2 animate-pulse" />
+                  <Skeleton
+                    variant="text"
+                    width="100%"
+                    height={16}
+                    animation="wave"
+                    sx={{ mb: 1 }}
+                  />
+                  <Skeleton
+                    variant="text"
+                    width="80%"
+                    height={16}
+                    animation="wave"
+                    sx={{ mb: 1 }}
+                  />
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={192}
+                    sx={{ borderRadius: 1 }}
+                    animation="wave"
+                  />
                 </CardContent>
 
                 <Box sx={{ px: 2, pb: 2 }}>
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-20 bg-emerald-100 rounded animate-pulse" />
-                    <div className="h-8 w-20 bg-emerald-100 rounded animate-pulse" />
-                    <div className="h-8 w-20 bg-emerald-100 rounded animate-pulse" />
-                  </div>
+                  <Box sx={{ display: 'flex', gap: 1 }}>
+                    <Skeleton
+                      variant="rectangular"
+                      width={80}
+                      height={32}
+                      sx={{ borderRadius: 1 }}
+                      animation="wave"
+                    />
+                    <Skeleton
+                      variant="rectangular"
+                      width={80}
+                      height={32}
+                      sx={{ borderRadius: 1 }}
+                      animation="wave"
+                    />
+                    <Skeleton
+                      variant="rectangular"
+                      width={80}
+                      height={32}
+                      sx={{ borderRadius: 1 }}
+                      animation="wave"
+                    />
+                  </Box>
                 </Box>
               </Card>
             }
@@ -526,26 +659,70 @@ const SubCommunityFeedPage: React.FC = () => {
 
   const renderMembersTab = () => {
     if (subCommunityLoading) {
-      // show tailwind-style skeletons while community data is loading
+      // show skeletons while community data is loading (theme-aware)
       return (
-        <div className="bg-white rounded-xl border border-emerald-100 p-4 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Members</h3>
-            <div className="w-16 h-3 bg-emerald-100 rounded animate-pulse" />
-          </div>
+        <Box
+          sx={{
+            bgcolor: 'background.paper',
+            borderRadius: 2,
+            border: 1,
+            borderColor: 'divider',
+            p: 3,
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 2,
+            }}
+          >
+            <Typography variant="h6">Members</Typography>
+            <Skeleton
+              variant="rectangular"
+              width={64}
+              height={16}
+              sx={{ borderRadius: 1 }}
+              animation="wave"
+            />
+          </Box>
 
-          <div className="space-y-3">
+          <Box sx={{ display: 'grid', gap: 2 }}>
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center gap-3 animate-pulse">
-                <div className="w-10 h-10 bg-emerald-100 rounded-full flex-shrink-0" />
-                <div className="flex-1">
-                  <div className="h-4 bg-emerald-100 rounded w-1/3 mb-2" />
-                  <div className="h-3 bg-emerald-100 rounded w-1/4" />
-                </div>
-              </div>
+              <Box
+                key={i}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2,
+                }}
+              >
+                <Skeleton
+                  variant="circular"
+                  width={40}
+                  height={40}
+                  animation="wave"
+                />
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton
+                    variant="text"
+                    width="35%"
+                    height={16}
+                    animation="wave"
+                    sx={{ mb: 0.5 }}
+                  />
+                  <Skeleton
+                    variant="text"
+                    width="25%"
+                    height={14}
+                    animation="wave"
+                  />
+                </Box>
+              </Box>
             ))}
-          </div>
-        </div>
+          </Box>
+        </Box>
       );
     }
 
@@ -619,30 +796,89 @@ const SubCommunityFeedPage: React.FC = () => {
 
   if (subCommunityLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm w-full max-w-3xl">
-          <div className="flex items-center justify-between mb-4">
-            <div className="h-6 bg-emerald-100 rounded w-1/3 animate-pulse" />
-            <div className="w-20 h-4 bg-emerald-100 rounded animate-pulse" />
-          </div>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+        }}
+      >
+        <Box
+          sx={{
+            bgcolor: 'background.paper',
+            rounded: 2,
+            borderRadius: 2,
+            border: 1,
+            borderColor: 'divider',
+            p: 4,
+            width: '100%',
+            maxWidth: '880px',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              mb: 2,
+            }}
+          >
+            <Skeleton variant="text" width="30%" height={24} animation="wave" />
+            <Skeleton
+              variant="rectangular"
+              width={80}
+              height={24}
+              sx={{ borderRadius: 1 }}
+              animation="wave"
+            />
+          </Box>
 
-          <div className="space-y-4">
+          <Box sx={{ display: 'grid', gap: 2 }}>
             {[...Array(3)].map((_, i) => (
-              <div
+              <Box
                 key={i}
-                className="flex gap-4 p-4 rounded-lg border border-gray-200 animate-pulse"
+                sx={{
+                  display: 'flex',
+                  gap: 2,
+                  p: 2,
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: 'divider',
+                }}
               >
-                <div className="w-20 h-20 bg-emerald-100 rounded-lg flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-emerald-100 rounded w-3/4" />
-                  <div className="h-3 bg-emerald-100 rounded w-2/3" />
-                  <div className="h-3 bg-emerald-100 rounded w-1/2" />
-                </div>
-              </div>
+                <Skeleton
+                  variant="rectangular"
+                  width={80}
+                  height={80}
+                  sx={{ borderRadius: 1 }}
+                  animation="wave"
+                />
+                <Box sx={{ flex: 1 }}>
+                  <Skeleton
+                    variant="text"
+                    width="75%"
+                    height={16}
+                    animation="wave"
+                  />
+                  <Skeleton
+                    variant="text"
+                    width="60%"
+                    height={14}
+                    animation="wave"
+                  />
+                  <Skeleton
+                    variant="text"
+                    width="50%"
+                    height={14}
+                    animation="wave"
+                  />
+                </Box>
+              </Box>
             ))}
-          </div>
-        </div>
-      </div>
+          </Box>
+        </Box>
+      </Box>
     );
   }
 
@@ -1092,10 +1328,21 @@ const SubCommunityFeedPage: React.FC = () => {
           <DialogContent sx={{ p: 3, minHeight: '400px' }}>
             <React.Suspense
               fallback={
-                <div className="py-4 space-y-4">
-                  <div className="h-10 bg-emerald-100 rounded w-3/4 animate-pulse" />
-                  <div className="h-40 bg-emerald-100 rounded animate-pulse" />
-                </div>
+                <Box sx={{ py: 4, display: 'grid', gap: 2 }}>
+                  <Skeleton
+                    variant="text"
+                    width="75%"
+                    height={40}
+                    animation="wave"
+                  />
+                  <Skeleton
+                    variant="rectangular"
+                    width="100%"
+                    height={160}
+                    sx={{ borderRadius: 1 }}
+                    animation="wave"
+                  />
+                </Box>
               }
             >
               <CreatePostForm
@@ -1140,7 +1387,7 @@ const SubCommunityFeedPage: React.FC = () => {
         </MenuItem>
         <MenuItem
           onClick={() => {
-            handleRemoveMember(selectedMember!.id);
+            handleRemoveMember(selectedMember!.user.id);
             closeMemberMenu();
           }}
           sx={{ color: 'error.main' }}
@@ -1214,13 +1461,29 @@ const SubCommunityFeedPage: React.FC = () => {
             onClose={() => setEditDialogOpen(false)}
           >
             <DialogTitle>
-              <div className="h-6 w-1/3 bg-emerald-100 rounded animate-pulse" />
+              <Skeleton
+                variant="text"
+                width="33%"
+                height={24}
+                animation="wave"
+              />
             </DialogTitle>
             <DialogContent>
-              <div className="space-y-3 py-2">
-                <div className="h-9 bg-emerald-100 rounded w-full animate-pulse" />
-                <div className="h-32 bg-emerald-100 rounded w-full animate-pulse" />
-              </div>
+              <Box sx={{ display: 'grid', gap: 2, py: 2 }}>
+                <Skeleton
+                  variant="text"
+                  width="100%"
+                  height={36}
+                  animation="wave"
+                />
+                <Skeleton
+                  variant="rectangular"
+                  width="100%"
+                  height={160}
+                  sx={{ borderRadius: 1 }}
+                  animation="wave"
+                />
+              </Box>
             </DialogContent>
           </Dialog>
         }

@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CacheService } from './services/cache.service';
 import { RedisService } from './services/redis.service';
 import { FcmService } from './services/fcm.service';
+import { WinstonLoggerService } from './logger/winston-logger.service';
 
 /**
  * Global module for common services used across the application
@@ -11,7 +12,7 @@ import { FcmService } from './services/fcm.service';
 @Global()
 @Module({
   imports: [ConfigModule],
-  providers: [CacheService, RedisService, FcmService],
-  exports: [CacheService, RedisService, FcmService],
+  providers: [WinstonLoggerService, CacheService, RedisService, FcmService],
+  exports: [WinstonLoggerService, CacheService, RedisService, FcmService],
 })
 export class CommonModule { }

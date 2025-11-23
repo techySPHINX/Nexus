@@ -41,14 +41,15 @@ interface PostContextType {
   createPost: (
     subject: string,
     content: string,
-    image?: File,
+    image?: string | File,
     subCommunityId?: string,
     type?: string
   ) => Promise<void>;
   updatePost: (
     id: string,
-    content: string,
-    image?: File,
+    subject?: string,
+    content?: string,
+    image?: string | File,
     subCommunityId?: string
   ) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
@@ -60,6 +61,7 @@ interface PostContextType {
   }>;
   getPostComments: (postId: string) => Promise<void>;
   createComment: (postId: string, content: string) => Promise<void>;
+  incrementCurrentPostComments: (amount?: number) => void;
   getFeed: (page?: number, limit?: number) => Promise<void>;
   getSubCommunityFeed: (
     subCommunityId: string,
@@ -113,7 +115,7 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
     async (
       subject: string,
       content: string,
-      image?: File,
+      image?: string | File,
       subCommunityId?: string,
       type?: string
     ) => {
@@ -413,11 +415,27 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
+  // Increment the comment count on the locally stored currentPost
+  const incrementCurrentPostComments = useCallback((amount = 1) => {
+    setCurrentPost((prev) => {
+      if (!prev) return prev;
+      const prevCount = prev._count || { Vote: 0, Comment: 0 };
+      return {
+        ...prev,
+        _count: {
+          ...prevCount,
+          Comment: (prevCount.Comment || 0) + amount,
+        },
+      } as Post;
+    });
+  }, []);
+
   const updatePost = useCallback(
     async (
       id: string,
-      content: string,
-      image?: File,
+      subject?: string,
+      content?: string,
+      image?: string | File,
       type?: string,
       subCommunityId?: string
     ) => {
@@ -426,6 +444,7 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         clearError();
         const { data } = await updatePostService(
           id,
+          subject,
           content,
           image,
           type,
@@ -590,6 +609,7 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         approvePost,
         rejectPost,
         getPendingPosts,
+        incrementCurrentPostComments,
         clearError,
       }}
     >
