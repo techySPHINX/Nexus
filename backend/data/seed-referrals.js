@@ -1,4 +1,4 @@
-import { PrismaClient, ReferralStatus } from '@prisma/client';
+const { PrismaClient, ReferralStatus } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
