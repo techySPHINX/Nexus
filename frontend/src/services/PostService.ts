@@ -24,7 +24,7 @@ function getUser() {
 export async function createPostService(
   subject: string,
   content: string,
-  imageFile?: File,
+  imageFile?: string | File,
   subCommunityId?: string,
   type?: string
 ) {
@@ -37,12 +37,40 @@ export async function createPostService(
     }
   }
   try {
+    // If imageFile is a string (URL or base64), send JSON payload
+    if (typeof imageFile === 'string') {
+      const payload: {
+        subject: string;
+        content: string;
+        type?: string;
+        subCommunityId?: string;
+        imageUrl?: string;
+      } = {
+        subject,
+        content,
+      };
+      if (type) payload.type = type;
+      if (subCommunityId) payload.subCommunityId = subCommunityId;
+      if (imageFile) payload.imageUrl = imageFile;
+
+      console.log('Creating post with payload:', payload);
+
+      const { data } = await api.post('/posts', payload, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return data;
+    }
+
+    // Otherwise, assume a File and send as multipart/form-data
     const formData = new FormData();
     formData.append('content', content);
     formData.append('subject', subject);
     if (type) formData.append('type', type);
     if (subCommunityId) formData.append('subCommunityId', subCommunityId);
-    if (imageFile) formData.append('image', imageFile);
+    if (imageFile) formData.append('imageUrl', imageFile as File);
 
     const { data } = await api.post('/posts', formData, {
       headers: {
@@ -219,8 +247,9 @@ export const createCommentService = async (postId: string, content: string) => {
 
 export async function updatePostService(
   postId: string,
+  subject?: string,
   content?: string,
-  imageFile?: File,
+  imageFile?: string | File,
   type?: string,
   subCommunityId?: string
 ) {
@@ -231,9 +260,35 @@ export async function updatePostService(
     );
   }
   try {
+    // If imageFile is a string (URL or base64) or subject/content present without file,
+    // send JSON payload using PATCH
+    if (typeof imageFile === 'string' || subject || content) {
+      const payload: {
+        subject?: string;
+        content?: string;
+        imageFile?: string;
+        type?: string;
+        subCommunityId?: string;
+      } = {};
+      if (subject) payload.subject = subject;
+      if (content) payload.content = content;
+      if (typeof imageFile === 'string') payload.imageFile = imageFile;
+      if (type) payload.type = type;
+      if (subCommunityId) payload.subCommunityId = subCommunityId;
+
+      const { data } = await api.patch(`/posts/${postId}`, payload, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return data;
+    }
+
+    // Otherwise assume a File upload
     const formData = new FormData();
     if (content) formData.append('content', content);
-    if (imageFile) formData.append('image', imageFile);
+    if (imageFile) formData.append('image', imageFile as File);
     if (type) formData.append('type', type);
     if (subCommunityId) formData.append('subCommunityId', subCommunityId);
 

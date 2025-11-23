@@ -64,16 +64,16 @@ export class PostController {
   async create(
     @GetCurrentUser('userId') userId: string,
     @Body() dto: CreatePostDto,
-    @UploadedFile() image: Express.Multer.File,
+    // @UploadedFile() image: Express.Multer.File,
   ) {
-    let imageUrl: string | undefined;
-    if (image) {
-      imageUrl = await this.legacyFilesService.saveFile(image, userId);
-    }
+    // removed image upload for now , just using imageUrl in dto
+    // let imageUrl: string | undefined;
+    // if (image) {
+    //   imageUrl = await this.legacyFilesService.saveFile(image, userId);
+    // }
 
     return this.postService.create(userId, {
       ...dto,
-      imageUrl: imageUrl,
     });
   }
 
