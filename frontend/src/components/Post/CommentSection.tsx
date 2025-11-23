@@ -197,7 +197,25 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
 
     try {
       const newComment = await commentOnPost(postId, comment.trim());
-      setComments((prev) => [newComment, ...prev]);
+
+      // Ensure the created comment has author information (name/avatar)
+      const author = currentUser
+        ? {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role,
+            profile: currentUser.profile,
+          }
+        : undefined;
+
+      const commentWithUser = {
+        ...newComment,
+        user: newComment.user || author,
+        userId: newComment.userId || author?.id,
+      } as typeof newComment & { user?: typeof author };
+
+      setComments((prev) => [commentWithUser, ...prev]);
       setComment('');
       if (onCommentAdded) onCommentAdded();
     } catch (error) {
@@ -220,13 +238,30 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
         parentCommentId
       );
 
+      // Ensure reply has author info
+      const author = currentUser
+        ? {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            role: currentUser.role,
+            profile: currentUser.profile,
+          }
+        : undefined;
+
+      const replyWithUser = {
+        ...newReply,
+        user: newReply.user || author,
+        userId: newReply.userId || author?.id,
+      } as typeof newReply & { user?: typeof author };
+
       // Update the comments state with the new reply
       setComments((prev) =>
         prev.map((comment) => {
           if (comment.id === parentCommentId) {
             return {
               ...comment,
-              replies: [...(comment.replies || []), newReply],
+              replies: [...(comment.replies || []), replyWithUser],
             };
           }
           return comment;
@@ -236,7 +271,7 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
       // Also update vote state for the new reply
       setCommentVotes((prev) => ({
         ...prev,
-        [newReply.id]: {
+        [replyWithUser.id]: {
           isLiked: false,
           count: 0,
         },
