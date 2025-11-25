@@ -14,6 +14,7 @@ import {
   Collapse,
   List,
   ListItem,
+  ListItemSecondaryAction,
   ListItemText,
   ListItemAvatar,
   Divider,
@@ -26,6 +27,7 @@ import {
   MoreVert,
   Send,
 } from '@mui/icons-material';
+import ReportButton from './Report/ReportButton';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -168,6 +170,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment }) => {
           <IconButton size="small">
             <Share />
           </IconButton>
+          <ReportButton type="POST" postId={post.id} />
         </CardActions>
 
         <Collapse in={showComments}>
@@ -190,16 +193,30 @@ const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment }) => {
                         <Box
                           sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
                         >
-                          <Typography variant="subtitle2" fontWeight={600}>
-                            {comment.userName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {formatDate(comment.createdAt)}
-                          </Typography>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <Typography variant="subtitle2" fontWeight={600}>
+                              {comment.userName}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {formatDate(comment.createdAt)}
+                            </Typography>
+                          </Box>
                         </Box>
                       }
                       secondary={comment.content}
                     />
+                    <ListItemSecondaryAction>
+                      <ReportButton type="COMMENT" commentId={comment.id} />
+                    </ListItemSecondaryAction>
                   </ListItem>
                 ))}
               </List>

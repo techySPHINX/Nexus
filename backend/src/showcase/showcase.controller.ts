@@ -138,6 +138,13 @@ export class ShowcaseController {
     return this.showcaseService.createStartup(userId, createStartupDto);
   }
 
+  @Get('startup/stats')
+  getStartupStats(
+    @GetCurrentUser('userId') userId: string,
+  ) {
+    return this.showcaseService.getStartupStats(userId);
+  }
+
   @Put('startup/:id')
   updateStartup(
     @GetCurrentUser('userId') userId: string,

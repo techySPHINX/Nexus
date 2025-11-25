@@ -93,9 +93,18 @@ export class SubCommunityService {
 
   async findAllSubCommunities(
     userId: string | undefined,
-    options?: { compact?: boolean; page?: number; limit?: number },
+    options?: {
+      compact?: boolean;
+      page?: number;
+      limit?: number;
+      privacy?: 'all' | 'public' | 'private';
+      sort?: 'recommended' | 'newest' | 'members';
+      type?: string;
+      q?: string;
+    },
   ) {
-    const where: Prisma.SubCommunityWhereInput = {
+    // Base visibility: public OR those where the user is a member
+    const baseWhere: Prisma.SubCommunityWhereInput = {
       OR: [{ isPrivate: false }, { members: { some: { userId } } }],
     };
 
@@ -103,6 +112,37 @@ export class SubCommunityService {
     const page = options?.page ?? 1;
     const limit = options?.limit ?? 50;
     const skip = (page - 1) * limit;
+
+    // Build additional filters
+    const extraAnd: Prisma.SubCommunityWhereInput[] = [];
+
+    if (options?.privacy && options.privacy !== 'all') {
+      extraAnd.push({ isPrivate: options.privacy === 'private' });
+    }
+
+    if (options?.type) {
+      extraAnd.push({ type: { is: { name: options.type.toUpperCase() } } } as any);
+    }
+
+    if (options?.q) {
+      extraAnd.push({
+        OR: [
+          { name: { contains: options.q, mode: 'insensitive' } },
+          { description: { contains: options.q, mode: 'insensitive' } },
+        ],
+      } as any);
+    }
+
+    const where: Prisma.SubCommunityWhereInput =
+      extraAnd.length > 0 ? { AND: [baseWhere, ...extraAnd] } : baseWhere;
+
+    // Determine ordering
+    let orderBy: any = { createdAt: 'desc' };
+    if (options?.sort === 'members') {
+      orderBy = [{ _count: { members: 'desc' } }, { createdAt: 'desc' }];
+    } else if (options?.sort === 'newest') {
+      orderBy = { createdAt: 'desc' };
+    }
 
     if (compact) {
       // Return a compact summary to minimize bandwidth: only essential fields
@@ -120,7 +160,7 @@ export class SubCommunityService {
           _count: { select: { members: true, posts: true } },
           type: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy,
       });
     }
 
@@ -140,6 +180,7 @@ export class SubCommunityService {
           },
           posts: true,
         },
+        orderBy,
       });
     }
 
@@ -153,7 +194,7 @@ export class SubCommunityService {
         type: true,
         _count: { select: { members: true, posts: true } },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy,
     });
   }
 
@@ -688,7 +729,7 @@ moderated: { data: moderatedData, pagination: makePagination(moderatedPage, mode
         subCommunityId: subCommunityId,
         status: 'PENDING',
       },
-      include: { user: { select: { id: true, name: true, email: true } } },
+      include: { user: { select: { id: true, name: true, email: true, role: true, profile: { select: { avatarUrl: true } } } } },
     });
   }
 
@@ -884,9 +925,18 @@ moderated: { data: moderatedData, pagination: makePagination(moderatedPage, mode
         'Moderators cannot remove other moderators.',
       );
     }
+    return this.prisma.$transaction(async (prisma) => {
+      // Remove any pending join request for the user in this sub-community (if exists)
+      await prisma.joinRequest.deleteMany({
+      where: { userId: memberIdToRemove, subCommunityId },
+      });
 
-    return this.prisma.subCommunityMember.delete({
+      // Delete the member and return the deleted member record
+      const deletedMember = await prisma.subCommunityMember.delete({
       where: { id: memberToRemove.id },
+      });
+
+      return deletedMember;
     });
   }
 }

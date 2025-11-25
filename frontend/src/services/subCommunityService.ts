@@ -20,11 +20,19 @@ export const subCommunityService = {
     compact?: boolean;
     page?: number;
     limit?: number;
+    privacy?: 'all' | 'public' | 'private';
+    sort?: 'recommended' | 'newest' | 'members';
+    type?: string;
+    q?: string;
   }): Promise<SubCommunity[]> => {
     const params: Record<string, unknown> = {};
     if (opts?.compact !== undefined) params.compact = opts.compact;
     if (opts?.page) params.page = opts.page;
     if (opts?.limit) params.limit = opts.limit;
+    if (opts?.privacy) params.privacy = opts.privacy;
+    if (opts?.sort) params.sort = opts.sort;
+    if (opts?.type) params.type = opts.type;
+    if (opts?.q) params.q = opts.q;
     const response = await api.get('/sub-community', { params });
     console.log('Fetched all sub-communities:', response.data);
     return response.data;
@@ -39,11 +47,16 @@ export const subCommunityService = {
     type: string,
     page: number = 1,
     limit: number = 20,
-    q?: string
+    q?: string,
+    opts?: { privacy?: 'all' | 'public' | 'private'; sort?: string }
   ): Promise<{ data: SubCommunity[]; pagination: PaginationData }> => {
-    const params: Record<string, unknown> = { page, limit };
+    // Use the unified /sub-community endpoint with `type` query param so
+    // server-side filters/sorting are honored.
+    const params: Record<string, unknown> = { page, limit, type };
     if (q) params.q = q;
-    const response = await api.get(`/sub-community/type/${type}`, {
+    if (opts?.privacy) params.privacy = opts.privacy;
+    if (opts?.sort) params.sort = opts.sort;
+    const response = await api.get(`/sub-community`, {
       params,
     });
     console.log(`Fetched sub-communities of type ${type}:`, response.data);

@@ -6,6 +6,7 @@ import {
   StartupDetail,
   StartupCommentsResponse,
   StartupComment,
+  StartupStats,
 } from '@/types/StartupType';
 
 export interface StartupListState {
@@ -17,11 +18,13 @@ export interface StartupListState {
 }
 
 export interface StartupContextType {
+  stats: StartupStats;
   // separate states per tab
   all: StartupListState;
   mine: StartupListState;
   followed: StartupListState;
   // fetch functions: if append=true will merge results (load-more)
+  getStartupStats: () => Promise<void>;
   getStartups: (
     filter?: {
       search?: string;
@@ -82,9 +85,11 @@ export interface StartupContextType {
 }
 
 export const StartupContext = React.createContext<StartupContextType>({
+  stats: { totalStartups: 0, myStartups: 0, followedStartups: 0 },
   all: { data: [], nextCursor: null, hasNext: false, loading: false },
   mine: { data: [], nextCursor: null, hasNext: false, loading: false },
   followed: { data: [], nextCursor: null, hasNext: false, loading: false },
+  getStartupStats: async () => {},
   getStartups: async () => {},
   getMyStartups: async () => {},
   getFollowedStartups: async () => {},
@@ -104,6 +109,11 @@ const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   type RawStartup = StartupSummary & { startupFollower?: { userId: string }[] };
 
+  const [stats, setStats] = useState<StartupStats>({
+    totalStartups: 0,
+    myStartups: 0,
+    followedStartups: 0,
+  });
   const [all, setAll] = useState<StartupListState>({
     data: [],
     nextCursor: null,
@@ -174,6 +184,15 @@ const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
     followedLoadingRef.current = followed.loading;
     followedDataRef.current = followed.data;
   }, [all, mine, followed]);
+
+  const getStartupStats = useCallback(async () => {
+    try {
+      const stats = await ShowcaseService.getStartupStats();
+      setStats(stats);
+    } catch (error) {
+      console.error('Failed to get startup stats', error);
+    }
+  }, []);
 
   const getStartups = useCallback(
     async (
@@ -812,9 +831,11 @@ const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const state: StartupContextType = useMemo(
     () => ({
+      stats,
       all,
       mine,
       followed,
+      getStartupStats,
       getStartups,
       getMyStartups,
       getFollowedStartups,
@@ -829,9 +850,11 @@ const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
       deleteStartup,
     }),
     [
+      stats,
       all,
       mine,
       followed,
+      getStartupStats,
       getStartups,
       getMyStartups,
       getFollowedStartups,

@@ -6,6 +6,12 @@ export enum StartupStatus {
   LAUNCHED = 'LAUNCHED',
 }
 
+export interface StartupStats {
+  totalStartups: number;
+  myStartups: number;
+  followedStartups: number;
+}
+
 export interface StartupComment {
   id: string;
   comment: string;

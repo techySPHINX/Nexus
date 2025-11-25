@@ -28,6 +28,7 @@ import {
   alpha,
   Stack,
 } from '@mui/material';
+import ReportButton from '../Report/ReportButton';
 import { formatDistanceToNow } from 'date-fns';
 import {
   Edit,
@@ -480,6 +481,8 @@ export const CommentSection: React.FC<CommentSectionProps> = ({
           }}
         />
 
+        {/* Report button for this comment */}
+        <ReportButton type="COMMENT" commentId={comment.id} />
         {/* Edit/Delete menu */}
         {isAuthor(comment) && token && (
           <IconButton
