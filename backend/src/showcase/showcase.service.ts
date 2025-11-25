@@ -997,6 +997,38 @@ export class ShowcaseService {
     });
   }
 
+  async getStartupStats(userId: string) {
+  const [totalStartups, userStats] = await Promise.all([
+    this.prisma.startup.count(),
+
+    this.prisma.startup.findMany({
+      where: {
+        OR: [
+          { startupFollower: { some: { userId } } },
+          { founderId: userId },
+        ]
+      },
+      select: {
+        founderId: true,
+        startupFollower: {
+          where: { userId },
+          select: { id: true }
+        }
+      }
+    })
+  ]);
+
+  let followedStartups = 0;
+  let myStartups = 0;
+
+  for (const s of userStats) {
+    if (s.founderId === userId) myStartups++;
+    if (s.startupFollower.length > 0) followedStartups++;
+  }
+
+  return { totalStartups, followedStartups, myStartups };
+}
+
   async updateStartup(
     userId: string,
     startupId: string,

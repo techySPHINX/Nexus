@@ -9,7 +9,11 @@ import {
 } from '@/types/ShowcaseType';
 import api from './api';
 import { getErrorMessage } from '@/utils/errorHandler';
-import { StartupDetail, StartupSummary } from '@/types/StartupType';
+import {
+  StartupDetail,
+  StartupStats,
+  StartupSummary,
+} from '@/types/StartupType';
 
 const ShowcaseService = {
   createProject: async (data: CreateProjectInterface) => {
@@ -368,6 +372,16 @@ const ShowcaseService = {
   },
 
   // Startup related endpoints
+  getStartupStats: async (): Promise<StartupStats> => {
+    try {
+      console.log('Fetching startup stats');
+      const response = await api.get('/showcase/startup/stats');
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to get startup stats: ' + getErrorMessage(error));
+    }
+  },
+
   getStartups: async (filterStartupDto?: {
     search?: string;
     status?: string;
