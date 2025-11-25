@@ -890,8 +890,8 @@ const SubCommunityFeedPage: React.FC = () => {
             Community not found
           </Typography>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-            The community you&apos;re looking for doesn&apos;t exist or may have
-            been removed.
+            You are not a member of this community or the community you&apos;re
+            looking for doesn&apos;t exist or may have been removed.
           </Typography>
           <Button
             component={Link}
@@ -1144,7 +1144,7 @@ const SubCommunityFeedPage: React.FC = () => {
                 )}
 
                 {/* Create Post Button (for members) */}
-                {isMember && !currentSubCommunity.isPrivate && (
+                {isMember && (
                   <Button
                     variant="contained"
                     onClick={() => setOpenForm(true)}

@@ -29,6 +29,8 @@ interface PostContextType {
   currentPost: Post | null;
   loading: boolean;
   error: string | null;
+  actionLoading: Record<string, boolean>;
+  isActionLoading: (key: string) => boolean;
   pagination: {
     page: number;
     limit: number;
@@ -111,6 +113,16 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const clearError = useCallback(() => setError(null), []);
 
+  // Per-action loading flags (e.g. creating a post) to avoid global UI
+  // blocking when only a small part of the page should update.
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+
+  const setActionLoadingFlag = useCallback((key: string, value: boolean) => {
+    setActionLoading((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const isActionLoading = useCallback((key: string) => !!actionLoading[key], [actionLoading]);
+
   const createPost = useCallback(
     async (
       subject: string,
@@ -127,7 +139,8 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
             );
           }
         }
-        setLoading(true);
+        const key = `createPost:${subCommunityId ?? 'global'}`;
+        setActionLoadingFlag(key, true);
         clearError();
         const response = await createPostService(
           subject,
@@ -157,16 +170,16 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
 
         setPosts((prev) => [normalizedPost, ...prev]);
         setFeed((prev) => [normalizedPost, ...prev]);
-        setLoading(false);
+        setActionLoadingFlag(`createPost:${subCommunityId ?? 'global'}`, false);
         return normalizedPost;
       } catch (err) {
         const errorMessage = getErrorMessage(err);
         setError(errorMessage);
-        setLoading(false);
+        setActionLoadingFlag(`createPost:${subCommunityId ?? 'global'}`, false);
         throw new Error(errorMessage);
       }
     },
-    [user, clearError]
+    [user, clearError, setActionLoadingFlag]
   );
 
   const getFeed = useCallback(
@@ -415,6 +428,7 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
+
   // Increment the comment count on the locally stored currentPost
   const incrementCurrentPostComments = useCallback((amount = 1) => {
     setCurrentPost((prev) => {
@@ -592,6 +606,8 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         searchResults,
         currentPost,
         loading,
+        actionLoading,
+        isActionLoading,
         error,
         pagination,
         createPost,
