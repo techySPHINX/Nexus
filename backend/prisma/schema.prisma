@@ -711,7 +711,7 @@ model ContentReport {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
   reporterId     String
-  subCommunityId String
+  subCommunityId String?
   type           ReportedContentType
   reason         String
   postId         String?
@@ -722,7 +722,7 @@ model ContentReport {
   handler        User?               @relation("ReportsHandled", fields: [handlerId], references: [id])
   post           Post?               @relation(fields: [postId], references: [id])
   reporter       User                @relation("ReportsMade", fields: [reporterId], references: [id])
-  subCommunity   SubCommunity        @relation(fields: [subCommunityId], references: [id])
+  subCommunity   SubCommunity?        @relation(fields: [subCommunityId], references: [id])
 
   @@index([subCommunityId, status])
 }

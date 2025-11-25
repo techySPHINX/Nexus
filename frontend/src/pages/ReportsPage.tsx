@@ -6,12 +6,13 @@ import {
   Card,
   CardContent,
   Button,
+  CircularProgress,
 } from '@mui/material';
 import { useReportContext } from '@/contexts/reportContext';
 import { Link } from 'react-router-dom';
 
 const ReportsPage: React.FC = () => {
-  const { reports, loading, fetchReports } = useReportContext();
+  const { reports, loading, fetchReports, nextCursor } = useReportContext();
 
   useEffect(() => {
     fetchReports().catch(() => {});
@@ -39,34 +40,46 @@ const ReportsPage: React.FC = () => {
                     <Typography variant="subtitle2">Type: {r.type}</Typography>
                     <Typography variant="body2">Reason: {r.reason}</Typography>
                     <Typography variant="caption">
-                      Reporter: {r.reporterId}
+                      Reporter:{' '}
+                      {r.reporter?.name || r.reporter?.email || r.reporterId}
                     </Typography>
                     <br />
                     <Typography variant="caption">
                       Created: {new Date(r.createdAt).toLocaleString()}
                     </Typography>
+                    {r.post && (
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        Post: {r.post.subject}
+                      </Typography>
+                    )}
+                    {r.comment && (
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        Comment: {r.comment.content}
+                      </Typography>
+                    )}
                   </Box>
                   <Box
                     sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}
                   >
-                    {r.postId && (
+                    {(r.post?.id || r.postId) && (
                       <Button
                         component={Link}
-                        to={`/posts/${r.postId}`}
+                        to={`/posts/${r.post?.id || r.postId}`}
                         size="small"
                       >
                         View Post
                       </Button>
                     )}
-                    {r.commentId && (
-                      <Button
-                        component={Link}
-                        to={`/posts/${r.postId}#comment-${r.commentId}`}
-                        size="small"
-                      >
-                        View Comment
-                      </Button>
-                    )}
+                    {(r.comment?.id || r.commentId) &&
+                      (r.comment?.postId || r.post?.id || r.postId) && (
+                        <Button
+                          component={Link}
+                          to={`/posts/${r.comment?.postId || r.post?.id || r.postId}#comment-${r.comment?.id || r.commentId}`}
+                          size="small"
+                        >
+                          View Comment
+                        </Button>
+                      )}
                   </Box>
                 </Box>
               </CardContent>
@@ -74,6 +87,22 @@ const ReportsPage: React.FC = () => {
           </Grid>
         ))}
       </Grid>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+        {loading && <CircularProgress size={24} />}
+        {!loading && nextCursor && (
+          <Button
+            variant="contained"
+            onClick={() => fetchReports({ cursor: nextCursor }).catch(() => {})}
+          >
+            Load more
+          </Button>
+        )}
+        {!loading && !nextCursor && reports.length > 0 && (
+          <Typography variant="caption" sx={{ mt: 1 }}>
+            No more reports
+          </Typography>
+        )}
+      </Box>
     </Box>
   );
 };

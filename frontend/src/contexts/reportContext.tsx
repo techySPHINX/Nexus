@@ -11,8 +11,12 @@ type ReportStates = {
 
 type ReportContextType = ReportStates & {
   createReport: (data: CreateReportDto) => Promise<Report | null>;
-  fetchReports: () => Promise<Report[]>;
+  fetchReports: (opts?: {
+    pageSize?: number;
+    cursor?: string;
+  }) => Promise<Report[]>;
   clearReports: () => void;
+  nextCursor?: string | null;
 };
 
 const ReportContext = createContext<ReportContextType | undefined>(undefined);
@@ -23,6 +27,7 @@ export const ReportProvider: React.FC<{ children: ReactNode }> = ({
   const { showNotification } = useNotification();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
 
   const createReport = useMemo(
     () => async (data: CreateReportDto) => {
@@ -44,12 +49,21 @@ export const ReportProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   const fetchReports = useMemo(
-    () => async () => {
+    () => async (opts?: { pageSize?: number; cursor?: string }) => {
       setLoading(true);
       try {
-        const data = await reportServices.getReports();
-        setReports(data || []);
-        return data || [];
+        const res = await reportServices.getReports(opts);
+        // res: { items, nextCursor }
+        const items = res?.items || [];
+        if (opts?.cursor) {
+          // append
+          setReports((prev) => [...prev, ...items]);
+        } else {
+          // replace
+          setReports(items);
+        }
+        setNextCursor(res.nextCursor ?? null);
+        return items;
       } catch (err) {
         showNotification?.(getErrorMessage(err), 'error');
         return [];
@@ -67,7 +81,14 @@ export const ReportProvider: React.FC<{ children: ReactNode }> = ({
 
   return (
     <ReportContext.Provider
-      value={{ reports, loading, createReport, fetchReports, clearReports }}
+      value={{
+        reports,
+        loading,
+        createReport,
+        fetchReports,
+        clearReports,
+        nextCursor,
+      }}
     >
       {children}
     </ReportContext.Provider>

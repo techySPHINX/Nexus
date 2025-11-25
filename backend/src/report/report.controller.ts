@@ -1,8 +1,10 @@
-import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, ParseIntPipe, DefaultValuePipe, Query } from '@nestjs/common';
 import { ReportService } from './report.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
+import { RolesGuard } from 'src/common/guards/roles.guard';
+import { Roles } from 'src/common/decorators/roles.decorator';
 
 @Controller('reports')
 export class ReportController {
@@ -18,10 +20,13 @@ export class ReportController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
-  getReports(
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('ADMIN')
+  async getReports(
+    @Query('pageSize', new DefaultValuePipe(20), ParseIntPipe) pageSize: number,
     @GetCurrentUser('userId') userId: string,
+    @Query('cursor') cursor?: string,
   ) {
-    return this.reportService.getAllReports(userId);
+    return this.reportService.getAllReports(userId, pageSize, cursor);
   }
 }
