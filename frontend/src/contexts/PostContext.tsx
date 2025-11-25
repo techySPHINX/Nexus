@@ -115,13 +115,18 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Per-action loading flags (e.g. creating a post) to avoid global UI
   // blocking when only a small part of the page should update.
-  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
+    {}
+  );
 
   const setActionLoadingFlag = useCallback((key: string, value: boolean) => {
     setActionLoading((prev) => ({ ...prev, [key]: value }));
   }, []);
 
-  const isActionLoading = useCallback((key: string) => !!actionLoading[key], [actionLoading]);
+  const isActionLoading = useCallback(
+    (key: string) => !!actionLoading[key],
+    [actionLoading]
+  );
 
   const createPost = useCallback(
     async (
@@ -427,7 +432,6 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
       throw new Error(errorMessage);
     }
   }, []);
-
 
   // Increment the comment count on the locally stored currentPost
   const incrementCurrentPostComments = useCallback((amount = 1) => {

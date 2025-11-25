@@ -139,7 +139,11 @@ interface SubCommunityContextType {
   }>;
   // Enqueue a type (or 'all') for scheduled loading. LazySection calls this
   // to ensure its type will be fetched eventually.
-  scheduleTypeLoad: (type: string, limit?: number, opts?: FilterOpts) => Promise<void>;
+  scheduleTypeLoad: (
+    type: string,
+    limit?: number,
+    opts?: FilterOpts
+  ) => Promise<void>;
 }
 
 const SubCommunityContext = createContext<SubCommunityContextType>({
@@ -355,13 +359,22 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const safeGetSubCommunityByType = useCallback(
-    async (type: string, page: number, limit: number, q?: string, opts?: FilterOpts) => {
+    async (
+      type: string,
+      page: number,
+      limit: number,
+      q?: string,
+      opts?: FilterOpts
+    ) => {
       const release = await loadSemaphoreRef.current!.acquire();
       // mark a section load in progress so UI can block scrolling
       setSectionLoadInProgress(true);
       try {
         const allowedSorts = new Set(['recommended', 'newest', 'members']);
-        const sortParam = opts?.sort && allowedSorts.has(opts.sort) ? (opts.sort as 'recommended' | 'newest' | 'members') : undefined;
+        const sortParam =
+          opts?.sort && allowedSorts.has(opts.sort)
+            ? (opts.sort as 'recommended' | 'newest' | 'members')
+            : undefined;
         const passOpts = opts ? { ...opts, sort: sortParam } : undefined;
         return await subCommunityService.getSubCommunityByType(
           type,
@@ -388,7 +401,9 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         Date.now() - allFailureAtRef.current < ALL_RETRY_BACKOFF_MS
       ) {
         return Promise.reject(
-          new Error('Previous all-subcommunities load failed recently; retry later')
+          new Error(
+            'Previous all-subcommunities load failed recently; retry later'
+          )
         );
       }
 
@@ -400,7 +415,10 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         const release = await loadSemaphoreRef.current!.acquire();
         try {
           const allowedSorts = new Set(['recommended', 'newest', 'members']);
-          const sortParam = opts?.sort && allowedSorts.has(opts.sort) ? (opts.sort as 'recommended' | 'newest' | 'members') : undefined;
+          const sortParam =
+            opts?.sort && allowedSorts.has(opts.sort)
+              ? (opts.sort as 'recommended' | 'newest' | 'members')
+              : undefined;
           const data = await subCommunityService.getAllSubCommunities({
             compact: true,
             page: 1,
@@ -529,7 +547,13 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setLoading(true);
       try {
-        const response = await safeGetSubCommunityByType(type, page, limit, q, opts);
+        const response = await safeGetSubCommunityByType(
+          type,
+          page,
+          limit,
+          q,
+          opts
+        );
 
         // Update cache
         setSubCommunityCache((prev) => ({
@@ -542,7 +566,9 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
           setSubCommunities((prev: SubCommunity[]) => {
             // Normalize response: service may return either an array or an
             // object { data, pagination }. Handle both shapes safely.
-            const items = Array.isArray(response) ? response : response.data || [];
+            const items = Array.isArray(response)
+              ? response
+              : response.data || [];
             // Merge with existing data, avoiding duplicates
             const newData = [...items];
             const existingIds = new Set(prev.map((item) => item.id));
@@ -555,7 +581,9 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
           setSubCommunitiesByType((prev: SubCommunity[]) => {
             // Normalize response: service may return either an array or an
             // object { data, pagination }. Handle both shapes safely.
-            const items = Array.isArray(response) ? response : response.data || [];
+            const items = Array.isArray(response)
+              ? response
+              : response.data || [];
             // Merge with existing data, avoiding duplicates
             const newData = [...items];
             const existingIds = new Set(prev.map((item) => item.id));
@@ -604,7 +632,14 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const p: Promise<void> = (async () => {
         try {
-          const resp = await getSubCommunityByType(type, 1, limit, q, opts, false);
+          const resp = await getSubCommunityByType(
+            type,
+            1,
+            limit,
+            q,
+            opts,
+            false
+          );
           if (resp?.data) {
             // mark page 1 loaded
             setSubCommunityPages((prev) => ({ ...prev, [type]: 1 }));
@@ -645,7 +680,14 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const p: Promise<void> = (async () => {
         try {
-          const resp = await getSubCommunityByType(type, next, limit, q, opts, false);
+          const resp = await getSubCommunityByType(
+            type,
+            next,
+            limit,
+            q,
+            opts,
+            false
+          );
           if (resp?.data) {
             setSubCommunityPages((prev) => ({ ...prev, [type]: next }));
           }
@@ -710,18 +752,25 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   // LazySection components enqueue their type id and optional filter opts here;
   // the queue processor will call `ensureTypeLoaded` (or `ensureAllSubCommunities`)
   // sequentially so no scheduled load is dropped due to transient flags.
-  const scheduledQueueRef = useRef<Array<{ type: string; opts?: FilterOpts }>>([]);
+  const scheduledQueueRef = useRef<Array<{ type: string; opts?: FilterOpts }>>(
+    []
+  );
   const queueProcessingRef = useRef(false);
 
   const scheduleTypeLoad = useCallback(
     async (
       type: string,
       limit = 6,
-      opts?: { privacy?: 'all' | 'public' | 'private'; sort?: string; q?: string }
+      opts?: {
+        privacy?: 'all' | 'public' | 'private';
+        sort?: string;
+        q?: string;
+      }
     ) => {
       // Avoid enqueueing duplicates for same type+opts
       const exists = scheduledQueueRef.current.find(
-        (s) => s.type === type && JSON.stringify(s.opts) === JSON.stringify(opts)
+        (s) =>
+          s.type === type && JSON.stringify(s.opts) === JSON.stringify(opts)
       );
       if (exists) return;
 

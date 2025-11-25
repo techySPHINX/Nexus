@@ -29,7 +29,10 @@ export const SubCommunityFilter: React.FC<Props> = ({
   onApply,
 }) => {
   const handlePrivacy = (e: SelectChangeEvent) => {
-    onChange({ ...value, privacy: e.target.value as any });
+    onChange({
+      ...value,
+      privacy: e.target.value as SubCommunityFilterValue['privacy'],
+    });
   };
 
   const handleSort = (
@@ -66,11 +69,11 @@ export const SubCommunityFilter: React.FC<Props> = ({
         <ToggleButton value="newest">Newest</ToggleButton>
         <ToggleButton value="members">Members</ToggleButton>
       </ToggleButtonGroup>
-        <Box sx={{ ml: 'auto' }}>
-          <Button size="small" variant="contained" onClick={onApply}>
-            Apply
-          </Button>
-        </Box>
+      <Box sx={{ ml: 'auto' }}>
+        <Button size="small" variant="contained" onClick={onApply}>
+          Apply
+        </Button>
+      </Box>
     </Box>
   );
 };
