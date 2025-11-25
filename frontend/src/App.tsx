@@ -41,6 +41,7 @@ const AdminModerationPage = lazy(
 const AdminSubCommunityModerationPage = lazy(
   () => import('./pages/SubCommunity/AdminSubCommunityModerationPage')
 );
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
 
 const RouteUnavailable = lazy(() => import('./pages/RouteUnavailable'));
 
@@ -66,6 +67,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { NavbarProvider } from './contexts/NavbarContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ReportProvider } from './contexts/reportContext';
 import { EngagementProvider } from './contexts/engagementContext';
 import { EngagementService } from './services/engagementService';
 import LandingPage2 from './pages/LandingPage2';
@@ -167,9 +169,7 @@ const Layout: React.FC = () => {
                 path="/profile"
                 element={
                   <ProtectedRoute>
-                    <ProfileProvider>
-                      <Profile />
-                    </ProfileProvider>
+                    <Profile />
                   </ProtectedRoute>
                 }
               />
@@ -177,9 +177,7 @@ const Layout: React.FC = () => {
                 path="/profile/:userId"
                 element={
                   <ProtectedRoute>
-                    <ProfileProvider>
-                      <Profile />
-                    </ProfileProvider>
+                    <Profile />
                   </ProtectedRoute>
                 }
               />
@@ -312,9 +310,7 @@ const Layout: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <ShowcaseProvider>
-                      <ProfileProvider>
-                        <ProjectsMainPage />
-                      </ProfileProvider>
+                      <ProjectsMainPage />
                     </ShowcaseProvider>
                   </ProtectedRoute>
                 }
@@ -374,6 +370,16 @@ const Layout: React.FC = () => {
                 }
               />
               <Route
+                path="/admin/reports"
+                element={
+                  <AdminRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <ReportsPage />
+                    </Suspense>
+                  </AdminRoute>
+                }
+              />
+              <Route
                 path="/admin/moderation/subcommunities"
                 element={
                   <AdminRoute>
@@ -425,9 +431,13 @@ function App() {
                 <Suspense fallback={<LoadingSpinner />}>
                   {/* Keep a single SubCommunityProvider mounted for the whole app so
                       sub-community state isn't re-created on every route change. */}
-                  <SubCommunityProvider>
-                    <Layout />
-                  </SubCommunityProvider>
+                  <ReportProvider>
+                    <SubCommunityProvider>
+                      <ProfileProvider>
+                        <Layout />
+                      </ProfileProvider>
+                    </SubCommunityProvider>
+                  </ReportProvider>
                 </Suspense>
               </Router>
             </EngagementProvider>

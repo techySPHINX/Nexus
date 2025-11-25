@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get } from '@nestjs/common';
 import { ReportService } from './report.service';
 import { CreateReportDto } from './dto/create-report.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -12,8 +12,16 @@ export class ReportController {
   @UseGuards(JwtAuthGuard)
   create(
     @Body() createReportDto: CreateReportDto,
-    @GetCurrentUser('id') reporterId: string,
+    @GetCurrentUser('userId') reporterId: string,
   ) {
     return this.reportService.createReport(createReportDto, reporterId);
+  }
+
+  @Get()
+  @UseGuards(JwtAuthGuard)
+  getReports(
+    @GetCurrentUser('userId') userId: string,
+  ) {
+    return this.reportService.getAllReports(userId);
   }
 }

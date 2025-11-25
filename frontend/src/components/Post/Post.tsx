@@ -25,6 +25,7 @@ import {
   Alert,
   Tooltip,
 } from '@mui/material';
+import ReportButton from '../Report/ReportButton';
 import {
   MoreVert,
   Favorite,
@@ -589,6 +590,7 @@ export const Post: React.FC<PostProps> = ({
               <Share />
             </Tooltip>
           </IconButton>
+          <ReportButton type="POST" postId={post.id} />
         </CardActions>
       )}
 

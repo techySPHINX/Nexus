@@ -63,4 +63,19 @@ export class ReportService {
       },
     });
   }
+
+  async getAllReports(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true , role: true },
+    });
+    
+    if (!user || user.role !== 'ADMIN') {
+      throw new BadRequestException('Only admins can access reports.');
+    }
+    
+    return this.prisma.contentReport.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

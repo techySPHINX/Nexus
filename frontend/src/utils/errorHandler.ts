@@ -46,6 +46,7 @@ const extractBackendMessage = (data?: ApiErrorResponse): string | undefined => {
   return undefined;
 };
 
+/*** get error message */
 export const getErrorMessage = (err: unknown): string => {
   const dbMsg = "Can't reach database server";
 
