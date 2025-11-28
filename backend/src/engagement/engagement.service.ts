@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { VoteTargetType, VoteType } from '@prisma/client';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { GamificationService } from 'src/gamification/gamification.service';
 
 import { NotificationService } from '../notification/notification.service';
 
@@ -17,6 +18,7 @@ export class EngagementService {
   constructor(
     private prisma: PrismaService,
     private notificationService: NotificationService,
+    private gamificationService: GamificationService,
   ) {}
 
   /**
@@ -216,6 +218,14 @@ export class EngagementService {
         currentUser.name,
         post.id,
       );
+    }
+
+    // award points: if this was a reply (parentId) give reply points, else comment points
+    try {
+      const eventKey = parentId ? 'COMMENT_REPLY' : 'COMMENT_CREATED';
+      this.gamificationService.awardForEvent(eventKey, userId, newComment.id).catch(() => undefined);
+    } catch {
+      // ignore gamification errors
     }
 
     return newComment;

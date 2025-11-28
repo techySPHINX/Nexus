@@ -4,9 +4,10 @@ import { ConnectionController } from './connection.controller';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotificationService } from 'src/notification/notification.service';
 import { MessagingModule } from '../messaging/messaging.module';
+import { GamificationModule } from 'src/gamification/gamification.module';
 
 @Module({
-  imports: [MessagingModule],
+  imports: [MessagingModule, GamificationModule],
   controllers: [ConnectionController],
   providers: [ConnectionService, PrismaService, NotificationService],
   exports: [ConnectionService],

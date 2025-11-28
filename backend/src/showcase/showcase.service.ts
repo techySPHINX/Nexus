@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { GamificationService } from 'src/gamification/gamification.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateCollaborationRequestDto } from './dto/create-collaboration-request.dto';
@@ -17,6 +18,7 @@ export class ShowcaseService {
   constructor(
     private prisma: PrismaService,
     private notificationService: NotificationService,
+    private gamificationService: GamificationService,
   ) {}
 
   async createProject(userId: string, createProjectDto: CreateProjectDto) {
@@ -38,6 +40,13 @@ export class ShowcaseService {
       },
       },
     });
+
+    // award points for creating a project (fire-and-forget)
+    try {
+      this.gamificationService.awardForEvent('PROJECT_CREATED', userId, project.id).catch(() => undefined);
+    } catch {
+      // ignore
+    }
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -989,12 +998,21 @@ export class ShowcaseService {
   }
 
   async createStartup(userId: string, createStartupDto: CreateStartupDto) {
-    return this.prisma.startup.create({
+    const startup = await this.prisma.startup.create({
       data: {
         founderId: userId,
         ...createStartupDto,
       },
     });
+
+    // award points for creating a startup
+    try {
+      this.gamificationService.awardForEvent('STARTUP_CREATED', userId, startup.id).catch(() => undefined);
+    } catch {
+      // ignore
+    }
+
+    return startup;
   }
 
   async getStartupStats(userId: string) {
@@ -1315,6 +1333,13 @@ export class ShowcaseService {
     //   type: 'STARTUP_COMMENT',
     // });
 
+    // award gamification points for startup comment
+    try {
+      this.gamificationService.awardForEvent('STARTUP_COMMENT', userId, comment.id).catch(() => undefined);
+    } catch {
+      // ignore
+    }
+
     return comment;
   }
 
@@ -1566,6 +1591,13 @@ export class ShowcaseService {
       message: `Your project "${project.title}" has a new comment.`,
       type: 'PROJECT_COMMENT',
     });
+
+    // award gamification points for project comment
+    try {
+      this.gamificationService.awardForEvent('PROJECT_COMMENT', userId, comment.id).catch(() => undefined);
+    } catch {
+      // ignore
+    }
 
     return comment;
   }

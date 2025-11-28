@@ -14,6 +14,7 @@ import { FilterReferralApplicationsDto } from './dto/filter-referral-application
 import { NotificationService, NotificationType } from 'src/notification/notification.service';
 import { EmailService } from 'src/email/email.service';
 import { ReferralGateway } from './referral.gateway';
+import { GamificationService } from 'src/gamification/gamification.service';
 
 /**
  * Service for managing job referrals and referral applications.
@@ -26,6 +27,7 @@ export class ReferralService {
     private notificationService: NotificationService,
     private emailService: EmailService,
     private gateway: ReferralGateway,
+    private gamificationService: GamificationService,
   ) {}
 
   // Referral methods
@@ -360,9 +362,23 @@ export class ReferralService {
   } catch {}
     }
 
+    // award gamification points for posting a referral (fire-and-forget)
+    if(user.role === Role.ALUM) {
+      try {
+        this.gamificationService.awardForEvent('REFERRAL_POSTED', userId, referral.id).catch(() => undefined);
+      } catch {
+        // ignore
+      }
+   }
+
     // Broadcast update
     this.gateway.emitReferralUpdated({ id: updatedReferral.id, status: updatedReferral.status });
-
+    // award gamification points for posting a referral (fire-and-forget)
+    try {
+      this.gamificationService.awardForEvent('REFERRAL_POSTED', userId, referral.id).catch(() => undefined);
+    } catch {
+      // ignore
+    }
     return updatedReferral;
   }
 
