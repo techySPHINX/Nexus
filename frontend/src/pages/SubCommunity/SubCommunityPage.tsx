@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { FC, Suspense, useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -36,7 +36,7 @@ import { Link } from 'react-router-dom';
 // previously caused repeated API calls).
 // No module-level initiated set any more — we rely on context's loading
 // state and caching to determine whether a section has started loading.
-const LazySection: React.FC<{
+const LazySection: FC<{
   typeId: string;
   title: string;
   initialCount?: number;
@@ -491,7 +491,7 @@ const SubCommunitiesPage: React.FC = () => {
         fullWidth
         placeholder="Search communities by name, description, or type..."
         value={searchTerm}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+        onChange={(e: ChangeEvent<HTMLInputElement>) =>
           setSearchTerm(e.target.value)
         }
         sx={{ mb: 4 }}
@@ -580,13 +580,13 @@ const SubCommunitiesPage: React.FC = () => {
 
       {/* Manage Types dialog for admins */}
       {isAdmin && (
-        <React.Suspense fallback={null}>
+        <Suspense fallback={null}>
           {/* Lazy load to avoid bundling if not used often */}
           <ManageTypesDialog
             open={manageTypesOpen}
             onClose={() => setManageTypesOpen(false)}
           />
-        </React.Suspense>
+        </Suspense>
       )}
 
       {/* Error Snackbar */}
