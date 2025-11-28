@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 import { useAuth } from './AuthContext';
 import { DashBoardService } from '@/services/DashBoardService';
+import gamificationService from '@/services/gamificationService';
 import { ProjectInterface } from '@/types/ShowcaseType';
 import { Post } from '@/types/post';
 import { ShowcaseService } from '@/services/ShowcaseService';
@@ -22,6 +23,7 @@ interface LoadingState {
   projects: boolean;
   profileCompletion: boolean;
   posts: boolean;
+  gamification: boolean;
 }
 
 interface ErrorState {
@@ -32,6 +34,7 @@ interface ErrorState {
   projects: string | null;
   profileCompletion: string | null;
   posts: string | null;
+  gamification: string | null;
 }
 
 interface ProfileCompletionStats {
@@ -67,6 +70,11 @@ type DashboardActions = {
   connectToUser: (userId: string) => Promise<void>;
   getSuggestedProjects: () => Promise<void>;
   getSuggestedPosts: () => Promise<void>;
+  // Gamification helpers
+  getLeaderboard?: (
+    period?: 'weekly' | 'monthly' | 'day',
+    limit?: number
+  ) => Promise<Array<Record<string, unknown>>>;
 };
 
 type DashboardContextType = DashboardState & DashboardActions;
@@ -87,6 +95,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     connecting: false,
     projects: false,
     posts: false,
+    gamification: false,
   });
   const [error, setError] = useState<ErrorState>({
     dashboard: null,
@@ -96,6 +105,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     connecting: null,
     projects: null,
     posts: null,
+    gamification: null,
   });
 
   const [connectionStats, setConnectionStats] = useState<ConnectionStats>({
@@ -125,6 +135,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     projects: 10 * 60 * 1000, // 10 minutes
     posts: 2 * 60 * 1000, // 2 minutes
     profileCompletion: 5 * 60 * 1000, // 5 minutes
+    gamification: 2 * 60 * 1000, // 2 minutes
   } as const;
 
   // Simple in-memory cache to avoid parse overhead during a single session
@@ -432,6 +443,76 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [getConnectionStats, getSuggestedConnections, getSuggestedProjects]);
 
+  // Gamification helper: fetch leaderboard via gamificationService and normalize
+  const getLeaderboard = useCallback(
+    async (period: 'weekly' | 'monthly' | 'day' = 'weekly', limit = 8) => {
+      const cacheKey = `gamification:leaderboard:${period}:${limit}`;
+      // try memory/local cache first
+      const cached = readCache<Array<Record<string, unknown>>>(
+        cacheKey,
+        TTL.gamification
+      );
+      if (cached) return cached;
+
+      // If specific period cache is missing, do not reuse other-period cached data
+      // Returning another period's leaderboard (e.g., weekly for day/month) causes incorrect displays.
+      // We only return exact-period cached data; otherwise proceed to fetch from the API.
+
+      // deduplicate concurrent calls
+      if (inFlightRef.current[cacheKey]) {
+        try {
+          await inFlightRef.current[cacheKey];
+          const again = readCache<Array<Record<string, unknown>>>(
+            cacheKey,
+            TTL.gamification
+          );
+          return again ?? [];
+        } catch {
+          return [];
+        }
+      }
+
+      setLoading((prev) => ({ ...prev, gamification: true }));
+      const promise = (async () => {
+        try {
+          incrRequestCount('gamification:leaderboard');
+          const map: Record<
+            'weekly' | 'monthly' | 'day',
+            'day' | 'week' | 'month'
+          > = {
+            weekly: 'week',
+            monthly: 'month',
+            day: 'day',
+          } as const;
+          const p = map[period] ?? 'week';
+          const resp = await gamificationService.getLeaderboard(p, limit);
+          const data = resp?.data ?? (Array.isArray(resp) ? resp : []);
+          // persist to cache
+          writeCache<Array<Record<string, unknown>>>(cacheKey, data);
+          return data as Array<Record<string, unknown>>;
+        } catch (err) {
+          console.error('DashboardContext.getLeaderboard error', err);
+          setError((prev) => ({
+            ...prev,
+            gamification: String(err || 'unknown'),
+          }));
+          return [] as Array<Record<string, unknown>>;
+        } finally {
+          setLoading((prev) => ({ ...prev, gamification: false }));
+        }
+      })();
+
+      inFlightRef.current[cacheKey] = promise;
+      try {
+        const res = await promise;
+        return res;
+      } finally {
+        inFlightRef.current[cacheKey] = null;
+      }
+    },
+    [readCache, writeCache, TTL.gamification]
+  );
+
   const value = useMemo<DashboardContextType>(
     () => ({
       loading,
@@ -448,6 +529,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       getSuggestedProjects,
       connectToUser,
       getSuggestedPosts,
+      getLeaderboard,
     }),
     [
       loading,
@@ -464,6 +546,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       connectToUser,
       getSuggestedProjects,
       getSuggestedPosts,
+      getLeaderboard,
     ]
   );
 

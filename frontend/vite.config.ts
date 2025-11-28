@@ -98,5 +98,14 @@ export default defineConfig(({ mode }: ConfigEnv) => {
         '@': '/src',
       },
     },
+    optimizeDeps: {
+      include: [
+        '@mui/material',
+        '@mui/material/styles',
+        '@emotion/react',
+        '@emotion/styled',
+        '@mui/styled-engine',
+      ],
+    },
   };
 });

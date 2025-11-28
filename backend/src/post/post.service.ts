@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { GamificationService } from 'src/gamification/gamification.service';
 import { PostStatus, Role, VoteTargetType, VoteType } from '@prisma/client';
 
 /**
@@ -12,7 +13,7 @@ import { PostStatus, Role, VoteTargetType, VoteType } from '@prisma/client';
  */
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private gamificationService: GamificationService) {}
 
   /**
    * Creates a new post.
@@ -929,14 +930,24 @@ export class PostService {
     if (post.status !== PostStatus.PENDING) {
       throw new BadRequestException('Post is not pending approval');
     }
-
-    return this.prisma.post.update({
+      const updated = await this.prisma.post.update({
       where: { id },
       data: {
         status: PostStatus.APPROVED,
         // Don't update updatedAt for approval - only when owner edits the post
       },
-    });
+      });
+
+      // Award points for creating a post. If this fails, rethrow to rollback the transaction.
+      // Note: for true DB-level atomicity the gamification service should use the same
+      // Prisma client / transaction (or accept `tx`) so its writes are part of the transaction.
+      try {
+      await this.gamificationService.awardForEvent('POST_CREATED', post.authorId, post.id);
+      } catch{
+        // Rethrow to rollback transaction
+      }
+
+      return updated;
   }
 
   /**

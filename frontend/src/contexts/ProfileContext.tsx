@@ -47,6 +47,11 @@ interface ProfileContextType {
   fetchAllBadges: () => Promise<void>;
   updateProfile: (profileData: UpdateProfileInput) => Promise<void>;
   setError: (error: string) => void;
+  // Gamification helper
+  getUserTransactions?: (
+    userId: string,
+    limit?: number
+  ) => Promise<Array<Record<string, unknown>>>;
 }
 
 const ProfileContext = createContext<ProfileContextType>({
@@ -70,6 +75,7 @@ const ProfileContext = createContext<ProfileContextType>({
   //   handleConnection: async () => {},
   updateProfile: async () => {},
   setError: () => {},
+  getUserTransactions: async () => [],
 });
 
 const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
@@ -269,6 +275,22 @@ const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
+  // Gamification: fetch user transactions
+  const getUserTransactions = useCallback(async (userId: string, limit = 5) => {
+    if (!userId) return [] as Array<Record<string, unknown>>;
+    try {
+      const gamify = await import('../services/gamificationService');
+      const resp = await gamify.default.getTransactions(userId, limit);
+      if (resp && resp.data) return resp.data as Array<Record<string, unknown>>;
+      return Array.isArray(resp)
+        ? (resp as Array<Record<string, unknown>>)
+        : [];
+    } catch (err) {
+      console.error('getUserTransactions error', err);
+      return [];
+    }
+  }, []);
+
   // Memoize the entire context value
   const contextValue = useMemo(
     () => ({
@@ -292,6 +314,7 @@ const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       //   handleConnection,
       updateProfile,
       setError,
+      getUserTransactions,
     }),
     [
       profile,
@@ -313,6 +336,7 @@ const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
       //   handleConnection,
       awardBadge,
       updateProfile,
+      getUserTransactions,
     ]
   );
 

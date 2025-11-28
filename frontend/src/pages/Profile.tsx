@@ -54,6 +54,7 @@ import {
 } from '@/types/profileType';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getErrorMessage } from '@/utils/errorHandler';
+// import RecentTransactions from '@/components/Profile/RecentTransaction';
 
 const Profile: React.FC = () => {
   const {
@@ -659,6 +660,12 @@ const Profile: React.FC = () => {
                   )}
                 </Grid>
               </Paper>
+
+              {/* <RecentTransactions
+                userId={profile.user.id}
+                maxItems={5}
+                compact={false}
+              /> */}
 
               {/* Additional Sections */}
               {/* {profile.user.postedReferrals &&

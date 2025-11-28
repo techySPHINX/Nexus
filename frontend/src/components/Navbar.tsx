@@ -36,6 +36,8 @@ import {
   ChevronRight,
   LightMode,
   DarkMode,
+  Event,
+  Gamepad,
 } from '@mui/icons-material';
 import Brightness4 from '@mui/icons-material/Brightness4';
 import Brightness7 from '@mui/icons-material/Brightness7';
@@ -81,6 +83,7 @@ const Navbar: React.FC = () => {
     { text: 'Community', icon: <People />, path: '/subcommunities' },
     { text: 'Project', icon: <Assignment />, path: '/projects' },
     { text: 'Startup', icon: <Folder />, path: '/startups' },
+    { text: 'Events', icon: <Event />, path: '/events' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -201,6 +204,16 @@ const Navbar: React.FC = () => {
                 </MenuItem>
                 <MenuItem
                   component={Link}
+                  to="/gamification"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Gamepad />
+                  </ListItemIcon>
+                  Gamification
+                </MenuItem>
+                <MenuItem
+                  component={Link}
                   to="/feed"
                   onClick={handleUserMenuClose}
                 >
@@ -222,40 +235,48 @@ const Navbar: React.FC = () => {
                   </MenuItem>
                 )}
                 {user?.role === 'ADMIN' && (
-                  <MenuItem
-                    component={Link}
-                    to="/admin/moderation"
-                    onClick={handleUserMenuClose}
-                  >
-                    <ListItemIcon>
-                      <Person />
-                    </ListItemIcon>
-                    Feed Moderation
-                  </MenuItem>
-                )}
-                {user?.role === 'ADMIN' && (
-                  <MenuItem
-                    component={Link}
-                    to="/admin/document-verification"
-                    onClick={handleUserMenuClose}
-                  >
-                    <ListItemIcon>
-                      <Assignment />
-                    </ListItemIcon>
-                    Document Verification
-                  </MenuItem>
-                )}
-                {user?.role === 'ADMIN' && (
-                  <MenuItem
-                    component={Link}
-                    to="/admin/moderation/subcommunities"
-                    onClick={handleUserMenuClose}
-                  >
-                    <ListItemIcon>
-                      <Person />
-                    </ListItemIcon>
-                    SubCommunity Moderation
-                  </MenuItem>
+                  <>
+                    <MenuItem
+                      component={Link}
+                      to="/admin/moderation"
+                      onClick={handleUserMenuClose}
+                    >
+                      <ListItemIcon>
+                        <Person />
+                      </ListItemIcon>
+                      Feed Moderation
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/admin/document-verification"
+                      onClick={handleUserMenuClose}
+                    >
+                      <ListItemIcon>
+                        <Assignment />
+                      </ListItemIcon>
+                      Document Verification
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/admin/moderation/subcommunities"
+                      onClick={handleUserMenuClose}
+                    >
+                      <ListItemIcon>
+                        <Person />
+                      </ListItemIcon>
+                      SubCommunity Moderation
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/admin/events/create"
+                      onClick={handleUserMenuClose}
+                    >
+                      <ListItemIcon>
+                        <Event />
+                        Create Events
+                      </ListItemIcon>
+                    </MenuItem>
+                  </>
                 )}
                 <MenuItem
                   component={Link}
@@ -813,6 +834,16 @@ const Navbar: React.FC = () => {
               </ListItemIcon>
               Notification
             </MenuItem>
+            <MenuItem
+              component={Link}
+              to="/gamification"
+              onClick={handleUserMenuClose}
+            >
+              <ListItemIcon>
+                <Gamepad />
+              </ListItemIcon>
+              Gamification
+            </MenuItem>
             <MenuItem component={Link} to="/feed" onClick={handleUserMenuClose}>
               <ListItemIcon>
                 <Person />
@@ -832,28 +863,48 @@ const Navbar: React.FC = () => {
               </MenuItem>
             )}
             {user?.role === 'ADMIN' && (
-              <MenuItem
-                component={Link}
-                to="/admin/moderation"
-                onClick={handleUserMenuClose}
-              >
-                <ListItemIcon>
-                  <Person />
-                </ListItemIcon>
-                Feed Moderation
-              </MenuItem>
-            )}
-            {user?.role === 'ADMIN' && (
-              <MenuItem
-                component={Link}
-                to="/admin/moderation/subcommunities"
-                onClick={handleUserMenuClose}
-              >
-                <ListItemIcon>
-                  <Person />
-                </ListItemIcon>
-                SubCommunity Moderation
-              </MenuItem>
+              <>
+                <MenuItem
+                  component={Link}
+                  to="/admin/moderation"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Person />
+                  </ListItemIcon>
+                  Feed Moderation
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/admin/document-verification"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Assignment />
+                  </ListItemIcon>
+                  Document Verification
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/admin/moderation/subcommunities"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Person />
+                  </ListItemIcon>
+                  SubCommunity Moderation
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/admin/events/create"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Event />
+                    Create Events
+                  </ListItemIcon>
+                </MenuItem>
+              </>
             )}
             <MenuItem
               component={Link}

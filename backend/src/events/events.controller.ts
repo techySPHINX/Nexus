@@ -27,8 +27,9 @@ export class EventsController {
   @Roles('ADMIN')
   create(
     @Body() createEventDto: CreateEventDto,
-    @GetCurrentUser('id') userId: string,
+    @GetCurrentUser('userId') userId: string,
   ) {
+    console.log('Received create event request:', createEventDto);
     return this.eventsService.create(createEventDto, userId);
   }
 
@@ -75,7 +76,9 @@ export class EventsController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('ADMIN')
-  remove(@Param('id') id: string) {
-    return this.eventsService.remove(id);
+  remove(@Param('id') id: string, @Query('force') force?: string) {
+    // If `force=true` is provided, perform a hard delete. Otherwise soft-cancel the event.
+    const hard = force === 'true';
+    return this.eventsService.remove(id, hard);
   }
 }
