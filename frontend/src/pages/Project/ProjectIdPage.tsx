@@ -21,6 +21,7 @@ import {
   ListItemAvatar,
   ListItemText,
   CircularProgress,
+  Pagination,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -60,15 +61,50 @@ const ProjectIdPage: React.FC = () => {
 
   useEffect(() => {
     if (!projectId) return;
-    // Fetch project details (detailed)
-    getProjectById(projectId, true, true).catch(() => {});
-    // Fetch a couple of comments for preview (non-forced)
-    getComments(projectId).catch(() => {});
-    // ensure we have project type labels available (tags mapping)
-    fetchAllTypes().catch(() => {});
-  }, [projectId, getProjectById, getComments, fetchAllTypes]);
+
+    // Avoid repeated fetches caused by unstable function identities in context
+    // only fetch when projectId changes
+    let cancelled = false;
+    const lastFetchedKey = `__project_fetched__:${projectId}`;
+    // Use a window-level marker to persist across remounts in the same SPA session
+    // so navigating away and back won't immediately re-trigger network calls.
+    // This is conservative; you can remove window-level caching if stricter freshness is desired.
+
+    const w = window as unknown as Record<string, unknown>;
+
+    const already = w[lastFetchedKey] as boolean | undefined;
+    if (already) return;
+
+    (async () => {
+      try {
+        // Fetch project details (detailed)
+        await getProjectById(projectId, true, true);
+
+        // ensure we have project type labels available (tags mapping)
+        await fetchAllTypes().catch(() => {});
+
+        if (!cancelled) {
+          // mark as fetched for this session
+
+          w[lastFetchedKey] = true;
+        }
+      } catch {
+        // ignore - context will handle errors
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally only depend on projectId to avoid repeats from changing function identities
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
   const [tabIndex, setTabIndex] = useState<number>(0);
+  const [commentPage, setCommentPage] = useState<number>(1);
+  const COMMENTS_PER_PAGE = 10;
+  const totalComments = projectById?._count?.comments || 0;
+  const totalPages = Math.max(1, Math.ceil(totalComments / COMMENTS_PER_PAGE));
 
   const projectComments = useMemo(
     () => comments?.[projectId as string]?.data || [],
@@ -94,25 +130,52 @@ const ProjectIdPage: React.FC = () => {
   // lazy-load per tab
   useEffect(() => {
     if (!projectId) return;
-    if (tabIndex === 1) {
-      // Team
-      getProjectTeamMembers(projectId).catch(() => {});
+
+    // Only load data for a tab if we don't already have it cached
+    (async () => {
+      try {
+        if (tabIndex === 1) {
+          // Team
+          const existing = teamMembers?.[projectId as string] || [];
+          if (!existing || existing.length === 0) {
+            await getProjectTeamMembers(projectId).catch(() => {});
+          }
+        }
+        if (tabIndex === 2) {
+          // Comments - only fetch first page if none cached
+          const existingComments = comments?.[projectId as string]?.data || [];
+          if (!existingComments || existingComments.length === 0) {
+            await getComments(projectId, commentPage, false).catch(() => {});
+          }
+        }
+        if (tabIndex === 3) {
+          // Updates
+          const existingUpdates = updates?.[projectId as string] || [];
+          if (!existingUpdates || existingUpdates.length === 0) {
+            await getProjectUpdates(projectId).catch(() => {});
+          }
+        }
+      } catch {
+        // ignore
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabIndex, projectId]);
+
+  // When the user navigates pages in the Comments tab, fetch that page if not present
+  useEffect(() => {
+    if (!projectId) return;
+    if (tabIndex !== 2) return;
+
+    const existing = comments?.[projectId as string]?.data || [];
+    const start = (commentPage - 1) * COMMENTS_PER_PAGE;
+    const hasPage = existing.length > start;
+
+    if (!hasPage) {
+      getComments(projectId, commentPage, true).catch(() => {});
     }
-    if (tabIndex === 2) {
-      // Comments - force refresh to ensure latest
-      getComments(projectId, 1, true).catch(() => {});
-    }
-    if (tabIndex === 3) {
-      // Updates
-      getProjectUpdates(projectId).catch(() => {});
-    }
-  }, [
-    tabIndex,
-    projectId,
-    getProjectTeamMembers,
-    getComments,
-    getProjectUpdates,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [commentPage, tabIndex, projectId]);
 
   if (!projectId) return null;
 
@@ -385,36 +448,37 @@ const ProjectIdPage: React.FC = () => {
                       </Stack>
 
                       <Box sx={{ mt: 2 }}>
-                        {projectComments.slice(0, 3).map((c) => (
-                          <Box
-                            key={c.id}
-                            sx={{ display: 'flex', gap: 2, mb: 2 }}
-                          >
-                            <Avatar
-                              src={c.user?.profile?.avatarUrl}
-                              sx={{ width: 40, height: 40 }}
-                            />
-                            <Box>
-                              <Typography
-                                variant="subtitle2"
-                                sx={{ fontWeight: 600 }}
-                              >
-                                {c.user?.name}
-                              </Typography>
-                              <Typography
-                                variant="body2"
-                                color="text.secondary"
-                              >
-                                {c.comment.length > 140
-                                  ? `${c.comment.slice(0, 140)}…`
-                                  : c.comment}
-                              </Typography>
+                        {projectComments && projectComments.length > 0 ? (
+                          projectComments.slice(0, 3).map((c) => (
+                            <Box
+                              key={c.id}
+                              sx={{ display: 'flex', gap: 2, mb: 2 }}
+                            >
+                              <Avatar
+                                src={c.user?.profile?.avatarUrl}
+                                sx={{ width: 40, height: 40 }}
+                              />
+                              <Box>
+                                <Typography
+                                  variant="subtitle2"
+                                  sx={{ fontWeight: 600 }}
+                                >
+                                  {c.user?.name}
+                                </Typography>
+                                <Typography
+                                  variant="body2"
+                                  color="text.secondary"
+                                >
+                                  {c.comment.length > 140
+                                    ? `${c.comment.slice(0, 140)}…`
+                                    : c.comment}
+                                </Typography>
+                              </Box>
                             </Box>
-                          </Box>
-                        ))}
-                        {projectComments.length === 0 && (
+                          ))
+                        ) : (
                           <Typography variant="body2" color="text.secondary">
-                            No comments yet.
+                            Comments are loaded when you open the Comments tab.
                           </Typography>
                         )}
                       </Box>
@@ -462,25 +526,52 @@ const ProjectIdPage: React.FC = () => {
                   {actionLoading.comment ? (
                     <CircularProgress size={24} />
                   ) : (
-                    <List>
-                      {projectComments.length > 0 ? (
-                        projectComments.map((c) => (
-                          <ListItem key={c.id} alignItems="flex-start" divider>
-                            <ListItemAvatar>
-                              <Avatar src={c.user?.profile?.avatarUrl} />
-                            </ListItemAvatar>
-                            <ListItemText
-                              primary={c.user?.name}
-                              secondary={c.comment}
-                            />
-                          </ListItem>
-                        ))
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          No comments yet.
-                        </Typography>
-                      )}
-                    </List>
+                    <>
+                      <List>
+                        {projectComments.length > 0 ? (
+                          projectComments
+                            .slice(
+                              (commentPage - 1) * COMMENTS_PER_PAGE,
+                              commentPage * COMMENTS_PER_PAGE
+                            )
+                            .map((c) => (
+                              <ListItem
+                                key={c.id}
+                                alignItems="flex-start"
+                                divider
+                              >
+                                <ListItemAvatar>
+                                  <Avatar src={c.user?.profile?.avatarUrl} />
+                                </ListItemAvatar>
+                                <ListItemText
+                                  primary={c.user?.name}
+                                  secondary={c.comment}
+                                />
+                              </ListItem>
+                            ))
+                        ) : (
+                          <Typography variant="body2" color="text.secondary">
+                            No comments yet.
+                          </Typography>
+                        )}
+                      </List>
+
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'center',
+                          mt: 2,
+                        }}
+                      >
+                        <Pagination
+                          count={totalPages}
+                          page={commentPage}
+                          onChange={(_, p) => setCommentPage(p)}
+                          color="primary"
+                          boundaryCount={1}
+                        />
+                      </Box>
+                    </>
                   )}
                 </>
               )}
