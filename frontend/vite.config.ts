@@ -58,35 +58,46 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       },
       rollupOptions: {
         output: {
-          manualChunks(id: string) {
+          manualChunks(id) {
+            const lower = id.toLowerCase();
+
+            // --- 1. Core vendor chunks ---
             if (id.includes('node_modules')) {
-              //   if (id.includes('react')) return 'vendor-react';
-              //   if (id.includes('axios')) return 'vendor-axios';
-              //   if (id.includes('chart.js') || id.includes('recharts'))
-              //     return 'vendor-charts';
-              return 'vendor';
+              // React must load first
+              // if (id.includes('react') || id.includes('react-dom'))
+              //   return 'first-vendor-react';
+
+              // // MUI + Emotion must come AFTER React
+              if (id.includes('@mui') || id.includes('@emotion'))
+                return 'vendor-mui';
+
+              // // Floating UI separately
+              if (id.includes('@floating-ui')) return 'vendor-floating';
+
+              if (id.includes('axios')) return 'vendor-axios';
+              if (id.includes('chart.js') || id.includes('recharts'))
+                return 'vendor-charts';
+
+              return 'nodes_modules'; // default vendor chunk
             }
-            // Split only your **feature code**
-            if (id.toLowerCase().includes('admin')) return 'admin-features';
-            if (id.toLowerCase().includes('auth')) return 'auth-features';
-            if (id.toLowerCase().includes('profile')) return 'profile-features';
-            if (id.toLowerCase().includes('post')) return 'post-features';
-            if (id.toLowerCase().includes('messaging'))
-              return 'messaging-features';
-            if (
-              id.toLowerCase().includes('showcase') ||
-              id.toLowerCase().includes('project')
-            )
+
+            // --- 2. Feature chunks ---
+            if (lower.includes('dashboard')) return 'dashboard-features';
+            if (lower.includes('gamification')) return 'gamification-features';
+            if (lower.includes('admin')) return 'admin-features';
+            if (lower.includes('auth')) return 'auth-features';
+            if (lower.includes('profile')) return 'profile-features';
+            if (lower.includes('posts')) return 'post-features';
+            if (lower.includes('messaging')) return 'messaging-features';
+            if (lower.includes('startup')) return 'startup-features';
+            if (lower.includes('showcase') || lower.includes('project'))
               return 'showcase-features';
-            if (id.toLowerCase().includes('startup')) return 'startup-features';
-            if (id.toLowerCase().includes('dashboard'))
-              return 'dashboard-features';
-            if (id.toLowerCase().includes('home')) return 'home-features';
-            if (id.toLowerCase().includes('components'))
-              return 'shared-components';
-            // return 'NodeVendors';
-            // Let Vite handle all node_modules safely
-            return 'others';
+            if (lower.includes('events')) return 'events-features';
+
+            // --- 3. Shared ---
+            if (lower.includes('components')) return 'shared-components';
+
+            return undefined;
           },
           chunkFileNames: `assets/[name]-[hash].js`,
           assetFileNames: `assets/[name]-[hash].[ext]`,
