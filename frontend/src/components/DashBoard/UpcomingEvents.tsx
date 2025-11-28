@@ -1,56 +1,50 @@
 // import { Calendar, MapPin, ArrowRight } from 'lucide-react';
+import { useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import Card from '@mui/material/Card';
 import { ArrowRight } from 'lucide-react';
-
-// const events = [
-//   {
-//     id: 1,
-//     title: 'Spring Networking',
-//     date: 'Mar 15',
-//     time: '6:00 PM',
-//     location: 'Virtual',
-//     attendees: 234,
-//   },
-//   {
-//     id: 2,
-//     title: 'Career Workshop',
-//     date: 'Mar 22',
-//     time: '2:00 PM',
-//     location: 'Campus',
-//     attendees: 156,
-//   },
-//   {
-//     id: 3,
-//     title: 'Alumni Mixer',
-//     date: 'Apr 5',
-//     time: '7:00 PM',
-//     location: 'Downtown',
-//     attendees: 89,
-//   },
-// ];
+import { useEventContext } from '@/contexts/eventContext';
+import { Link } from 'react-router-dom';
+import {
+  Box,
+  CircularProgress,
+  Button,
+  Chip,
+  IconButton,
+  Typography,
+} from '@mui/material';
+import { useAuth } from '@/contexts/AuthContext';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import { EventService } from '@/services/EventService';
 
 export default function UpcomingEvents() {
   const { isDark } = useTheme();
+  const { upcoming, fetchUpcoming, loading } = useEventContext();
 
+  useEffect(() => {
+    // Only fetch if we don't already have upcoming events to avoid repeated calls
+    if (!fetchUpcoming) return;
+    if (upcoming && upcoming.length > 0) return;
+    void fetchUpcoming(3);
+  }, [fetchUpcoming, upcoming]);
+
+  const events = upcoming || [];
+
+  // Use a unique purple accent for upcoming events to distinguish from other cards
   const containerClasses = isDark
-    ? 'rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow bg-neutral-900 border-neutral-700 text-emerald-100'
+    ? 'rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow bg-neutral-900 border-neutral-700 text-sky-100'
     : 'bg-white rounded-xl border border-emerald-100 p-6 shadow-sm';
 
-  // const eventCardClass = isDark
-  //   ? 'p-3 rounded-lg border border-neutral-700 hover:border-emerald-500 hover:bg-neutral-800 transition-all cursor-pointer group'
-  //   : 'p-3 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all cursor-pointer group';
+  const eventCardClass = isDark
+    ? 'p-3 rounded-lg border border-neutral-700 hover:border-sky-500 hover:bg-neutral-800 transition-all cursor-pointer group flex items-center justify-between'
+    : 'p-3 rounded-lg border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/50 transition-all cursor-pointer group flex items-center justify-between';
 
-  // const eventTitleClass = isDark
-  //   ? 'font-semibold text-emerald-100 text-sm mb-2 group-hover:text-emerald-300 transition-colors'
-  //   : 'font-semibold text-gray-900 text-sm mb-2 group-hover:text-emerald-600 transition-colors';
-
-  // const eventInfoClass = isDark
-  //   ? 'text-xs text-neutral-300'
-  //   : 'text-xs text-gray-600';
-  // const attendeesClass = isDark
-  //   ? 'text-xs text-emerald-200 mt-2'
-  //   : 'text-xs text-emerald-600 mt-2';
+  const metaClass = isDark
+    ? 'text-xs text-neutral-300'
+    : 'text-xs text-gray-600';
+  const { user } = useAuth();
+  const { fetchEvents } = useEventContext();
 
   return (
     <Card className={containerClasses}>
@@ -64,37 +58,145 @@ export default function UpcomingEvents() {
         >
           Upcoming Events
         </h3>
-        <button
-          className={
-            isDark
-              ? 'text-sky-600 hover:text-sky-700 transition-colors'
-              : 'text-emerald-600 hover:text-emerald-700 transition-colors'
-          }
-        >
+        <Button component={Link} to="/events" size="small">
           <ArrowRight className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
-      Not Available
-      {/* <div className="space-y-3">
+      {loading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+          <CircularProgress size={20} />
+        </Box>
+      )}
+      {!loading && events.length === 0 && <div>Not Available</div>}
+      <div className="space-y-3">
         {events.map((event) => (
           <div key={event.id} className={eventCardClass}>
-            <h4 className={eventTitleClass}>{event.title}</h4>
-            <div className="space-y-1">
-              <div className={`flex items-center gap-2 ${eventInfoClass}`}>
-                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
-                <span>
-                  {event.date} • {event.time}
-                </span>
-              </div>
-              <div className={`flex items-center gap-2 ${eventInfoClass}`}>
-                <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                <span>{event.location}</span>
-              </div>
-            </div>
-            <p className={attendeesClass}>{event.attendees} attending</p>
+            <Box
+              sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}
+            >
+              {/* Title */}
+              <Typography
+                variant="subtitle1"
+                sx={{ fontWeight: 600 }}
+                className={
+                  isDark
+                    ? 'text-sky-100 hover:text-sky-300'
+                    : 'text-gray-900 hover:text-emerald-600'
+                }
+                onClick={() => {
+                  // Navigate to event detail page
+                  window.location.href = `/events/${event.id}`;
+                }}
+              >
+                {event.title}
+              </Typography>
+
+              {/* Row 1 — Category (left) | Date (right) */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Chip
+                  size="small"
+                  label={event.category || 'General'}
+                  sx={{
+                    height: 22,
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    backgroundColor: isDark
+                      ? 'rgb(2 132 199)'
+                      : 'rgb(5 150 105)', // sky-600 / emerald-600
+                    color: 'white',
+                  }}
+                />
+
+                <Typography variant="caption" className={metaClass}>
+                  {new Date(event.date).toLocaleString()}
+                </Typography>
+              </Box>
+
+              {/* Row 2 — Location (left) | Days Left (right) */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <Typography variant="caption" className={metaClass}>
+                  {event.location || 'Online'}
+                </Typography>
+
+                <Chip
+                  size="small"
+                  label={(() => {
+                    const now = new Date();
+                    const evDate = new Date(event.date);
+                    const diff = Math.ceil(
+                      (evDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+                    );
+                    if (diff > 1) return `${diff} days left`;
+                    if (diff === 1) return '1 day left';
+                    if (diff === 0) return 'Today';
+                    return 'Passed';
+                  })()}
+                  sx={{
+                    height: 22,
+                    fontSize: '0.7rem',
+                    backgroundColor: isDark
+                      ? 'rgb(2 132 199)'
+                      : 'rgb(5 150 105)', // sky-600 / emerald-600
+                    color: 'white',
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Admin Actions */}
+            {(user?.role === 'ADMIN' || user?.id === event.authorId) && (
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1,
+                  alignItems: 'flex-end',
+                }}
+              >
+                <IconButton
+                  size="small"
+                  component={Link}
+                  to={`/admin/events/create?id=${event.id}`}
+                  aria-label="edit"
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+
+                <IconButton
+                  size="small"
+                  aria-label="delete"
+                  onClick={async () => {
+                    const ok = window.confirm('Delete this event?');
+                    if (!ok) return;
+                    try {
+                      await EventService.remove(event.id);
+                      void fetchUpcoming();
+                      void fetchEvents();
+                      alert('Event deleted');
+                    } catch {
+                      alert('Failed to delete event');
+                    }
+                  }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            )}
           </div>
         ))}
-      </div> */}
+      </div>
     </Card>
   );
 }
