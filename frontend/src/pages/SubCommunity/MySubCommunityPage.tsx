@@ -1,5 +1,5 @@
 // File: src/pages/SubCommunity/MySubCommunitiesPage.tsx
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -42,7 +42,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const MySubCommunitiesPage: React.FC = () => {
+const MySubCommunitiesPage: FC = () => {
   const { user } = useAuth();
   const { loading } = useSubCommunity();
   const navigate = useNavigate();
@@ -76,7 +76,7 @@ const MySubCommunitiesPage: React.FC = () => {
         ? 'moderatedPage'
         : 'memberPage';
 
-  const getPageFromUrl = React.useCallback(
+  const getPageFromUrl = useCallback(
     (tabIndex: number) => {
       const key = getPageKeyForTab(tabIndex);
       const params = new URLSearchParams(location.search);

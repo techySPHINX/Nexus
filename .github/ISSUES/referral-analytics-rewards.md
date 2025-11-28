@@ -504,7 +504,7 @@ export class AIMatchingService {
 ```tsx
 // frontend/src/components/ReferralMatchCard.tsx
 
-const ReferralMatchCard: React.FC<{ referral: Referral; matchScore: number }> = ({ referral, matchScore }) => {
+const ReferralMatchCard: FC<{ referral: Referral; matchScore: number }> = ({ referral, matchScore }) => {
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'success.main';
     if (score >= 60) return 'warning.main';

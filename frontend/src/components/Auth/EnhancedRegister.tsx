@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   Container,
   Paper,
@@ -41,7 +41,7 @@ import axios from 'axios';
 
 const steps = ['Basic Information', 'Document Verification', 'Review & Submit'];
 
-const EnhancedRegister: React.FC = () => {
+const EnhancedRegister: FC = () => {
   const [activeStep, setActiveStep] = useState(0);
   type RoleType = 'STUDENT' | 'ALUM' | 'ADMIN' | 'MENTOR';
 

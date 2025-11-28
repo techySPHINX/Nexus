@@ -1,4 +1,4 @@
-import React, { lazy, Suspense } from 'react';
+import { FC, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
 import { useNavbar } from './contexts/NavbarContext';
@@ -80,7 +80,7 @@ import { EngagementService } from './services/engagementService';
 import LandingPage2 from './pages/LandingPage2';
 
 // Loading component for Suspense fallback
-const LoadingSpinner: React.FC = () => (
+const LoadingSpinner: FC = () => (
   <Box
     sx={{
       display: 'flex',
@@ -94,7 +94,7 @@ const LoadingSpinner: React.FC = () => (
 );
 
 // Layout component that handles navbar positioning
-const Layout: React.FC = () => {
+const Layout: FC = () => {
   const { position, collapsed } = useNavbar();
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -18,9 +18,10 @@ interface CreateSubCommunityDialogProps {
   onClose: () => void;
 }
 
-export const CreateSubCommunityDialog: React.FC<
-  CreateSubCommunityDialogProps
-> = ({ open, onClose }) => {
+export const CreateSubCommunityDialog: FC<CreateSubCommunityDialogProps> = ({
+  open,
+  onClose,
+}) => {
   const { createSubCommunity } = useSubCommunity();
   const { user } = useAuth();
   const [name, setName] = useState('');

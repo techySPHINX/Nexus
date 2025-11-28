@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState, MouseEvent } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -47,7 +47,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNavbar } from '../contexts/NavbarContext';
 // import NavbarToggle from './NavbarToggle';
 
-const Navbar: React.FC = () => {
+const Navbar: FC = () => {
   const { user, logout } = useAuth();
   const { position, collapsed, toggleCollapsed } = useNavbar();
   const navigate = useNavigate();
@@ -61,7 +61,7 @@ const Navbar: React.FC = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  const handleUserMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+  const handleUserMenuOpen = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
@@ -102,20 +102,35 @@ const Navbar: React.FC = () => {
       <Toolbar sx={{ justifyContent: 'space-between' }}>
         {/* Left side - Logo and Navigation */}
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Typography
-            variant="h6"
+          <Box
             component={Link}
             to="/"
             sx={{
-              fontWeight: 700,
-              color: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
               textDecoration: 'none',
+              color: 'inherit',
               mr: 4,
-              '&:hover': { opacity: 0.8 },
             }}
           >
-            Nexus
-          </Typography>
+            <Box
+              component="img"
+              src="/nexus.png"
+              alt="Nexus"
+              sx={{ width: 32, height: 32, objectFit: 'contain', mr: 1 }}
+            />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 700,
+                color: 'inherit',
+                textDecoration: 'none',
+                '&:hover': { opacity: 0.8 },
+              }}
+            >
+              Nexus
+            </Typography>
+          </Box>
 
           {user && (
             <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
@@ -417,21 +432,36 @@ const Navbar: React.FC = () => {
             }}
           >
             <Tooltip title="Nexus" placement="right" arrow>
-              <Typography
-                variant="h6"
+              <Box
                 component={Link}
                 to="/"
                 sx={{
-                  fontWeight: 700,
-                  color: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
                   textDecoration: 'none',
-                  display: 'block',
-                  textAlign: collapsed ? 'center' : 'left',
-                  '&:hover': { opacity: 0.9 },
+                  color: 'inherit',
                 }}
               >
-                {collapsed ? 'N' : 'Nexus'}
-              </Typography>
+                <Box
+                  component="img"
+                  src="/nexus.png"
+                  alt="Nexus"
+                  sx={{ width: collapsed ? 28 : 36, height: collapsed ? 28 : 36, objectFit: 'contain', mr: collapsed ? 0 : 1 }}
+                />
+                {!collapsed && (
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 700,
+                      color: 'inherit',
+                      textDecoration: 'none',
+                      '&:hover': { opacity: 0.9 },
+                    }}
+                  >
+                    Nexus
+                  </Typography>
+                )}
+              </Box>
             </Tooltip>
           </Box>
 

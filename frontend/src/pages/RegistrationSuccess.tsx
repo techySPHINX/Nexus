@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   Container,
   Paper,
@@ -11,7 +11,7 @@ import { CheckCircle, Email, Schedule, Login } from '@mui/icons-material';
 import { useLocation, Link as RouterLink } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
-const RegistrationSuccess: React.FC = () => {
+const RegistrationSuccess: FC = () => {
   const location = useLocation();
   const { message, requiresApproval } = location.state || {
     message: 'Registration successful!',

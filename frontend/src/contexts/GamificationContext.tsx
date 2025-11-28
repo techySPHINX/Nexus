@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import {
+  FC,
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import gamificationService from '../services/gamificationService';
 
 type LeaderboardItem = {
@@ -59,17 +66,17 @@ export const useGamification = () => useContext(GamificationContext);
 
 // (Per-key read/write helpers implemented inside provider)
 
-export const GamificationProvider: React.FC<{ children: React.ReactNode }> = ({
+export const GamificationProvider: FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardItem[]>([]);
   const [userPoints, setUserPoints] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
-  const memoryCacheRef = React.useRef<
-    Record<string, { ts: number; data: unknown }>
-  >({});
-  const inFlightRef = React.useRef<Record<string, Promise<unknown> | null>>({});
+  const memoryCacheRef = useRef<Record<string, { ts: number; data: unknown }>>(
+    {}
+  );
+  const inFlightRef = useRef<Record<string, Promise<unknown> | null>>({});
 
   const TTL = {
     leaderboard: 2 * 60 * 1000, // 2 minutes

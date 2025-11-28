@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC, useState, MouseEvent } from 'react';
 import {
   Box,
   Button,
@@ -13,13 +13,13 @@ import {
 import { ViewHeadline, ViewSidebar, Settings } from '@mui/icons-material';
 import { useNavbar } from '../contexts/NavbarContext';
 
-const NavbarToggle: React.FC = () => {
+const NavbarToggle: FC = () => {
   const { position, setPosition } = useNavbar();
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
   const theme = useTheme();
 
-  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+  const handleClick = (event: MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 

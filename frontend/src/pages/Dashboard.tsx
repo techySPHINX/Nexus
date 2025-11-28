@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { FC, useEffect, useState, useRef } from 'react';
 import { Container, Grid, Typography, Box, Chip } from '@mui/material';
 import { Message } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,7 +36,7 @@ interface RecentActivity {
   user?: { name: string; avatar: string };
 }
 
-const OnView: React.FC<{
+const OnView: FC<{
   children: React.ReactNode;
   placeholderHeight?: number;
   rootMargin?: string;
@@ -88,7 +88,7 @@ const OnView: React.FC<{
   );
 };
 
-const Dashboard: React.FC = () => {
+const Dashboard: FC = () => {
   const { user, token } = useAuth();
   const {
     connectionStats,

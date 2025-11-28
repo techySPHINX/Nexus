@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   Box,
   TextField,
@@ -15,7 +15,7 @@ interface FilterBarProps {
   setStatus: (v: string) => void;
 }
 
-const FilterBar: React.FC<FilterBarProps> = ({
+const FilterBar: FC<FilterBarProps> = ({
   search,
   setSearch,
   status,

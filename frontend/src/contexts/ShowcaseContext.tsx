@@ -14,7 +14,16 @@ import {
   ProjectUpdateInterface,
   Tags,
 } from '@/types/ShowcaseType';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  FC,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { saveSmallList, restoreSmallList } from './showcasePersistence';
 import { useAuth } from './AuthContext';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -169,7 +178,7 @@ export interface ShowcaseContextType {
   fetchAllTypes: () => Promise<void>;
 }
 
-const ShowcaseContext = React.createContext<ShowcaseContextType>({
+const ShowcaseContext = createContext<ShowcaseContextType>({
   // Initial states
   projectCounts: { total: 0, owned: 0, supported: 0, followed: 0 },
   allProjects: {
@@ -250,9 +259,7 @@ const ShowcaseContext = React.createContext<ShowcaseContextType>({
   fetchAllTypes: async () => {},
 });
 
-const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [actionLoading, setActionLoading] = useState({
     teamMembers: false,
@@ -353,26 +360,26 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
   const [typeLoading, setTypeLoading] = useState<boolean>(false);
 
   // Refs for better performance
-  const paginationRef = React.useRef(allProjects.pagination);
-  const loadingRef = React.useRef(loading);
-  const projectsCacheRef = React.useRef(projectsCache);
-  const commentsCacheRef = React.useRef(commentsCache);
+  const paginationRef = useRef(allProjects.pagination);
+  const loadingRef = useRef(loading);
+  const projectsCacheRef = useRef(projectsCache);
+  const commentsCacheRef = useRef(commentsCache);
   // Keep track of last-used filters so we can detect when callers pass new filters
-  const lastAllProjectsFilterRef = React.useRef<
+  const lastAllProjectsFilterRef = useRef<FilterProjectInterface | undefined>(
+    undefined
+  );
+  const lastProjectsByUserFilterRef = useRef<
     FilterProjectInterface | undefined
   >(undefined);
-  const lastProjectsByUserFilterRef = React.useRef<
+  const lastSupportedProjectsFilterRef = useRef<
     FilterProjectInterface | undefined
   >(undefined);
-  const lastSupportedProjectsFilterRef = React.useRef<
-    FilterProjectInterface | undefined
-  >(undefined);
-  const lastFollowedProjectsFilterRef = React.useRef<
+  const lastFollowedProjectsFilterRef = useRef<
     FilterProjectInterface | undefined
   >(undefined);
 
   // Helper to normalize filters for equality checks (ignore pagination cursor)
-  const normalizeFilterForCompare = React.useCallback(
+  const normalizeFilterForCompare = useCallback(
     (f?: FilterProjectInterface) => {
       if (!f) return {};
       const copy = { ...f };
@@ -382,8 +389,8 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     []
   );
-  const rehydrateResolveRef = React.useRef<(() => void) | null>(null);
-  const rehydratePromiseRef = React.useRef<Promise<void>>(
+  const rehydrateResolveRef = useRef<(() => void) | null>(null);
+  const rehydratePromiseRef = useRef<Promise<void>>(
     new Promise((res) => {
       rehydrateResolveRef.current = res;
     })
@@ -2173,7 +2180,7 @@ const ShowcaseProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 export const useShowcase = (): ShowcaseContextType => {
-  const context = React.useContext(ShowcaseContext);
+  const context = useContext(ShowcaseContext);
   if (context === undefined) {
     throw new Error('useShowcase must be used within a ShowcaseProvider');
   }

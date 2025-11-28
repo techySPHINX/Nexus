@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   Box,
   TextField,
@@ -30,7 +30,7 @@ interface SubCommunityEditBoxProps {
   onSave: () => void;
 }
 
-export const SubCommunityEditBox: React.FC<SubCommunityEditBoxProps> = ({
+export const SubCommunityEditBox: FC<SubCommunityEditBoxProps> = ({
   community,
   open,
   onClose,

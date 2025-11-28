@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   Container,
   Box,
@@ -49,7 +49,7 @@ interface SearchUser {
 }
 // Removed empty interface Conversation
 
-const ChatPage: React.FC = () => {
+const ChatPage: FC = () => {
   const { user, token } = useAuth();
   const {
     conversations,
@@ -80,7 +80,7 @@ const ChatPage: React.FC = () => {
   const selectedConversation: StoreConversation | null = selectedConversationId
     ? conversations.find((c) => c.id === selectedConversationId) || null
     : null;
-  const messages: Message[] = React.useMemo(
+  const messages: Message[] = useMemo(
     () =>
       selectedConversationId
         ? storeMessages.get(selectedConversationId) || []

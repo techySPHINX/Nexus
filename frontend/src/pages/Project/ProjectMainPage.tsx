@@ -1,5 +1,5 @@
 // ProjectMainPage.tsx - Updated implementation
-import React, { useState, useEffect, useCallback } from 'react';
+import { FC, useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -57,7 +57,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const ProjectsMainPage: React.FC = () => {
+const ProjectsMainPage: FC = () => {
   const {
     projectCounts,
     allProjects,
@@ -116,7 +116,7 @@ const ProjectsMainPage: React.FC = () => {
   const [tabLoading, setTabLoading] = useState(false);
   // Short-lived cache to avoid repeated refetches when an API returns empty results
   // Keyed by `${activeTab}:${JSON.stringify(filters)}` -> timestamp of last empty response
-  const lastEmptyFetchRef = React.useRef<Record<string, number>>({});
+  const lastEmptyFetchRef = useRef<Record<string, number>>({});
   const EMPTY_FETCH_TTL = 60 * 1000; // 60 seconds
 
   useEffect(() => {
@@ -903,4 +903,4 @@ const ProjectsMainPage: React.FC = () => {
   );
 };
 
-export default React.memo(ProjectsMainPage);
+export default memo(ProjectsMainPage);

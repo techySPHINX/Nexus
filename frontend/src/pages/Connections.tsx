@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect } from 'react';
 import {
   Container,
   Typography,
@@ -60,7 +60,7 @@ import type {
 import { apiService } from '../services/api';
 import { LocationOn, School, Email } from '@mui/icons-material';
 
-const Connections: React.FC = () => {
+const Connections: FC = () => {
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');

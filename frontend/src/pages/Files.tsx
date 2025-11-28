@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { FC, useState, useEffect, useRef } from 'react';
 import {
   Container,
   Grid,
@@ -65,7 +65,7 @@ interface UploadForm {
   tags: string;
 }
 
-const Files: React.FC = () => {
+const Files: FC = () => {
   const { user } = useAuth();
   const [files, setFiles] = useState<FileItem[]>([]);
   const [loading, setLoading] = useState(true);

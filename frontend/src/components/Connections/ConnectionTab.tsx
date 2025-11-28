@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   Grid,
   Card,
@@ -56,7 +56,7 @@ interface ConnectionTabProps {
     | 'warning';
 }
 
-const ConnectionTab: React.FC<ConnectionTabProps> = ({
+const ConnectionTab: FC<ConnectionTabProps> = ({
   connections,
   setSelectedUser,
   setMessageDialog,

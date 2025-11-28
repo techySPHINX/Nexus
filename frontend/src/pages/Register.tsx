@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   Container,
   Paper,
@@ -70,7 +70,7 @@ const initialForm: RegisterForm = {
   role: Role.STUDENT,
 };
 
-const Register: React.FC = () => {
+const Register: FC = () => {
   const [formData, setFormData] = useState<RegisterForm>(initialForm);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);

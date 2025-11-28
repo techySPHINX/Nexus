@@ -1,5 +1,5 @@
 // StartupMainPage.tsx
-import React, { useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Box,
   Container,
@@ -49,7 +49,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const StartupMainPage: React.FC = () => {
+const StartupMainPage: FC = () => {
   const {
     stats,
     all,
@@ -253,13 +253,13 @@ const StartupMainPage: React.FC = () => {
     setEditModalOpen(true);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     // fetch initial stats on mount
     getStartupStats();
   }, [getStartupStats]);
 
   // fetch startups when search/status/active tab change (debounced)
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(async () => {
       try {
         if (activeTab === 0) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { FC, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEngagement } from '../../contexts/engagementContext';
 import {
@@ -53,7 +53,7 @@ interface CommentSectionProps {
   onCommentAdded?: () => void;
 }
 
-export const CommentSection: React.FC<CommentSectionProps> = ({
+export const CommentSection: FC<CommentSectionProps> = ({
   postId,
   onCommentAdded,
 }) => {

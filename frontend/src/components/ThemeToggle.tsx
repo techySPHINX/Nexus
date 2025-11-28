@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { IconButton, Tooltip } from '@mui/material';
 import {
   LightMode as LightModeIcon,
@@ -6,7 +6,7 @@ import {
 } from '@mui/icons-material';
 import { useTheme } from '../contexts/ThemeContext';
 
-const ThemeToggle: React.FC = () => {
+const ThemeToggle: FC = () => {
   const { toggleTheme, isDark } = useTheme();
 
   return (

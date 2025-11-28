@@ -1,5 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, {
+import {
+  FC,
+  forwardRef,
   useCallback,
   useEffect,
   useMemo,
@@ -50,7 +52,7 @@ import { useShowcase } from '@/contexts/ShowcaseContext';
  * MotionPaper defined outside component so it doesn't recreate on every render.
  * Keeps wrapper stable to prevent focus/caret issues when typing.
  */
-const MotionPaper = React.forwardRef<HTMLDivElement, any>(function MotionPaper(
+const MotionPaper = forwardRef<HTMLDivElement, any>(function MotionPaper(
   { children, style }: any,
   ref
 ) {
@@ -102,7 +104,7 @@ const EMPTY_FORM: CreateProjectInterface = {
   seeking: undefined, // Change from [] to undefined
 };
 
-const ProjectModal: React.FC<ProjectModalProps> = ({
+const ProjectModal: FC<ProjectModalProps> = ({
   project,
   onClose,
   onSubmit,

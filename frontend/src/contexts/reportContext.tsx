@@ -1,6 +1,13 @@
 import reportServices from '@/services/reportServices';
 import { getErrorMessage } from '@/utils/errorHandler';
-import { createContext, ReactNode, useState, useContext, useMemo } from 'react';
+import {
+  FC,
+  createContext,
+  ReactNode,
+  useState,
+  useContext,
+  useMemo,
+} from 'react';
 import { useNotification } from './NotificationContext';
 import { CreateReportDto, Report } from '@/types/Report';
 
@@ -21,9 +28,7 @@ type ReportContextType = ReportStates & {
 
 const ReportContext = createContext<ReportContextType | undefined>(undefined);
 
-export const ReportProvider: React.FC<{ children: ReactNode }> = ({
-  children,
-}) => {
+export const ReportProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { showNotification } = useNotification();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState<boolean>(false);

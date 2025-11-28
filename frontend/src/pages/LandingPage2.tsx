@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -192,7 +192,7 @@ const pulseVariants = {
   },
 };
 
-const Landing: React.FC = () => {
+const Landing: FC = () => {
   const navigate = useNavigate();
 
   return (

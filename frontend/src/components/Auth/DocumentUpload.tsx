@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Box,
   Paper,
@@ -48,7 +48,7 @@ const ALUMNI_DOCUMENT_TYPES = [
   { value: 'EMPLOYMENT_PROOF', label: 'Employment Proof (Optional)' },
 ];
 
-const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
+const DocumentUploadComponent: FC<DocumentUploadComponentProps> = ({
   onDocumentsChange,
   userRole,
 }) => {
@@ -150,7 +150,7 @@ const DocumentUploadComponent: React.FC<DocumentUploadComponentProps> = ({
     );
   };
   // Sync parent when documents change
-  React.useEffect(() => {
+  useEffect(() => {
     const validDocuments = documents
       .filter((doc) => doc.status === 'success' && doc.url)
       .map((doc) => ({

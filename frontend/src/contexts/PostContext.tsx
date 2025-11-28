@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  FC,
+  ReactNode,
+} from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Post } from '../types/post';
 import {
@@ -89,9 +96,7 @@ interface PostContextType {
 
 const PostContext = createContext<PostContextType | undefined>(undefined);
 
-const PostProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [pendingPosts, setPendingPosts] = useState<Post[]>([]);

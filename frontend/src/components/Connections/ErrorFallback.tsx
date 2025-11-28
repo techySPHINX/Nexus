@@ -1,5 +1,4 @@
-// components/ErrorFallback.tsx
-import React from 'react';
+import { FC } from 'react';
 import { Alert, Button } from '@mui/material';
 
 interface ErrorFallbackProps {
@@ -7,7 +6,7 @@ interface ErrorFallbackProps {
   resetErrorBoundary: () => void;
 }
 
-export const ErrorFallback: React.FC<ErrorFallbackProps> = ({
+export const ErrorFallback: FC<ErrorFallbackProps> = ({
   error,
   resetErrorBoundary,
 }) => {

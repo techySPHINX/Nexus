@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -36,9 +36,10 @@ const COMMUNITY_TYPES = [
   'OTHER',
 ];
 
-export const SubCommunityRequestDialog: React.FC<
-  SubCommunityRequestDialogProps
-> = ({ open, onClose }) => {
+export const SubCommunityRequestDialog: FC<SubCommunityRequestDialogProps> = ({
+  open,
+  onClose,
+}) => {
   const { createSubCommunityRequest } = useSubCommunity();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');

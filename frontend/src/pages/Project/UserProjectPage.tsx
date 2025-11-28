@@ -1,11 +1,11 @@
-import React, { useEffect, useCallback } from 'react';
+import { FC, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, IconButton, Skeleton, Stack } from '@mui/material';
 import { ArrowBack } from '@mui/icons-material';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import ProjectGrid from '@/components/Project/ProjectGrid';
 
-const UserProjectPage: React.FC = () => {
+const UserProjectPage: FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
 

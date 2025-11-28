@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { StartupSummary } from '@/types/StartupType';
 import { motion } from 'framer-motion';
 import {
@@ -33,7 +33,7 @@ interface Props {
   tab: number;
 }
 
-const StartupCard: React.FC<Props> = ({
+const StartupCard: FC<Props> = ({
   startup,
   onFollowToggle,
   onView,

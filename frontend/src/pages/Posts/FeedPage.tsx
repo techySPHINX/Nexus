@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { FC, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { useProfile } from '../../contexts/ProfileContext';
@@ -18,7 +18,7 @@ import {
 import { CreatePostForm } from '../../components/Post/CreatePostForm';
 import { getErrorMessage } from '@/utils/errorHandler';
 
-const FeedPage: React.FC = () => {
+const FeedPage: FC = () => {
   const { feed, getFeed, pagination, loading, error, clearError } = usePosts();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();

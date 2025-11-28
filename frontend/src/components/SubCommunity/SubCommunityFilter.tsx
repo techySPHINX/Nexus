@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   Box,
   FormControl,
@@ -23,11 +23,7 @@ interface Props {
   types?: string[];
 }
 
-export const SubCommunityFilter: React.FC<Props> = ({
-  value,
-  onChange,
-  onApply,
-}) => {
+export const SubCommunityFilter: FC<Props> = ({ value, onChange, onApply }) => {
   const handlePrivacy = (e: SelectChangeEvent) => {
     onChange({
       ...value,

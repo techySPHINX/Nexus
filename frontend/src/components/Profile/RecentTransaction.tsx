@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { FC, useCallback, useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -36,14 +36,14 @@ interface RecentTransactionsProps {
   compact?: boolean;
 }
 
-const RecentTransactions: React.FC<RecentTransactionsProps> = ({
+const RecentTransactions: FC<RecentTransactionsProps> = ({
   userId,
   maxItems = 5,
   compact = true,
 }) => {
   const theme = useTheme();
-  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const { getUserTransactions } = useProfile();
 
   const fetchTransactions = useCallback(async () => {
@@ -59,7 +59,7 @@ const RecentTransactions: React.FC<RecentTransactionsProps> = ({
     }
   }, [userId, maxItems, getUserTransactions]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchTransactions();
   }, [userId, maxItems, fetchTransactions]);
 

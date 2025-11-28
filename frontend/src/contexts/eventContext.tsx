@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { FC, createContext, useContext, useState, useCallback } from 'react';
 import { EventService } from '@/services/EventService';
 import type { Event } from '@/types/Event';
 import { useNotification } from './NotificationContext';
@@ -28,7 +28,7 @@ export const useEventContext = (): EventContextShape => {
   return ctx;
 };
 
-export const EventProvider: React.FC<{ children: React.ReactNode }> = ({
+export const EventProvider: FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { showNotification } = useNotification();

@@ -1,5 +1,14 @@
 // StartupContext.tsx
-import React, { useCallback, useMemo, useState } from 'react';
+import {
+  createContext,
+  FC,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { ShowcaseService } from '@/services/ShowcaseService';
 import {
   StartupSummary,
@@ -84,7 +93,7 @@ export interface StartupContextType {
   refreshTab: (tab: number) => Promise<void>;
 }
 
-export const StartupContext = React.createContext<StartupContextType>({
+export const StartupContext = createContext<StartupContextType>({
   stats: { totalStartups: 0, myStartups: 0, followedStartups: 0 },
   all: { data: [], nextCursor: null, hasNext: false, loading: false },
   mine: { data: [], nextCursor: null, hasNext: false, loading: false },
@@ -104,9 +113,7 @@ export const StartupContext = React.createContext<StartupContextType>({
   refreshTab: async () => {},
 });
 
-const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+const StartupProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   type RawStartup = StartupSummary & { startupFollower?: { userId: string }[] };
 
   const [stats, setStats] = useState<StartupStats>({
@@ -139,30 +146,30 @@ const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
   });
 
   // Refs to avoid duplicate fetches and inspect pagination/loading without stale closures
-  const allPaginationRef = React.useRef({
+  const allPaginationRef = useRef({
     nextCursor: all.nextCursor,
     hasNext: all.hasNext,
   });
-  const allLoadingRef = React.useRef(all.loading);
-  const allFilterRef = React.useRef<string | null>(null);
-  const minePaginationRef = React.useRef({
+  const allLoadingRef = useRef(all.loading);
+  const allFilterRef = useRef<string | null>(null);
+  const minePaginationRef = useRef({
     nextCursor: mine.nextCursor,
     hasNext: mine.hasNext,
   });
-  const mineLoadingRef = React.useRef(mine.loading);
-  const mineFilterRef = React.useRef<string | null>(null);
-  const followedPaginationRef = React.useRef({
+  const mineLoadingRef = useRef(mine.loading);
+  const mineFilterRef = useRef<string | null>(null);
+  const followedPaginationRef = useRef({
     nextCursor: followed.nextCursor,
     hasNext: followed.hasNext,
   });
-  const followedLoadingRef = React.useRef(followed.loading);
-  const followedFilterRef = React.useRef<string | null>(null);
-  const allDataRef = React.useRef(all.data);
-  const mineDataRef = React.useRef(mine.data);
-  const followedDataRef = React.useRef(followed.data);
+  const followedLoadingRef = useRef(followed.loading);
+  const followedFilterRef = useRef<string | null>(null);
+  const allDataRef = useRef(all.data);
+  const mineDataRef = useRef(mine.data);
+  const followedDataRef = useRef(followed.data);
 
   // keep refs in sync with state to avoid stale closures and enable safe early-returns
-  React.useEffect(() => {
+  useEffect(() => {
     allPaginationRef.current = {
       nextCursor: all.nextCursor,
       hasNext: all.hasNext,
@@ -876,7 +883,7 @@ const StartupProvider: React.FC<{ children: React.ReactNode }> = ({
 };
 
 export const useStartup = (): StartupContextType => {
-  const context = React.useContext(StartupContext);
+  const context = useContext(StartupContext);
   if (context === undefined) {
     throw new Error('useStartup must be used within a StartupProvider');
   }

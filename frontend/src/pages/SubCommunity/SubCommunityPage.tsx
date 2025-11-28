@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { FC, Suspense, useState, useEffect, useRef, ChangeEvent } from 'react';
 import {
   Box,
   Typography,
@@ -38,7 +38,7 @@ import { getErrorMessage } from '@/utils/errorHandler';
 // previously caused repeated API calls).
 // No module-level initiated set any more — we rely on context's loading
 // state and caching to determine whether a section has started loading.
-const LazySection: React.FC<{
+const LazySection: FC<{
   typeId: string;
   title: string;
   initialCount?: number;
@@ -344,7 +344,7 @@ const LazySection: React.FC<{
     </div>
   );
 };
-const SubCommunitiesPage: React.FC = () => {
+const SubCommunitiesPage: FC = () => {
   const {
     subCommunities,
     loading,
@@ -359,8 +359,8 @@ const SubCommunitiesPage: React.FC = () => {
 
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = React.useState<SubCommunity[]>([]);
-  const [searchLoading, setSearchLoading] = React.useState(false);
+  const [searchResults, setSearchResults] = useState<SubCommunity[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [pendingFilter, setPendingFilter] = useState<SubCommunityFilterValue>({
     privacy: 'all',
     sort: 'recommended',
@@ -398,7 +398,7 @@ const SubCommunitiesPage: React.FC = () => {
   // store results separately in `searchResults` so we don't replace the
   // main `subCommunities` cache. This guarantees the search queries the
   // database and returns matches even if they weren't previously loaded.
-  React.useEffect(() => {
+  useEffect(() => {
     const q = searchTerm?.trim();
     if (!q) {
       setSearchResults([]);
@@ -596,7 +596,7 @@ const SubCommunitiesPage: React.FC = () => {
         fullWidth
         placeholder="Search communities by name, description, or type..."
         value={searchTerm}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+        onChange={(e: ChangeEvent<HTMLInputElement>) =>
           setSearchTerm(e.target.value)
         }
         sx={{ mb: 4 }}
@@ -720,13 +720,13 @@ const SubCommunitiesPage: React.FC = () => {
 
       {/* Manage Types dialog for admins */}
       {isAdmin && (
-        <React.Suspense fallback={null}>
+        <Suspense fallback={null}>
           {/* Lazy load to avoid bundling if not used often */}
           <ManageTypesDialog
             open={manageTypesOpen}
             onClose={() => setManageTypesOpen(false)}
           />
-        </React.Suspense>
+        </Suspense>
       )}
 
       {/* Error Snackbar */}

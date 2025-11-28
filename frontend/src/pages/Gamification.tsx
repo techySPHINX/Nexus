@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -56,7 +56,7 @@ interface Transaction {
   description?: string;
 }
 
-const GamificationPage: React.FC = () => {
+const GamificationPage: FC = () => {
   const theme = useTheme();
   const { user } = useAuth();
   const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'all'>(

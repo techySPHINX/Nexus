@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { Post } from '../../components/Post/Post';
@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { Home, ArrowBack, Comment as CommentIcon } from '@mui/icons-material';
 
-const PostDetailPage: React.FC = () => {
+const PostDetailPage: FC = () => {
   const { id } = useParams<{ id: string }>();
   const { currentPost, getPost, loading, error, incrementCurrentPostComments } =
     usePosts();

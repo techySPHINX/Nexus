@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { FC, useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -38,17 +38,17 @@ interface LeaderboardProps {
 }
 type TimePeriod = 'day' | 'week' | 'month';
 
-const Leaderboard: React.FC<LeaderboardProps> = ({
+const Leaderboard: FC<LeaderboardProps> = ({
   currentUserId,
   maxItems = 8,
   compact = true,
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [leaderboard, setLeaderboard] = React.useState<LeaderboardUser[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const { getLeaderboard } = useDashboardContext();
-  const [isListLoading, setIsListLoading] = React.useState(true);
-  const [timePeriod, setTimePeriod] = React.useState<TimePeriod>('week');
+  const [isListLoading, setIsListLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
 
   const fetchLeaderboard = useCallback(
     async (period: TimePeriod = 'week') => {
@@ -108,7 +108,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
     [maxItems, getLeaderboard]
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     // only reload leaderboard entries when timePeriod changes
     fetchLeaderboard(timePeriod);
   }, [timePeriod, fetchLeaderboard]);

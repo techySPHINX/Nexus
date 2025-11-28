@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Container,
   Paper,
@@ -56,7 +56,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getErrorMessage } from '@/utils/errorHandler';
 // import RecentTransactions from '@/components/Profile/RecentTransaction';
 
-const Profile: React.FC = () => {
+const Profile: FC = () => {
   const {
     profile,
     badges,
@@ -270,7 +270,7 @@ const Profile: React.FC = () => {
     }
   };
 
-  const InfoCard: React.FC<{
+  const InfoCard: FC<{
     icon: React.ReactNode;
     title: string;
     value?: string | null;

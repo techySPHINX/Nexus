@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -77,7 +77,7 @@ const getStatusChip = (status: RequestStatus) => {
   );
 };
 
-export const AdminSubCommunityModerationPage: React.FC = () => {
+export const AdminSubCommunityModerationPage: FC = () => {
   const { user } = useAuth();
   const {
     creationRequests,
@@ -267,7 +267,7 @@ export const AdminSubCommunityModerationPage: React.FC = () => {
 };
 
 // Tab Components for better code splitting
-const PendingRequestsTab: React.FC<{
+const PendingRequestsTab: FC<{
   requests: SubCommunityCreationRequest[];
   onViewDetails: (request: SubCommunityCreationRequest) => void;
   onApprove: (requestId: string) => void;
@@ -302,7 +302,7 @@ const PendingRequestsTab: React.FC<{
   );
 };
 
-const ApprovedRequestsTab: React.FC<{
+const ApprovedRequestsTab: FC<{
   requests: SubCommunityCreationRequest[];
   onViewDetails: (request: SubCommunityCreationRequest) => void;
 }> = ({ requests, onViewDetails }) => {
@@ -331,7 +331,7 @@ const ApprovedRequestsTab: React.FC<{
   );
 };
 
-const RejectedRequestsTab: React.FC<{
+const RejectedRequestsTab: FC<{
   requests: SubCommunityCreationRequest[];
   onViewDetails: (request: SubCommunityCreationRequest) => void;
 }> = ({ requests, onViewDetails }) => {
@@ -361,7 +361,7 @@ const RejectedRequestsTab: React.FC<{
 };
 
 // Request Card Component
-const RequestCard: React.FC<{
+const RequestCard: FC<{
   request: SubCommunityCreationRequest;
   onViewDetails: (request: SubCommunityCreationRequest) => void;
   onApprove?: (requestId: string) => void;
@@ -466,7 +466,7 @@ const RequestCard: React.FC<{
 };
 
 // Request Detail Dialog Component
-const RequestDetailDialog: React.FC<{
+const RequestDetailDialog: FC<{
   open: boolean;
   request: SubCommunityCreationRequest | null;
   onClose: () => void;

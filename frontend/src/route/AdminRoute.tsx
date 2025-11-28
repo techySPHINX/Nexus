@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -6,7 +6,7 @@ interface AdminRouteProps {
   children: React.ReactElement;
 }
 
-const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
+const AdminRoute: FC<AdminRouteProps> = ({ children }) => {
   const { user, token, loading } = useAuth();
 
   const isAuthenticated = !!token && !!user; // ✅ derive auth

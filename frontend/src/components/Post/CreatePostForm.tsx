@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { FC, useState, useCallback } from 'react';
 import { usePosts } from '../../contexts/PostContext';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -35,7 +35,7 @@ interface CreatePostFormProps {
   userRole?: SubCommunityRole | null;
 }
 
-export const CreatePostForm: React.FC<CreatePostFormProps> = ({
+export const CreatePostForm: FC<CreatePostFormProps> = ({
   subCommunityId,
   subCommunityName,
   onSuccess,

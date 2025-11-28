@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   Container,
   Paper,
@@ -25,7 +25,7 @@ import { motion } from 'framer-motion';
 import ThemeToggle from '../components/ThemeToggle';
 import { getErrorMessage } from '@/utils/errorHandler';
 
-const Login: React.FC = () => {
+const Login: FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);

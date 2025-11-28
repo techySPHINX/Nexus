@@ -1,10 +1,12 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
   useCallback,
   useMemo,
   useRef,
+  FC,
+  ReactNode,
 } from 'react';
 import { subCommunityService } from '../services/subCommunityService';
 import {
@@ -268,7 +270,7 @@ class Semaphore {
   }
 }
 
-export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
+export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const [subCommunities, setSubCommunities] = useState<SubCommunity[]>([]);

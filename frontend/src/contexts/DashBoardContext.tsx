@@ -1,6 +1,7 @@
 import { ConnectionStats, ConnectionSuggestion } from '@/types/connections';
 import { getErrorMessage } from '@/utils/errorHandler';
-import React, {
+import {
+  FC,
   createContext,
   useCallback,
   useContext,
@@ -83,9 +84,7 @@ const DashboardContext = createContext<DashboardContextType | undefined>(
   undefined
 );
 
-const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+const DashboardProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState<LoadingState>({
     dashboard: false,

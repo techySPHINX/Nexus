@@ -1,5 +1,5 @@
 // EditStartupModal.tsx
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect, FormEvent } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -37,7 +37,7 @@ interface EditStartupModalProps {
   loading?: boolean;
 }
 
-const EditStartupModal: React.FC<EditStartupModalProps> = ({
+const EditStartupModal: FC<EditStartupModalProps> = ({
   open,
   onClose,
   onSubmit,
@@ -72,7 +72,7 @@ const EditStartupModal: React.FC<EditStartupModalProps> = ({
     }
   }, [startup]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     await onSubmit({
       ...formData,

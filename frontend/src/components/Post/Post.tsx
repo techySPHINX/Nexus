@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePosts } from '../../contexts/PostContext';
 import { useEngagement } from '../../contexts/engagementContext';
@@ -56,7 +56,7 @@ interface PostProps {
   onClick?: () => void;
 }
 
-export const Post: React.FC<PostProps> = ({
+export const Post: FC<PostProps> = ({
   post,
   onUpdate,
   onDelete,
