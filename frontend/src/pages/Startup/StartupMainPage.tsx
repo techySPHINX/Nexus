@@ -51,9 +51,11 @@ function TabPanel(props: TabPanelProps) {
 
 const StartupMainPage: React.FC = () => {
   const {
+    stats,
     all,
     mine,
     followed,
+    getStartupStats,
     getComments,
     getStartups,
     getMyStartups,
@@ -251,6 +253,11 @@ const StartupMainPage: React.FC = () => {
     setEditModalOpen(true);
   };
 
+  React.useEffect(() => {
+    // fetch initial stats on mount
+    getStartupStats();
+  }, [getStartupStats]);
+
   // fetch startups when search/status/active tab change (debounced)
   React.useEffect(() => {
     const timer = setTimeout(async () => {
@@ -291,9 +298,9 @@ const StartupMainPage: React.FC = () => {
   ]);
 
   // when switching tabs, we can optionally scroll to top of list
-  React.useEffect(() => {
-    window.scrollTo({ top: 200, behavior: 'smooth' });
-  }, [activeTab]);
+  // React.useEffect(() => {
+  //   window.scrollTo({ top: 200, behavior: 'smooth' });
+  // }, [activeTab]);
 
   return (
     <Container maxWidth="xl" sx={{ py: 4, position: 'relative' }}>
@@ -398,22 +405,24 @@ const StartupMainPage: React.FC = () => {
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
           <Chip
             icon={<Rocket />}
-            label={`${currentList.data.length} Startups`}
+            label={`${stats.totalStartups} Startups`}
             color="primary"
             variant="outlined"
           />
           <Chip
             icon={<People />}
-            label={`${currentList.data.reduce((acc, s) => acc + (s.followersCount || 0), 0)} Total Followers`}
+            label={`${stats.followedStartups} Total Followers`}
             color="secondary"
             variant="outlined"
           />
-          <Chip
-            icon={<TrendingUp />}
-            label={`${currentList.data.filter((s) => s.status === 'LAUNCHED').length} Launched`}
-            color="success"
-            variant="outlined"
-          />
+          {stats.myStartups !== undefined && stats.myStartups !== 0 && (
+            <Chip
+              icon={<TrendingUp />}
+              label={`${stats.myStartups} Launched`}
+              color="success"
+              variant="outlined"
+            />
+          )}
         </Box>
 
         {/* Search and Filter Bar */}
@@ -432,7 +441,9 @@ const StartupMainPage: React.FC = () => {
           >
             <Tab label="All Startups" />
             <Tab label="Following" />
-            <Tab label="My Startups" />
+            {stats.myStartups !== undefined && stats.myStartups !== 0 && (
+              <Tab label="My Startups" />
+            )}
           </Tabs>
         </Box>
 

@@ -25,6 +25,7 @@ import {
   Alert,
   Tooltip,
 } from '@mui/material';
+import ReportButton from '../Report/ReportButton';
 import {
   MoreVert,
   Favorite,
@@ -76,15 +77,17 @@ export const Post: React.FC<PostProps> = ({
   const { voteOnPost, loading: engagementLoading } = useEngagement();
   const navigate = useNavigate();
 
+  const isPostPage = window.location.pathname === `/posts/${post.id}`;
+
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(post?.content || '');
+  const [editedSubject, setEditedSubject] = useState(post?.subject || '');
   const [isLiked, setIsLiked] = useState(
     (post.Vote || []).some((vote) => vote.type === VoteType.UPVOTE)
   );
   const [likeCount, setLikeCount] = useState(post?._count?.Vote || 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | undefined>(
     post?.imageUrl
   );
@@ -103,6 +106,9 @@ export const Post: React.FC<PostProps> = ({
   };
 
   const handleEdit = () => {
+    setEditedSubject(post.subject || '');
+    setEditedContent(post.content || '');
+    setImagePreview(post.imageUrl);
     setIsEditing(true);
     handleMenuClose();
   };
@@ -110,13 +116,19 @@ export const Post: React.FC<PostProps> = ({
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditedContent(post.content);
+    setEditedSubject(post.subject || '');
     setImagePreview(post.imageUrl);
-    setImageFile(null);
   };
 
   const handleSaveEdit = async () => {
     try {
-      await updatePostContext(post.id, editedContent, imageFile || undefined);
+      await updatePostContext(
+        post.id,
+        editedSubject,
+        editedContent,
+        imagePreview || undefined
+      );
+
       setIsEditing(false);
       if (onUpdate) onUpdate();
       setSnackbar({
@@ -186,7 +198,7 @@ export const Post: React.FC<PostProps> = ({
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setImageFile(file);
+      // store preview only; we'll send the preview string to update
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -284,12 +296,29 @@ export const Post: React.FC<PostProps> = ({
             to={`/profile/${post.author.id}`}
             style={{ textDecoration: 'none' }}
           >
-            <Avatar
-              src={post.author.profile?.avatarUrl}
-              sx={{ bgcolor: 'primary.light', cursor: 'pointer' }}
-            >
-              {post.author.name?.charAt(0) || 'N'}
-            </Avatar>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Avatar
+                src={post.author.profile?.avatarUrl}
+                sx={{ bgcolor: 'primary.light', cursor: 'pointer' }}
+              >
+                {post.author.name?.charAt(0) || 'N'}
+              </Avatar>
+              {/* Thumbnail only on the post detail page */}
+              {/* {isPostPage && post.imageUrl && (
+                <Box
+                  component="img"
+                  src={post.imageUrl}
+                  alt="Post thumbnail"
+                  sx={{
+                    width: { xs: 40, sm: 56 },
+                    height: { xs: 40, sm: 56 },
+                    objectFit: 'cover',
+                    borderRadius: 1,
+                    display: 'block',
+                  }}
+                />
+              )} */}
+            </Box>
           </Link>
         }
         action={
@@ -389,12 +418,34 @@ export const Post: React.FC<PostProps> = ({
       <CardContent>
         {isEditing ? (
           <>
+            {/* Show preview above inputs when editing on the post page */}
+            {isPostPage && imagePreview && (
+              <Box sx={{ mb: 2 }}>
+                <img
+                  src={imagePreview}
+                  alt="Preview"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '300px',
+                    display: 'block',
+                  }}
+                />
+              </Box>
+            )}
+            <TextField
+              fullWidth
+              value={editedSubject}
+              onChange={(e) => setEditedSubject(e.target.value)}
+              sx={{ mb: 2 }}
+              label="Subject"
+            />
             <TextField
               fullWidth
               multiline
               value={editedContent}
               onChange={(e) => setEditedContent(e.target.value)}
               sx={{ mb: 2 }}
+              label="Content"
             />
             <input
               accept="image/*"
@@ -408,15 +459,6 @@ export const Post: React.FC<PostProps> = ({
                 Change Image
               </Button>
             </label>
-            {imagePreview && (
-              <Box sx={{ mt: 2, mb: 2 }}>
-                <img
-                  src={imagePreview}
-                  alt="Preview"
-                  style={{ maxWidth: '100%', maxHeight: '300px' }}
-                />
-              </Box>
-            )}
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
               <Button onClick={handleCancelEdit} sx={{ mr: 2 }}>
                 Cancel
@@ -495,7 +537,9 @@ export const Post: React.FC<PostProps> = ({
                   </Typography>
                 )}
 
-              {post.imageUrl && <PostImage imageUrl={post.imageUrl} />}
+              {isPostPage && post.imageUrl && (
+                <PostImage imageUrl={post.imageUrl} />
+              )}
             </Box>
             {isAdminView && post.status && (
               <Chip
@@ -546,6 +590,7 @@ export const Post: React.FC<PostProps> = ({
               <Share />
             </Tooltip>
           </IconButton>
+          <ReportButton type="POST" postId={post.id} />
         </CardActions>
       )}
 

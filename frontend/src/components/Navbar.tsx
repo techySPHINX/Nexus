@@ -36,6 +36,8 @@ import {
   ChevronRight,
   LightMode,
   DarkMode,
+  Event,
+  Gamepad,
 } from '@mui/icons-material';
 import Brightness4 from '@mui/icons-material/Brightness4';
 import Brightness7 from '@mui/icons-material/Brightness7';
@@ -81,6 +83,7 @@ const Navbar: React.FC = () => {
     { text: 'Community', icon: <People />, path: '/subcommunities' },
     { text: 'Project', icon: <Assignment />, path: '/projects' },
     { text: 'Startup', icon: <Folder />, path: '/startups' },
+    { text: 'Events', icon: <Event />, path: '/events' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -201,6 +204,16 @@ const Navbar: React.FC = () => {
                 </MenuItem>
                 <MenuItem
                   component={Link}
+                  to="/gamification"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Gamepad />
+                  </ListItemIcon>
+                  Gamification
+                </MenuItem>
+                <MenuItem
+                  component={Link}
                   to="/feed"
                   onClick={handleUserMenuClose}
                 >
@@ -222,40 +235,48 @@ const Navbar: React.FC = () => {
                   </MenuItem>
                 )}
                 {user?.role === 'ADMIN' && (
-                  <MenuItem
-                    component={Link}
-                    to="/admin/moderation"
-                    onClick={handleUserMenuClose}
-                  >
-                    <ListItemIcon>
-                      <Person />
-                    </ListItemIcon>
-                    Feed Moderation
-                  </MenuItem>
-                )}
-                {user?.role === 'ADMIN' && (
-                  <MenuItem
-                    component={Link}
-                    to="/admin/document-verification"
-                    onClick={handleUserMenuClose}
-                  >
-                    <ListItemIcon>
-                      <Assignment />
-                    </ListItemIcon>
-                    Document Verification
-                  </MenuItem>
-                )}
-                {user?.role === 'ADMIN' && (
-                  <MenuItem
-                    component={Link}
-                    to="/admin/moderation/subcommunities"
-                    onClick={handleUserMenuClose}
-                  >
-                    <ListItemIcon>
-                      <Person />
-                    </ListItemIcon>
-                    SubCommunity Moderation
-                  </MenuItem>
+                  <>
+                    <MenuItem
+                      component={Link}
+                      to="/admin/moderation"
+                      onClick={handleUserMenuClose}
+                    >
+                      <ListItemIcon>
+                        <Person />
+                      </ListItemIcon>
+                      Feed Moderation
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/admin/document-verification"
+                      onClick={handleUserMenuClose}
+                    >
+                      <ListItemIcon>
+                        <Assignment />
+                      </ListItemIcon>
+                      Document Verification
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/admin/moderation/subcommunities"
+                      onClick={handleUserMenuClose}
+                    >
+                      <ListItemIcon>
+                        <Person />
+                      </ListItemIcon>
+                      SubCommunity Moderation
+                    </MenuItem>
+                    <MenuItem
+                      component={Link}
+                      to="/admin/events/create"
+                      onClick={handleUserMenuClose}
+                    >
+                      <ListItemIcon>
+                        <Event />
+                        Create Events
+                      </ListItemIcon>
+                    </MenuItem>
+                  </>
                 )}
                 <MenuItem
                   component={Link}
@@ -379,6 +400,11 @@ const Navbar: React.FC = () => {
             zIndex: theme.zIndex.drawer + 1,
             transition: 'width 300ms cubic-bezier(0.4,0,0.2,1)',
             overflowX: 'hidden',
+            // Layout as column so header, scroll area and bottom controls are stacked
+            display: 'flex',
+            flexDirection: 'column',
+            // Allow absolutely positioned bottom controls to be visible above the scroll area
+            overflow: 'visible',
           }}
         >
           <Box
@@ -410,85 +436,137 @@ const Navbar: React.FC = () => {
           </Box>
 
           {user ? (
-            <Box
-              sx={{
-                flex: 1,
-                overflowY: 'auto',
-                // Custom scrollbar for the sidebar
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: 'transparent',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: 'rgba(255,255,255,0.12)',
-                  borderRadius: 4,
-                },
-                scrollbarWidth: 'thin',
-                scrollbarColor: 'rgba(255,255,255,0.12) transparent',
-              }}
-            >
-              <List sx={{ px: 1 }}>
-                {navigationItems.map((item) => {
-                  if (collapsed) {
-                    return (
-                      <Tooltip
-                        key={item.text}
-                        title={item.text}
-                        placement="right"
-                        arrow
-                      >
-                        <ListItem
-                          component={Link}
-                          to={item.path}
-                          button
-                          sx={{
-                            mb: 0.5,
-                            borderRadius: 2,
-                            bgcolor: isActive(item.path)
-                              ? 'rgba(255,255,255,0.06)'
-                              : 'transparent',
-                            color: 'inherit',
-                            '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
-                            px: 1,
-                            justifyContent: 'flex-start',
-                            alignItems: 'center',
-                            minHeight: 36,
-                          }}
+            <>
+              <Box
+                sx={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  // Ensure content doesn't get hidden behind the fixed bottom controls
+                  pb: '120px',
+                  // Custom scrollbar for the sidebar
+                  '&::-webkit-scrollbar': {
+                    width: '8px',
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    background: 'transparent',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    borderRadius: 4,
+                  },
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'rgba(255,255,255,0.12) transparent',
+                }}
+              >
+                <List sx={{ px: 1 }}>
+                  {navigationItems.map((item) => {
+                    if (collapsed) {
+                      return (
+                        <Tooltip
+                          key={item.text}
+                          title={item.text}
+                          placement="right"
+                          arrow
                         >
-                          <ListItemIcon
+                          <ListItem
+                            component={Link}
+                            to={item.path}
+                            button
                             sx={{
+                              mb: 0.5,
+                              borderRadius: 2,
+                              bgcolor: isActive(item.path)
+                                ? 'rgba(255,255,255,0.06)'
+                                : 'transparent',
                               color: 'inherit',
-                              minWidth: 32,
-                              justifyContent: 'center',
-                              mr: 1,
+                              '&:hover': { bgcolor: 'rgba(255,255,255,0.08)' },
+                              px: 1,
+                              justifyContent: 'flex-start',
+                              alignItems: 'center',
+                              minHeight: 36,
                             }}
                           >
-                            {item.icon}
-                          </ListItemIcon>
-                        </ListItem>
-                      </Tooltip>
-                    );
-                  }
+                            <ListItemIcon
+                              sx={{
+                                color: 'inherit',
+                                minWidth: 32,
+                                justifyContent: 'center',
+                                mr: 1,
+                              }}
+                            >
+                              {item.icon}
+                            </ListItemIcon>
+                          </ListItem>
+                        </Tooltip>
+                      );
+                    }
 
-                  return (
+                    return (
+                      <ListItem
+                        key={item.text}
+                        component={Link}
+                        to={item.path}
+                        button
+                        sx={{
+                          mb: 0.7,
+                          borderRadius: 2,
+                          bgcolor: isActive(item.path)
+                            ? 'rgba(255,255,255,0.06)'
+                            : 'transparent',
+                          color: 'inherit',
+                          '&:hover': {
+                            bgcolor: 'rgba(255,255,255,0.08)',
+                          },
+                          px: 0.5,
+                          justifyContent: 'flex-start',
+                          alignItems: 'center',
+                          minHeight: 36,
+                        }}
+                      >
+                        <ListItemIcon
+                          sx={{
+                            color: 'inherit',
+                            minWidth: 32,
+                            justifyContent: 'center',
+                            mr: 1,
+                          }}
+                        >
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.text}
+                          primaryTypographyProps={{
+                            fontWeight: isActive(item.path) ? 600 : 400,
+                            sx: { fontSize: '0.85rem', color: 'inherit' },
+                          }}
+                          sx={{
+                            opacity: collapsed ? 0 : 1,
+                            maxWidth: collapsed ? 0 : 160,
+                            transition:
+                              'opacity 300ms ease, max-width 320ms ease, transform 300ms ease',
+                            transform: collapsed
+                              ? 'translateX(-6px)'
+                              : 'translateX(0)',
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                          }}
+                        />
+                      </ListItem>
+                    );
+                  })}
+                  {user?.role === 'ADMIN' && (
                     <ListItem
-                      key={item.text}
                       component={Link}
-                      to={item.path}
+                      to="/admin/document-verification"
                       button
                       sx={{
-                        mb: 0.7,
+                        mb: 1,
                         borderRadius: 2,
-                        bgcolor: isActive(item.path)
+                        bgcolor: isActive('/admin/document-verification')
                           ? 'rgba(255,255,255,0.06)'
                           : 'transparent',
                         color: 'inherit',
-                        '&:hover': {
-                          bgcolor: 'rgba(255,255,255,0.08)',
-                        },
-                        px: 0.5,
+                        px: 1,
                         justifyContent: 'flex-start',
                         alignItems: 'center',
                         minHeight: 36,
@@ -496,87 +574,39 @@ const Navbar: React.FC = () => {
                     >
                       <ListItemIcon
                         sx={{
-                          color: 'inherit',
                           minWidth: 32,
                           justifyContent: 'center',
                           mr: 1,
                         }}
                       >
-                        {item.icon}
+                        <Assignment />
                       </ListItemIcon>
-                      <ListItemText
-                        primary={item.text}
-                        primaryTypographyProps={{
-                          fontWeight: isActive(item.path) ? 600 : 400,
-                          sx: { fontSize: '0.85rem', color: 'inherit' },
-                        }}
-                        sx={{
-                          opacity: collapsed ? 0 : 1,
-                          maxWidth: collapsed ? 0 : 160,
-                          transition:
-                            'opacity 300ms ease, max-width 320ms ease, transform 300ms ease',
-                          transform: collapsed
-                            ? 'translateX(-6px)'
-                            : 'translateX(0)',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                        }}
-                      />
+                      {!collapsed && (
+                        <ListItemText
+                          primary="Document Verification"
+                          primaryTypographyProps={{
+                            fontWeight: isActive('/admin/document-verification')
+                              ? 600
+                              : 400,
+                          }}
+                          sx={{
+                            opacity: collapsed ? 0 : 1,
+                            maxWidth: collapsed ? 0 : 160,
+                            transition:
+                              'opacity 300ms ease, max-width 320ms ease, transform 300ms ease',
+                            transform: collapsed
+                              ? 'translateX(-6px)'
+                              : 'translateX(0)',
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                          }}
+                        />
+                      )}
                     </ListItem>
-                  );
-                })}
-                {user?.role === 'ADMIN' && (
-                  <ListItem
-                    component={Link}
-                    to="/admin/document-verification"
-                    button
-                    sx={{
-                      mb: 1,
-                      borderRadius: 2,
-                      bgcolor: isActive('/admin/document-verification')
-                        ? 'rgba(255,255,255,0.06)'
-                        : 'transparent',
-                      color: 'inherit',
-                      px: 1,
-                      justifyContent: 'flex-start',
-                      alignItems: 'center',
-                      minHeight: 36,
-                    }}
-                  >
-                    <ListItemIcon
-                      sx={{
-                        minWidth: 32,
-                        justifyContent: 'center',
-                        mr: 1,
-                      }}
-                    >
-                      <Assignment />
-                    </ListItemIcon>
-                    {!collapsed && (
-                      <ListItemText
-                        primary="Document Verification"
-                        primaryTypographyProps={{
-                          fontWeight: isActive('/admin/document-verification')
-                            ? 600
-                            : 400,
-                        }}
-                        sx={{
-                          opacity: collapsed ? 0 : 1,
-                          maxWidth: collapsed ? 0 : 160,
-                          transition:
-                            'opacity 300ms ease, max-width 320ms ease, transform 300ms ease',
-                          transform: collapsed
-                            ? 'translateX(-6px)'
-                            : 'translateX(0)',
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                        }}
-                      />
-                    )}
-                  </ListItem>
-                )}
-              </List>
-            </Box>
+                  )}
+                </List>
+              </Box>
+            </>
           ) : (
             <Box
               sx={{
@@ -685,9 +715,13 @@ const Navbar: React.FC = () => {
                 position: 'absolute',
                 left: 0,
                 right: 0,
-                bottom: 16,
+                bottom: 10,
                 px: 2,
                 background: 'transparent',
+                // Keep above the scrollable content
+                zIndex: theme.zIndex.drawer + 3,
+                // Ensure it captures pointer events
+                pointerEvents: 'auto',
               }}
             >
               {/* Collapse control sits above the user card */}
@@ -800,6 +834,16 @@ const Navbar: React.FC = () => {
               </ListItemIcon>
               Notification
             </MenuItem>
+            <MenuItem
+              component={Link}
+              to="/gamification"
+              onClick={handleUserMenuClose}
+            >
+              <ListItemIcon>
+                <Gamepad />
+              </ListItemIcon>
+              Gamification
+            </MenuItem>
             <MenuItem component={Link} to="/feed" onClick={handleUserMenuClose}>
               <ListItemIcon>
                 <Person />
@@ -819,28 +863,48 @@ const Navbar: React.FC = () => {
               </MenuItem>
             )}
             {user?.role === 'ADMIN' && (
-              <MenuItem
-                component={Link}
-                to="/admin/moderation"
-                onClick={handleUserMenuClose}
-              >
-                <ListItemIcon>
-                  <Person />
-                </ListItemIcon>
-                Feed Moderation
-              </MenuItem>
-            )}
-            {user?.role === 'ADMIN' && (
-              <MenuItem
-                component={Link}
-                to="/admin/moderation/subcommunities"
-                onClick={handleUserMenuClose}
-              >
-                <ListItemIcon>
-                  <Person />
-                </ListItemIcon>
-                SubCommunity Moderation
-              </MenuItem>
+              <>
+                <MenuItem
+                  component={Link}
+                  to="/admin/moderation"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Person />
+                  </ListItemIcon>
+                  Feed Moderation
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/admin/document-verification"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Assignment />
+                  </ListItemIcon>
+                  Document Verification
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/admin/moderation/subcommunities"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Person />
+                  </ListItemIcon>
+                  SubCommunity Moderation
+                </MenuItem>
+                <MenuItem
+                  component={Link}
+                  to="/admin/events/create"
+                  onClick={handleUserMenuClose}
+                >
+                  <ListItemIcon>
+                    <Event />
+                    Create Events
+                  </ListItemIcon>
+                </MenuItem>
+              </>
             )}
             <MenuItem
               component={Link}

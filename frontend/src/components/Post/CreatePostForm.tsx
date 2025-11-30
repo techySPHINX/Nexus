@@ -52,8 +52,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
   const [type, setType] = useState<'DISCUSSION' | 'QUESTION' | 'UPDATE'>(
     'UPDATE'
   );
-  const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageUrl, setImageUrl] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -89,7 +89,8 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
         return;
       }
 
-      setImage(file);
+      // If user selected a file, clear any pasted URL
+      setImageUrl('');
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -99,9 +100,34 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }
   };
 
+  const handleImageUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const url = e.target.value;
+    setImageUrl(url);
+
+    if (!url) {
+      // cleared
+      setImagePreview(null);
+      return;
+    }
+
+    // basic validation for http(s)
+    if (!/^https?:\/\//i.test(url)) {
+      showSnackbar(
+        'Enter a valid image URL (start with http:// or https://).',
+        'error'
+      );
+      setImagePreview(null);
+      return;
+    }
+
+    // Use the URL as the preview. Clear any uploaded File selection.
+    setImagePreview(url);
+    showSnackbar('Image URL set for preview', 'success');
+  };
+
   const handleRemoveImage = () => {
-    setImage(null);
     setImagePreview(null);
+    setImageUrl('');
     showSnackbar('Image removed', 'info');
   };
 
@@ -126,17 +152,17 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     clearError();
 
     try {
+      // Pass image as a string (data URL) to match backend DTO (imageFile?: string)
       await createPost(
         subject,
         content,
-        image || undefined,
+        imagePreview || undefined,
         subCommunityId,
         type
       );
 
       // Reset form
       setContent('');
-      setImage(null);
       setImagePreview(null);
 
       showSnackbar(
@@ -166,7 +192,7 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
     }
   };
 
-  const isFormEmpty = !subject.trim() && !content.trim() && !image;
+  const isFormEmpty = !subject.trim() && !content.trim() && !imagePreview;
 
   return (
     <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
@@ -330,6 +356,15 @@ export const CreatePostForm: React.FC<CreatePostFormProps> = ({
                 Add Photo
               </Button>
             </label>
+
+            <TextField
+              size="small"
+              placeholder="Or paste image URL"
+              value={imageUrl}
+              onChange={handleImageUrlChange}
+              sx={{ ml: 1, width: 300 }}
+              disabled={isSubmitting}
+            />
 
             {subCommunityName && (
               <Chip

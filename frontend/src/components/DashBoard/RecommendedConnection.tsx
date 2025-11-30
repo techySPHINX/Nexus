@@ -10,6 +10,7 @@ import {
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import Card from '@mui/material/Card';
+import { ProfileNameLink } from '@/utils/ProfileNameLink';
 
 export default function RecommendedConnection() {
   const {
@@ -40,9 +41,9 @@ export default function RecommendedConnection() {
     : 'bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-all';
 
   // Dark-mode class variants for inner content
-  const nameClass = isDark
-    ? 'font-bold text-neutral-100 mb-1 text-lg'
-    : 'font-bold text-gray-900 mb-1 text-lg';
+  // const nameClass = isDark
+  //   ? 'font-bold text-neutral-100 mb-1 text-lg'
+  //   : 'font-bold text-gray-900 mb-1 text-lg';
   const roleClass = isDark
     ? 'text-sm text-neutral-300 font-medium'
     : 'text-sm text-emerald-600 font-medium';
@@ -224,8 +225,9 @@ export default function RecommendedConnection() {
 
   const currentSuggestion = suggestedConnections[currentIndex];
   const { user, matchScore, reasons } = currentSuggestion;
+  const userId = user.id;
   const name = user?.name || 'Unknown Name';
-  const avatarUrl = user?.profile?.avatarUrl || null;
+  const avatarUrl = user?.profile?.avatarUrl || undefined;
   const role = user?.role || 'STUDENT';
   const location = user?.profile?.location || '';
   const interests = user?.profile?.interests || 'Various interests';
@@ -335,7 +337,11 @@ export default function RecommendedConnection() {
               })()
             )}
           </div>
-          <h4 className={nameClass}>{name}</h4>
+          {/* <h4 className={nameClass}>{name}</h4> */}
+          <ProfileNameLink
+            user={{ id: userId, name, profile: { avatarUrl } }}
+            fontSize="large"
+          />
           <div className="flex items-center gap-2 mb-1 flex-wrap justify-center">
             <span className={roleClass}>{role}</span>
             <span className="text-xs text-gray-400">•</span>

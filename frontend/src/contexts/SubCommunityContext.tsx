@@ -22,6 +22,12 @@ import {
 import { useAuth } from './AuthContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 
+type FilterOpts = {
+  privacy?: 'all' | 'public' | 'private';
+  sort?: string;
+  q?: string;
+};
+
 interface SubCommunityContextType {
   // State
   subCommunities: SubCommunity[];
@@ -38,18 +44,32 @@ interface SubCommunityContextType {
   // Actions - All return Promise<void>
   getAllSubCommunities: () => Promise<void>;
   // Ensure helpers - idempotent loaders to avoid duplicate requests
-  ensureAllSubCommunities: (forceRefresh?: boolean) => Promise<void>;
+  ensureAllSubCommunities: (
+    forceRefresh?: boolean,
+    opts?: FilterOpts
+  ) => Promise<void>;
   getSubCommunity: (id: string) => Promise<void>;
   getSubCommunityByType: (
     type: string,
     page?: number,
     limit?: number,
     q?: string,
+    opts?: FilterOpts,
     forceRefresh?: boolean
   ) => Promise<SubCommunityTypeResponse>;
   // Per-type paging helpers
-  ensureTypeLoaded: (type: string, limit?: number, q?: string) => Promise<void>;
-  loadMoreForType: (type: string, limit?: number, q?: string) => Promise<void>;
+  ensureTypeLoaded: (
+    type: string,
+    limit?: number,
+    q?: string,
+    opts?: FilterOpts
+  ) => Promise<void>;
+  loadMoreForType: (
+    type: string,
+    limit?: number,
+    q?: string,
+    opts?: FilterOpts
+  ) => Promise<void>;
   createSubCommunity: (data: {
     name: string;
     description: string;
@@ -119,7 +139,11 @@ interface SubCommunityContextType {
   }>;
   // Enqueue a type (or 'all') for scheduled loading. LazySection calls this
   // to ensure its type will be fetched eventually.
-  scheduleTypeLoad: (type: string, limit?: number) => Promise<void>;
+  scheduleTypeLoad: (
+    type: string,
+    limit?: number,
+    opts?: FilterOpts
+  ) => Promise<void>;
 }
 
 const SubCommunityContext = createContext<SubCommunityContextType>({
@@ -263,6 +287,20 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
     SubCommunityCreationRequest[]
   >([]);
   const [loading, setLoading] = useState(false);
+  // Per-action loading flags to avoid global page reloads when mutating
+  // specific entities (e.g. removing a member, requesting to join).
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  const setActionLoadingFlag = useCallback((key: string, value: boolean) => {
+    setActionLoading((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const isActionLoading = useCallback(
+    (key: string) => !!actionLoading[key],
+    [actionLoading]
+  );
   // When any section-level load is in progress (one at a time due to semaphore)
   // this flag is true. Consumers can use it to block scrolling or show a
   // global skeleton indicator.
@@ -276,8 +314,14 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   } | null>(null);
   // Idempotent/load guards to avoid duplicate network requests
   const typesFetchPromiseRef = useRef<Promise<SubCommunityType[]> | null>(null);
+  // Track recent failure to avoid immediate retry storms when network is flaky
+  const typesFailureAtRef = useRef<number | null>(null);
+  const TYPES_RETRY_BACKOFF_MS = 30_000; // 30 seconds
   const [allLoaded, setAllLoaded] = useState(false);
   const allFetchPromiseRef = useRef<Promise<void> | null>(null);
+  // Track recent failure for 'all' load to avoid retry storms when backend is down
+  const allFailureAtRef = useRef<number | null>(null);
+  const ALL_RETRY_BACKOFF_MS = 30_000; // 30 seconds
   // track current loaded page per type and in-flight promises per type+page
   const [subCommunityPages, setSubCommunityPages] = useState<
     Record<string, number>
@@ -315,16 +359,29 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   }
 
   const safeGetSubCommunityByType = useCallback(
-    async (type: string, page: number, limit: number, q?: string) => {
+    async (
+      type: string,
+      page: number,
+      limit: number,
+      q?: string,
+      opts?: FilterOpts
+    ) => {
       const release = await loadSemaphoreRef.current!.acquire();
       // mark a section load in progress so UI can block scrolling
       setSectionLoadInProgress(true);
       try {
+        const allowedSorts = new Set(['recommended', 'newest', 'members']);
+        const sortParam =
+          opts?.sort && allowedSorts.has(opts.sort)
+            ? (opts.sort as 'recommended' | 'newest' | 'members')
+            : undefined;
+        const passOpts = opts ? { ...opts, sort: sortParam } : undefined;
         return await subCommunityService.getSubCommunityByType(
           type,
           page,
           limit,
-          q
+          q,
+          passOpts
         );
       } finally {
         release();
@@ -335,8 +392,21 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const ensureAllSubCommunities = useCallback(
-    async (forceRefresh = false) => {
+    async (forceRefresh = false, opts?: FilterOpts) => {
       if (!forceRefresh && allLoaded) return;
+
+      // If recent failure recorded, avoid immediate retry and fail fast
+      if (
+        allFailureAtRef.current &&
+        Date.now() - allFailureAtRef.current < ALL_RETRY_BACKOFF_MS
+      ) {
+        return Promise.reject(
+          new Error(
+            'Previous all-subcommunities load failed recently; retry later'
+          )
+        );
+      }
+
       if (allFetchPromiseRef.current) return allFetchPromiseRef.current;
       const p = (async () => {
         // For the main page, fetch compact summaries to save bandwidth
@@ -344,16 +414,26 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         // Acquire semaphore so 'all' loads are serialized with per-type loads
         const release = await loadSemaphoreRef.current!.acquire();
         try {
+          const allowedSorts = new Set(['recommended', 'newest', 'members']);
+          const sortParam =
+            opts?.sort && allowedSorts.has(opts.sort)
+              ? (opts.sort as 'recommended' | 'newest' | 'members')
+              : undefined;
           const data = await subCommunityService.getAllSubCommunities({
             compact: true,
             page: 1,
             limit: 6,
+            privacy: opts?.privacy,
+            sort: sortParam,
+            q: opts?.q,
           });
           setSubCommunities(data as SubCommunity[]);
           setAllLoaded(true);
         } catch (err: unknown) {
           if (err instanceof Error) {
             setError(err.message || 'Failed to fetch sub-communities');
+            // mark failure time so subsequent callers will back off
+            allFailureAtRef.current = Date.now();
           } else {
             setError('An unexpected error occurred');
             console.error('Unexpected error:', err);
@@ -380,15 +460,31 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   // Idempotent loader for types to avoid duplicate network requests
   const ensureTypes = useCallback(async () => {
     if (types.length > 0) return types;
+
+    // If there's a very recent failure, avoid retrying immediately to
+    // prevent a storm of repeated network calls while the network is down.
+    if (
+      typesFailureAtRef.current &&
+      Date.now() - typesFailureAtRef.current < TYPES_RETRY_BACKOFF_MS
+    ) {
+      return Promise.reject(
+        new Error('Previous types load failed recently; retry later')
+      );
+    }
+
     if (typesFetchPromiseRef.current) return typesFetchPromiseRef.current;
 
     const p = (async () => {
       try {
         const t = await subCommunityService.getTypes();
         setTypes(t);
+        // clear any previous failure marker on success
+        typesFailureAtRef.current = null;
         return t;
       } catch (err) {
         console.warn('Failed to load sub-community types', err);
+        // mark failure time so subsequent callers back off
+        typesFailureAtRef.current = Date.now();
         throw err;
       } finally {
         typesFetchPromiseRef.current = null;
@@ -426,9 +522,10 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       page: number = 1,
       limit: number = 20,
       q?: string,
+      opts?: FilterOpts,
       forceRefresh = false
     ) => {
-      const cacheKey = `${type}-${page}-${limit}-${q || ''}`;
+      const cacheKey = `${type}-${page}-${limit}-${q || ''}-${opts?.privacy ?? 'all'}-${opts?.sort ?? 'recommended'}`;
 
       // Check cache first
       if (!forceRefresh && subCommunityCache[cacheKey]) {
@@ -450,7 +547,13 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
       setLoading(true);
       try {
-        const response = await safeGetSubCommunityByType(type, page, limit, q);
+        const response = await safeGetSubCommunityByType(
+          type,
+          page,
+          limit,
+          q,
+          opts
+        );
 
         // Update cache
         setSubCommunityCache((prev) => ({
@@ -461,8 +564,13 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         // Update state based on type
         if (type === 'all') {
           setSubCommunities((prev: SubCommunity[]) => {
+            // Normalize response: service may return either an array or an
+            // object { data, pagination }. Handle both shapes safely.
+            const items = Array.isArray(response)
+              ? response
+              : response.data || [];
             // Merge with existing data, avoiding duplicates
-            const newData = [...response.data];
+            const newData = [...items];
             const existingIds = new Set(prev.map((item) => item.id));
             const uniqueNewData = newData.filter(
               (item) => !existingIds.has(item.id)
@@ -471,8 +579,13 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
           });
         } else {
           setSubCommunitiesByType((prev: SubCommunity[]) => {
+            // Normalize response: service may return either an array or an
+            // object { data, pagination }. Handle both shapes safely.
+            const items = Array.isArray(response)
+              ? response
+              : response.data || [];
             // Merge with existing data, avoiding duplicates
-            const newData = [...response.data];
+            const newData = [...items];
             const existingIds = new Set(prev.map((item) => item.id));
             const uniqueNewData = newData.filter(
               (item) => !existingIds.has(item.id)
@@ -498,8 +611,13 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Ensure the first page for a given type is loaded (idempotent)
   const ensureTypeLoaded = useCallback(
-    async (type: string, limit: number = 6, q?: string): Promise<void> => {
-      const key = `${type}-1-${limit}-${q || ''}`;
+    async (
+      type: string,
+      limit: number = 6,
+      q?: string,
+      opts?: FilterOpts
+    ): Promise<void> => {
+      const key = `${type}-1-${limit}-${q || ''}-${opts?.privacy ?? 'all'}-${opts?.sort ?? 'recommended'}`;
       if (subCommunityCache[key]) {
         setSubCommunityPages((prev) => ({ ...prev, [type]: 1 }));
         return;
@@ -514,7 +632,14 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const p: Promise<void> = (async () => {
         try {
-          const resp = await getSubCommunityByType(type, 1, limit, q, false);
+          const resp = await getSubCommunityByType(
+            type,
+            1,
+            limit,
+            q,
+            opts,
+            false
+          );
           if (resp?.data) {
             // mark page 1 loaded
             setSubCommunityPages((prev) => ({ ...prev, [type]: 1 }));
@@ -533,10 +658,15 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Load next page for a type (idempotent per target page)
   const loadMoreForType = useCallback(
-    async (type: string, limit: number = 6, q?: string): Promise<void> => {
+    async (
+      type: string,
+      limit: number = 6,
+      q?: string,
+      opts?: FilterOpts
+    ): Promise<void> => {
       const current = subCommunityPages[type] ?? 1;
       const next = current + 1;
-      const key = `${type}-${next}-${limit}-${q || ''}`;
+      const key = `${type}-${next}-${limit}-${q || ''}-${opts?.privacy ?? 'all'}-${opts?.sort ?? 'recommended'}`;
       if (subCommunityCache[key]) {
         // already loaded
         setSubCommunityPages((prev) => ({ ...prev, [type]: next }));
@@ -550,7 +680,14 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
       const p: Promise<void> = (async () => {
         try {
-          const resp = await getSubCommunityByType(type, next, limit, q, false);
+          const resp = await getSubCommunityByType(
+            type,
+            next,
+            limit,
+            q,
+            opts,
+            false
+          );
           if (resp?.data) {
             setSubCommunityPages((prev) => ({ ...prev, [type]: next }));
           }
@@ -612,18 +749,32 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   // A small queue to ensure scheduled section loads are eventually processed.
-  // LazySection components enqueue their type id here; the queue processor
-  // will call `ensureTypeLoaded` (or `ensureAllSubCommunities`) sequentially
-  // so no scheduled load is dropped due to transient flags.
-  const scheduledQueueRef = useRef<string[]>([]);
+  // LazySection components enqueue their type id and optional filter opts here;
+  // the queue processor will call `ensureTypeLoaded` (or `ensureAllSubCommunities`)
+  // sequentially so no scheduled load is dropped due to transient flags.
+  const scheduledQueueRef = useRef<Array<{ type: string; opts?: FilterOpts }>>(
+    []
+  );
   const queueProcessingRef = useRef(false);
 
   const scheduleTypeLoad = useCallback(
-    async (type: string, limit = 6) => {
-      // Avoid enqueueing duplicates
-      if (scheduledQueueRef.current.includes(type)) return;
+    async (
+      type: string,
+      limit = 6,
+      opts?: {
+        privacy?: 'all' | 'public' | 'private';
+        sort?: string;
+        q?: string;
+      }
+    ) => {
+      // Avoid enqueueing duplicates for same type+opts
+      const exists = scheduledQueueRef.current.find(
+        (s) =>
+          s.type === type && JSON.stringify(s.opts) === JSON.stringify(opts)
+      );
+      if (exists) return;
 
-      scheduledQueueRef.current.push(type);
+      scheduledQueueRef.current.push({ type, opts });
 
       // Kick off processor if not already running
       if (queueProcessingRef.current) return;
@@ -633,12 +784,12 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         while (scheduledQueueRef.current.length > 0) {
           const next = scheduledQueueRef.current.shift()!;
           try {
-            if (next === 'all') {
+            if (next.type === 'all') {
               // Ensure 'all' loads use the compact loader
               // Acquire semaphore inside ensureAllSubCommunities
-              await ensureAllSubCommunities();
+              await ensureAllSubCommunities(false, next.opts);
             } else {
-              await ensureTypeLoaded(next, limit);
+              await ensureTypeLoaded(next.type, limit, next.opts?.q, next.opts);
             }
           } catch (err) {
             // swallow and continue; retry logic is handled by the enqueuing
@@ -666,7 +817,8 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       isPrivate: boolean;
       ownerId: string;
     }) => {
-      setLoading(true);
+      const key = `createSubCommunity`;
+      setActionLoadingFlag(key, true);
       try {
         const newSubCommunity =
           await subCommunityService.createSubCommunity(data);
@@ -679,10 +831,10 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         throw err;
       } finally {
-        setLoading(false);
+        setActionLoadingFlag(key, false);
       }
     },
-    [setError]
+    [setError, setActionLoadingFlag]
   );
 
   const updateSubCommunity = useCallback(
@@ -737,7 +889,8 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const requestToJoin = useCallback(
     async (subCommunityId: string) => {
-      setLoading(true);
+      const key = `requestToJoin:${subCommunityId}`;
+      setActionLoadingFlag(key, true);
       try {
         const joinRequest =
           await subCommunityService.requestToJoin(subCommunityId);
@@ -745,10 +898,10 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       } catch (err: unknown) {
         setError(getErrorMessage(err));
       } finally {
-        setLoading(false);
+        setActionLoadingFlag(key, false);
       }
     },
-    [setError]
+    [setActionLoadingFlag, setError]
   );
 
   const getPendingJoinRequests = useCallback(
@@ -784,9 +937,11 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
           joinRequestId,
           dto
         );
+        // Merge updated fields onto existing request to preserve related
+        // nested data (e.g. `user`) when the backend response omits it.
         setJoinRequests((prev: JoinRequest[]) =>
           prev.map((jr: JoinRequest) =>
-            jr.id === joinRequestId ? updated : jr
+            jr.id === joinRequestId ? { ...jr, ...updated } : jr
           )
         );
       } catch (err: unknown) {
@@ -805,7 +960,8 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const leaveSubCommunity = useCallback(
     async (subCommunityId: string) => {
-      setLoading(true);
+      const key = `leave:${subCommunityId}`;
+      setActionLoadingFlag(key, true);
       try {
         await subCommunityService.leaveSubCommunity(subCommunityId);
         setMembers((prev: SubCommunityMember[]) =>
@@ -819,15 +975,16 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         throw err;
       } finally {
-        setLoading(false);
+        setActionLoadingFlag(key, false);
       }
     },
-    [user, setError]
+    [user, setError, setActionLoadingFlag]
   );
 
   const removeMember = useCallback(
     async (subCommunityId: string, memberId: string) => {
-      setLoading(true);
+      const key = `removeMember:${memberId}`;
+      setActionLoadingFlag(key, true);
       try {
         await subCommunityService.removeMember(subCommunityId, memberId);
         setMembers((prev: SubCommunityMember[]) =>
@@ -841,10 +998,10 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         throw err;
       } finally {
-        setLoading(false);
+        setActionLoadingFlag(key, false);
       }
     },
-    [setError]
+    [setError, setActionLoadingFlag]
   );
 
   const updateMemberRole = useCallback(
@@ -853,7 +1010,8 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       memberId: string,
       role: SubCommunityRole
     ) => {
-      setLoading(true);
+      const key = `updateMemberRole:${memberId}`;
+      setActionLoadingFlag(key, true);
       try {
         const updated = await subCommunityService.updateMemberRole(
           subCommunityId,
@@ -873,15 +1031,16 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         throw err;
       } finally {
-        setLoading(false);
+        setActionLoadingFlag(key, false);
       }
     },
-    [setError]
+    [setError, setActionLoadingFlag]
   );
 
   const createSubCommunityRequest = useCallback(
     async (dto: CreateSubCommunityRequestDto) => {
-      setLoading(true);
+      const key = `createSubCommunityRequest`;
+      setActionLoadingFlag(key, true);
       try {
         const request =
           await subCommunityService.createSubCommunityRequest(dto);
@@ -897,10 +1056,10 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         throw err;
       } finally {
-        setLoading(false);
+        setActionLoadingFlag(key, false);
       }
     },
-    [setError]
+    [setActionLoadingFlag, setError]
   );
 
   const getAllSubCommunityRequests = useCallback(async () => {
@@ -921,7 +1080,8 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const approveSubCommunityRequest = useCallback(
     async (requestId: string) => {
-      setLoading(true);
+      const key = `approveSubCommunityRequest:${requestId}`;
+      setActionLoadingFlag(key, true);
       try {
         const updated =
           await subCommunityService.approveSubCommunityRequest(requestId);
@@ -938,15 +1098,16 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         throw err;
       } finally {
-        setLoading(false);
+        setActionLoadingFlag(key, false);
       }
     },
-    [setError]
+    [setError, setActionLoadingFlag]
   );
 
   const rejectSubCommunityRequest = useCallback(
     async (requestId: string) => {
-      setLoading(true);
+      const key = `rejectSubCommunityRequest:${requestId}`;
+      setActionLoadingFlag(key, true);
       try {
         const updated =
           await subCommunityService.rejectSubCommunityRequest(requestId);
@@ -963,10 +1124,10 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
         }
         throw err;
       } finally {
-        setLoading(false);
+        setActionLoadingFlag(key, false);
       }
     },
-    [setError]
+    [setError, setActionLoadingFlag]
   );
 
   const fetchMySubCommunities = useCallback(
@@ -1084,6 +1245,9 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       joinRequests,
       creationRequests,
       loading,
+      // Per-action loading map and helper
+      actionLoading,
+      isActionLoading,
       error,
 
       // Actions
@@ -1167,6 +1331,8 @@ export const SubCommunityProvider: React.FC<{ children: React.ReactNode }> = ({
       mySubCommunities,
       fetchMySubCommunities,
       scheduleTypeLoad,
+      actionLoading,
+      isActionLoading,
       setError,
       clearError,
     ]

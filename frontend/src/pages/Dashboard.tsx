@@ -4,6 +4,7 @@ import { Message } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardContext } from '@/contexts/DashBoardContext';
 import { useNotification } from '@/contexts/NotificationContext';
+import { useEventContext } from '@/contexts/eventContext';
 import { apiService } from '../services/api';
 import { improvedWebSocketService } from '../services/websocket.improved';
 import type { WebSocketMessage } from '../services/websocket.improved';
@@ -14,6 +15,7 @@ import RecommendedProjects from '../components/DashBoard/RecommendedProjects';
 import RecentPosts from '../components/DashBoard/RecentPosts';
 import RecommendedConnection from '../components/DashBoard/RecommendedConnection';
 import UpcomingEvents from '../components/DashBoard/UpcomingEvents';
+import Leaderboard from '../components/DashBoard/LeaderBoard';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
 import ThemeToggle from '@/components/ThemeToggle';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -88,7 +90,13 @@ const OnView: React.FC<{
 
 const Dashboard: React.FC = () => {
   const { user, token } = useAuth();
-  const { connectionStats } = useDashboardContext();
+  const {
+    connectionStats,
+    profileCompletionStats,
+    getProfileCompletionStats,
+    loading: { profileCompletion: loadingProfileCompletion },
+  } = useDashboardContext();
+  const { upcoming, fetchUpcoming, loading: eventsLoading } = useEventContext();
   const { showNotification } = useNotification();
   const showNotificationRef = useRef(showNotification);
 
@@ -100,9 +108,6 @@ const Dashboard: React.FC = () => {
     messages: number;
     pendingRequests: number;
   }>({ messages: 0, pendingRequests: 0 });
-  const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(
-    []
-  );
 
   const fetchMessageCount = async () => {
     try {
@@ -242,10 +247,26 @@ const Dashboard: React.FC = () => {
               timestamp: new Date().toLocaleDateString(),
             });
           }
-
-          setRecentActivities(activities);
         } catch (err) {
           showNotificationRef.current?.(getErrorMessage(err), 'error');
+        }
+
+        // fetch profile stats (for ProfileStrength component) and upcoming events
+        try {
+          void getProfileCompletionStats();
+        } catch (err) {
+          console.debug(
+            'Profile stats fetch failed during dashboard init',
+            err
+          );
+        }
+        try {
+          void fetchUpcoming(3);
+        } catch (err) {
+          console.debug(
+            'Upcoming events fetch failed during dashboard init',
+            err
+          );
         }
       } catch (err) {
         showNotificationRef.current?.(getErrorMessage(err), 'error');
@@ -253,7 +274,7 @@ const Dashboard: React.FC = () => {
     };
 
     void init();
-  }, [user?.id]);
+  }, [user?.id, getProfileCompletionStats, fetchUpcoming]);
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
@@ -300,29 +321,6 @@ const Dashboard: React.FC = () => {
         >
           Here's your alumni network overview
         </Typography>
-
-        {recentActivities.length > 0 && (
-          <Box sx={{ mt: 2 }}>
-            <div className="rounded-lg border p-3 bg-transparent">
-              <h4 className="text-sm font-semibold mb-2">Recent Activity</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                {recentActivities.slice(0, 4).map((a) => (
-                  <li key={a.id} className="flex items-start justify-between">
-                    <div>
-                      <div className="font-medium text-gray-900">{a.title}</div>
-                      <div className="text-xs text-gray-500">
-                        {a.description}
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-400 ml-4">
-                      {a.timestamp}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Box>
-        )}
       </Box>
 
       <Grid container spacing={3}>
@@ -347,11 +345,24 @@ const Dashboard: React.FC = () => {
         </Grid>
 
         <Grid item xs={12} lg={4}>
-          <Box sx={{ mb: 3 }}>
-            <OnView placeholderHeight={280}>
-              <ProfileStrength />
-            </OnView>
-          </Box>
+          {/** Show ProfileStrength only after profile stats have been fetched and contain data */}
+          {(() => {
+            const hasProfileData = !!(
+              profileCompletionStats &&
+              (profileCompletionStats.details ||
+                typeof profileCompletionStats.completionPercentage === 'number')
+            );
+            const showProfile = !loadingProfileCompletion && hasProfileData;
+            return (
+              showProfile && (
+                <Box sx={{ mb: 3 }}>
+                  <OnView placeholderHeight={280}>
+                    <ProfileStrength />
+                  </OnView>
+                </Box>
+              )
+            );
+          })()}
 
           <Box sx={{ mb: 3 }}>
             <OnView placeholderHeight={280} threshold={0.5}>
@@ -359,11 +370,23 @@ const Dashboard: React.FC = () => {
             </OnView>
           </Box>
 
-          <Box sx={{ mb: 3 }}>
-            <OnView placeholderHeight={280} threshold={0.3}>
-              <UpcomingEvents />
-            </OnView>
-          </Box>
+          {(() => {
+            const hasEvents = Array.isArray(upcoming) && upcoming.length > 0;
+            const showEvents = !eventsLoading && hasEvents;
+            return (
+              showEvents && (
+                <Box sx={{ mb: 3 }}>
+                  <OnView placeholderHeight={280} threshold={0.3}>
+                    <UpcomingEvents />
+                  </OnView>
+                </Box>
+              )
+            );
+          })()}
+
+          <OnView placeholderHeight={280} threshold={0.3}>
+            <Leaderboard currentUserId={user?.id} maxItems={6} compact={true} />
+          </OnView>
         </Grid>
       </Grid>
     </Container>

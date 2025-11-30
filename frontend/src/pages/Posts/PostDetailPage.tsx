@@ -15,7 +15,8 @@ import { Home, ArrowBack, Comment as CommentIcon } from '@mui/icons-material';
 
 const PostDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { currentPost, getPost, loading, error } = usePosts();
+  const { currentPost, getPost, loading, error, incrementCurrentPostComments } =
+    usePosts();
   const [notFound, setNotFound] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
@@ -41,10 +42,8 @@ const PostDetailPage: React.FC = () => {
   }, [id, getPost]);
 
   const handleCommentAdded = () => {
-    // Refresh the post to update comment count
-    if (id) {
-      getPost(id);
-    }
+    // Avoid re-fetching the whole post — increment local comment count
+    incrementCurrentPostComments(1);
   };
 
   if (isLoading || loading) {

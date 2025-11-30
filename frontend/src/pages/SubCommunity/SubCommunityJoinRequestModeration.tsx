@@ -34,28 +34,37 @@ import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { JoinRequest, RequestStatus } from '../../types/subCommunity';
+import { ProfileNameLink } from '@/utils/ProfileNameLink';
 
 // Move getStatusChip function outside the component
-const getStatusChip = (status: RequestStatus) => {
-  const statusConfig = {
-    [RequestStatus.PENDING]: { color: 'warning', label: 'Pending' },
-    [RequestStatus.APPROVED]: { color: 'success', label: 'Approved' },
-    [RequestStatus.REJECTED]: { color: 'error', label: 'Rejected' },
+const getStatusChip = (status: string | RequestStatus) => {
+  // normalize backend/status variants (some endpoints return 'ACCEPTED' instead of 'APPROVED')
+  const normalized = (status || '').toString().toUpperCase();
+  const key = normalized === 'ACCEPTED' ? 'APPROVED' : normalized;
+
+  const statusConfig: Record<string, { color: string; label: string }> = {
+    PENDING: { color: 'warning', label: 'Pending' },
+    APPROVED: { color: 'success', label: 'Approved' },
+    REJECTED: { color: 'error', label: 'Rejected' },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[key] || {
+    color: 'default',
+    label: String(status),
+  };
+
   return (
     <Chip
       label={config.label}
       color={
-        config.color as
+        (config.color as
           | 'default'
           | 'primary'
           | 'secondary'
           | 'error'
           | 'info'
           | 'success'
-          | 'warning'
+          | 'warning') || 'default'
       }
       size="small"
       variant="outlined"
@@ -317,15 +326,24 @@ const JoinRequestCard: React.FC<{
     <Card sx={{ '&:hover': { boxShadow: 3 }, height: '100%' }}>
       <CardContent>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-          <Avatar sx={{ width: 48, height: 48 }}>
-            {/* {request.user.name.charAt(0).toUpperCase()} */}
+          <Avatar
+            sx={{ width: 48, height: 48 }}
+            src={request.user.profile?.avatarUrl || ''}
+          >
+            {request.user.profile?.avatarUrl ||
+              request.user.name.charAt(0).toUpperCase()}
           </Avatar>
           <Box sx={{ flex: 1 }}>
-            <Typography variant="h6" component="h3">
-              {/* {request.user.name} */}
-            </Typography>
+            <ProfileNameLink
+              user={{
+                id: request.user.id,
+                name: request.user.name,
+                role: request.user.role,
+              }}
+              variant="h6"
+            />
             <Typography variant="body2" color="text.secondary">
-              {/* {request.user.email} */}
+              {request.user.email}
             </Typography>
           </Box>
           {getStatusChip(request.status)}

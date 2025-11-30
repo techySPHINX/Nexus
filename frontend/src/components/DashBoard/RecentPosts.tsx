@@ -16,6 +16,7 @@ import AttachmentIcon from '@mui/icons-material/Attachment';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '@/contexts/NotificationContext';
 import { Tooltip } from '@mui/material';
+import ReportButton from '../Report/ReportButton';
 
 export default function RecentPosts() {
   const {
@@ -393,6 +394,7 @@ export default function RecentPosts() {
                     <MessageCircle className="w-4 h-4" />
                     <span>{post._count?.Comment ?? 0}</span>
                   </button>
+                  <ReportButton postId={post.id} type="POST" />
                 </div>
                 <Tooltip title="Share Post">
                   <button

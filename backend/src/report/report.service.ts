@@ -26,29 +26,37 @@ export class ReportService {
       );
     }
 
-    let subCommunityId: string;
+    // ensure the provided id matches the report type
+    if (type === ReportedContentType.POST && !postId) {
+      throw new BadRequestException('postId must be provided for POST reports.');
+    }
+    if (type === ReportedContentType.COMMENT && !commentId) {
+      throw new BadRequestException(
+        'commentId must be provided for COMMENT reports.',
+      );
+    }
+
+    let subCommunityId: string | null = null;
 
     if (type === ReportedContentType.POST) {
       const post = await this.prisma.post.findUnique({
         where: { id: postId },
       });
-      if (!post || !post.subCommunityId) {
-        throw new NotFoundException(
-          'Post not found or does not belong to a sub-community.',
-        );
+      if (!post) {
+        throw new NotFoundException('Post not found');
       }
-      subCommunityId = post.subCommunityId;
+      // allow null subCommunityId
+      subCommunityId = post.subCommunityId ?? null;
     } else if (type === ReportedContentType.COMMENT) {
       const comment = await this.prisma.comment.findUnique({
         where: { id: commentId },
         include: { post: true },
       });
-      if (!comment || !comment.post.subCommunityId) {
-        throw new NotFoundException(
-          'Comment not found or does not belong to a sub-community.',
-        );
+      if (!comment) {
+        throw new NotFoundException('Comment not found');
       }
-      subCommunityId = comment.post.subCommunityId;
+      // allow null subCommunityId (if comment.post is null or has no subCommunityId)
+      subCommunityId = comment.post?.subCommunityId ?? null;
     }
 
     // This will fail if the database is not migrated.
@@ -62,5 +70,49 @@ export class ReportService {
         subCommunityId,
       },
     });
+  }
+
+  async getAllReports(
+    userId: string,
+    pageSize = 20,
+    cursor: string | null,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, role: true },
+    });
+
+    if (!user || user.role !== 'ADMIN') {
+      throw new BadRequestException('Only admins can access reports.');
+    }
+
+    const limit = Math.max(1, Math.min(pageSize || 20, 50)); // enforce 1..50
+    const take = limit + 1; // fetch one extra to detect next cursor
+
+    const reports = await this.prisma.contentReport.findMany({
+      take,
+      cursor: cursor ? { id: cursor } : undefined,
+      skip: cursor ? 1 : 0,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        reporter: {
+          select: { id: true, email: true, name: true, role: true },
+        },
+        post: {
+          select: { id: true, subject: true, subCommunityId: true },
+        },
+        comment: {
+          select: { id: true, content: true, postId: true },
+        },
+      },
+    });
+
+    let nextCursor: string | null = null;
+    if (reports.length > limit) {
+      const next = reports.pop();
+      nextCursor = next?.id ?? null;
+    }
+
+    return { items: reports, nextCursor };
   }
 }

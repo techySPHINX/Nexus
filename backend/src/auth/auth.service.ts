@@ -183,7 +183,21 @@ export class AuthService {
 
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      include: { profile: true },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        isAccountActive: true,
+        name: true,
+        role: true,
+        isEmailVerified: true,
+        accountStatus: true,
+        profile: {
+          select: {
+            avatarUrl: true,
+          },
+        },
+      },
     });
 
     if (!user || !user.password) {
@@ -231,7 +245,7 @@ export class AuthService {
       userAgent,
     });
 
-    return this.signTokenPair(user, ipAddress, userAgent);
+    return this.signTokenPair({ id: user.id , email: user.email, name: user.name, role: user.role, isEmailVerified: user.isEmailVerified, accountStatus: user.accountStatus, profile: user.profile }, ipAddress, userAgent);
   }
 
   /**

@@ -23,4 +23,20 @@ export class CreateReportDto {
   @IsUUID()
   @IsOptional()
   commentId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  projectId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  startupId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  subCommunityId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  userId?: string;
 }

@@ -29,6 +29,8 @@ interface PostContextType {
   currentPost: Post | null;
   loading: boolean;
   error: string | null;
+  actionLoading: Record<string, boolean>;
+  isActionLoading: (key: string) => boolean;
   pagination: {
     page: number;
     limit: number;
@@ -41,14 +43,15 @@ interface PostContextType {
   createPost: (
     subject: string,
     content: string,
-    image?: File,
+    image?: string | File,
     subCommunityId?: string,
     type?: string
   ) => Promise<void>;
   updatePost: (
     id: string,
-    content: string,
-    image?: File,
+    subject?: string,
+    content?: string,
+    image?: string | File,
     subCommunityId?: string
   ) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
@@ -60,6 +63,7 @@ interface PostContextType {
   }>;
   getPostComments: (postId: string) => Promise<void>;
   createComment: (postId: string, content: string) => Promise<void>;
+  incrementCurrentPostComments: (amount?: number) => void;
   getFeed: (page?: number, limit?: number) => Promise<void>;
   getSubCommunityFeed: (
     subCommunityId: string,
@@ -109,11 +113,26 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const clearError = useCallback(() => setError(null), []);
 
+  // Per-action loading flags (e.g. creating a post) to avoid global UI
+  // blocking when only a small part of the page should update.
+  const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
+    {}
+  );
+
+  const setActionLoadingFlag = useCallback((key: string, value: boolean) => {
+    setActionLoading((prev) => ({ ...prev, [key]: value }));
+  }, []);
+
+  const isActionLoading = useCallback(
+    (key: string) => !!actionLoading[key],
+    [actionLoading]
+  );
+
   const createPost = useCallback(
     async (
       subject: string,
       content: string,
-      image?: File,
+      image?: string | File,
       subCommunityId?: string,
       type?: string
     ) => {
@@ -125,7 +144,8 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
             );
           }
         }
-        setLoading(true);
+        const key = `createPost:${subCommunityId ?? 'global'}`;
+        setActionLoadingFlag(key, true);
         clearError();
         const response = await createPostService(
           subject,
@@ -155,16 +175,16 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
 
         setPosts((prev) => [normalizedPost, ...prev]);
         setFeed((prev) => [normalizedPost, ...prev]);
-        setLoading(false);
+        setActionLoadingFlag(`createPost:${subCommunityId ?? 'global'}`, false);
         return normalizedPost;
       } catch (err) {
         const errorMessage = getErrorMessage(err);
         setError(errorMessage);
-        setLoading(false);
+        setActionLoadingFlag(`createPost:${subCommunityId ?? 'global'}`, false);
         throw new Error(errorMessage);
       }
     },
-    [user, clearError]
+    [user, clearError, setActionLoadingFlag]
   );
 
   const getFeed = useCallback(
@@ -413,11 +433,27 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, []);
 
+  // Increment the comment count on the locally stored currentPost
+  const incrementCurrentPostComments = useCallback((amount = 1) => {
+    setCurrentPost((prev) => {
+      if (!prev) return prev;
+      const prevCount = prev._count || { Vote: 0, Comment: 0 };
+      return {
+        ...prev,
+        _count: {
+          ...prevCount,
+          Comment: (prevCount.Comment || 0) + amount,
+        },
+      } as Post;
+    });
+  }, []);
+
   const updatePost = useCallback(
     async (
       id: string,
-      content: string,
-      image?: File,
+      subject?: string,
+      content?: string,
+      image?: string | File,
       type?: string,
       subCommunityId?: string
     ) => {
@@ -426,6 +462,7 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         clearError();
         const { data } = await updatePostService(
           id,
+          subject,
           content,
           image,
           type,
@@ -573,6 +610,8 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         searchResults,
         currentPost,
         loading,
+        actionLoading,
+        isActionLoading,
         error,
         pagination,
         createPost,
@@ -590,6 +629,7 @@ const PostProvider: React.FC<{ children: React.ReactNode }> = ({
         approvePost,
         rejectPost,
         getPendingPosts,
+        incrementCurrentPostComments,
         clearError,
       }}
     >

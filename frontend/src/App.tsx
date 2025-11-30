@@ -41,6 +41,10 @@ const AdminModerationPage = lazy(
 const AdminSubCommunityModerationPage = lazy(
   () => import('./pages/SubCommunity/AdminSubCommunityModerationPage')
 );
+const ReportsPage = lazy(() => import('./pages/ReportsPage'));
+const EventsPage = lazy(() => import('./pages/Events/EventsPage'));
+const EventDetailPage = lazy(() => import('./pages/Events/EventDetailPage'));
+const CreateEventPage = lazy(() => import('./pages/Admin/CreateEventPage'));
 
 const RouteUnavailable = lazy(() => import('./pages/RouteUnavailable'));
 
@@ -54,18 +58,23 @@ const ProjectsMainPage = lazy(() => import('./pages/Project/ProjectMainPage'));
 const StartupsMainPage = lazy(() => import('./pages/Startup/StartupMainPage'));
 const ProjectIdPage = lazy(() => import('./pages/Project/ProjectIdPage'));
 const UserProjectPage = lazy(() => import('./pages/Project/UserProjectPage'));
+const Gamification = lazy(() => import('./pages/Gamification'));
 
 // Import context providers
 const ProfileProvider = lazy(() => import('./contexts/ProfileContext'));
 const PostProvider = lazy(() => import('./contexts/PostContext'));
 import { SubCommunityProvider } from './contexts/SubCommunityContext';
-const DashboardProvider = lazy(() => import('./contexts/DashBoardContext'));
+import DashboardProvider from './contexts/DashBoardContext';
 const ShowcaseProvider = lazy(() => import('./contexts/ShowcaseContext'));
 const StartupProvider = lazy(() => import('./contexts/StartupContext'));
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { NavbarProvider } from './contexts/NavbarContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { ReportProvider } from './contexts/reportContext';
+import { GamificationProvider } from './contexts/GamificationContext';
+import { EventProvider } from './contexts/eventContext';
+import TagProvider from './contexts/TagContext';
 import { EngagementProvider } from './contexts/engagementContext';
 import { EngagementService } from './services/engagementService';
 import LandingPage2 from './pages/LandingPage2';
@@ -167,9 +176,7 @@ const Layout: React.FC = () => {
                 path="/profile"
                 element={
                   <ProtectedRoute>
-                    <ProfileProvider>
-                      <Profile />
-                    </ProfileProvider>
+                    <Profile />
                   </ProtectedRoute>
                 }
               />
@@ -177,9 +184,7 @@ const Layout: React.FC = () => {
                 path="/profile/:userId"
                 element={
                   <ProtectedRoute>
-                    <ProfileProvider>
-                      <Profile />
-                    </ProfileProvider>
+                    <Profile />
                   </ProtectedRoute>
                 }
               />
@@ -312,10 +317,18 @@ const Layout: React.FC = () => {
                 element={
                   <ProtectedRoute>
                     <ShowcaseProvider>
-                      <ProfileProvider>
-                        <ProjectsMainPage />
-                      </ProfileProvider>
+                      <ProjectsMainPage />
                     </ShowcaseProvider>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/gamification"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <Gamification />
+                    </Suspense>
                   </ProtectedRoute>
                 }
               />
@@ -359,6 +372,26 @@ const Layout: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/events"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <EventsPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/events/:id"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <EventDetailPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Admin-only routes with lazy loading */}
               <Route
@@ -370,6 +403,28 @@ const Layout: React.FC = () => {
                         <AdminModerationPage />
                       </Suspense>
                     </PostProvider>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/reports"
+                element={
+                  <AdminRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <ReportsPage />
+                    </Suspense>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/events/create"
+                element={
+                  <AdminRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <TagProvider>
+                        <CreateEventPage />
+                      </TagProvider>
+                    </Suspense>
                   </AdminRoute>
                 }
               />
@@ -425,9 +480,17 @@ function App() {
                 <Suspense fallback={<LoadingSpinner />}>
                   {/* Keep a single SubCommunityProvider mounted for the whole app so
                       sub-community state isn't re-created on every route change. */}
-                  <SubCommunityProvider>
-                    <Layout />
-                  </SubCommunityProvider>
+                  <ReportProvider>
+                    <EventProvider>
+                      <SubCommunityProvider>
+                        <GamificationProvider>
+                          <ProfileProvider>
+                            <Layout />
+                          </ProfileProvider>
+                        </GamificationProvider>
+                      </SubCommunityProvider>
+                    </EventProvider>
+                  </ReportProvider>
                 </Suspense>
               </Router>
             </EngagementProvider>

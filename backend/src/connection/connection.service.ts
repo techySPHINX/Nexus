@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { GamificationService } from 'src/gamification/gamification.service';
 import { UpdateConnectionStatusDto } from './dto/connection.dto';
 import { NotificationService } from 'src/notification/notification.service';
 
@@ -17,6 +18,7 @@ export class ConnectionService {
   constructor(
     private prisma: PrismaService,
     private notificationService: NotificationService,
+    private gamificationService: GamificationService,
   ) {}
 
   /**
@@ -245,6 +247,24 @@ export class ConnectionService {
         connection.requesterId,
         connection.recipient.name,
       );
+    }
+
+    // award gamification points when connection is accepted
+    if (dto.status === 'ACCEPTED') {
+      try {
+        // award requester based on recipient role
+        const recipientRole = updatedConnection.recipient.role;
+        const requesterRole = updatedConnection.requester.role;
+
+        const requesterEvent = recipientRole === 'ALUM' ? 'CONNECTION_ALUMNI' : 'CONNECTION_STUDENT';
+        const recipientEvent = requesterRole === 'ALUM' ? 'CONNECTION_ALUMNI' : 'CONNECTION_STUDENT';
+
+        // fire-and-forget
+        this.gamificationService.awardForEvent(requesterEvent, updatedConnection.requesterId, updatedConnection.id).catch(() => undefined);
+        this.gamificationService.awardForEvent(recipientEvent, updatedConnection.recipientId, updatedConnection.id).catch(() => undefined);
+      } catch {
+        // ignore gamification errors
+      }
     }
 
     return {
