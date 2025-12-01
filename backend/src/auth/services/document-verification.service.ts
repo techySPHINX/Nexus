@@ -3,6 +3,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EmailService } from '../../email/email.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
+import {
+  GetPendingDocumentsFilterDto,
+  PendingDocumentsResponseDto,
+  PendingDocumentsStatsDto,
+  SortBy,
+} from '../../admin/dto';
 
 @Injectable()
 export class DocumentVerificationService {
@@ -53,28 +59,339 @@ export class DocumentVerificationService {
   }
 
   /**
-   * Get pending documents for admin review
+   * Get pending documents for admin review with advanced filtering
    */
-  async getPendingDocuments() {
-    return this.prisma.verificationDocument.findMany({
-      where: { status: 'PENDING' },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            role: true,
-            createdAt: true,
+  async getPendingDocuments(
+    filters?: GetPendingDocumentsFilterDto,
+  ): Promise<PendingDocumentsResponseDto> {
+    const {
+      page = 1,
+      limit = 20,
+      sortBy = SortBy.SUBMITTED_AT,
+      sortOrder = 'asc',
+      graduationYear,
+      graduationYearFrom,
+      graduationYearTo,
+      role,
+      searchName,
+      searchEmail,
+      department,
+      branch,
+      course,
+      year,
+      location,
+      documentType,
+      documentTypes,
+      submittedAfter,
+      submittedBefore,
+      accountStatus,
+      includeStats = false,
+    } = filters || {};
+
+    // Build where clause with advanced filters
+    const where: any = {
+      status: 'PENDING',
+      user: {},
+    };
+
+    // User table filters
+    if (role) {
+      where.user.role = role.toUpperCase();
+    }
+
+    if (graduationYear) {
+      where.user.graduationYear = graduationYear;
+    }
+
+    if (graduationYearFrom || graduationYearTo) {
+      where.user.graduationYear = {};
+      if (graduationYearFrom) {
+        where.user.graduationYear.gte = graduationYearFrom;
+      }
+      if (graduationYearTo) {
+        where.user.graduationYear.lte = graduationYearTo;
+      }
+    }
+
+    if (searchName) {
+      where.user.name = {
+        contains: searchName,
+        mode: 'insensitive',
+      };
+    }
+
+    if (searchEmail) {
+      where.user.email = {
+        contains: searchEmail,
+        mode: 'insensitive',
+      };
+    }
+
+    if (accountStatus) {
+      where.user.accountStatus = accountStatus;
+    }
+
+    // Profile filters (nested)
+    const profileFilters: any = {};
+    if (department) {
+      profileFilters.dept = {
+        contains: department,
+        mode: 'insensitive',
+      };
+    }
+
+    if (branch) {
+      profileFilters.branch = {
+        contains: branch,
+        mode: 'insensitive',
+      };
+    }
+
+    if (course) {
+      profileFilters.course = {
+        contains: course,
+        mode: 'insensitive',
+      };
+    }
+
+    if (year) {
+      profileFilters.year = year;
+    }
+
+    if (location) {
+      profileFilters.location = {
+        contains: location,
+        mode: 'insensitive',
+      };
+    }
+
+    if (Object.keys(profileFilters).length > 0) {
+      where.user.profile = profileFilters;
+    }
+
+    // Document filters
+    if (documentType && documentType !== 'ALL') {
+      where.documentType = documentType;
+    }
+
+    if (documentTypes && documentTypes.length > 0) {
+      where.documentType = {
+        in: documentTypes,
+      };
+    }
+
+    // Date range filters
+    if (submittedAfter || submittedBefore) {
+      where.submittedAt = {};
+      if (submittedAfter) {
+        where.submittedAt.gte = new Date(submittedAfter);
+      }
+      if (submittedBefore) {
+        where.submittedAt.lte = new Date(submittedBefore);
+      }
+    }
+
+    // Clean up empty objects
+    if (Object.keys(where.user).length === 0) {
+      delete where.user;
+    }
+
+    // Build orderBy clause
+    const orderBy: any = {};
+    switch (sortBy) {
+      case SortBy.SUBMITTED_AT:
+        orderBy.submittedAt = sortOrder;
+        break;
+      case SortBy.USER_NAME:
+        orderBy.user = { name: sortOrder };
+        break;
+      case SortBy.GRADUATION_YEAR:
+        orderBy.user = { graduationYear: sortOrder };
+        break;
+      case SortBy.ROLE:
+        orderBy.user = { role: sortOrder };
+        break;
+      case SortBy.DEPARTMENT:
+        orderBy.submittedAt = sortOrder; // fallback
+        break;
+      default:
+        orderBy.submittedAt = sortOrder;
+    }
+
+    try {
+      // Get total count
+      const total = await this.prisma.verificationDocument.count({ where });
+
+      // Calculate pagination
+      const skip = (page - 1) * limit;
+      const totalPages = Math.ceil(total / limit);
+
+      // Fetch documents with relations
+      const documents = await this.prisma.verificationDocument.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+              graduationYear: true,
+              createdAt: true,
+              accountStatus: true,
+              iconUrl: true,
+              description: true,
+              profile: {
+                select: {
+                  dept: true,
+                  branch: true,
+                  course: true,
+                  year: true,
+                  location: true,
+                  studentId: true,
+                  bio: true,
+                },
+              },
+            },
           },
         },
-      },
-      orderBy: { submittedAt: 'asc' },
-    });
+        orderBy,
+        skip,
+        take: limit,
+      });
+
+      // Build response
+      const response: PendingDocumentsResponseDto = {
+        data: documents,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1,
+        },
+      };
+
+      // Include statistics if requested
+      if (includeStats) {
+        response.stats = await this.calculatePendingDocumentsStats();
+      }
+
+      this.logger.log(
+        `📊 Fetched ${documents.length} pending documents (Page ${page}/${totalPages})`,
+      );
+
+      return response;
+    } catch (error) {
+      this.logger.error('Failed to fetch pending documents:', error);
+      throw new BadRequestException('Failed to fetch pending documents');
+    }
+  }
+
+  /**
+   * Calculate comprehensive statistics for pending documents
+   */
+  private async calculatePendingDocumentsStats(): Promise<PendingDocumentsStatsDto> {
+    try {
+      const allPending = await this.prisma.verificationDocument.findMany({
+        where: { status: 'PENDING' },
+        include: {
+          user: {
+            select: {
+              role: true,
+              graduationYear: true,
+              profile: {
+                select: {
+                  dept: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      const total = allPending.length;
+
+      // By Role
+      const byRole = {
+        STUDENT: allPending.filter((d) => d.user.role === 'STUDENT').length,
+        ALUMNI: allPending.filter((d) => d.user.role === 'ALUM').length,
+      };
+
+      // By Department
+      const byDepartment: Record<string, number> = {};
+      allPending.forEach((doc) => {
+        const dept = doc.user.profile?.dept || 'Not Specified';
+        byDepartment[dept] = (byDepartment[dept] || 0) + 1;
+      });
+
+      // By Graduation Year
+      const byGraduationYear: Record<string, number> = {};
+      allPending.forEach((doc) => {
+        const year = doc.user.graduationYear?.toString() || 'Not Specified';
+        byGraduationYear[year] = (byGraduationYear[year] || 0) + 1;
+      });
+
+      // By Document Type
+      const byDocumentType: Record<string, number> = {};
+      allPending.forEach((doc) => {
+        const type = doc.documentType || 'OTHERS';
+        byDocumentType[type] = (byDocumentType[type] || 0) + 1;
+      });
+
+      // Calculate average waiting time
+      const now = new Date();
+      const waitingTimes = allPending.map(
+        (doc) =>
+          (now.getTime() - new Date(doc.submittedAt).getTime()) /
+          (1000 * 60 * 60),
+      );
+      const avgWaitingTime =
+        waitingTimes.length > 0
+          ? waitingTimes.reduce((a, b) => a + b, 0) / waitingTimes.length
+          : 0;
+
+      // Get oldest and newest request dates
+      const submittedDates = allPending.map((d) => new Date(d.submittedAt));
+      const oldestRequest =
+        submittedDates.length > 0
+          ? new Date(Math.min(...submittedDates.map((d) => d.getTime())))
+          : null;
+      const newestRequest =
+        submittedDates.length > 0
+          ? new Date(Math.max(...submittedDates.map((d) => d.getTime())))
+          : null;
+
+      return {
+        total,
+        byRole,
+        byDepartment,
+        byGraduationYear,
+        byDocumentType,
+        avgWaitingTime: Math.round(avgWaitingTime * 100) / 100,
+        oldestRequest,
+        newestRequest,
+      };
+    } catch (error) {
+      this.logger.error('Failed to calculate statistics:', error);
+      // Return empty stats on error
+      return {
+        total: 0,
+        byRole: { STUDENT: 0, ALUMNI: 0 },
+        byDepartment: {},
+        byGraduationYear: {},
+        byDocumentType: {},
+        avgWaitingTime: 0,
+        oldestRequest: null,
+        newestRequest: null,
+      };
+    }
   }
 
   /**
    * Approve user documents with transaction support
+   * Supports batch approval of multiple users
    */
   async approveDocuments(
     documentIds: string[],
@@ -94,96 +411,139 @@ export class DocumentVerificationService {
       throw new BadRequestException('Documents not found');
     }
 
-    // Validate all documents belong to the same user
-    const userId = documents[0].userId;
-    const allSameUser = documents.every((doc) => doc.userId === userId);
-    if (!allSameUser) {
-      throw new BadRequestException(
-        'All documents must belong to the same user',
-      );
-    }
-
-    const user = documents[0].user;
-
-    // Check if any documents are already approved
-    const alreadyApproved = documents.some((doc) => doc.status === 'APPROVED');
-    if (alreadyApproved) {
-      throw new BadRequestException('Some documents are already approved');
-    }
-
-    try {
-      // Use transaction for atomic operation
-      const result = await this.prisma.$transaction(async (tx) => {
-        // Update documents status
-        await tx.verificationDocument.updateMany({
-          where: { id: { in: documentIds } },
-          data: {
-            status: 'APPROVED',
-            reviewedBy: adminId,
-            reviewedAt: new Date(),
-            adminComments,
-          },
-        });
-
-        // Generate secure temporary password
-        const temporaryPassword = this.generateSecureTemporaryPassword();
-        const hashedPassword = await this.hashPassword(temporaryPassword);
-
-        // Update user account
-        await tx.user.update({
-          where: { id: userId },
-          data: {
-            accountStatus: 'ACTIVE',
-            password: hashedPassword,
-            isAccountActive: true,
-            isEmailVerified: true,
-          },
-        });
-
-        return { temporaryPassword };
-      });
-
-      // Send approval email with login credentials (outside transaction)
-      try {
-        await this.emailService.sendAccountApprovalEmail(
-          user.email,
-          user.name || 'User',
-          result.temporaryPassword,
-        );
-      } catch (emailError) {
-        this.logger.error(
-          `Failed to send approval email to ${user.email}:`,
-          emailError,
-        );
-        // Don't fail the entire operation if email fails
+    // Group documents by user for batch processing
+    const documentsByUser = new Map<string, typeof documents>();
+    documents.forEach((doc) => {
+      if (!documentsByUser.has(doc.userId)) {
+        documentsByUser.set(doc.userId, []);
       }
+      documentsByUser.get(doc.userId)!.push(doc);
+    });
 
-      // Log security event
-      await this.logSecurityEvent(userId, 'DOCUMENT_APPROVED', {
-        adminId,
-        documentIds,
-        documentCount: documentIds.length,
-      });
+    const results = {
+      successful: [] as Array<{ userId: string; email: string; userName: string }>,
+      failed: [] as Array<{ userId: string; email: string; reason: string }>,
+      alreadyApproved: [] as Array<{ userId: string; email: string }>,
+    };
 
-      this.logger.log(
-        `✅ Documents approved for user ${userId} by admin ${adminId}`,
-      );
+    // Process each user's documents
+    for (const [userId, userDocs] of documentsByUser) {
+      try {
+        const user = userDocs[0].user;
 
-      return {
-        message: 'Documents approved and user activated successfully',
-        userId,
-        email: user.email,
-      };
-    } catch (error) {
-      this.logger.error('Failed to approve documents:', error);
-      throw new BadRequestException(
-        'Failed to approve documents. Please try again.',
-      );
+        // Check if any documents are already approved
+        const alreadyApproved = userDocs.some((doc) => doc.status === 'APPROVED');
+        if (alreadyApproved) {
+          results.alreadyApproved.push({
+            userId,
+            email: user.email,
+          });
+          this.logger.warn(`⚠️ Some documents already approved for user ${userId}`);
+          continue;
+        }
+
+        // Check if user account is already active
+        if (user.isAccountActive && user.accountStatus === 'ACTIVE') {
+          results.alreadyApproved.push({
+            userId,
+            email: user.email,
+          });
+          this.logger.warn(`⚠️ User ${userId} already activated`);
+          continue;
+        }
+
+        const userDocIds = userDocs.map(d => d.id);
+
+        // Use transaction for atomic operation per user
+        const result = await this.prisma.$transaction(async (tx) => {
+          // Update documents status
+          await tx.verificationDocument.updateMany({
+            where: { id: { in: userDocIds } },
+            data: {
+              status: 'APPROVED',
+              reviewedBy: adminId,
+              reviewedAt: new Date(),
+              adminComments,
+            },
+          });
+
+          // Generate secure temporary password
+          const temporaryPassword = this.generateSecureTemporaryPassword();
+          const hashedPassword = await this.hashPassword(temporaryPassword);
+
+          // Update user account
+          await tx.user.update({
+            where: { id: userId },
+            data: {
+              accountStatus: 'ACTIVE',
+              password: hashedPassword,
+              isAccountActive: true,
+              isEmailVerified: true,
+            },
+          });
+
+          return { temporaryPassword };
+        });
+
+        // Send approval email with login credentials (outside transaction)
+        try {
+          await this.emailService.sendAccountApprovalEmail(
+            user.email,
+            user.name || 'User',
+            result.temporaryPassword,
+          );
+        } catch (emailError) {
+          this.logger.error(
+            `Failed to send approval email to ${user.email}:`,
+            emailError,
+          );
+          // Don't fail the entire operation if email fails
+        }
+
+        // Log security event
+        await this.logSecurityEvent(userId, 'DOCUMENT_APPROVED', {
+          adminId,
+          documentIds: userDocIds,
+          documentCount: userDocIds.length,
+        });
+
+        results.successful.push({
+          userId,
+          email: user.email,
+          userName: user.name || 'User',
+        });
+
+        this.logger.log(
+          `✅ Documents approved for user ${userId} (${user.email}) by admin ${adminId}`,
+        );
+      } catch (error) {
+        this.logger.error(`Failed to approve documents for user ${userId}:`, error);
+        results.failed.push({
+          userId,
+          email: userDocs[0].user.email,
+          reason: error.message || 'Unknown error',
+        });
+      }
     }
+
+    // Return comprehensive batch results
+    return {
+      message: `Batch approval completed: ${results.successful.length} successful, ${results.failed.length} failed, ${results.alreadyApproved.length} already approved`,
+      totalProcessed: documentsByUser.size,
+      successful: results.successful,
+      failed: results.failed,
+      alreadyApproved: results.alreadyApproved,
+      stats: {
+        successCount: results.successful.length,
+        failedCount: results.failed.length,
+        alreadyApprovedCount: results.alreadyApproved.length,
+      },
+    };
   }
 
   /**
    * Reject user documents with proper validation
+   * Supports batch rejection of multiple users
    */
   async rejectDocuments(
     documentIds: string[],
@@ -208,67 +568,90 @@ export class DocumentVerificationService {
       throw new BadRequestException('Documents not found');
     }
 
-    const userId = documents[0].userId;
-    const user = documents[0].user;
-
-    // Validate all documents belong to the same user
-    const allSameUser = documents.every((doc) => doc.userId === userId);
-    if (!allSameUser) {
-      throw new BadRequestException(
-        'All documents must belong to the same user',
-      );
-    }
-
-    try {
-      // Update documents status
-      await this.prisma.verificationDocument.updateMany({
-        where: { id: { in: documentIds } },
-        data: {
-          status: 'REJECTED',
-          reviewedBy: adminId,
-          reviewedAt: new Date(),
-          adminComments,
-        },
-      });
-
-      // Send rejection email
-      try {
-        await this.emailService.sendAccountRejectionEmail(
-          user.email,
-          user.name || 'User',
-          reason,
-        );
-      } catch (emailError) {
-        this.logger.error(
-          `Failed to send rejection email to ${user.email}:`,
-          emailError,
-        );
-        // Don't fail the operation if email fails
+    // Group documents by user for batch processing
+    const documentsByUser = new Map<string, typeof documents>();
+    documents.forEach((doc) => {
+      if (!documentsByUser.has(doc.userId)) {
+        documentsByUser.set(doc.userId, []);
       }
+      documentsByUser.get(doc.userId)!.push(doc);
+    });
 
-      // Log security event
-      await this.logSecurityEvent(userId, 'DOCUMENT_REJECTED', {
-        adminId,
-        reason,
-        documentIds,
-        documentCount: documentIds.length,
-      });
+    const results = {
+      successful: [] as Array<{ userId: string; email: string; userName: string }>,
+      failed: [] as Array<{ userId: string; email: string; reason: string }>,
+    };
 
-      this.logger.log(
-        `❌ Documents rejected for user ${userId} by admin ${adminId}`,
-      );
+    // Process each user's documents
+    for (const [userId, userDocs] of documentsByUser) {
+      try {
+        const user = userDocs[0].user;
+        const userDocIds = userDocs.map(d => d.id);
 
-      return {
-        message: 'Documents rejected successfully',
-        userId,
-        email: user.email,
-      };
-    } catch (error) {
-      this.logger.error('Failed to reject documents:', error);
-      throw new BadRequestException(
-        'Failed to reject documents. Please try again.',
-      );
+        // Update documents status
+        await this.prisma.verificationDocument.updateMany({
+          where: { id: { in: userDocIds } },
+          data: {
+            status: 'REJECTED',
+            reviewedBy: adminId,
+            reviewedAt: new Date(),
+            adminComments,
+          },
+        });
+
+        // Send rejection email
+        try {
+          await this.emailService.sendAccountRejectionEmail(
+            user.email,
+            user.name || 'User',
+            reason,
+          );
+        } catch (emailError) {
+          this.logger.error(
+            `Failed to send rejection email to ${user.email}:`,
+            emailError,
+          );
+          // Don't fail the operation if email fails
+        }
+
+        // Log security event
+        await this.logSecurityEvent(userId, 'DOCUMENT_REJECTED', {
+          adminId,
+          reason,
+          documentIds: userDocIds,
+          documentCount: userDocIds.length,
+        });
+
+        results.successful.push({
+          userId,
+          email: user.email,
+          userName: user.name || 'User',
+        });
+
+        this.logger.log(
+          `❌ Documents rejected for user ${userId} (${user.email}) by admin ${adminId}`,
+        );
+      } catch (error) {
+        this.logger.error(`Failed to reject documents for user ${userId}:`, error);
+        results.failed.push({
+          userId,
+          email: userDocs[0].user.email,
+          reason: error.message || 'Unknown error',
+        });
+      }
     }
+
+    // Return comprehensive batch results
+    return {
+      message: `Batch rejection completed: ${results.successful.length} successful, ${results.failed.length} failed`,
+      totalProcessed: documentsByUser.size,
+      successful: results.successful,
+      failed: results.failed,
+      stats: {
+        successCount: results.successful.length,
+        failedCount: results.failed.length,
+      },
+    };
   }
 
   /**

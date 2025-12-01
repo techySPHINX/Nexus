@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { FilterMessagesDto } from './dto/filter-messages.dto';
 import { ImprovedMessagingGateway } from './messaging.gateway.improved';
+import { PushNotificationService } from '../common/services/push-notification.service';
 
 /**
  * Service for handling messaging operations.
@@ -20,6 +21,7 @@ export class MessagingService {
     private prisma: PrismaService,
     @Inject(forwardRef(() => ImprovedMessagingGateway))
     private messagingGateway: ImprovedMessagingGateway,
+    private pushNotificationService: PushNotificationService,
   ) { }
 
   /**
@@ -93,6 +95,18 @@ export class MessagingService {
       sender: message.sender,
       receiver: message.receiver,
     });
+
+    // Send push notification to receiver if they're offline
+    try {
+      await this.pushNotificationService.notifyNewMessage(
+        message.receiverId,
+        message.senderId,
+        message.content,
+      );
+    } catch (error) {
+      // Log error but don't fail the message sending
+      console.error('Failed to send message push notification:', error);
+    }
 
     return message;
   }
