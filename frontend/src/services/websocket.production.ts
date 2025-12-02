@@ -35,7 +35,7 @@ export interface NamespaceConfig {
 /**
  * Event Handler
  */
-export type EventHandler<T = any> = (data: T) => void;
+export type EventHandler<T = unknown> = (data: T) => void;
 
 /**
  * Production-Grade WebSocket Manager for Frontend
@@ -56,7 +56,7 @@ export class ProductionWebSocketManager {
   private namespaces: Map<string, Socket> = new Map();
   private eventHandlers: Map<string, Map<string, Set<EventHandler>>> =
     new Map();
-  private messageQueue: Map<string, Array<{ event: string; data: any }>> =
+  private messageQueue: Map<string, Array<{ event: string; data: unknown }>> =
     new Map();
   private processedMessages = new Set<string>();
 
@@ -169,9 +169,15 @@ export class ProductionWebSocketManager {
         resolve();
       });
 
-      socket.on('auth:error', (error: any) => {
+      socket.on('auth:error', (error: unknown) => {
         console.error(`❌ Namespace ${name} auth error:`, error);
-        reject(new Error(`Authentication failed: ${error.error}`));
+        let errorMsg = 'Unknown error';
+        if (error && typeof error === 'object' && 'error' in error) {
+          errorMsg = (error as { error: string }).error;
+        } else if (typeof error === 'string') {
+          errorMsg = error;
+        }
+        reject(new Error(`Authentication failed: ${errorMsg}`));
       });
 
       socket.on('connect_error', (error: Error) => {
@@ -191,12 +197,12 @@ export class ProductionWebSocketManager {
       });
 
       // Set up message routing
-      socket.onAny((event: string, data: any) => {
+      socket.onAny((event: string, data: unknown) => {
         this.handleEvent(name, event, data);
       });
 
       // Error handling
-      socket.on('error', (error: any) => {
+      socket.on('error', (error: unknown) => {
         console.error(`❌ Namespace ${name} error:`, error);
       });
     });
@@ -208,8 +214,8 @@ export class ProductionWebSocketManager {
   disconnect(): void {
     console.log('🔌 Disconnecting all WebSocket namespaces...');
 
-    this.namespaces.forEach((socket, name) => {
-      this.disconnectNamespace(name);
+    this.namespaces.forEach((_, ns) => {
+      this.disconnectNamespace(ns);
     });
 
     this.connectionStatus = 'disconnected';
@@ -278,7 +284,7 @@ export class ProductionWebSocketManager {
   /**
    * Register event handler
    */
-  on<T = any>(
+  on<T = unknown>(
     namespace: string,
     event: string,
     handler: EventHandler<T>
@@ -293,7 +299,7 @@ export class ProductionWebSocketManager {
       nsHandlers.set(event, new Set());
     }
 
-    nsHandlers.get(event)!.add(handler);
+    (nsHandlers.get(event) as Set<EventHandler<T>>).add(handler);
     console.log(`📝 Handler registered: ${namespace}/${event}`);
   }
 
@@ -316,7 +322,7 @@ export class ProductionWebSocketManager {
   /**
    * Emit event to namespace
    */
-  emit(namespace: string, event: string, data: any): void {
+  emit(namespace: string, event: string, data: unknown): void {
     const socket = this.namespaces.get(namespace);
 
     if (socket && socket.connected) {
@@ -332,7 +338,7 @@ export class ProductionWebSocketManager {
   /**
    * Handle incoming event
    */
-  private handleEvent(namespace: string, event: string, data: any): void {
+  private handleEvent(namespace: string, event: string, data: unknown): void {
     console.log(`📨 Event received: ${namespace}/${event}`, data);
 
     // Check for deduplication
@@ -366,11 +372,16 @@ export class ProductionWebSocketManager {
   private shouldDeduplicateEvent(
     namespace: string,
     event: string,
-    data: any
+    data: unknown
   ): boolean {
     // Only deduplicate events with unique IDs
-    if (data?.id || data?.uniqueId || data?.messageId) {
-      const uniqueId = data.id || data.uniqueId || data.messageId;
+    if (
+      typeof data === 'object' &&
+      data !== null &&
+      ('id' in data || 'uniqueId' in data || 'messageId' in data)
+    ) {
+      const d = data as { id?: string; uniqueId?: string; messageId?: string };
+      const uniqueId = d.id || d.uniqueId || d.messageId;
       const key = `${namespace}:${event}:${uniqueId}`;
 
       if (this.processedMessages.has(key)) {
@@ -391,7 +402,7 @@ export class ProductionWebSocketManager {
   /**
    * Queue message for later delivery
    */
-  private queueMessage(namespace: string, event: string, data: any): void {
+  private queueMessage(namespace: string, event: string, data: unknown): void {
     if (!this.messageQueue.has(namespace)) {
       this.messageQueue.set(namespace, []);
     }
@@ -459,7 +470,7 @@ export class ProductionWebSocketManager {
    * Send heartbeat to all namespaces
    */
   private sendHeartbeat(): void {
-    this.namespaces.forEach((socket, name) => {
+    this.namespaces.forEach((socket) => {
       if (socket.connected) {
         socket.emit('activity:ping');
       }
