@@ -9,11 +9,14 @@ import {
   Query,
   UseGuards,
   Req,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { NotificationService } from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
+import { PushNotificationService } from '../common/services/push-notification.service';
 
 /**
  * Controller for handling notification-related requests.
@@ -22,7 +25,10 @@ import { NotificationQueryDto } from './dto/notification-query.dto';
 @Controller('notifications')
 @UseGuards(JwtAuthGuard)
 export class NotificationController {
-  constructor(private readonly notificationService: NotificationService) {}
+  constructor(
+    private readonly notificationService: NotificationService,
+    private readonly pushNotificationService: PushNotificationService,
+  ) { }
 
   /**
    * Creates a new notification.
@@ -166,5 +172,36 @@ export class NotificationController {
   @Delete('all')
   removeAll(@Req() req): Promise<{ message: string; count: any }> {
     return this.notificationService.removeAll(req.user.userId);
+  }
+
+  /**
+   * Register device token for push notifications
+   * @param req - The request object containing user information
+   * @param body - The request body containing FCM token
+   * @returns Success message
+   */
+  @Post('device-token')
+  @HttpCode(HttpStatus.OK)
+  async registerDeviceToken(
+    @Req() req,
+    @Body() body: { token: string },
+  ): Promise<{ message: string }> {
+    await this.pushNotificationService.registerDeviceToken(
+      req.user.userId,
+      body.token,
+    );
+    return { message: 'Device token registered successfully' };
+  }
+
+  /**
+   * Unregister device token for push notifications
+   * @param req - The request object containing user information
+   * @returns Success message
+   */
+  @Delete('device-token')
+  @HttpCode(HttpStatus.OK)
+  async unregisterDeviceToken(@Req() req): Promise<{ message: string }> {
+    await this.pushNotificationService.unregisterDeviceToken(req.user.userId);
+    return { message: 'Device token unregistered successfully' };
   }
 }

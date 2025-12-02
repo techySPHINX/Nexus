@@ -6,11 +6,13 @@ import { ImprovedMessagingGateway } from './messaging.gateway.improved';
 import { FastChatGateway } from './fast-chat.gateway';
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { AuthModule } from 'src/auth/auth.module';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
     PrismaModule,
     AuthModule,
+    CommonModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'fallback-secret',
       signOptions: { expiresIn: '24h' },
@@ -24,4 +26,4 @@ import { AuthModule } from 'src/auth/auth.module';
   ],
   exports: [ImprovedMessagingGateway, FastChatGateway, MessagingService],
 })
-export class MessagingModule {}
+export class MessagingModule { }

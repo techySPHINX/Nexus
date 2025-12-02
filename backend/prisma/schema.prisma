@@ -79,6 +79,13 @@ model User {
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
   ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
   ReportsMade                           ContentReport[]               @relation("ReportsMade")
+  userActionsReceived                   UserAction[]                  @relation("UserActionsReceived")
+  userActionsPerformed                  UserAction[]                  @relation("UserActionsPerformed")
+  userActionsRevoked                    UserAction[]                  @relation("UserActionsRevoked")
+  moderationLogsPerformed               ModerationLog[]               @relation("ModerationLogsPerformed")
+  moderationLogsTargeted                ModerationLog[]               @relation("ModerationLogsTargeted")
+  deletedPosts                          Post[]                        @relation("DeletedPosts")
+  deletedComments                       Comment[]                     @relation("DeletedComments")
 
   @@map("users")
 }
@@ -395,13 +402,20 @@ model Post {
   updatedAt      DateTime        @default(now()) @updatedAt
   isUrgent       Boolean         @default(false)
   subject        String
+  isDeleted      Boolean         @default(false)
+  deletedAt      DateTime?
+  deletedBy      String?
+  deletionReason String?
   reports        ContentReport[]
   Comment        Comment[]
   author         User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  deletedByUser  User?           @relation("DeletedPosts", fields: [deletedBy], references: [id], onDelete: SetNull)
   flair          Flair?          @relation(fields: [flairId], references: [id])
   subCommunity   SubCommunity?   @relation(fields: [subCommunityId], references: [id])
   Vote           Vote[]
+  moderationLogs ModerationLog[]
 
+  @@index([isDeleted])
   @@map("post")
 }
 
@@ -427,14 +441,21 @@ model Comment {
   postId         String
   parentId       String?
   createdAt      DateTime        @default(now())
+  isDeleted      Boolean         @default(false)
+  deletedAt      DateTime?
+  deletedBy      String?
+  deletionReason String?
   reports        ContentReport[]
   parent         Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replies        Comment[]       @relation("CommentReplies")
   post           Post            @relation(fields: [postId], references: [id])
   user           User            @relation(fields: [userId], references: [id])
+  deletedByUser  User?           @relation("DeletedComments", fields: [deletedBy], references: [id], onDelete: SetNull)
   votes          Vote[]
   mentionedUsers User[]          @relation("mentionedUsers")
+  moderationLogs ModerationLog[]
 
+  @@index([isDeleted])
   @@map("comment")
 }
 
@@ -722,7 +743,9 @@ model ContentReport {
   handler        User?               @relation("ReportsHandled", fields: [handlerId], references: [id])
   post           Post?               @relation(fields: [postId], references: [id])
   reporter       User                @relation("ReportsMade", fields: [reporterId], references: [id])
-  subCommunity   SubCommunity?        @relation(fields: [subCommunityId], references: [id])
+  subCommunity   SubCommunity?       @relation(fields: [subCommunityId], references: [id])
+  userActions    UserAction[]
+  moderationLogs ModerationLog[]
 
   @@index([subCommunityId, status])
 }
@@ -930,6 +953,57 @@ enum RequestStatus {
   REJECTED
 }
 
+model UserAction {
+  id           String          @id @default(cuid())
+  userId       String
+  actionType   UserActionType
+  reason       String
+  reportId     String?
+  adminId      String
+  createdAt    DateTime        @default(now())
+  expiresAt    DateTime?
+  isActive     Boolean         @default(true)
+  revokedAt    DateTime?
+  revokedBy    String?
+  revokeReason String?
+  metadata     Json?
+  user         User            @relation("UserActionsReceived", fields: [userId], references: [id], onDelete: Cascade)
+  admin        User            @relation("UserActionsPerformed", fields: [adminId], references: [id], onDelete: Restrict)
+  revoker      User?           @relation("UserActionsRevoked", fields: [revokedBy], references: [id], onDelete: SetNull)
+  report       ContentReport?  @relation(fields: [reportId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isActive])
+  @@index([reportId])
+  @@index([adminId])
+  @@index([expiresAt])
+  @@map("user_actions")
+}
+
+model ModerationLog {
+  id            String               @id @default(cuid())
+  actionType    ModerationActionType
+  performedById String
+  targetUserId  String?
+  reportId      String?
+  postId        String?
+  commentId     String?
+  details       String
+  metadata      Json?
+  createdAt     DateTime             @default(now())
+  performedBy   User                 @relation("ModerationLogsPerformed", fields: [performedById], references: [id], onDelete: Restrict)
+  targetUser    User?                @relation("ModerationLogsTargeted", fields: [targetUserId], references: [id], onDelete: SetNull)
+  report        ContentReport?       @relation(fields: [reportId], references: [id], onDelete: SetNull)
+  post          Post?                @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment       Comment?             @relation(fields: [commentId], references: [id], onDelete: SetNull)
+
+  @@index([performedById])
+  @@index([targetUserId])
+  @@index([reportId])
+  @@index([createdAt])
+  @@index([actionType])
+  @@map("moderation_logs")
+}
+
 enum MentorshipListingStatus {
   OPEN
   CLOSED
@@ -1023,4 +1097,23 @@ enum SecurityEventType {
   DOCUMENT_UPLOADED
   DOCUMENT_APPROVED
   DOCUMENT_REJECTED
+}
+
+enum UserActionType {
+  WARNING
+  TEMPORARY_BAN
+  PERMANENT_BAN
+  RESTRICT_POSTING
+  REMOVE_PRIVILEGES
+  CONTENT_REMOVAL
+}
+
+enum ModerationActionType {
+  REPORT_CREATED
+  REPORT_RESOLVED
+  REPORT_DISMISSED
+  CONTENT_DELETED
+  USER_ACTION_TAKEN
+  USER_ACTION_REVERTED
+  BATCH_OPERATION
 }

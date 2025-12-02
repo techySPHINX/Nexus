@@ -7,6 +7,7 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VoteType } from '@prisma/client';
 import { CreateNotificationDto } from './dto/create-notification.dto';
+import { PushNotificationService } from '../common/services/push-notification.service';
 
 /**
  * Enum for different types of notifications.
@@ -38,7 +39,10 @@ export enum NotificationType {
  */
 @Injectable()
 export class NotificationService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private pushNotificationService: PushNotificationService,
+  ) { }
 
   /**
    * Creates a new notification.
@@ -71,13 +75,28 @@ export class NotificationService {
       throw new BadRequestException('Invalid notification type');
     }
 
-    return this.prisma.notification.create({
+    const notification = await this.prisma.notification.create({
       data: {
         userId: dto.userId,
         message: dto.message.trim(),
         type: dto.type || NotificationType.SYSTEM,
       },
     });
+
+    // Send push notification via PushNotificationService
+    try {
+      await this.pushNotificationService.sendToUser(dto.userId, {
+        title: 'New Notification',
+        body: dto.message.trim(),
+        type: dto.type || NotificationType.SYSTEM,
+        data: { notificationId: notification.id },
+      });
+    } catch (error) {
+      // Log error but don't fail the notification creation
+      console.error('Failed to send push notification:', error);
+    }
+
+    return notification;
   }
 
   /**
