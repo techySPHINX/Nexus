@@ -261,6 +261,7 @@ const EventsPage: FC = () => {
                 <Grid
                   item
                   xs={12}
+                  sm={viewMode === 'grid' ? 6 : 12}
                   md={viewMode === 'grid' ? 6 : 12}
                   lg={viewMode === 'grid' ? 4 : 12}
                   key={event.id}

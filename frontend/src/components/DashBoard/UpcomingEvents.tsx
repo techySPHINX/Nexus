@@ -3,8 +3,8 @@ import { useEffect } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import Card from '@mui/material/Card';
 import { ArrowRight } from 'lucide-react';
-import { useEventContext } from '@/contexts/eventContext';
-import { Link } from 'react-router-dom';
+import { useDashboardContext } from '@/contexts/DashBoardContext';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
   CircularProgress,
@@ -20,14 +20,19 @@ import { EventService } from '@/services/EventService';
 
 export default function UpcomingEvents() {
   const { isDark } = useTheme();
-  const { upcoming, fetchUpcoming, loading } = useEventContext();
+  const {
+    upcomingEvents: upcoming,
+    getUpcomingEvents,
+    loading,
+  } = useDashboardContext();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Only fetch if we don't already have upcoming events to avoid repeated calls
-    if (!fetchUpcoming) return;
+    if (!getUpcomingEvents) return;
     if (upcoming && upcoming.length > 0) return;
-    void fetchUpcoming(3);
-  }, [fetchUpcoming, upcoming]);
+    void getUpcomingEvents(3);
+  }, [getUpcomingEvents, upcoming]);
 
   const events = upcoming || [];
 
@@ -44,7 +49,6 @@ export default function UpcomingEvents() {
     ? 'text-xs text-neutral-300'
     : 'text-xs text-gray-600';
   const { user } = useAuth();
-  const { fetchEvents } = useEventContext();
 
   return (
     <Card className={containerClasses}>
@@ -62,12 +66,12 @@ export default function UpcomingEvents() {
           <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
-      {loading && (
+      {loading.events && (
         <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
           <CircularProgress size={20} />
         </Box>
       )}
-      {!loading && events.length === 0 && <div>Not Available</div>}
+      {!loading.events && events.length === 0 && <div>Not Available</div>}
       <div className="space-y-3">
         {events.map((event) => (
           <div key={event.id} className={eventCardClass}>
@@ -85,7 +89,7 @@ export default function UpcomingEvents() {
                 }
                 onClick={() => {
                   // Navigate to event detail page
-                  window.location.href = `/events/${event.id}`;
+                  navigate(`/events/${event.id}`);
                 }}
               >
                 {event.title}
@@ -182,8 +186,7 @@ export default function UpcomingEvents() {
                     if (!ok) return;
                     try {
                       await EventService.remove(event.id);
-                      void fetchUpcoming();
-                      void fetchEvents();
+                      if (getUpcomingEvents) await getUpcomingEvents(3);
                       alert('Event deleted');
                     } catch {
                       alert('Failed to delete event');
