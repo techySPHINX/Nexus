@@ -15,8 +15,9 @@ import Card from '@mui/material/Card';
 import AttachmentIcon from '@mui/icons-material/Attachment';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '@/contexts/NotificationContext';
-import { Tooltip } from '@mui/material';
+import { Box, Tooltip } from '@mui/material';
 import ReportButton from '../Report/ReportButton';
+import { SubCommunityBadge } from '../Post/SubCommunityBadge';
 
 export default function RecentPosts() {
   const {
@@ -332,6 +333,11 @@ export default function RecentPosts() {
                         Urgent
                       </span>
                     )} */}
+                    {post.subCommunity && (
+                      <Box sx={{ px: 2 }}>
+                        <SubCommunityBadge subCommunity={post.subCommunity} />
+                      </Box>
+                    )}
                   </div>
                 </div>
               </div>
