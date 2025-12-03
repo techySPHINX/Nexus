@@ -59,6 +59,9 @@ const StartupsMainPage = lazy(() => import('./pages/Startup/StartupMainPage'));
 const ProjectIdPage = lazy(() => import('./pages/Project/ProjectIdPage'));
 const UserProjectPage = lazy(() => import('./pages/Project/UserProjectPage'));
 const Gamification = lazy(() => import('./pages/Gamification'));
+const NewsPage = lazy(() => import('./pages/NewsPage'));
+const NewsDetail = lazy(() => import('./components/News/NewsDetail'));
+const AdminNews = lazy(() => import('./pages/AdminNews'));
 
 // Import context providers
 const ProfileProvider = lazy(() => import('./contexts/ProfileContext'));
@@ -76,6 +79,7 @@ import { GamificationProvider } from './contexts/GamificationContext';
 import { EventProvider } from './contexts/eventContext';
 import TagProvider from './contexts/TagContext';
 import { EngagementProvider } from './contexts/engagementContext';
+import { NewsProvider } from './contexts/NewsContext';
 import { EngagementService } from './services/engagementService';
 import LandingPage2 from './pages/LandingPage2';
 
@@ -392,6 +396,26 @@ const Layout: FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/news"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <NewsPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news/:slug"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <NewsDetail />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Admin-only routes with lazy loading */}
               <Route
@@ -412,6 +436,16 @@ const Layout: FC = () => {
                   <AdminRoute>
                     <Suspense fallback={<LoadingSpinner />}>
                       <ReportsPage />
+                    </Suspense>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/news"
+                element={
+                  <AdminRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <AdminNews />
                     </Suspense>
                   </AdminRoute>
                 }
@@ -484,9 +518,11 @@ function App() {
                     <EventProvider>
                       <SubCommunityProvider>
                         <GamificationProvider>
-                          <ProfileProvider>
-                            <Layout />
-                          </ProfileProvider>
+                          <NewsProvider>
+                            <ProfileProvider>
+                              <Layout />
+                            </ProfileProvider>
+                          </NewsProvider>
                         </GamificationProvider>
                       </SubCommunityProvider>
                     </EventProvider>

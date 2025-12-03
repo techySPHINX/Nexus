@@ -24,6 +24,7 @@ import { GamificationModule } from './gamification/gamification.module';
 import { ReportModule } from './report/report.module';
 import { EventsModule } from './events/events.module';
 import { ShowcaseModule } from './showcase/showcase.module';
+import { NewsModule } from './news/news.module';
 import { securityConfig } from './common/config/security.config';
 import { WinstonLoggerService } from './common/logger/winston-logger.service';
 import { AuditLogService } from './common/services/audit-log.service';
@@ -62,6 +63,7 @@ import { FileSecurityService } from './common/services/file-security.service';
     ReportModule,
     EventsModule,
     ShowcaseModule,
+    NewsModule,
   ],
   controllers: [AppController],
   providers: [
