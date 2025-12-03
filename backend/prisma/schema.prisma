@@ -76,6 +76,7 @@ model User {
   userSessions                          UserSession[]
   verificationDocuments                 VerificationDocument[]
   Vote                                  Vote[]
+  News                                  News[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
   ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
   ReportsMade                           ContentReport[]               @relation("ReportsMade")
@@ -88,6 +89,22 @@ model User {
   deletedComments                       Comment[]                     @relation("DeletedComments")
 
   @@map("users")
+}
+
+model News {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  summary     String?
+  content     String
+  topic       String?
+  imageUrl    String?
+  published   Boolean  @default(false)
+  publishedAt DateTime?
+  authorId    String?
+  author      User?    @relation(fields: [authorId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Project {
@@ -660,6 +677,7 @@ model PointTransaction {
   userPointsId String
   points       Int
   type         String
+  message      String?
   entityId     String?
   createdAt    DateTime   @default(now())
   userPoints   UserPoints @relation(fields: [userPointsId], references: [id])
