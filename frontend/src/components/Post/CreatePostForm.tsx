@@ -13,6 +13,7 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Image, Close, Cancel } from '@mui/icons-material';
+import RichTextEditorWrapper from '@/utils/RichTextEditorWrapper';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { SubCommunityRole } from '@/types/subCommunity';
@@ -186,6 +187,15 @@ export const CreatePostForm: FC<CreatePostFormProps> = ({
     }
   };
 
+  // Editor upload handler: return object URLs so the editor can insert images immediately.
+  const handleEditorUploadFiles = async (files: File[]) => {
+    const images = Array.from(files).map((f) => ({
+      src: URL.createObjectURL(f),
+      alt: f.name,
+    }));
+    return images;
+  };
+
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
@@ -233,22 +243,14 @@ export const CreatePostForm: FC<CreatePostFormProps> = ({
           disabled={isSubmitting}
         />
 
-        <TextField
-          fullWidth
-          multiline
-          rows={4}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your post content here..."
-          variant="outlined"
-          sx={{
-            mb: 2,
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-            },
-          }}
-          disabled={isSubmitting}
-        />
+        <Box sx={{ mb: 2, px: 3 }}>
+          <RichTextEditorWrapper
+            value={content}
+            onChange={(html) => setContent(html)}
+            onUploadFiles={handleEditorUploadFiles}
+            minHeight={180}
+          />
+        </Box>
 
         <Box sx={{ mb: 2 }}>
           <Box
