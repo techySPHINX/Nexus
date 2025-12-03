@@ -43,7 +43,8 @@ export class ShowcaseService {
 
     // award points for creating a project (fire-and-forget)
     try {
-      this.gamificationService.awardForEvent('PROJECT_CREATED', userId, project.id).catch(() => undefined);
+      const message = 'Created a new project';
+      this.gamificationService.awardForEvent('PROJECT_CREATED', userId, project.id, message).catch(() => undefined);
     } catch {
       // ignore
     }
@@ -1007,7 +1008,8 @@ export class ShowcaseService {
 
     // award points for creating a startup
     try {
-      this.gamificationService.awardForEvent('STARTUP_CREATED', userId, startup.id).catch(() => undefined);
+      const message = 'Created a new startup';
+      this.gamificationService.awardForEvent('STARTUP_CREATED', userId, startup.id, message).catch(() => undefined);
     } catch {
       // ignore
     }
@@ -1311,7 +1313,10 @@ export class ShowcaseService {
   }
 
   async createStartupComment(userId: string, startupId: string, commentText: string) {
-    const startup = await this.prisma.startup.findUnique({ where: { id: startupId } });
+    const startup = await this.prisma.startup.findUnique({ 
+      where: { id: startupId },
+      select: { id: true, name: true, founderId: true },
+    });
     if (!startup) {
       throw new Error('Startup not found');
     }
@@ -1335,7 +1340,8 @@ export class ShowcaseService {
 
     // award gamification points for startup comment
     try {
-      this.gamificationService.awardForEvent('STARTUP_COMMENT', userId, comment.id).catch(() => undefined);
+      const message = `Commented on a ${startup.name} startup`;
+      this.gamificationService.awardForEvent('STARTUP_COMMENT', userId, comment.id, message).catch(() => undefined);
     } catch {
       // ignore
     }
@@ -1397,11 +1403,22 @@ export class ShowcaseService {
       type: 'PROJECT_SUPPORT',
     });
 
+    try {
+      const message = `You got a supporter on project "${project.title}".`;
+      this.gamificationService
+        .awardForEvent('PROJECT_SUPPORTED', project.ownerId, support.id, message)
+        .catch(() => undefined);
+    } catch {}
+
     return support;
   }
 
   async unsupportProject(userId: string, projectId: string) {
-    return this.prisma.projectSupport.delete({
+    const existing = await this.prisma.projectSupport.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+
+    const deleted = await this.prisma.projectSupport.delete({
       where: {
         projectId_userId: {
           projectId,
@@ -1409,6 +1426,18 @@ export class ShowcaseService {
         },
       },
     });
+
+     // Revoke gamification points if necessary
+
+    try {
+      if (existing) {
+        const project = await this.prisma.project.findUnique({ where: { id: projectId }, select: { ownerId: true } });
+        if (project && project.ownerId !== userId) {
+          await this.gamificationService.revokeForEvent('PROJECT_SUPPORTED', project.ownerId, existing.id).catch(() => undefined);
+        }
+      }
+    } catch {}
+    return deleted;
   }
 
   async followProject(userId: string, projectId: string) {
@@ -1432,18 +1461,38 @@ export class ShowcaseService {
       type: 'PROJECT_FOLLOW',
     });
 
+    // Award points to the project owner for receiving a follower (fire-and-forget)
+    try {
+      const message = `You got follower on project "${project.title}".`;
+      this.gamificationService
+        .awardForEvent('PROJECT_FOLLOWED', project.ownerId, follow.id, message)
+        .catch(() => undefined);
+    } catch {}
+
     return follow;
   }
 
   async unfollowProject(userId: string, projectId: string) {
-    return this.prisma.projectFollower.delete({
-      where: {
-        projectId_userId: {
-          projectId,
-          userId,
-        },
-      },
+    // Find the follow record first so we can revoke gamification points if necessary
+    const existing = await this.prisma.projectFollower.findUnique({
+      where: { projectId_userId: { projectId, userId } },
     });
+
+    const deleted = await this.prisma.projectFollower.delete({
+      where: { projectId_userId: { projectId, userId } },
+    });
+
+    try {
+      if (existing) {
+        const project = await this.prisma.project.findUnique({ where: { id: projectId }, select: { ownerId: true } });
+        if (project && project.ownerId !== userId) {
+          // Revoke the points previously awarded for this follow (entityId was follow.id when created)
+          await this.gamificationService.revokeForEvent('PROJECT_FOLLOWED', project.ownerId, existing.id).catch(() => undefined);
+        }
+      }
+    } catch {}
+
+    return deleted;
   }
 
   async createCollaborationRequest(
@@ -1594,7 +1643,8 @@ export class ShowcaseService {
 
     // award gamification points for project comment
     try {
-      this.gamificationService.awardForEvent('PROJECT_COMMENT', userId, comment.id).catch(() => undefined);
+      const message = `Commented on a project "${project.title}"`;
+      this.gamificationService.awardForEvent('PROJECT_COMMENT', userId, comment.id, message).catch(() => undefined);
     } catch {
       // ignore
     }

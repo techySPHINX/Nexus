@@ -53,7 +53,6 @@ export const EventProvider: FC<{ children: React.ReactNode }> = ({
         console.log('Parsed upcoming events list:', list);
         setUpcoming(list);
         console.log('Upcoming events state updated:', list);
-        showNotification?.('Upcoming events fetched', 'success');
       } catch (err) {
         showNotification?.(getErrorMessage(err), 'error');
         setError(getErrorMessage(err));
@@ -75,7 +74,6 @@ export const EventProvider: FC<{ children: React.ReactNode }> = ({
           ? data
           : data?.items || data?.data || data?.results || [];
         setEvents(list);
-        showNotification?.('Events fetched', 'success');
       } catch (err) {
         showNotification?.(getErrorMessage(err), 'error');
         setError(getErrorMessage(err));

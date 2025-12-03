@@ -9,14 +9,12 @@ import {
   Avatar,
   Chip,
   Skeleton,
-  IconButton,
-  Tooltip,
   useTheme,
   ToggleButtonGroup,
   ToggleButton,
   alpha,
 } from '@mui/material';
-import { TrendingUp, Refresh } from '@mui/icons-material';
+import { TrendingUp } from '@mui/icons-material';
 import { useDashboardContext } from '@/contexts/DashBoardContext';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { useNavigate } from 'react-router-dom';
@@ -48,10 +46,10 @@ const Leaderboard: FC<LeaderboardProps> = ({
   const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const { getLeaderboard } = useDashboardContext();
   const [isListLoading, setIsListLoading] = useState(true);
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>('week');
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('day');
 
   const fetchLeaderboard = useCallback(
-    async (period: TimePeriod = 'week') => {
+    async (period: TimePeriod = 'day') => {
       try {
         setIsListLoading(true);
         if (!getLeaderboard) {
@@ -66,6 +64,7 @@ const Leaderboard: FC<LeaderboardProps> = ({
         type UserObj = {
           name?: string;
           displayName?: string;
+          role?: Role;
           profile?: { avatarUrl?: string };
           avatarUrl?: string;
         };
@@ -81,6 +80,7 @@ const Leaderboard: FC<LeaderboardProps> = ({
             (userObj.displayName as string | undefined) ||
             userId ||
             'Anonymous';
+          const userRole = userObj.role as Role;
 
           const totalPoints =
             (e.points as number) || (e.totalPoints as number) || 0;
@@ -92,6 +92,7 @@ const Leaderboard: FC<LeaderboardProps> = ({
           return {
             userId,
             username,
+            role: userRole,
             totalPoints,
             rank,
             avatar,
@@ -135,11 +136,6 @@ const Leaderboard: FC<LeaderboardProps> = ({
     }
   };
 
-  const getCurrentUserRank = () => {
-    if (!currentUserId) return null;
-    return leaderboard.find((user) => user.userId === currentUserId);
-  };
-
   const formatPoints = (points: number) => {
     if (points >= 1000) {
       return `${(points / 1000).toFixed(1)}k`;
@@ -148,9 +144,6 @@ const Leaderboard: FC<LeaderboardProps> = ({
   };
 
   // Render the full component; show skeleton only for the leaderboard list
-
-  const currentUserRank = getCurrentUserRank();
-
   return (
     <Box
       sx={{
@@ -185,7 +178,7 @@ const Leaderboard: FC<LeaderboardProps> = ({
           </Typography>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Tooltip title="Refresh">
             <IconButton
               size="small"
@@ -195,7 +188,7 @@ const Leaderboard: FC<LeaderboardProps> = ({
               <Refresh sx={{ fontSize: compact ? '16px' : '18px' }} />
             </IconButton>
           </Tooltip>
-        </Box>
+        </Box> */}
       </Box>
 
       {/* Time Period Selector */}
@@ -340,8 +333,9 @@ const Leaderboard: FC<LeaderboardProps> = ({
                         role: user.role,
                       }}
                       showRoleBadge={true}
+                      showYouBadge={false}
                       fontSize={compact ? '0.75rem' : '0.875rem'}
-                      badgeSize={compact ? 16 : 18}
+                      badgeSize={10}
                     />
                   </Typography>
                 }
@@ -385,21 +379,6 @@ const Leaderboard: FC<LeaderboardProps> = ({
           ))
         )}
       </List>
-
-      {/* Current User Rank Footer */}
-      {currentUserId && !currentUserRank && leaderboard.length > 0 && (
-        <Box
-          sx={{
-            p: 1,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            bgcolor: alpha(theme.palette.primary.main, 0.04),
-          }}
-        >
-          <Typography variant="caption" color="text.secondary" align="center">
-            Your rank is outside top {maxItems}
-          </Typography>
-        </Box>
-      )}
 
       {compact && leaderboard.length > 0 && (
         <Box

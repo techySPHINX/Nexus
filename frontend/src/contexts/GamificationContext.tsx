@@ -18,6 +18,7 @@ type Transaction = {
   userId: string;
   points: number;
   type: string;
+  message?: string;
   entityId?: string | null;
   createdAt: string;
 };
