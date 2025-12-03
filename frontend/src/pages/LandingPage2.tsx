@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import {
   School,
   People,
-  Event,
   Work,
   RocketLaunch,
   TrendingUp,
@@ -21,82 +20,80 @@ import {
   CorporateFare,
   MenuBook,
 } from '@mui/icons-material';
+import ThemeToggle from '@/components/ThemeToggle';
+import { useTheme } from '@/contexts/ThemeContext';
+import NotificationIndicator from '@/components/Notification/NotificationIndicator';
+import { useAuth } from '@/contexts/AuthContext';
 
-// More professional, focused feature list with harmonious greens
+// Optimized feature list with reduced animations
 const featureList = [
   {
-    icon: <ConnectWithoutContact className="text-white text-2xl" />,
+    icon: <ConnectWithoutContact sx={{ fontSize: 24 }} />,
     title: 'Smart Connections',
-    desc: 'Algorithmic matching to connect you with alumni and mentors relevant to your goals.',
+    desc: 'AI-powered matching to connect students with relevant alumni mentors and career opportunities.',
     gradient: 'from-emerald-600 to-emerald-700',
-    hoverGradient: 'from-emerald-700 to-emerald-800',
   },
   {
-    icon: <Work className="text-white text-2xl" />,
-    title: 'Career & Referrals',
-    desc: 'Job postings, referral pipelines, and recruiter access tailored for KIIT alumni.',
+    icon: <Work sx={{ fontSize: 24 }} />,
+    title: 'Career Guidance',
+    desc: 'Get career advice, internship opportunities, and industry insights from experienced alumni.',
     gradient: 'from-emerald-500 to-emerald-600',
-    hoverGradient: 'from-emerald-600 to-emerald-700',
   },
   {
-    icon: <School className="text-white text-2xl" />,
-    title: 'Mentorship',
-    desc: 'Structured mentorship sessions and office hours with experienced alumni.',
+    icon: <School sx={{ fontSize: 24 }} />,
+    title: 'Mentorship Programs',
+    desc: 'Structured mentorship with alumni across various industries and experience levels.',
     gradient: 'from-teal-500 to-emerald-500',
-    hoverGradient: 'from-teal-600 to-emerald-600',
   },
   {
-    icon: <Groups className="text-white text-2xl" />,
-    title: 'Verified Communities',
-    desc: 'Curated groups by batch, industry, and interest with verified members.',
+    icon: <Groups sx={{ fontSize: 24 }} />,
+    title: 'Community Groups',
+    desc: 'Join specialized groups by major, interests, and career paths with verified members.',
     gradient: 'from-emerald-500 to-teal-500',
-    hoverGradient: 'from-emerald-600 to-teal-600',
   },
   {
-    icon: <RocketLaunch className="text-white text-2xl" />,
+    icon: <RocketLaunch sx={{ fontSize: 24 }} />,
     title: 'Project Collaboration',
-    desc: 'Find collaborators, co-founders, and project teams within a trusted community.',
+    desc: 'Find project partners, research collaborators, and startup co-founders within our trusted network.',
     gradient: 'from-emerald-400 to-emerald-600',
-    hoverGradient: 'from-emerald-500 to-emerald-700',
   },
   {
-    icon: <TrendingUp className="text-white text-2xl" />,
-    title: 'Skills & Growth',
-    desc: 'Workshops, curated learning paths, and peer learning groups.',
+    icon: <TrendingUp sx={{ fontSize: 24 }} />,
+    title: 'Skill Development',
+    desc: 'Access workshops, webinars, and learning resources curated by successful alumni.',
     gradient: 'from-lime-400 to-emerald-500',
-    hoverGradient: 'from-lime-500 to-emerald-600',
   },
 ];
 
-const alumniSpotlights = [
+const successStories = [
   {
-    name: 'Dr. Arjun Mishra',
-    title: 'AI Researcher, Google',
-    quote:
-      'Nexus helped me reconnect with my batchmates and find collaborators for groundbreaking research projects.',
-    achievement: 'Published 5 research papers with KIIT alumni collaborators',
+    name: 'Priya Sharma',
+    role: 'Computer Science, 2023',
+    achievement: 'Landed internship at Google through alumni referral',
+    story:
+      'Nexus connected me with an alum working at Google who referred me for an internship. The mentorship I received was invaluable!',
     avatarColor: 'bg-gradient-to-br from-emerald-500 to-green-500',
   },
   {
-    name: 'Sahana R.',
-    title: 'Founder, GreenLeaf',
-    quote:
-      "I found my technical co-founder through Nexus' project collaboration group. Our startup just secured Series A funding.",
-    achievement: '$2M funding raised with Nexus connections',
+    name: 'Rahul Kumar',
+    role: 'Mechanical Engineering, 2022',
+    achievement: 'Founded startup with alumni co-founder',
+    story:
+      'Found my technical co-founder through Nexus. Our startup now has 10+ employees and we regularly hire from KIIT.',
     avatarColor: 'bg-gradient-to-br from-green-500 to-teal-500',
   },
   {
-    name: 'Rohit K.',
-    title: 'Senior PM, Fintech Co',
-    quote:
-      'Re-engaging with students and hiring exceptional interns has been seamless through the platform.',
-    achievement: 'Hired 15+ interns from KIIT via Nexus',
+    name: 'Anjali Patel',
+    role: 'Biotechnology, 2024',
+    achievement: 'Published research with alumni mentor',
+    story:
+      'My alumni mentor guided me through my research paper and helped me connect with journals. Got published in my final year!',
     avatarColor: 'bg-gradient-to-br from-teal-500 to-cyan-500',
   },
 ];
 
 const stats = [
-  { number: '15K+', label: 'Active Alumni', icon: <People /> },
+  { number: '15K+', label: 'Active Members', icon: <People /> },
   { number: '2K+', label: 'Mentorship Sessions', icon: <School /> },
   { number: '500+', label: 'Partner Companies', icon: <Work /> },
   { number: '98%', label: 'Satisfaction Rate', icon: <EmojiEvents /> },
@@ -104,66 +101,71 @@ const stats = [
 
 const platformFeatures = [
   {
-    icon: <Security className="text-3xl" />,
-    title: 'Verified Profiles',
-    description: 'All alumni profiles are verified through KIIT credentials',
+    icon: <Security sx={{ fontSize: 32 }} />,
+    title: 'Verified Network',
+    description:
+      'All members verified through KIIT credentials for trusted connections',
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
   },
   {
-    icon: <Diversity3 className="text-3xl" />,
-    title: 'Diverse Network',
-    description: 'Connect with alumni across 50+ countries worldwide',
+    icon: <Diversity3 sx={{ fontSize: 32 }} />,
+    title: 'Global Reach',
+    description:
+      'Connect with alumni across 50+ countries and industries worldwide',
     color: 'text-green-600',
     bgColor: 'bg-green-100 dark:bg-green-900/30',
   },
   {
-    icon: <CorporateFare className="text-3xl" />,
-    title: 'Industry Partnerships',
-    description: 'Exclusive partnerships with top companies for recruitment',
+    icon: <CorporateFare sx={{ fontSize: 32 }} />,
+    title: 'Industry Partners',
+    description: 'Exclusive recruitment partnerships with top companies',
     color: 'text-teal-600',
     bgColor: 'bg-teal-100 dark:bg-teal-900/30',
   },
   {
-    icon: <MenuBook className="text-3xl" />,
-    title: 'Knowledge Base',
-    description: 'Access to exclusive resources and learning materials',
+    icon: <MenuBook sx={{ fontSize: 32 }} />,
+    title: 'Learning Resources',
+    description:
+      'Access to exclusive workshops, materials, and career resources',
     color: 'text-lime-600',
     bgColor: 'bg-lime-100 dark:bg-lime-900/30',
   },
 ];
 
-const upcomingEvents = [
-  {
-    title: 'Annual Alumni Meet 2024',
-    date: 'March 15, 2024',
-    location: 'KIIT Campus, Bhubaneswar',
-    type: 'Networking',
-  },
-  {
-    title: 'Tech Career Workshop',
-    date: 'March 22, 2024',
-    location: 'Virtual Event',
-    type: 'Workshop',
-  },
-  {
-    title: 'Startup Pitch Competition',
-    date: 'April 5, 2024',
-    location: 'Bangalore Hub',
-    type: 'Competition',
-  },
-];
+// const upcomingEvents = [
+//   {
+//     title: 'Tech Career Workshop',
+//     date: 'March 15, 2024',
+//     location: 'Campus Innovation Center',
+//     type: 'Workshop',
+//   },
+//   {
+//     title: 'Alumni-Student Mixer',
+//     date: 'March 22, 2024',
+//     location: 'University Auditorium',
+//     type: 'Networking',
+//   },
+//   {
+//     title: 'Startup Pitch Competition',
+//     date: 'April 5, 2024',
+//     location: 'Entrepreneurship Cell',
+//     type: 'Competition',
+//   },
+// ];
 
+// Optimized motion components with reduced animations for Firefox
 const MotionButton = motion.button;
 const MotionCard = motion.div;
 const MotionBox = motion.div;
 
+// Simplified variants for better performance
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.15,
     },
   },
 };
@@ -174,67 +176,34 @@ const itemVariants = {
     y: 0,
     opacity: 1,
     transition: {
-      duration: 0.6,
+      duration: 0.5,
       ease: 'easeOut',
-    },
-  },
-};
-
-const pulseVariants = {
-  animate: {
-    scale: [1, 1.03, 1],
-    opacity: [0.45, 0.85, 0.45],
-    transition: {
-      duration: 5,
-      repeat: Infinity,
-      ease: 'easeInOut',
     },
   },
 };
 
 const Landing: FC = () => {
   const navigate = useNavigate();
+  const { isDark: darkMode } = useTheme();
+  const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 dark:from-gray-900 dark:via-emerald-900 dark:to-green-900 overflow-hidden">
-      {/* Enhanced Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <MotionBox
-          className="absolute top-24 left-8 w-64 h-64 bg-emerald-300 rounded-full opacity-8 blur-2xl"
-          variants={pulseVariants}
-          animate="animate"
-        />
-        <MotionBox
-          className="absolute bottom-40 right-10 w-56 h-56 bg-emerald-200 rounded-full opacity-8 blur-2xl"
-          animate={{
-            y: [0, 28, 0],
-            scale: [1, 1.08, 1],
-            rotate: [0, 90, 0],
-          }}
-          transition={{
-            duration: 14,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        />
-        <MotionBox
-          className="absolute top-1/2 left-1/3 w-44 h-44 bg-teal-300 rounded-full opacity-6 blur-2xl"
-          animate={{
-            x: [0, 60, 0],
-            y: [0, -40, 0],
-          }}
-          transition={{
-            duration: 9,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: 2,
-          }}
-        />
+    <div
+      className={`transition-colors duration-300 ${
+        darkMode
+          ? 'bg-gradient-to-br from-gray-900 via-emerald-900 to-green-900'
+          : 'bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50'
+      } overflow-hidden`}
+    >
+      {/* Theme Toggle */}
+      <div className="fixed top-6 right-6 z-50">
+        <ThemeToggle />
+        {user && <NotificationIndicator />}
       </div>
 
       {/* HERO SECTION */}
-      <section className="relative py-20 md:py-32">
-        <div className="container mx-auto px-4 relative z-10">
+      <section className="relative py-6">
+        <div className="container mx-4 px-4 relative z-10">
           <MotionBox
             variants={containerVariants}
             initial="hidden"
@@ -246,98 +215,145 @@ const Landing: FC = () => {
               <MotionBox
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ type: 'spring', stiffness: 160, damping: 12 }}
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-emerald-700 to-emerald-500 text-white px-5 py-2 rounded-full text-sm font-semibold shadow-md"
+                transition={{ type: 'spring', stiffness: 120, damping: 10 }}
+                className={`inline-flex items-center gap-3 px-5 py-2 rounded-full text-sm font-semibold shadow-md ${
+                  darkMode
+                    ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 text-white'
+                    : 'bg-gradient-to-r from-emerald-700 to-emerald-500 text-white'
+                }`}
               >
-                <Star className="text-yellow-400 animate-pulse" />
-                Trusted by 15,000+ KIIT Alumni
+                <Star className="text-yellow-400" />
+                Trusted by 15,000+ KIIT Students & Alumni
               </MotionBox>
 
               <MotionBox variants={itemVariants}>
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-700 to-emerald-500">
-                    KIIT Alumni
+                <h1
+                  className={`text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight ${
+                    darkMode ? 'text-white' : 'text-gray-900'
+                  }`}
+                >
+                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-emerald-500">
+                    Nexus
                   </span>
                   <br />
-                  <span className="bg-clip-text text-transparent bg-gradient-to-r from-emerald-600 to-teal-500">
-                    Network
+                  <span
+                    className={`text-3xl md:text-5xl ${
+                      darkMode ? 'text-gray-300' : 'text-gray-700'
+                    }`}
+                  >
+                    Discover, Connect, Collaborate
                   </span>
                 </h1>
               </MotionBox>
 
               <MotionBox variants={itemVariants}>
-                <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 leading-relaxed max-w-lg">
-                  Connect with fellow alumni, discover opportunities, and build
-                  meaningful relationships that last a lifetime.
+                <p
+                  className={`text-xl md:text-2xl leading-relaxed max-w-lg ${
+                    darkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+                >
+                  The premier platform connecting KIIT students with alumni
+                  worldwide. Build meaningful relationships, discover
+                  opportunities, and accelerate your career.
                 </p>
               </MotionBox>
 
-              <MotionBox
-                variants={itemVariants}
-                className="flex flex-col sm:flex-row gap-4"
-              >
-                <MotionButton
-                  onClick={() => navigate('/register')}
-                  className="group relative bg-gradient-to-r from-emerald-700 to-emerald-500 text-white px-7 py-3 rounded-2xl font-semibold text-lg shadow-md transition-all duration-350 flex items-center gap-3 overflow-hidden"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/12 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  Join Now
-                  <ArrowForward className="group-hover:translate-x-2 transition-transform duration-300" />
-                </MotionButton>
-
-                <MotionButton
-                  onClick={() => navigate('/login')}
-                  className="group border-2 border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 px-6 py-3 rounded-2xl font-semibold text-lg hover:border-emerald-500 hover:bg-emerald-50 dark:hover:border-emerald-400 transition-all duration-300 backdrop-blur-sm"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Sign In
-                </MotionButton>
-              </MotionBox>
+              {!user ? (
+                <>
+                  <MotionBox
+                    variants={itemVariants}
+                    className="flex flex-col sm:flex-row gap-4"
+                  >
+                    <MotionButton
+                      onClick={() => navigate('/register')}
+                      className={`group relative px-7 py-3 rounded-2xl font-semibold text-lg shadow-md transition-all duration-300 flex items-center gap-3 overflow-hidden ${
+                        darkMode
+                          ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white'
+                          : 'bg-gradient-to-r from-emerald-700 to-emerald-500 text-white'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Join Now
+                      <ArrowForward className="group-hover:translate-x-1 transition-transform duration-300" />
+                    </MotionButton>
+                    <MotionButton
+                      onClick={() => navigate('/login')}
+                      className={`group border-2 px-6 py-3 rounded-2xl font-semibold text-lg transition-all duration-300 backdrop-blur-sm ${
+                        darkMode
+                          ? 'border-emerald-600 text-emerald-400 hover:border-emerald-400 hover:bg-emerald-900/30'
+                          : 'border-emerald-200 text-emerald-700 hover:border-emerald-500 hover:bg-emerald-50'
+                      }`}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Sign In
+                    </MotionButton>
+                  </MotionBox>
+                </>
+              ) : (
+                <MotionBox variants={itemVariants}>
+                  <MotionButton
+                    onClick={() => navigate('/dashboard')}
+                    className={`group relative px-7 py-3 rounded-2xl font-semibold text-lg shadow-md transition-all duration-300 flex items-center gap-3 overflow-hidden ${
+                      darkMode
+                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-400 text-white'
+                        : 'bg-gradient-to-r from-emerald-700 to-emerald-500 text-white'
+                    }`}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Go to Dashboard
+                  </MotionButton>
+                </MotionBox>
+              )}
             </MotionBox>
 
-            {/* Right Content */}
+            {/* Right Content - Stats Card */}
             <MotionBox variants={itemVariants} className="relative">
               <MotionCard
-                className="bg-white/95 dark:bg-gray-800/90 backdrop-blur-lg rounded-3xl p-8 shadow-md border border-transparent"
-                whileHover={{ y: -6 }}
-                transition={{ type: 'spring', stiffness: 180, damping: 16 }}
+                className={`backdrop-blur-lg rounded-3xl p-8 shadow-lg border ${
+                  darkMode
+                    ? 'bg-gray-800/90 border-gray-700'
+                    : 'bg-white/95 border-gray-200'
+                }`}
+                whileHover={{ y: -4 }}
+                transition={{ type: 'spring', stiffness: 120 }}
               >
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-emerald-500 to-green-500 rounded-bl-3xl opacity-10" />
-                <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-teal-500 to-cyan-500 rounded-tr-3xl opacity-10" />
+                <h3
+                  className={`text-2xl font-bold mb-6 ${
+                    darkMode ? 'text-white' : 'text-gray-800'
+                  }`}
+                >
+                  🚀 Your Network Awaits
+                </h3>
 
-                <div className="relative z-10">
-                  <h3 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">
-                    🚀 Your Alumni Network Awaits
-                  </h3>
-
-                  <div className="grid grid-cols-2 gap-6">
-                    {stats.map((stat, index) => (
-                      <MotionBox
-                        key={index}
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{
-                          type: 'spring',
-                          stiffness: 140,
-                          damping: 14,
-                          delay: 0.6 + index * 0.08,
-                        }}
-                        className="text-center group"
-                        whileHover={{ scale: 1.1 }}
+                <div className="grid grid-cols-2 gap-6">
+                  {stats.map((stat, index) => (
+                    <MotionBox
+                      key={index}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 120,
+                        delay: 0.5 + index * 0.1,
+                      }}
+                      className="text-center group"
+                    >
+                      <div className="text-2xl font-black bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                        {stat.number}
+                      </div>
+                      <div
+                        className={`text-sm font-semibold mt-2 flex items-center justify-center gap-1 ${
+                          darkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}
                       >
-                        <div className="text-3xl font-black bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent group-hover:from-green-600 group-hover:to-teal-600 transition-all duration-300">
-                          {stat.number}
-                        </div>
-                        <div className="text-sm text-gray-600 dark:text-gray-400 font-semibold mt-2 flex items-center justify-center gap-1">
-                          {stat.icon}
-                          {stat.label}
-                        </div>
-                      </MotionBox>
-                    ))}
-                  </div>
+                        {stat.icon}
+                        {stat.label}
+                      </div>
+                    </MotionBox>
+                  ))}
                 </div>
               </MotionCard>
             </MotionBox>
@@ -346,25 +362,37 @@ const Landing: FC = () => {
       </section>
 
       {/* PLATFORM FEATURES */}
-      <section className="py-20 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+      <section
+        className={`py-20 backdrop-blur-sm ${
+          darkMode ? 'bg-gray-800/50' : 'bg-white/50'
+        }`}
+      >
         <div className="container mx-auto px-4">
           <MotionBox
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            viewport={{ once: true, margin: '-100px' }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true, margin: '-50px' }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white mb-6">
+            <h2
+              className={`text-4xl md:text-5xl font-black mb-6 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}
+            >
               Why Choose{' '}
               <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
                 Nexus
               </span>
               ?
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Built exclusively for the KIIT community with features that matter
-              most to alumni
+            <p
+              className={`text-xl max-w-2xl mx-auto ${
+                darkMode ? 'text-gray-300' : 'text-gray-600'
+              }`}
+            >
+              Built exclusively for the KIIT community with features designed to
+              bridge students and alumni
             </p>
           </MotionBox>
 
@@ -373,29 +401,36 @@ const Landing: FC = () => {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-50px' }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
           >
             {platformFeatures.map((feature, index) => (
               <MotionCard
                 key={index}
                 variants={itemVariants}
-                className="group text-center p-8 hover:bg-white dark:hover:bg-gray-800 rounded-3xl transition-all duration-500 hover:shadow-2xl border border-transparent hover:border-emerald-200 dark:hover:border-emerald-700"
-                whileHover={{
-                  y: -8,
-                  scale: 1.02,
-                }}
+                className={`group text-center p-6 rounded-3xl transition-all duration-300 border ${
+                  darkMode
+                    ? 'bg-gray-800/80 border-gray-700 hover:bg-gray-700/80'
+                    : 'bg-white/80 border-gray-200 hover:bg-white'
+                }`}
+                whileHover={{ y: -4 }}
               >
-                <MotionBox
-                  className={`inline-flex items-center justify-center w-20 h-20 ${feature.bgColor} rounded-2xl mb-6 group-hover:scale-105 transition-transform duration-300 ${feature.color}`}
-                  whileHover={{ rotate: 10 }}
-                  transition={{ duration: 0.5 }}
+                <div
+                  className={`inline-flex items-center justify-center w-16 h-16 ${feature.bgColor} rounded-2xl mb-4 ${feature.color}`}
                 >
                   {feature.icon}
-                </MotionBox>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
+                </div>
+                <h3
+                  className={`text-lg font-bold mb-3 ${
+                    darkMode ? 'text-white' : 'text-gray-900'
+                  }`}
+                >
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                <p
+                  className={`text-sm leading-relaxed ${
+                    darkMode ? 'text-gray-300' : 'text-gray-600'
+                  }`}
+                >
                   {feature.description}
                 </p>
               </MotionCard>
@@ -408,18 +443,26 @@ const Landing: FC = () => {
       <section className="py-20 md:py-32 relative">
         <div className="container mx-auto px-4">
           <MotionBox
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="text-center mb-20"
+            className="text-center mb-16"
           >
-            <h2 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-white mb-6">
+            <h2
+              className={`text-4xl md:text-5xl font-black mb-6 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}
+            >
               Powerful Features
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-              Everything you need to connect, collaborate, and grow with the
-              KIIT alumni community worldwide
+            <p
+              className={`text-xl max-w-3xl mx-auto ${
+                darkMode ? 'text-gray-300' : 'text-gray-600'
+              }`}
+            >
+              Everything you need to connect with alumni, discover
+              opportunities, and build your career
             </p>
           </MotionBox>
 
@@ -427,35 +470,39 @@ const Landing: FC = () => {
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+            viewport={{ once: true, margin: '-50px' }}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {featureList.map((feature, index) => (
               <MotionCard
                 key={index}
                 variants={itemVariants}
-                className="group relative bg-white/80 dark:bg-gray-800/80 backdrop-blur-lg rounded-3xl p-8 border border-gray-200 dark:border-gray-700 hover:border-transparent transition-all duration-500 overflow-hidden"
-                whileHover={{
-                  y: -12,
-                  scale: 1.02,
-                }}
+                className={`group relative backdrop-blur-lg rounded-3xl p-6 border transition-all duration-300 overflow-hidden ${
+                  darkMode
+                    ? 'bg-gray-800/80 border-gray-700'
+                    : 'bg-white/80 border-gray-200'
+                }`}
+                whileHover={{ y: -4 }}
               >
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-6 transition-opacity duration-400`}
-                />
                 <div className="relative z-10">
-                  <MotionBox
-                    className={`w-16 h-16 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-6 text-white shadow-md group-hover:scale-105 transition-all duration-300`}
-                    whileHover={{ rotate: 8 }}
-                    transition={{ duration: 0.5 }}
+                  <div
+                    className={`w-12 h-12 bg-gradient-to-r ${feature.gradient} rounded-2xl flex items-center justify-center mb-4 text-white shadow-md`}
                   >
                     {feature.icon}
-                  </MotionBox>
+                  </div>
 
-                  <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                  <h3
+                    className={`text-xl font-bold mb-3 ${
+                      darkMode ? 'text-white' : 'text-gray-900'
+                    }`}
+                  >
                     {feature.title}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-lg">
+                  <p
+                    className={`leading-relaxed ${
+                      darkMode ? 'text-gray-300' : 'text-gray-600'
+                    }`}
+                  >
                     {feature.desc}
                   </p>
                 </div>
@@ -465,237 +512,203 @@ const Landing: FC = () => {
         </div>
       </section>
 
-      {/* UPCOMING EVENTS */}
-      <section className="py-20 bg-gradient-to-br from-emerald-50/80 via-green-50/80 to-teal-50/80 dark:from-emerald-900/20 dark:via-green-900/20 dark:to-teal-900/20 backdrop-blur-sm">
+      {/* SUCCESS STORIES */}
+      <section
+        className={`py-20 backdrop-blur-sm ${
+          darkMode ? 'bg-gray-800/50' : 'bg-emerald-50/80'
+        }`}
+      >
         <div className="container mx-auto px-4">
           <MotionBox
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
             className="text-center mb-16"
           >
-            <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white mb-6">
-              Upcoming Events
+            <h2
+              className={`text-4xl md:text-5xl font-black mb-6 ${
+                darkMode ? 'text-white' : 'text-gray-900'
+              }`}
+            >
+              Success Stories
             </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300">
-              Don't miss these exclusive alumni events and networking
-              opportunities
+            <p
+              className={`text-xl max-w-2xl mx-auto ${
+                darkMode ? 'text-gray-300' : 'text-gray-600'
+              }`}
+            >
+              See how KIIT students are achieving remarkable success through
+              alumni connections
             </p>
           </MotionBox>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {upcomingEvents.map((event, index) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {successStories.map((story, index) => (
               <MotionCard
                 key={index}
-                initial={{ opacity: 0, x: -30 }}
+                initial={{ opacity: 0, x: -20 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.6, delay: index * 0.2 }}
                 viewport={{ once: true }}
-                className="group bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-3xl p-8 border border-emerald-200 dark:border-emerald-700 hover:shadow-2xl transition-all duration-500"
-                whileHover={{ y: -8, scale: 1.02 }}
+                className={`group p-6 rounded-3xl border transition-all duration-300 ${
+                  darkMode
+                    ? 'bg-gray-800/80 border-gray-700'
+                    : 'bg-white border-emerald-200'
+                }`}
+                whileHover={{ y: -4 }}
               >
-                <div className="flex items-center gap-4 mb-6">
-                  <MotionBox
-                    className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
-                    whileHover={{ rotate: 15 }}
+                <div className="flex items-start gap-4 mb-4">
+                  <div
+                    className={`w-16 h-16 ${story.avatarColor} rounded-2xl flex items-center justify-center text-white font-bold text-xl`}
                   >
-                    <Event className="text-emerald-600 dark:text-emerald-400 text-2xl" />
-                  </MotionBox>
+                    {story.name.charAt(0)}
+                  </div>
                   <div>
-                    <span className="inline-block bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs font-semibold px-3 py-2 rounded-full">
-                      {event.type}
-                    </span>
+                    <h4
+                      className={`font-bold text-lg ${
+                        darkMode ? 'text-white' : 'text-gray-900'
+                      }`}
+                    >
+                      {story.name}
+                    </h4>
+                    <p
+                      className={`text-sm ${
+                        darkMode ? 'text-emerald-400' : 'text-emerald-600'
+                      }`}
+                    >
+                      {story.role}
+                    </p>
                   </div>
                 </div>
-                <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-4">
-                  {event.title}
-                </h3>
-                <div className="space-y-3 text-gray-600 dark:text-gray-300">
-                  <p className="flex items-center gap-2">📅 {event.date}</p>
-                  <p className="flex items-center gap-2">📍 {event.location}</p>
-                </div>
-                <MotionButton
-                  className="w-full mt-6 bg-gradient-to-r from-emerald-700 to-emerald-500 hover:from-emerald-800 hover:to-emerald-600 text-white py-3 rounded-xl font-semibold transition-all duration-300 shadow-md hover:shadow-lg"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+
+                <div
+                  className={`inline-block text-sm font-semibold px-3 py-1 rounded-full mb-4 ${
+                    darkMode
+                      ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-700'
+                      : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                  }`}
                 >
-                  Register Now
-                </MotionButton>
+                  {story.achievement}
+                </div>
+
+                <blockquote
+                  className={`text-sm italic border-l-4 pl-4 leading-relaxed ${
+                    darkMode
+                      ? 'text-gray-300 border-emerald-500'
+                      : 'text-gray-600 border-emerald-400'
+                  }`}
+                >
+                  "{story.story}"
+                </blockquote>
               </MotionCard>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ALUMNI SPOTLIGHT */}
-      <section className="py-20 md:py-32 bg-gradient-to-br from-green-50/80 via-emerald-50/80 to-teal-50/80 dark:from-green-900/20 dark:via-emerald-900/20 dark:to-teal-900/20 backdrop-blur-sm">
-        <div className="container mx-auto px-4">
-          <MotionBox
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-20"
-          >
-            <h2 className="text-5xl md:text-6xl font-black text-gray-900 dark:text-white mb-6">
-              Success Stories
-            </h2>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              See how KIIT alumni are achieving remarkable success through our
-              global network
-            </p>
-          </MotionBox>
-
-          <MotionBox
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-100px' }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8"
-          >
-            {alumniSpotlights.map((alumni, index) => (
-              <MotionCard
-                key={index}
-                variants={itemVariants}
-                className="group bg-white/90 dark:bg-gray-800/90 backdrop-blur-lg rounded-3xl p-8 border border-gray-200 dark:border-gray-700 hover:border-transparent transition-all duration-500 hover:shadow-2xl"
-                whileHover={{ y: -10, scale: 1.02 }}
-              >
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-400 to-green-400 rounded-bl-3xl opacity-10 group-hover:opacity-20 transition-opacity duration-500" />
-
-                <div className="flex items-start gap-6 mb-6">
-                  <MotionBox
-                    className={`w-20 h-20 ${alumni.avatarColor} rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-md group-hover:scale-105 transition-transform duration-300`}
-                    whileHover={{ rotate: 4 }}
-                  >
-                    {alumni.name.charAt(0)}
-                  </MotionBox>
-                  <div className="flex-1">
-                    <h4 className="font-bold text-gray-900 dark:text-white text-xl">
-                      {alumni.name}
-                    </h4>
-                    <p className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                      {alumni.title}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="inline-block bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-700 dark:text-emerald-300 text-sm font-semibold px-4 py-2 rounded-full mb-6 border border-emerald-200 dark:border-emerald-700">
-                  {alumni.achievement}
-                </div>
-
-                <blockquote className="text-gray-600 dark:text-gray-300 text-lg italic border-l-4 border-emerald-400 pl-6 leading-relaxed">
-                  "{alumni.quote}"
-                </blockquote>
-              </MotionCard>
-            ))}
-          </MotionBox>
-        </div>
-      </section>
-
       {/* FINAL CTA */}
-      <section className="py-20 md:py-32">
+      <section className="py-20">
         <div className="container mx-auto px-4">
           <MotionCard
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, type: 'spring', stiffness: 160 }}
+            transition={{ duration: 0.6 }}
             viewport={{ once: true }}
-            className="relative bg-gradient-to-br from-emerald-700 via-emerald-600 to-teal-600 rounded-4xl p-10 md:p-14 text-center text-white overflow-hidden"
+            className={`relative rounded-3xl p-8 md:p-12 text-center overflow-hidden ${
+              darkMode
+                ? 'bg-gradient-to-br from-emerald-600 to-teal-600'
+                : 'bg-gradient-to-br from-emerald-700 to-emerald-500'
+            } text-white`}
           >
-            {/* Animated Background Elements */}
-            <div className="absolute inset-0 overflow-hidden">
-              <MotionBox
-                className="absolute -top-32 -right-32 w-64 h-64 bg-white/10 rounded-full"
-                animate={{
-                  scale: [1, 1.2, 1],
-                  opacity: [0.1, 0.2, 0.1],
-                }}
-                transition={{
-                  duration: 6,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }}
-              />
-              <MotionBox
-                className="absolute -bottom-32 -left-32 w-64 h-64 bg-white/10 rounded-full"
-                animate={{
-                  scale: [1.2, 1, 1.2],
-                  opacity: [0.2, 0.1, 0.2],
-                }}
-                transition={{
-                  duration: 8,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                  delay: 2,
-                }}
-              />
-            </div>
-
             <div className="relative z-10">
-              <h3 className="text-4xl md:text-6xl font-black mb-6">
-                Ready to Join Your Alumni Network?
+              <h3 className="text-3xl md:text-5xl font-black mb-6">
+                Ready to Join Your Network?
               </h3>
-              <p className="text-xl md:text-2xl opacity-90 mb-12 max-w-3xl mx-auto">
-                Connect with 15,000+ KIIT alumni worldwide and unlock new
-                opportunities for growth, collaboration, and success
+              <p className="text-xl opacity-90 mb-8 max-w-3xl mx-auto">
+                Connect with KIIT alumni worldwide and unlock opportunities for
+                mentorship, career growth, and collaboration.
               </p>
 
               <MotionButton
                 onClick={() => navigate('/register')}
-                className="group relative bg-white text-emerald-600 px-12 py-5 rounded-2xl font-semibold text-xl shadow-2xl hover:shadow-3xl transition-all duration-500 flex items-center gap-3 mx-auto overflow-hidden"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                className="group relative bg-white text-emerald-600 px-8 py-4 rounded-2xl font-semibold text-lg shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 mx-auto"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 to-green-500/10 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                 Get Started Free
-                <ArrowForward className="group-hover:translate-x-2 transition-transform duration-300" />
+                <ArrowForward className="group-hover:translate-x-1 transition-transform duration-300" />
               </MotionButton>
             </div>
           </MotionCard>
 
-          {/* Enhanced Footer */}
-          <footer className="mt-20 pt-12 border-t border-emerald-200 dark:border-emerald-800">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          {/* Footer */}
+          <footer className="mt-16 pt-8 border-t border-emerald-200 dark:border-emerald-800">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
               <div>
-                <h4 className="text-3xl font-black text-gray-900 dark:text-white mb-4">
+                <h4
+                  className={`text-2xl font-black mb-2 ${
+                    darkMode ? 'text-white' : 'text-gray-900'
+                  }`}
+                >
                   <span className="bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
-                    KIIT Alumni — Nexus
+                    Nexus
                   </span>
                 </h4>
-                <p className="text-gray-600 dark:text-gray-400 text-lg max-w-md leading-relaxed">
-                  Building lasting connections and creating opportunities for
-                  the KIIT community worldwide through innovation and
-                  collaboration.
+                <p
+                  className={`text-sm ${
+                    darkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}
+                >
+                  KIIT Alumni-Student Connection Platform
                 </p>
               </div>
 
-              <div className="flex justify-start md:justify-end gap-6">
-                {[LinkedIn, Twitter, GitHub].map((Icon, index) => (
-                  <MotionButton
+              <div className="flex gap-4">
+                {[
+                  {
+                    Icon: LinkedIn,
+                    href: '',
+                    label: 'LinkedIn',
+                  },
+                  {
+                    Icon: Twitter,
+                    href: '',
+                    label: 'Twitter',
+                  },
+                  {
+                    Icon: GitHub,
+                    href: 'https://github.com/techySPHINX/Nexus',
+                    label: 'GitHub',
+                  },
+                ].map((item, index) => (
+                  <a
                     key={index}
-                    className="p-4 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl hover:bg-emerald-200 dark:hover:bg-emerald-800/50 transition-colors duration-300"
-                    whileHover={{ scale: 1.1, y: -2 }}
-                    whileTap={{ scale: 0.9 }}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={item.label}
+                    className={`p-3 rounded-2xl transition-colors duration-300 inline-flex items-center justify-center ${
+                      darkMode
+                        ? 'bg-gray-800 text-emerald-400 hover:bg-gray-700'
+                        : 'bg-emerald-100 text-emerald-600 hover:bg-emerald-200'
+                    }`}
                   >
-                    <Icon className="text-2xl" />
-                  </MotionButton>
+                    <item.Icon />
+                  </a>
                 ))}
               </div>
             </div>
 
-            <div className="border-t border-emerald-200 dark:border-emerald-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-gray-500 dark:text-gray-400">
-                © {new Date().getFullYear()} KIIT Alumni Network. All rights
-                reserved.
-              </p>
-              <MotionBox
-                className="text-gray-500 dark:text-gray-400 flex items-center gap-2"
-                whileHover={{ scale: 1.05 }}
+            <div className="border-t border-emerald-200 dark:border-emerald-800 mt-8 pt-6 text-center">
+              <p
+                className={`text-sm ${
+                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}
               >
-                Made with <span className="text-red-500 animate-pulse">❤️</span>{' '}
-                for the KIIT community
-              </MotionBox>
+                © {new Date().getFullYear()} Nexus - KIIT Alumni Network. Made
+                with ❤️ for the KIIT community.
+              </p>
             </div>
           </footer>
         </div>
