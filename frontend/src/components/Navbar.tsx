@@ -28,6 +28,7 @@ import {
   Message,
   Work,
   Folder,
+  Article,
   Person,
   Logout,
   Login,
@@ -84,6 +85,7 @@ const Navbar: FC = () => {
     { text: 'Project', icon: <Assignment />, path: '/projects' },
     { text: 'Startup', icon: <Folder />, path: '/startups' },
     { text: 'Events', icon: <Event />, path: '/events' },
+    { text: 'News', icon: <Article />, path: '/news' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -117,7 +119,15 @@ const Navbar: FC = () => {
               component="img"
               src="/nexus.png"
               alt="Nexus"
-              sx={{ width: 32, height: 32, objectFit: 'contain', mr: 1 }}
+              sx={{
+                width: 32,
+                height: 32,
+                objectFit: 'contain',
+                mr: 1,
+                bgcolor: isDark ? 'transparent' : 'rgba(0,0,0,0.06)',
+                p: isDark ? 0 : 0.4,
+                borderRadius: '50%',
+              }}
             />
             <Typography
               variant="h6"
@@ -343,39 +353,78 @@ const Navbar: FC = () => {
           ) : (
             <>
               {/* <NavbarToggle /> */}
-              <Button
-                component={Link}
-                to="/login"
-                variant="outlined"
-                startIcon={<Login />}
-                sx={{
-                  color: 'white',
-                  borderColor: 'white',
-                  textTransform: 'none',
-                  '&:hover': {
-                    borderColor: 'white',
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                  },
-                }}
-              >
-                Login
-              </Button>
-              <Button
-                component={Link}
-                to="/register"
-                variant="contained"
-                startIcon={<PersonAdd />}
-                sx={{
-                  bgcolor: 'white',
-                  color: 'primary.main',
-                  textTransform: 'none',
-                  '&:hover': {
-                    bgcolor: 'grey.100',
-                  },
-                }}
-              >
-                Register
-              </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button
+                  component={Link}
+                  to="/login"
+                  variant="outlined"
+                  startIcon={<Login />}
+                  sx={{
+                    color: 'inherit',
+                    borderColor: isDark
+                      ? 'rgba(255,255,255,0.6)'
+                      : 'rgba(0,0,0,0.12)',
+                    textTransform: 'none',
+                    '&:hover': {
+                      borderColor: isDark
+                        ? 'rgba(255,255,255,0.8)'
+                        : 'rgba(0,0,0,0.2)',
+                      bgcolor: isDark
+                        ? 'rgba(255,255,255,0.04)'
+                        : 'rgba(0,0,0,0.04)',
+                    },
+                  }}
+                >
+                  Login
+                </Button>
+
+                <Button
+                  component={Link}
+                  to="/register"
+                  variant="contained"
+                  startIcon={<PersonAdd />}
+                  sx={{
+                    textTransform: 'none',
+                    bgcolor: isDark
+                      ? 'rgba(126, 15, 15, 0.1)'
+                      : theme.palette.common.white,
+                    color: isDark
+                      ? theme.palette.primary.main
+                      : theme.palette.primary.main,
+                    '&:hover': {
+                      bgcolor: isDark ? theme.palette.action.hover : 'grey.100',
+                    },
+                    boxShadow: 'none',
+                  }}
+                >
+                  Register
+                </Button>
+
+                <Tooltip
+                  title={
+                    isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'
+                  }
+                >
+                  <IconButton
+                    onClick={toggleTheme}
+                    sx={{
+                      color: 'inherit',
+                      ml: 0.5,
+                      transition: 'transform 250ms ease',
+                      transform: isDark
+                        ? 'rotate(20deg) scale(1.05)'
+                        : 'rotate(0deg) scale(1)',
+                    }}
+                    aria-label="Toggle theme"
+                  >
+                    {isDark ? (
+                      <LightMode sx={{ color: 'gold' }} />
+                    ) : (
+                      <DarkMode sx={{ color: theme.palette.primary.main }} />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
             </>
           )}
 
@@ -429,6 +478,7 @@ const Navbar: FC = () => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: collapsed ? 'center' : 'space-between',
+              bgcolor: isDark ? 'transparent' : 'rgba(0, 0, 0, 0.06)',
             }}
           >
             <Tooltip title="Nexus" placement="right" arrow>
@@ -446,7 +496,12 @@ const Navbar: FC = () => {
                   component="img"
                   src="/nexus.png"
                   alt="Nexus"
-                  sx={{ width: collapsed ? 28 : 36, height: collapsed ? 28 : 36, objectFit: 'contain', mr: collapsed ? 0 : 1 }}
+                  sx={{
+                    width: collapsed ? 28 : 36,
+                    height: collapsed ? 28 : 36,
+                    objectFit: 'contain',
+                    mr: collapsed ? 0 : 1,
+                  }}
                 />
                 {!collapsed && (
                   <Typography
@@ -658,11 +713,17 @@ const Navbar: FC = () => {
                     fullWidth
                     sx={{
                       color: 'inherit',
-                      borderColor: 'rgba(255,255,255,0.6)',
+                      borderColor: isDark
+                        ? 'rgba(255,255,255,0.6)'
+                        : 'rgba(0,0,0,0.12)',
                       textTransform: 'none',
                       '&:hover': {
-                        borderColor: 'rgba(255,255,255,0.8)',
-                        bgcolor: 'rgba(255,255,255,0.04)',
+                        borderColor: isDark
+                          ? 'rgba(255,255,255,0.8)'
+                          : 'rgba(0,0,0,0.2)',
+                        bgcolor: isDark
+                          ? 'rgba(255,255,255,0.04)'
+                          : 'rgba(0,0,0,0.04)',
                       },
                     }}
                   >
@@ -675,10 +736,19 @@ const Navbar: FC = () => {
                     startIcon={<PersonAdd />}
                     fullWidth
                     sx={{
-                      bgcolor: theme.palette.background.paper,
-                      color: theme.palette.primary.main,
+                      color: 'inherit',
+                      borderColor: isDark
+                        ? 'rgba(255,255,255,0.6)'
+                        : 'rgba(0,0,0,0.12)',
                       textTransform: 'none',
-                      '&:hover': { bgcolor: theme.palette.action.hover },
+                      '&:hover': {
+                        borderColor: isDark
+                          ? 'rgba(255,255,255,0.8)'
+                          : 'rgba(0,0,0,0.2)',
+                        bgcolor: isDark
+                          ? 'rgba(255,255,255,0.04)'
+                          : 'rgba(0,0,0,0.04)',
+                      },
                     }}
                   >
                     Register
@@ -686,22 +756,26 @@ const Navbar: FC = () => {
                 </Stack>
               ) : (
                 <Box>
-                  <IconButton
-                    component={Link}
-                    to="/login"
-                    sx={{ color: 'inherit', mb: 3 }}
-                    aria-label="Login"
-                  >
-                    <Login />
-                  </IconButton>
-                  <IconButton
-                    component={Link}
-                    to="/register"
-                    sx={{ color: 'inherit' }}
-                    aria-label="Register"
-                  >
-                    <PersonAdd />
-                  </IconButton>
+                  <Tooltip title="Login" placement="right" arrow>
+                    <IconButton
+                      component={Link}
+                      to="/login"
+                      sx={{ color: 'inherit', mb: 3 }}
+                      aria-label="Login"
+                    >
+                      <Login />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Register" placement="right" arrow>
+                    <IconButton
+                      component={Link}
+                      to="/register"
+                      sx={{ color: 'inherit' }}
+                      aria-label="Register"
+                    >
+                      <PersonAdd />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               )}
               {/* Collapse control also present when no user */}
@@ -747,7 +821,8 @@ const Navbar: FC = () => {
                 right: 0,
                 bottom: 10,
                 px: 2,
-                background: 'transparent',
+                background: 'rgba(0,0,0,0.0)',
+                bgcolor: isDark ? 'transparent' : 'rgba(0,0,0,0.06)',
                 // Keep above the scrollable content
                 zIndex: theme.zIndex.drawer + 3,
                 // Ensure it captures pointer events
