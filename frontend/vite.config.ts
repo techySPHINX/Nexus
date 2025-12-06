@@ -68,8 +68,8 @@ export default defineConfig(({ mode }: ConfigEnv) => {
               //   return 'first-vendor-react';
 
               // // MUI + Emotion must come AFTER React
-              if (id.includes('@mui') || id.includes('@emotion'))
-                return 'vendor-mui';
+              // if (id.includes('@mui') || id.includes('@emotion'))
+              //   return 'vendor-mui';
 
               // // Floating UI separately
               if (id.includes('@floating-ui')) return 'vendor-floating';
