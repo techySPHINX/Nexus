@@ -113,66 +113,76 @@ const FeedPage: FC = () => {
               <Typography variant="h4" gutterBottom>
                 Your Feed
               </Typography>
-        {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
-          <>
-            <Button
-              variant="contained"
-              onClick={() => setOpenForm(true)}
-              sx={{ mb: 2 }}
-            >
-              Create Post
-            </Button>
-            <Dialog
-              open={openForm}
-              onClose={() => setOpenForm(false)}
-              maxWidth="md"
-              fullWidth
-            >
-              <DialogTitle>Create a New Post</DialogTitle>
-              <DialogContent
-                sx={{
-                  minHeight: '400px',
-                  overflowY: 'auto',
-                }}
-              >
-                <CreatePostForm
-                  profile={profile ?? undefined}
-                  onSuccess={handleCreatePostSuccess}
-                  onError={handleCreatePostError}
-                  onCancel={() => setOpenForm(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          </>
-        )}
+              {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
+                <>
+                  <Button
+                    variant="contained"
+                    onClick={() => setOpenForm(true)}
+                    sx={{ mb: 2 }}
+                  >
+                    Create Post
+                  </Button>
+                  <Dialog
+                    open={openForm}
+                    onClose={() => setOpenForm(false)}
+                    maxWidth="md"
+                    fullWidth
+                  >
+                    <DialogTitle>Create a New Post</DialogTitle>
+                    <DialogContent
+                      sx={{
+                        minHeight: '400px',
+                        overflowY: 'auto',
+                      }}
+                    >
+                      <CreatePostForm
+                        profile={profile ?? undefined}
+                        onSuccess={handleCreatePostSuccess}
+                        onError={handleCreatePostError}
+                        onCancel={() => setOpenForm(false)}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
 
-        {loading && pagination.page === 1 ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            {renderPosts()}
+              {loading && pagination.page === 1 ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <>
+                  {renderPosts()}
 
-            {pagination.hasNext && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleLoadMore}
-                  disabled={loading}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Load More'}
-                </Button>
-              </Box>
-            )}
-          </>
-        )}
+                  {pagination.hasNext && (
+                    <Box
+                      sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}
+                    >
+                      <Button
+                        variant="outlined"
+                        onClick={handleLoadMore}
+                        disabled={loading}
+                      >
+                        {loading ? <CircularProgress size={24} /> : 'Load More'}
+                      </Button>
+                    </Box>
+                  )}
+                </>
+              )}
             </Box>
           </Grid>
 
           <Grid item xs={12} md={4}>
             <Box sx={{ position: 'sticky', top: { xs: 16, md: 96 } }}>
-              <Paper elevation={0} sx={{ p: 2, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
+              <Paper
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
                 <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
                   Recent
                 </Typography>

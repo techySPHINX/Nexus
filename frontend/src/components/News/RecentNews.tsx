@@ -1,5 +1,17 @@
 import React, { useEffect } from 'react';
-import { Box, Card, CardContent, Typography, Avatar, List, ListItem, ListItemAvatar, ListItemText, Divider, Button } from '@mui/material';
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Avatar,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
+  Divider,
+  Button,
+} from '@mui/material';
 import { Link } from 'react-router-dom';
 import { useNews } from '@/contexts/NewsContext';
 
@@ -37,8 +49,14 @@ export default function RecentNews() {
                   </ListItemAvatar>
                   <ListItemText
                     primary={
-                      <Link to={`/news/${n.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                      <Link
+                        to={`/news/${n.slug}`}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
+                      >
+                        <Typography
+                          variant="subtitle2"
+                          sx={{ fontWeight: 700 }}
+                        >
                           {n.title}
                         </Typography>
                       </Link>

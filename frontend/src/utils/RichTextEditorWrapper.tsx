@@ -54,7 +54,6 @@ const RichTextEditorWrapper = forwardRef<RichEditorRef, Props>(
       return () => {
         editor.off('update', handler);
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [innerRef.current?.editor, onChange]);
 
     // When the `value` prop changes externally, update editor content
