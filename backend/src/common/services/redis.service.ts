@@ -14,10 +14,23 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     const redisUrl = process.env.REDIS_URL;
     let client, subscriber, publisher;
     if (redisUrl) {
-      client = new Redis(redisUrl);
-      subscriber = new Redis(redisUrl);
-      publisher = new Redis(redisUrl);
-    } else {
+      const isTls = redisUrl.startsWith('rediss://');
+
+      const options = {
+        tls: isTls ? { rejectUnauthorized: false } : undefined,
+        maxRetriesPerRequest: null,
+        retryStrategy: (times: number) => {
+          const delay = Math.min(times * 100, 2000);
+          if (times > 5) return null;
+          return delay;
+        },
+      };
+
+      client = new Redis(redisUrl, options);
+      subscriber = new Redis(redisUrl, options);
+      publisher = new Redis(redisUrl, options);
+    }
+    else {
       const redisConfig = {
         url: process.env.REDIS_URL,
         retryStrategy: (times: number) => {
