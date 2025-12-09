@@ -437,6 +437,7 @@ export class ShowcaseService {
       sortBy,
       search,
       personalize,
+      seekingCollaboration,
       status,
       seeking,
       pageSize,
@@ -473,6 +474,12 @@ export class ShowcaseService {
       where.seeking = {
         hasSome: seeking,
       };
+    }
+
+    if (seekingCollaboration !== undefined) {
+      if (seekingCollaboration) {
+        where.seekingCollaboration = true;
+      }
     }
 
     if (search) {
