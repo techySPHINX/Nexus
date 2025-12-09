@@ -375,6 +375,7 @@ const DashboardProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       const promise = (async () => {
         const response = await ShowcaseService.getAllProjects({
           personalize: true,
+          seekingCollaboration: true,
           pageSize: 5,
         });
         // debug: increment request counter for projects

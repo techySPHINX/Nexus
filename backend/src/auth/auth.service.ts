@@ -195,6 +195,8 @@ export class AuthService {
         profile: {
           select: {
             avatarUrl: true,
+            skills: { select: { name: true }, take: 10},
+            gender: true,
           },
         },
       },
@@ -245,7 +247,17 @@ export class AuthService {
       userAgent,
     });
 
-    return this.signTokenPair({ id: user.id , email: user.email, name: user.name, role: user.role, isEmailVerified: user.isEmailVerified, accountStatus: user.accountStatus, profile: user.profile }, ipAddress, userAgent);
+    return this.signTokenPair({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      accountStatus: user.accountStatus,
+      profile: user.profile,
+      gender: user.profile?.gender,
+    },
+      ipAddress, userAgent);
   }
 
   /**
