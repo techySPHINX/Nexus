@@ -48,6 +48,8 @@ export interface Profile {
   location?: string;
   interests?: string;
   avatarUrl?: string;
+  gender?: string;
+  skills?: { name: string }[];
 }
 
 interface AuthResponse {

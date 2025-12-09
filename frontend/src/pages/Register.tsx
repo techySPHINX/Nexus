@@ -1,6 +1,5 @@
-import { FC, useState } from 'react';
+import { FC, useState, useMemo } from 'react';
 import {
-  Container,
   Paper,
   TextField,
   Button,
@@ -20,7 +19,7 @@ import type { SelectChangeEvent } from '@mui/material/Select';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
-import ThemeToggle from '../components/ThemeToggle';
+import { useTheme } from '@mui/material/styles';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { Role } from '@/types/profileType';
 
@@ -76,6 +75,23 @@ const Register: FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const { registerWithDocuments } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
+
+  const backgrounds = useMemo(
+    () => ({
+      page: isDark
+        ? 'radial-gradient(circle at 10% 20%, rgba(34,197,94,0.08), transparent 25%), radial-gradient(circle at 90% 10%, rgba(16,185,129,0.06), transparent 25%), linear-gradient(135deg, #020617 0%, #0f172a 45%, #052e16 100%)'
+        : 'radial-gradient(circle at 10% 20%, rgba(22,163,74,0.12), transparent 25%), radial-gradient(circle at 90% 10%, rgba(56,189,248,0.12), transparent 25%), linear-gradient(135deg, #f8fafc 0%, #ecfdf3 50%, #e0f2fe 100%)',
+      panel: isDark
+        ? 'linear-gradient(135deg, rgba(15,23,42,0.8), rgba(17,24,39,0.92))'
+        : 'linear-gradient(135deg, rgba(255,255,255,0.9), rgba(236,248,243,0.9))',
+      left: isDark
+        ? 'radial-gradient(circle at 20% 20%, rgba(52,211,153,0.18), transparent 35%), radial-gradient(circle at 80% 0%, rgba(34,197,94,0.12), transparent 30%), linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.04))'
+        : 'radial-gradient(circle at 20% 20%, rgba(16,185,129,0.2), transparent 35%), radial-gradient(circle at 80% 0%, rgba(59,130,246,0.18), transparent 30%), linear-gradient(135deg, rgba(16,185,129,0.12), rgba(59,130,246,0.08))',
+    }),
+    [isDark]
+  );
 
   const handleChange =
     (field: keyof RegisterForm) =>
@@ -100,26 +116,6 @@ const Register: FC = () => {
     });
   };
 
-  /*
-  Previously we supported selecting a local file and converting it to a base64 data URL
-  which was stored in `documentUrl`. That logic is commented out because we now collect
-  a direct URL from the user instead of uploading files during registration.
-
-  Old implementation (kept for reference):
-
-  const handleFileSelect = (index: number, file?: File) => {
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      handleDocumentChange(index, 'documentUrl', result);
-      handleDocumentChange(index, 'fileName', file.name);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  */
-
   const addDocument = () => {
     setFormData((prev) => ({
       ...prev,
@@ -134,19 +130,9 @@ const Register: FC = () => {
     }));
   };
 
-  // const removeDocument = (index: number) => {
-  //   setFormData((prev) => {
-  //     const docs = prev.documents.slice();
-  //     docs.splice(index, 1);
-  //     return { ...prev, documents: docs } as RegisterForm;
-  //   });
-  // };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-
-    console.log('Form Data:', formData);
 
     if (!formData.email.endsWith('@kiit.ac.in')) {
       setError('Email must be from kiit.ac.in domain');
@@ -156,7 +142,6 @@ const Register: FC = () => {
     setLoading(true);
 
     try {
-      // prepare payload matching RegisterWithDocumentsDto
       const payload: RegisterWithDocsPayload = {
         email: formData.email,
         name: formData.name,
@@ -190,230 +175,463 @@ const Register: FC = () => {
     }
   };
 
-  // (role icons were previously used for adornments; Select does not accept startAdornment)
-
   return (
-    <Container maxWidth="sm">
-      <Box sx={{ position: 'absolute', top: 20, right: 20 }}>
-        <ThemeToggle />
-      </Box>
+    <div
+      className={`w-full min-h-screen overflow-x-hidden bg-gradient-to-br transition-all duration-500 ${
+        isDark
+          ? 'from-gray-900 via-emerald-900 to-green-900'
+          : 'from-emerald-50 via-green-50 to-teal-50'
+      }`}
+    >
       <Box
         sx={{
           minHeight: '100vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          py: 4,
+          pt: { xs: 12, md: 14 },
+          pb: 8,
+          px: { xs: 2.5, md: 4 },
+          width: '100%',
         }}
       >
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          style={{ width: '100%' }}
+        <Paper
+          elevation={0}
+          sx={{
+            width: '100%',
+            maxWidth: 1100,
+            borderRadius: 4,
+            overflow: 'hidden',
+            border: '1px solid',
+            borderColor: 'divider',
+            background: backgrounds.panel,
+            boxShadow:
+              '0 25px 80px rgba(16,185,129,0.12), 0 10px 30px rgba(0,0,0,0.35)',
+          }}
         >
-          <Paper
-            elevation={0}
+          <Box
             sx={{
-              p: 4,
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              backgroundColor: 'background.paper',
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '1.15fr 0.85fr' },
             }}
           >
-            <Box sx={{ textAlign: 'center', mb: 4 }}>
+            {/* Left showcase */}
+            <Box
+              sx={{
+                position: 'relative',
+                p: { xs: 3, md: 5 },
+                background: backgrounds.left,
+                borderRight: { md: '1px solid rgba(255,255,255,0.06)' },
+              }}
+            >
               <motion.div
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  marginBottom: 18,
+                }}
               >
                 <Box
                   sx={{
-                    width: 60,
-                    height: 60,
-                    borderRadius: '50%',
-                    backgroundColor: 'primary.main',
+                    width: 56,
+                    height: 56,
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    boxShadow: '0 12px 30px rgba(16,185,129,0.35)',
+                    border: '1px solid rgba(255,255,255,0.08)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    mx: 'auto',
-                    mb: 2,
+                    bgcolor: 'rgba(16,185,129,0.08)',
                   }}
                 >
-                  <School sx={{ color: 'white', fontSize: 30 }} />
+                  <img
+                    src="/nexus.png"
+                    alt="Nexus"
+                    style={{
+                      width: '70%',
+                      height: '70%',
+                      objectFit: 'contain',
+                    }}
+                  />
+                </Box>
+                <Box>
+                  <Typography
+                    variant="overline"
+                    sx={{
+                      color: isDark ? 'rgba(167,243,208,0.9)' : '#047857',
+                      letterSpacing: 1.5,
+                      fontWeight: 700,
+                    }}
+                  >
+                    Nexus Platform
+                  </Typography>
+                  <Typography
+                    variant="h4"
+                    sx={{
+                      fontWeight: 800,
+                      color: isDark ? 'white' : '#0f172a',
+                      textShadow: isDark
+                        ? '0 10px 30px rgba(16,185,129,0.35)'
+                        : '0 6px 18px rgba(16,185,129,0.15)',
+                    }}
+                  >
+                    Join us today
+                  </Typography>
+                  <Typography
+                    variant="body1"
+                    sx={{
+                      color: isDark ? 'rgba(226,232,240,0.85)' : '#0f172a',
+                      mt: 0.5,
+                    }}
+                  >
+                    Create your account to get started.
+                  </Typography>
                 </Box>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
-              >
-                <Typography
-                  variant="h4"
-                  component="h1"
-                  gutterBottom
-                  sx={{ fontWeight: 700 }}
-                >
-                  Join Nexus
-                </Typography>
-                <Typography variant="body1" color="text.secondary">
-                  Create your account to get started
-                </Typography>
-              </motion.div>
-            </Box>
-
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Alert severity="error" sx={{ mb: 3 }}>
-                  {error}
-                </Alert>
-              </motion.div>
-            )}
-
-            <motion.form
-              onSubmit={handleSubmit}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.4 }}
-            >
-              <TextField
-                fullWidth
-                label="Full Name"
-                value={formData.name}
-                onChange={handleChange('name')}
-                required
-                margin="normal"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Person color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange('email')}
-                required
-                margin="normal"
-                helperText="Must be from kiit.ac.in domain"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Email color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
-              <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
-                <InputLabel>Role</InputLabel>
-                <Select
-                  value={formData.role}
-                  label="Role"
-                  onChange={handleChange('role')}
-                >
-                  <MenuItem value={Role.STUDENT}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      Student
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value={Role.ALUM}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      Alumni
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value={Role.MENTOR}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      Mentor
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value={Role.ADMIN}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      Admin
-                    </Box>
-                  </MenuItem>
-                </Select>
-              </FormControl>
-              {/* Documents UI */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                  Verification Documents
-                </Typography>
-                {formData.documents.map((doc: DocumentItem, idx: number) => (
-                  <Paper
-                    key={idx}
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      mb: 1,
+              <Box sx={{ display: 'grid', gap: 1.5, mt: 3 }}>
+                {[
+                  'Verified student and alumni accounts',
+                  'Connect with peers and mentors instantly',
+                  'Access exclusive networking opportunities',
+                ].map((text, idx) => (
+                  <motion.div
+                    key={text}
+                    initial={{ opacity: 0, x: -12 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.35, delay: 0.15 * idx }}
+                    style={{
                       display: 'flex',
-                      flexDirection: { xs: 'column', md: 'row' },
-                      gap: 2,
-                      alignItems: { xs: 'stretch', md: 'center' },
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '12px 14px',
+                      borderRadius: 12,
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      color: 'rgba(226,232,240,0.9)',
                     }}
                   >
-                    <FormControl sx={{ minWidth: 180, flex: '0 0 220px' }}>
-                      <InputLabel>Type</InputLabel>
-                      <Select
-                        value={doc.documentType}
-                        label="Type"
+                    <Box
+                      sx={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        background:
+                          idx === 0
+                            ? '#22c55e'
+                            : idx === 1
+                              ? '#38bdf8'
+                              : '#a78bfa',
+                        boxShadow: '0 0 0 6px rgba(255,255,255,0.03)',
+                        flexShrink: 0,
+                      }}
+                    />
+                    <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                      {text}
+                    </Typography>
+                  </motion.div>
+                ))}
+              </Box>
+
+              <Box sx={{ mt: 4, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    border: '1px solid rgba(34,197,94,0.35)',
+                    background: isDark
+                      ? 'rgba(16,185,129,0.08)'
+                      : 'rgba(16,185,129,0.12)',
+                    color: isDark ? '#bbf7d0' : '#065f46',
+                    fontWeight: 700,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  KIIT Verified
+                </Box>
+                <Box
+                  sx={{
+                    px: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    border: '1px solid rgba(59,130,246,0.25)',
+                    background: isDark
+                      ? 'rgba(59,130,246,0.08)'
+                      : 'rgba(59,130,246,0.12)',
+                    color: isDark ? '#c7d2fe' : '#1e3a8a',
+                    fontWeight: 700,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  Secure Platform
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Right form */}
+            <Box
+              sx={{
+                p: { xs: 3, md: 4 },
+                backdropFilter: 'blur(12px)',
+                backgroundColor: isDark
+                  ? 'transparent'
+                  : 'rgba(255,255,255,0.65)',
+                maxHeight: '90vh',
+                overflowY: 'auto',
+              }}
+            >
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                  </Alert>
+                </motion.div>
+              )}
+
+              <motion.form
+                onSubmit={handleSubmit}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45 }}
+              >
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 800,
+                    mb: 2,
+                    color: isDark ? 'white' : '#0f172a',
+                  }}
+                >
+                  Create Account
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: isDark
+                      ? 'rgba(226,232,240,0.7)'
+                      : 'rgba(15,23,42,0.7)',
+                    mb: 3,
+                  }}
+                >
+                  Fill in your details to join the network.
+                </Typography>
+
+                <TextField
+                  fullWidth
+                  label="Full Name"
+                  value={formData.name}
+                  onChange={handleChange('name')}
+                  required
+                  margin="normal"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Person color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                />
+
+                <TextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange('email')}
+                  required
+                  margin="normal"
+                  helperText="Must be from kiit.ac.in domain"
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Email color="action" />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mb: 2 }}
+                />
+
+                <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
+                  <InputLabel>Role</InputLabel>
+                  <Select
+                    value={formData.role}
+                    label="Role"
+                    onChange={handleChange('role')}
+                  >
+                    <MenuItem value={Role.STUDENT}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        Student
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value={Role.ALUM}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        Alumni
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value={Role.MENTOR}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        Mentor
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value={Role.ADMIN}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                        }}
+                      >
+                        Admin
+                      </Box>
+                    </MenuItem>
+                  </Select>
+                </FormControl>
+
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                    Verification Documents
+                  </Typography>
+                  {formData.documents.map((doc: DocumentItem, idx: number) => (
+                    <Paper
+                      key={idx}
+                      variant="outlined"
+                      sx={{
+                        p: 2,
+                        mb: 1,
+                        display: 'flex',
+                        flexDirection: { xs: 'column', md: 'row' },
+                        gap: 2,
+                        alignItems: { xs: 'stretch', md: 'center' },
+                      }}
+                    >
+                      <FormControl sx={{ minWidth: 180, flex: '0 0 220px' }}>
+                        <InputLabel>Type</InputLabel>
+                        <Select
+                          value={doc.documentType}
+                          label="Type"
+                          onChange={(e) =>
+                            handleDocumentChange(
+                              idx,
+                              'documentType',
+                              (e.target as HTMLInputElement).value
+                            )
+                          }
+                        >
+                          {Object.values(DocumentTypes).map((dt) => (
+                            <MenuItem key={dt} value={dt}>
+                              {dt.replace('_', ' ')}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <TextField
+                        fullWidth
+                        label="Document URL"
+                        value={doc.documentUrl}
                         onChange={(e) =>
                           handleDocumentChange(
                             idx,
-                            'documentType',
-                            (e.target as HTMLInputElement).value
+                            'documentUrl',
+                            e.target.value
                           )
                         }
-                      >
-                        {Object.values(DocumentTypes).map((dt) => (
-                          <MenuItem key={dt} value={dt}>
-                            {dt.replace('_', ' ')}
+                        margin="normal"
+                        sx={{ mx: 2, flex: 1, mt: { xs: 1, md: 0 } }}
+                      />
+                    </Paper>
+                  ))}
+                  <Button onClick={addDocument} sx={{ mt: 1 }}>
+                    Add another document
+                  </Button>
+                </Box>
+
+                {formData.role === 'STUDENT' && (
+                  <TextField
+                    fullWidth
+                    label="Student ID"
+                    value={formData.studentId}
+                    onChange={handleChange('studentId')}
+                    required
+                    margin="normal"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <School color="action" />
+                        </InputAdornment>
+                      ),
+                    }}
+                    sx={{ mb: 2 }}
+                  />
+                )}
+
+                {formData.role === 'STUDENT' && (
+                  <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
+                    <InputLabel id="graduation-year-label">
+                      Graduation Year
+                    </InputLabel>
+                    <Select
+                      labelId="graduation-year-label"
+                      label="Graduation Year"
+                      value={formData.graduationYear ?? ''}
+                      onChange={(e) => {
+                        const val = Number((e.target as HTMLInputElement).value);
+                        setFormData((prev) => ({
+                          ...prev,
+                          graduationYear: isNaN(val) ? null : val,
+                        }));
+                      }}
+                      required
+                    >
+                      {(() => {
+                        const currentYear = new Date().getFullYear();
+                        const start = currentYear - 8;
+                        const years = Array.from({ length: 14 }).map(
+                          (_, i) => start + i
+                        );
+                        return years.map((year) => (
+                          <MenuItem key={year} value={year}>
+                            {year}
                           </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    {/* Document URL input (we accept a URL for now instead of file upload) */}
-                    <TextField
-                      fullWidth
-                      label="Document URL"
-                      value={doc.documentUrl}
-                      onChange={(e) =>
-                        handleDocumentChange(idx, 'documentUrl', e.target.value)
-                      }
-                      margin="normal"
-                      sx={{ mx: 2, flex: 1, mt: { xs: 1, md: 0 } }}
-                    />
-                    {/* <Box sx={{ flex: 1 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {doc.documentUrl ? 'File selected' : 'No file selected'}
-                      </Typography>
-                    </Box>
-                    <Button color="error" onClick={() => removeDocument(idx)}>
-                      Remove
-                    </Button> */}
-                  </Paper>
-                ))}
-                <Button onClick={addDocument} sx={{ mt: 1 }}>
-                  Add another document
-                </Button>
-              </Box>
-              {formData.role === 'STUDENT' && (
+                        ));
+                      })()}
+                    </Select>
+                  </FormControl>
+                )}
+
                 <TextField
                   fullWidth
-                  label="Student ID"
-                  value={formData.studentId}
-                  onChange={handleChange('studentId')}
+                  label="Department"
+                  value={formData.department}
+                  onChange={handleChange('department')}
                   required
                   margin="normal"
                   InputProps={{
@@ -425,112 +643,86 @@ const Register: FC = () => {
                   }}
                   sx={{ mb: 2 }}
                 />
-              )}
-              {formData.role === 'STUDENT' && (
-                <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
-                  <InputLabel id="graduation-year-label">
-                    Graduation Year
-                  </InputLabel>
-                  <Select
-                    labelId="graduation-year-label"
-                    label="Graduation Year"
-                    value={formData.graduationYear ?? ''}
-                    onChange={(e) => {
-                      const val = Number((e.target as HTMLInputElement).value);
-                      setFormData((prev) => ({
-                        ...prev,
-                        graduationYear: isNaN(val) ? null : val,
-                      }));
+
+                <motion.div
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    disabled={loading}
+                    sx={{
+                      py: 1.4,
+                      fontSize: '1.05rem',
+                      fontWeight: 700,
+                      mb: 2,
+                      borderRadius: 3,
+                      background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                      boxShadow: isDark
+                        ? '0 12px 35px rgba(34,197,94,0.35)'
+                        : '0 8px 24px rgba(34,197,94,0.25)',
                     }}
-                    required
                   >
-                    {(() => {
-                      const currentYear = new Date().getFullYear();
-                      const start = currentYear - 8;
-                      const years = Array.from({ length: 14 }).map(
-                        (_, i) => start + i
-                      );
-                      return years.map((year) => (
-                        <MenuItem key={year} value={year}>
-                          {year}
-                        </MenuItem>
-                      ));
-                    })()}
-                  </Select>
-                </FormControl>
-              )}
-              <TextField
-                fullWidth
-                label="Department"
-                value={formData.department}
-                onChange={handleChange('department')}
-                required
-                margin="normal"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <School color="action" />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{ mb: 2 }}
-              />
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  size="large"
-                  disabled={loading}
+                    {loading ? 'Creating Account...' : 'Create Account'}
+                  </Button>
+                </motion.div>
+
+                <Divider
                   sx={{
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                    mb: 3,
+                    my: 3,
+                    borderColor: isDark
+                      ? 'rgba(255,255,255,0.06)'
+                      : 'rgba(15,23,42,0.08)',
                   }}
                 >
-                  {loading ? 'Creating Account...' : 'Create Account'}
-                </Button>
-              </motion.div>
-            </motion.form>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: isDark
+                        ? 'rgba(226,232,240,0.7)'
+                        : 'rgba(15,23,42,0.6)',
+                    }}
+                  >
+                    or
+                  </Typography>
+                </Divider>
 
-            <Divider sx={{ my: 3 }}>
-              <Typography variant="body2" color="text.secondary">
-                or
-              </Typography>
-            </Divider>
-
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.6 }}
-              style={{ textAlign: 'center' }}
-            >
-              <Typography variant="body2" color="text.secondary">
-                Already have an account?{' '}
-                <Link
-                  component={RouterLink}
-                  to="/login"
-                  sx={{
-                    color: 'primary.main',
-                    textDecoration: 'none',
-                    fontWeight: 600,
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.2 }}
+                  style={{ textAlign: 'center' }}
                 >
-                  Sign in
-                </Link>
-              </Typography>
-            </motion.div>
-          </Paper>
-        </motion.div>
+                  <Typography
+                    variant="body2"
+                    sx={{ color: isDark ? 'rgba(226,232,240,0.8)' : '#0f172a' }}
+                  >
+                    Already have an account?{' '}
+                    <Link
+                      component={RouterLink}
+                      to="/login"
+                      sx={{
+                        color: '#22c55e',
+                        textDecoration: 'none',
+                        fontWeight: 700,
+                        '&:hover': {
+                          textDecoration: 'underline',
+                        },
+                      }}
+                    >
+                      Sign in
+                    </Link>
+                  </Typography>
+                </motion.div>
+              </motion.form>
+            </Box>
+          </Box>
+        </Paper>
       </Box>
-    </Container>
+    </div>
   );
 };
 

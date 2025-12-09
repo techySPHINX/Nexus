@@ -50,6 +50,15 @@ export const ThemeProvider: FC<ThemeProviderProps> = ({ children }) => {
     }
   }, []);
 
+  // Apply dark class to document element for Tailwind
+  useEffect(() => {
+    if (mode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [mode]);
+
   const toggleTheme = () => {
     const newMode = mode === 'light' ? 'dark' : 'light';
     setMode(newMode);
