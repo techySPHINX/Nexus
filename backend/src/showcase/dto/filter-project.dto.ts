@@ -35,6 +35,11 @@ export class FilterProjectDto {
   @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === 'true' || value === true)
+  seekingCollaboration?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
   personalize?: boolean;
 
   @IsOptional()
