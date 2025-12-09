@@ -420,7 +420,7 @@ const SubCommunitiesPage: React.FC = () => {
   ];
 
   return (
-    <Box sx={{ maxWidth: 1200, margin: '0 auto', p: 3 }}>
+    <Box className="w-full" sx={{ p: 3 }}>
       {/* Header Section */}
       <Box
         sx={{
