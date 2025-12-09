@@ -2,7 +2,6 @@
 import { FC, useEffect, useState } from 'react';
 import {
   Box,
-  Container,
   Typography,
   Button,
   Dialog,
@@ -303,7 +302,7 @@ const StartupMainPage: FC = () => {
   // }, [activeTab]);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4, position: 'relative' }}>
+    <div className="w-full" style={{ padding: '1rem', position: 'relative' }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -624,7 +623,7 @@ const StartupMainPage: FC = () => {
           </Snackbar>
         )}
       </motion.div>
-    </Container>
+    </div>
   );
 };
 

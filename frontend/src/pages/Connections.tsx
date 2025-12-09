@@ -1,6 +1,5 @@
 import { FC, useState, useEffect } from 'react';
 import {
-  Container,
   Typography,
   Box,
   Button,
@@ -418,7 +417,10 @@ const Connections: FC = () => {
 
   if (connectionsLoading) {
     return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Box
+        className="w-full mx-auto"
+        sx={{ py: 3, maxWidth: '1280px', px: { xs: 2, md: 3 } }}
+      >
         <Box
           display="flex"
           justifyContent="center"
@@ -427,17 +429,20 @@ const Connections: FC = () => {
         >
           <CircularProgress size={60} />
         </Box>
-      </Container>
+      </Box>
     );
   }
 
   if (connectionsError) {
     return (
-      <Container maxWidth="xl" sx={{ py: 3 }}>
+      <Box
+        className="w-full mx-auto"
+        sx={{ py: 3, maxWidth: '1280px', px: { xs: 2, md: 3 } }}
+      >
         <Alert severity="error" sx={{ mb: 3 }}>
           {connectionsError}
         </Alert>
-      </Container>
+      </Box>
     );
   }
 
@@ -449,7 +454,10 @@ const Connections: FC = () => {
   ) as Row[];
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
+    <Box
+      className="w-full mx-auto"
+      sx={{ py: 4, maxWidth: '1280px', px: { xs: 2, md: 3 } }}
+    >
       {/* Header */}
       <Box
         display="flex"
@@ -1441,7 +1449,7 @@ const Connections: FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+    </Box>
   );
 };
 

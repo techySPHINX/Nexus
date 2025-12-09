@@ -23,7 +23,6 @@ import {
   Snackbar,
   Alert,
   Fade,
-  Container,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -471,7 +470,7 @@ const ProjectsMainPage: FC = () => {
   const counts = getTabCounts();
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <div className="w-full" style={{ padding: '1rem' }}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -899,7 +898,7 @@ const ProjectsMainPage: FC = () => {
           </Alert>
         </Snackbar>
       </motion.div>
-    </Container>
+    </div>
   );
 };
 
