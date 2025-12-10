@@ -71,7 +71,7 @@ const Login: FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          pt: { xs: 12, md: 14 },
+          pt: '20px',
           pb: 8,
           px: { xs: 2.5, md: 4 },
           width: '100%',

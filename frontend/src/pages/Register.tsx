@@ -603,7 +603,9 @@ const Register: FC = () => {
                       label="Graduation Year"
                       value={formData.graduationYear ?? ''}
                       onChange={(e) => {
-                        const val = Number((e.target as HTMLInputElement).value);
+                        const val = Number(
+                          (e.target as HTMLInputElement).value
+                        );
                         setFormData((prev) => ({
                           ...prev,
                           graduationYear: isNaN(val) ? null : val,

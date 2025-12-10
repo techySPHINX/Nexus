@@ -503,7 +503,9 @@ const EnhancedRegister: FC = () => {
                     <Typography variant="caption" color="text.secondary">
                       Student ID
                     </Typography>
-                    <Typography variant="body1">{formData.studentId}</Typography>
+                    <Typography variant="body1">
+                      {formData.studentId}
+                    </Typography>
                   </Box>
                 )}
                 {formData.graduationYear && (
@@ -521,7 +523,9 @@ const EnhancedRegister: FC = () => {
                     <Typography variant="caption" color="text.secondary">
                       Department
                     </Typography>
-                    <Typography variant="body1">{formData.department}</Typography>
+                    <Typography variant="body1">
+                      {formData.department}
+                    </Typography>
                   </Box>
                 )}
               </Box>
@@ -577,7 +581,7 @@ const EnhancedRegister: FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          pt: { xs: 12, md: 14 },
+          pt: '20px',
           pb: 8,
           px: { xs: 2.5, md: 4 },
           width: '100%',
