@@ -8,6 +8,8 @@ import {
   Briefcase,
   Calendar,
   Newspaper,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -18,8 +20,9 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-  SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
+import { Button } from '@/components/ui/button';
 import { NavMainNexus } from '@/components/nav-main-nexus';
 import { NavUser } from '@/components/nav-user-nexus';
 
@@ -27,6 +30,7 @@ export function AppSidebarNexus() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { open, toggleSidebar } = useSidebar();
 
   const handleLogout = () => {
     logout();
@@ -174,32 +178,29 @@ export function AppSidebarNexus() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center justify-between py-2">
-          <Link
-            to="/"
-            className="flex items-center gap-2 rounded-lg transition-colors flex-1 group-data-[collapsible=icon]:pl-0"
+        <Link
+          to="/"
+          className="flex items-center gap-2 rounded-lg transition-colors flex-1 group-data-[collapsible=icon]:pl-0"
+        >
+          <motion.div
+            whileHover={{ scale: 1.1, rotate: 5 }}
+            className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden bg-white shadow-sm"
           >
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden bg-white shadow-sm"
+            <img
+              src="/nexus.png"
+              alt="Nexus"
+              className="size-7 object-contain"
+            />
+          </motion.div>
+          <div className="grid flex-1 text-left text-lg leading-tight group-data-[collapsible=icon]:hidden">
+            <motion.span
+              whileHover={{ letterSpacing: '0.05em' }}
+              className="truncate font-semibold bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 bg-clip-text text-transparent"
             >
-              <img
-                src="/nexus.png"
-                alt="Nexus"
-                className="size-7 object-contain"
-              />
-            </motion.div>
-            <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-              <motion.span
-                whileHover={{ letterSpacing: '0.05em' }}
-                className="truncate font-semibold bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 bg-clip-text text-transparent"
-              >
-                Nexus
-              </motion.span>
-            </div>
-          </Link>
-          <SidebarTrigger className="group-data-[collapsible=icon]:hidden" />
-        </div>
+              Nexus
+            </motion.span>
+          </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
@@ -207,6 +208,36 @@ export function AppSidebarNexus() {
       </SidebarContent>
 
       <SidebarFooter>
+        <div className="flex flex-col gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            className="w-full justify-center group-data-[collapsible=icon]:hidden"
+          >
+            {open ? (
+              <>
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Collapse
+              </>
+            ) : (
+              <>
+                <ChevronRight className="h-4 w-4 mr-2" />
+                Expand
+              </>
+            )}
+          </Button>
+          <div className="group-data-[collapsible=icon]:flex hidden justify-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleSidebar}
+              className="p-2"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
         <NavUser user={userData} onLogout={handleLogout} />
       </SidebarFooter>
 

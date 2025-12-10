@@ -25,8 +25,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-const SIDEBAR_COOKIE_NAME = 'sidebar_state';
-const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
+const SIDEBAR_STORAGE_KEY = 'sidebar_state';
 const SIDEBAR_WIDTH = '16rem';
 const SIDEBAR_WIDTH_MOBILE = '18rem';
 const SIDEBAR_WIDTH_ICON = '3rem';
@@ -89,8 +88,12 @@ const SidebarProvider = React.forwardRef<
           _setOpen(openState);
         }
 
-        // This sets the cookie to keep the sidebar state.
-        document.cookie = `${SIDEBAR_COOKIE_NAME}=${openState}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`;
+        // This saves the sidebar state to localStorage.
+        try {
+          localStorage.setItem(SIDEBAR_STORAGE_KEY, String(openState));
+        } catch {
+          // Silently fail if localStorage is not available
+        }
       },
       [setOpenProp, open]
     );
@@ -117,6 +120,18 @@ const SidebarProvider = React.forwardRef<
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }, [toggleSidebar]);
+
+    // Initialize sidebar state from localStorage on mount
+    React.useEffect(() => {
+      try {
+        const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+        if (stored !== null && !openProp) {
+          _setOpen(stored === 'true');
+        }
+      } catch {
+        // Silently fail if localStorage is not available
+      }
+    }, [openProp]);
 
     // We add a state so that we can do data-state="expanded" or "collapsed".
     // This makes it easier to style the sidebar with Tailwind classes.
