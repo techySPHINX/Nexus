@@ -18,7 +18,9 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     },
     base: '/', // <--- ✅ Add this line
     plugins: [
-      react(),
+      react({
+        jsxImportSource: 'react',
+      }),
       isAnalyze &&
         visualizer({
           filename: 'dist/stats.html',
@@ -49,7 +51,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       esbuild: {
         target: 'es2017',
       },
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 1200,
       terserOptions: {
         compress: {
           drop_console: mode === 'production',
@@ -61,24 +63,17 @@ export default defineConfig(({ mode }: ConfigEnv) => {
           manualChunks(id) {
             const lower = id.toLowerCase();
 
-            // --- 1. Core vendor chunks ---
+            // --- 1. Split vendor chunks strategically ---
             if (id.includes('node_modules')) {
-              // React must load first
-              // if (id.includes('react') || id.includes('react-dom'))
-              //   return 'first-vendor-react';
+              // Heavy dependencies that load separately
+              if (id.includes('three')) return 'vendor-three';
+              if (id.includes('tiptap') || id.includes('prosemirror'))
+                return 'vendor-editor';
+              if (id.includes('firebase')) return 'vendor-firebase';
+              if (id.includes('socket.io')) return 'vendor-socket';
 
-              // // MUI + Emotion must come AFTER React
-              // if (id.includes('@mui') || id.includes('@emotion'))
-              //   return 'vendor-mui';
-
-              // // Floating UI separately
-              if (id.includes('@floating-ui')) return 'vendor-floating';
-
-              if (id.includes('axios')) return 'vendor-axios';
-              if (id.includes('chart.js') || id.includes('recharts'))
-                return 'vendor-charts';
-
-              return 'nodes_modules'; // default vendor chunk
+              // Core UI dependencies - keep together
+              return 'vendor-core';
             }
 
             // --- 2. Feature chunks ---
@@ -101,6 +96,10 @@ export default defineConfig(({ mode }: ConfigEnv) => {
           },
           chunkFileNames: `assets/[name]-[hash].js`,
           assetFileNames: `assets/[name]-[hash].[ext]`,
+          entryFileNames: `assets/[name]-[hash].js`,
+        },
+        input: {
+          main: '/index.html',
         },
       },
     },
@@ -111,11 +110,16 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     },
     optimizeDeps: {
       include: [
+        'react',
+        'react-dom',
         '@mui/material',
         '@mui/material/styles',
         '@emotion/react',
         '@emotion/styled',
         '@mui/styled-engine',
+        '@floating-ui/react',
+        '@radix-ui/react-dropdown-menu',
+        '@radix-ui/react-tooltip',
       ],
     },
   };

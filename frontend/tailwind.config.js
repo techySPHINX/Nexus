@@ -3,11 +3,6 @@ export default {
   darkMode: ['class'],
   // important: true,
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx,html}'],
-  safelist: [
-    {
-      pattern: /motion-.*/, // keep tailwindcss-motion utilities (bracketed values purge otherwise)
-    },
-  ],
   theme: {
     extend: {
       colors: {
