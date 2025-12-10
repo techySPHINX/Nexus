@@ -8,7 +8,6 @@ import {
   Card,
   CardContent,
   Avatar,
-  Badge,
 } from '@mui/material';
 import { Message, Star, Celebration } from '@mui/icons-material';
 import { useTheme, alpha } from '@mui/material/styles';
@@ -115,56 +114,6 @@ const Dashboard: FC = () => {
   const showNotificationRef = useRef(showNotification);
   const navigate = useNavigate();
   const theme = useTheme();
-
-  // Create SVG icon element from hex color code
-  const renderSkillIcon = (skillName: string): React.ReactNode => {
-    // Map skills to unicode/emoji icons
-    const skillEmojis: { [key: string]: string } = {
-      typescript: '⌨️',
-      javascript: 'JS',
-      python: '🐍',
-      java: '☕',
-      'c++': '++',
-      'c#': '#',
-      ruby: '💎',
-      php: 'PHP',
-      go: 'Go',
-      rust: '🦀',
-      react: '⚛️',
-      vue: 'Vue',
-      angular: 'ng',
-      'next.js': 'N→',
-      svelte: 'S',
-      tailwind: '🎨',
-      'node.js': 'Node',
-      express: 'Ex',
-      django: 'DJ',
-      postgresql: 'PG',
-      mongodb: 'M',
-      mysql: 'My',
-      sql: 'SQL',
-      firebase: '🔥',
-      git: 'Git',
-      docker: '🐳',
-      aws: 'AWS',
-      kubernetes: 'K8',
-      graphql: 'GQ',
-      rest: 'REST',
-      testing: '✓',
-      'ui/ux': 'UI',
-      leadership: '👑',
-      writing: '✍️',
-      community: '🤝',
-      apis: 'API',
-      design: '🎭',
-    };
-
-    const lowerSkill = skillName.toLowerCase();
-    const emoji =
-      skillEmojis[lowerSkill] || skillName.slice(0, 2).toUpperCase();
-
-    return emoji;
-  };
 
   const skillPalette = [
     {
@@ -458,91 +407,158 @@ const Dashboard: FC = () => {
         </Box>
       </Box>
 
-      {/* Hero Welcome Card */}
+      {/* Hero Welcome Card with Integrated Skills Visualization */}
       <Card
         sx={{
           mb: 4,
-          backgroundColor: alpha(theme.palette.background.paper, 0.5),
-          backdropFilter: 'blur(8px)',
-          borderRadius: 2,
-          border: `1px solid ${alpha(theme.palette.divider, 0.15)}`,
-          overflow: 'visible',
+          backgroundColor: alpha(theme.palette.background.paper, 0.8),
+          backdropFilter: 'blur(12px)',
+          borderRadius: '20px',
+          border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+          overflow: 'hidden',
           position: 'relative',
-          boxShadow: `0 2px 8px ${alpha(theme.palette.common.black, 0.05)}`,
+          boxShadow:
+            theme.palette.mode === 'dark'
+              ? `0 8px 32px ${alpha(theme.palette.common.black, 0.3)}`
+              : `0 8px 32px ${alpha(theme.palette.common.black, 0.08)}`,
+          transition: 'all 0.3s ease',
+          '&:hover': {
+            boxShadow:
+              theme.palette.mode === 'dark'
+                ? `0 12px 40px ${alpha(theme.palette.common.black, 0.4)}`
+                : `0 12px 40px ${alpha(theme.palette.common.black, 0.12)}`,
+            transform: 'translateY(-2px)',
+          },
         }}
       >
+        {/* Decorative background elements */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background:
+              theme.palette.mode === 'dark'
+                ? `radial-gradient(circle at 20% 80%, ${alpha(theme.palette.primary.main, 0.08)} 0%, transparent 50%),
+           radial-gradient(circle at 80% 20%, ${alpha(theme.palette.secondary.main, 0.08)} 0%, transparent 50%)`
+                : `radial-gradient(circle at 20% 80%, ${alpha(theme.palette.primary.light, 0.06)} 0%, transparent 50%),
+           radial-gradient(circle at 80% 20%, ${alpha(theme.palette.secondary.light, 0.06)} 0%, transparent 50%)`,
+            zIndex: 0,
+          }}
+        />
+
+        {/* Subtle grid pattern */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage:
+              theme.palette.mode === 'dark'
+                ? `linear-gradient(90deg, ${alpha(theme.palette.divider, 0.05)} 1px, transparent 1px),
+           linear-gradient(${alpha(theme.palette.divider, 0.05)} 1px, transparent 1px)`
+                : `linear-gradient(90deg, ${alpha(theme.palette.divider, 0.03)} 1px, transparent 1px),
+           linear-gradient(${alpha(theme.palette.divider, 0.03)} 1px, transparent 1px)`,
+            backgroundSize: '40px 40px',
+            zIndex: 0,
+          }}
+        />
+
         <CardContent
-          sx={{ position: 'relative', zIndex: 2, p: { xs: 2, md: 2 } }}
+          sx={{ position: 'relative', zIndex: 2, p: { xs: 3, md: 4 } }}
         >
-          <Grid container spacing={2} alignItems="stretch">
-            {/* Left side - Avatar and Message */}
-            <Grid item xs={12} md={8}>
+          <Grid container spacing={3} alignItems="center">
+            {/* Left Column - User Info */}
+            <Grid item xs={12} md={6}>
               <Box
                 sx={{
                   display: 'flex',
-                  alignItems: { xs: 'center', sm: 'flex-start' },
-                  flexDirection: { xs: 'column', sm: 'row' },
-                  gap: 2,
-                  textAlign: { xs: 'center', sm: 'left' },
+                  alignItems: 'center',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  gap: 3,
+                  textAlign: { xs: 'center', md: 'left' },
                 }}
               >
-                <Badge
-                  overlap="circular"
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  badgeContent={
-                    <Box
-                      sx={{
-                        bgcolor: '#22c55e',
-                        borderRadius: '50%',
-                        p: 0.4,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        border: '2px solid white',
-                      }}
-                    >
-                      <Star sx={{ fontSize: 14, color: 'white' }} />
-                    </Box>
-                  }
-                >
+                {/* Avatar with Status */}
+                <Box sx={{ position: 'relative' }}>
                   <Avatar
                     src={user?.profile?.avatarUrl || undefined}
                     alt={user?.name}
                     sx={{
-                      width: 75,
-                      height: 75,
-                      border: `2px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-                      boxShadow: `0 4px 12px ${alpha(theme.palette.primary.main, 0.2)}`,
+                      width: { xs: 80, md: 100 },
+                      height: { xs: 80, md: 100 },
+                      border:
+                        theme.palette.mode === 'dark'
+                          ? `3px solid ${alpha(theme.palette.primary.main, 0.4)}`
+                          : `3px solid ${alpha(theme.palette.primary.light, 0.6)}`,
+                      boxShadow:
+                        theme.palette.mode === 'dark'
+                          ? `0 8px 24px ${alpha(theme.palette.primary.main, 0.3)}`
+                          : `0 8px 24px ${alpha(theme.palette.primary.main, 0.2)}`,
+                      backgroundColor:
+                        theme.palette.mode === 'dark'
+                          ? alpha(theme.palette.background.paper, 0.9)
+                          : alpha(theme.palette.background.paper, 0.95),
                     }}
                   />
-                </Badge>
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      bottom: 4,
+                      right: 4,
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      background:
+                        theme.palette.mode === 'dark' ? '#059669' : '#10b981',
+                      border: `2px solid ${theme.palette.background.paper}`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      animation: 'pulse 2s ease-in-out infinite',
+                      '@keyframes pulse': {
+                        '0%, 100%': { transform: 'scale(1)' },
+                        '50%': { transform: 'scale(1.1)' },
+                      },
+                    }}
+                  >
+                    <Star sx={{ fontSize: 12, color: 'white' }} />
+                  </Box>
+                </Box>
 
+                {/* Welcome Message */}
                 <Box sx={{ flex: 1 }}>
                   <Box
                     sx={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: 1,
-                      mb: 0.5,
+                      gap: 1.5,
+                      mb: 2,
+                      justifyContent: { xs: 'center', md: 'flex-start' },
                     }}
                   >
                     <Celebration
                       sx={{
                         color:
-                          theme.palette.mode === 'dark' ? '#a7f3d0' : '#059669',
-                        fontSize: '1.3rem',
+                          theme.palette.mode === 'dark' ? '#10b981' : '#059669',
+                        fontSize: '1.8rem',
                       }}
                     />
                     <Typography
                       variant="overline"
                       sx={{
-                        color: 'text.primary',
+                        color: theme.palette.text.primary,
                         fontWeight: 700,
-                        letterSpacing: 1.2,
-                        fontSize: '0.7rem',
+                        letterSpacing: 1.5,
+                        fontSize: '0.8rem',
+                        textTransform: 'uppercase',
                       }}
                     >
-                      WELCOME BACK!
+                      Welcome Back!
                     </Typography>
                   </Box>
 
@@ -550,13 +566,13 @@ const Dashboard: FC = () => {
                     variant="h4"
                     sx={{
                       fontWeight: 800,
-                      mb: 1.5,
-                      color: 'text.primary',
-                      fontSize: { xs: '1.4rem', md: '1.8rem' },
-                      lineHeight: 1.1,
+                      mb: 2,
+                      color: theme.palette.text.primary,
+                      fontSize: { xs: '1.6rem', md: '2rem' },
+                      lineHeight: 1.2,
                     }}
                   >
-                    {user?.name?.split(' ')[0] || 'Friend'}, your momentum is
+                    Hello, {user?.name?.split(' ')[0] || 'Friend'}
                     <Box
                       component="span"
                       sx={{
@@ -564,60 +580,72 @@ const Dashboard: FC = () => {
                         color:
                           theme.palette.mode === 'dark' ? '#a7f3d0' : '#059669',
                         fontWeight: 800,
+                        fontSize: { xs: '1.4rem', md: '1.8rem' },
                       }}
                     >
-                      {progress}% rising
+                      Momentum: {progress}%
                     </Box>
                   </Typography>
 
-                  {/* Progress bar - Compact */}
-                  <Box sx={{ maxWidth: 280 }}>
+                  {/* Progress Bar */}
+                  <Box sx={{ maxWidth: 320, mt: 3 }}>
                     <Box
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        mb: 0.5,
+                        mb: 1,
                         alignItems: 'center',
                       }}
                     >
                       <Typography
-                        variant="caption"
+                        variant="body2"
                         sx={{
-                          color: 'rgba(255, 255, 255, 0.85)',
+                          color: theme.palette.text.secondary,
                           fontWeight: 600,
                         }}
                       >
-                        Weekly Goal
+                        Weekly Progress
                       </Typography>
                       <Typography
-                        variant="caption"
+                        variant="body2"
                         sx={{
                           fontWeight: 700,
-                          color: '#a7f3d0',
-                          fontSize: '0.8rem',
+                          color:
+                            theme.palette.mode === 'dark'
+                              ? '#a7f3d0'
+                              : '#059669',
                         }}
                       >
-                        {progress}%
+                        {progress}% Complete
                       </Typography>
                     </Box>
                     <Box
                       sx={{
-                        height: 6,
-                        bgcolor: alpha(theme.palette.divider, 0.3),
-                        borderRadius: 3,
+                        height: 8,
+                        bgcolor:
+                          theme.palette.mode === 'dark'
+                            ? alpha(theme.palette.divider, 0.4)
+                            : alpha(theme.palette.divider, 0.2),
+                        borderRadius: 4,
                         overflow: 'hidden',
-                        border: `1px solid ${alpha(theme.palette.primary.main, 0.2)}`,
+                        border: `1px solid ${alpha(theme.palette.divider, 0.2)}`,
                       }}
                     >
                       <Box
                         sx={{
                           height: '100%',
                           width: `${progress}%`,
-                          borderRadius: 3,
+                          borderRadius: 4,
                           transition:
-                            'width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                          background: `linear-gradient(90deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`,
-                          boxShadow: `0 0 12px ${alpha(theme.palette.primary.main, 0.55)}`,
+                            'width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                          background:
+                            theme.palette.mode === 'dark'
+                              ? `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`
+                              : `linear-gradient(90deg, ${theme.palette.primary.light} 0%, ${theme.palette.secondary.light} 100%)`,
+                          boxShadow:
+                            theme.palette.mode === 'dark'
+                              ? `0 0 16px ${alpha(theme.palette.primary.main, 0.5)}`
+                              : `0 0 16px ${alpha(theme.palette.primary.main, 0.3)}`,
                         }}
                       />
                     </Box>
@@ -625,158 +653,134 @@ const Dashboard: FC = () => {
                 </Box>
               </Box>
             </Grid>
-            {/* Right side - Skills Visualization */}
-            <Grid item xs={12} md={4}>
+
+            {/* Right Column - Skills Distribution */}
+            <Grid item xs={12} md={6}>
               <Box
                 sx={{
                   position: 'relative',
-                  height: { xs: 160, md: 180 },
+                  height: { xs: 280, md: 280 },
                   width: '100%',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  overflow: 'visible',
+                  borderRadius: '16px',
+                  border: `1px solid ${alpha(theme.palette.divider, 0.1)}`,
+                  overflow: 'hidden',
+                  padding: 2,
                 }}
               >
-                {/* Animated Background Glow */}
-                <Box
-                  sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    transform: 'translate(-50%, -50%)',
-                    width: { xs: 160, md: 200 },
-                    height: { xs: 160, md: 200 },
-                    borderRadius: '50%',
-                    background: `radial-gradient(circle at center, ${alpha(theme.palette.primary.main, 0.05)} 0%, transparent 70%)`,
-                    filter: 'blur(20px)',
-                    animation: 'pulseGlow 6s ease-in-out infinite',
-                    '@keyframes pulseGlow': {
-                      '0%, 100%': {
-                        opacity: 0.2,
-                        transform: 'translate(-50%, -50%) scale(0.9)',
-                      },
-                      '50%': {
-                        opacity: 0.4,
-                        transform: 'translate(-50%, -50%) scale(1.1)',
-                      },
-                    },
-                    zIndex: 0,
-                  }}
-                />
-
-                {/* Main Container */}
+                {/* Skills Distribution Container */}
                 <Box
                   sx={{
                     position: 'relative',
                     width: '100%',
-                    height: '100%',
-                    zIndex: 1,
+                    height: 'calc(100% - 50px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }}
                 >
-                  {/* SKILL BUBBLES - Smaller, strategically spaced, high z-index */}
+                  {/* Skills distributed around the container */}
                   {displayedSkills.map((skill, index) => {
-                    // Strategic grid positions to avoid overlaps - MORE horizontal spacing
-                    const positions = [
-                      { x: -200, y: -50 }, // Top-left
-                      { x: -50, y: -65 }, // Top-center
-                      { x: 100, y: -50 }, // Top-right
-                      { x: -160, y: -5 }, // Mid-left
-                      { x: 150, y: -5 }, // Mid-right
-                      { x: -120, y: 50 }, // Bottom-left
-                      { x: 0, y: 65 }, // Bottom-center
-                      { x: 85, y: 50 }, // Bottom-right
-                      { x: -70, y: -10 }, // Inner top-left
-                      { x: 45, y: -20 }, // Inner top-right
-                    ];
-
-                    const pos = positions[index % positions.length];
-                    const randomX = pos.x;
-                    const randomY = pos.y;
-
                     const colorPair = skillPalette[index % skillPalette.length];
-                    const randomDelay = Math.random() * 300;
+                    const totalSkills = displayedSkills.length;
+
+                    // Calculate positions around the container perimeter
+                    const angle = (index * 2 * Math.PI) / totalSkills;
+                    const distance = 0.8; // 80% from center
+
+                    // Convert polar to Cartesian coordinates
+                    const x = Math.cos(angle) * distance * 100; // Percentage from center
+                    const y = Math.sin(angle) * distance * 100;
+
+                    // Add slight randomness for natural look
+                    const randomOffset = (Math.random() - 0.5) * 10;
+                    const xPos = x + randomOffset;
+                    const yPos = y + randomOffset;
+
+                    const delay = index * 120;
 
                     return (
                       <Box
                         key={skill.name}
                         sx={{
                           position: 'absolute',
-                          top: `calc(50% + ${randomY}px)`,
-                          left: `calc(50% + ${randomX}px)`,
-                          transform: 'translate(-50%, -50%) scale(0)',
-                          zIndex: 20 + index,
-                          animation: `
-                skillPop${index} 500ms cubic-bezier(0.68, -0.55, 0.265, 1.55) ${randomDelay}ms forwards
-              `,
-                          willChange: 'transform, opacity',
+                          top: `calc(50% + ${yPos}px)`,
+                          left: `calc(50% + ${xPos}px)`,
+                          transform: 'translate(-50%, -50%)',
+                          zIndex: 10,
+                          opacity: 0,
+                          animation: `skillFloatIn 800ms cubic-bezier(0.34, 1.56, 0.64, 1) ${delay}ms forwards`,
+                          '@keyframes skillFloatIn': {
+                            '0%': {
+                              opacity: 0,
+                              transform:
+                                'translate(-50%, -50%) scale(0) rotate(-45deg)',
+                            },
+                            '60%': {
+                              opacity: 1,
+                              transform:
+                                'translate(-50%, -50%) scale(1.1) rotate(10deg)',
+                            },
+                            '100%': {
+                              opacity: 1,
+                              transform:
+                                'translate(-50%, -50%) scale(1) rotate(0deg)',
+                            },
+                          },
                         }}
                       >
-                        {/* Individual pop animation for each skill */}
-                        <style>
-                          {`
-                @keyframes skillPop${index} {
-                  0% {
-                    opacity: 0;
-                    transform: translate(-50%, -50%) scale(0) rotate(-20deg);
-                    filter: blur(4px);
-                  }
-                  50% {
-                    opacity: 1;
-                    transform: translate(-50%, -50%) scale(1.15) rotate(5deg);
-                    filter: blur(1px);
-                  }
-                  100% {
-                    opacity: 1;
-                    transform: translate(-50%, -50%) scale(1) rotate(0deg);
-                    filter: blur(0px);
-                  }
-                }
-              `}
-                        </style>
-
-                        {/* Skill Bubble - Small and rounded */}
+                        {/* Skill Box - Simple hover animation only */}
                         <Box
                           sx={{
-                            width: 48,
-                            height: 48,
+                            width: { xs: 48, md: 56 },
+                            height: { xs: 48, md: 56 },
                             borderRadius: '12px',
-                            background: colorPair.bg,
+                            backgroundColor: colorPair.bg,
                             color: 'white',
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
                             fontWeight: 600,
-                            boxShadow: `
-                  0 6px 16px ${alpha(colorPair.glow, 0.4)},
-                  inset 0 1px 0 rgba(255,255,255,0.25)
-                `,
-                            fontSize: '0.65rem',
-                            textAlign: 'center',
-                            px: 0.8,
-                            cursor: 'pointer',
+                            boxShadow:
+                              theme.palette.mode === 'dark'
+                                ? `0 6px 20px ${alpha(colorPair.glow, 0.4)}`
+                                : `0 6px 20px ${alpha(colorPair.glow, 0.3)}`,
+                            fontSize: { xs: '0.7rem', md: '0.8rem' },
+                            padding: 1,
+                            cursor: 'default',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             border: `1px solid ${alpha('#ffffff', 0.2)}`,
                             position: 'relative',
                             overflow: 'hidden',
                             '&:hover': {
-                              transform: 'scale(1.15)',
-                              boxShadow: `
-                    0 10px 24px ${alpha(colorPair.glow, 0.6)},
-                    inset 0 1px 0 rgba(255,255,255,0.3)
-                  `,
+                              transform: 'scale(1.15) translateY(-2px)',
+                              boxShadow:
+                                theme.palette.mode === 'dark'
+                                  ? `0 10px 28px ${alpha(colorPair.glow, 0.6)}`
+                                  : `0 10px 28px ${alpha(colorPair.glow, 0.4)}`,
+                              '&::before': {
+                                opacity: 0.2,
+                              },
+                            },
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              bottom: 0,
+                              background: `linear-gradient(135deg, rgba(255,255,255,0.2), rgba(255,255,255,0.1) 50%, transparent)`,
+                              opacity: 0.1,
+                              transition: 'opacity 0.3s ease',
                             },
                           }}
                           title={skill.name}
                         >
-                          {/* Skill Content - Icon or text fallback */}
+                          {/* Skill Content - Simple text */}
                           <Box
                             sx={{
                               position: 'relative',
                               zIndex: 2,
-                              textShadow: '0 0.5px 1px rgba(0,0,0,0.3)',
-                              fontSize: '1.5rem',
-                              fontWeight: 700,
+                              textShadow: '0 1px 2px rgba(0,0,0,0.3)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -785,32 +789,106 @@ const Dashboard: FC = () => {
                             }}
                           >
                             {(() => {
-                              const icon = renderSkillIcon(skill.name);
-                              const iconStr = icon as string;
-                              // Show skill name if icon is just 1-2 letter abbreviation
-                              if (
-                                iconStr.length <= 2 &&
-                                /^[A-Z0-9]{1,2}$/.test(iconStr)
-                              ) {
-                                return (
-                                  <span
-                                    style={{
-                                      fontSize: '0.75rem',
-                                      fontWeight: 700,
-                                    }}
-                                  >
-                                    {skill.name.slice(0, 6)}
-                                  </span>
-                                );
+                              // Show skill abbreviation
+                              const words = skill.name.split(/[\s-_]+/);
+                              if (words.length >= 2) {
+                                return `${words[0].charAt(0)}${words[1].charAt(0)}`;
                               }
-                              // Otherwise show the icon/emoji
-                              return icon;
+                              return skill.name.slice(0, 2).toUpperCase();
                             })()}
                           </Box>
+
+                          {/* Corner accent */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              right: 4,
+                              width: 4,
+                              height: 4,
+                              borderRadius: '50%',
+                              background: alpha('#ffffff', 0.6),
+                            }}
+                          />
                         </Box>
+
+                        {/* Subtle pulse on hover */}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: { xs: 60, md: 70 },
+                            height: { xs: 60, md: 70 },
+                            borderRadius: '14px',
+                            background: colorPair.glow,
+                            opacity: 0,
+                            transition: 'opacity 0.3s ease',
+                            filter: 'blur(8px)',
+                            zIndex: -1,
+                            '&:hover + &': {
+                              opacity: 0.2,
+                            },
+                          }}
+                        />
                       </Box>
                     );
                   })}
+
+                  {/* Central decorative element */}
+                  <Box
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: 60,
+                      height: 60,
+                      borderRadius: '16px',
+                      background:
+                        theme.palette.mode === 'dark'
+                          ? alpha(theme.palette.primary.main, 0.1)
+                          : alpha(theme.palette.primary.light, 0.15),
+                      border: `2px dashed ${alpha(theme.palette.divider, 0.3)}`,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      animation: 'rotateSlow 20s linear infinite',
+                      '@keyframes rotateSlow': {
+                        '0%': {
+                          transform: 'translate(-50%, -50%) rotate(0deg)',
+                        },
+                        '100%': {
+                          transform: 'translate(-50%, -50%) rotate(360deg)',
+                        },
+                      },
+                      '&::after': {
+                        content: '""',
+                        position: 'absolute',
+                        width: '80%',
+                        height: '80%',
+                        borderRadius: '12px',
+                        background: alpha(theme.palette.divider, 0.05),
+                      },
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        position: 'relative',
+                        zIndex: 1,
+                        fontWeight: 600,
+                        color: theme.palette.text.secondary,
+                        opacity: 0.8,
+                        fontSize: '0.7rem',
+                        textAlign: 'center',
+                        lineHeight: 1.2,
+                      }}
+                    >
+                      Skills
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             </Grid>
