@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -34,7 +34,7 @@ interface SubCommunityCardProps {
   onEdit?: (community: SubCommunity) => void;
 }
 
-export const SubCommunityCard: FC<SubCommunityCardProps> = ({
+export const SubCommunityCard: React.FC<SubCommunityCardProps> = ({
   subCommunity,
   onEdit,
 }) => {
