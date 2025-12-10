@@ -1,9 +1,9 @@
-import { FC, Suspense, useState, useEffect, useRef, ChangeEvent } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
-  TextField,
-  InputAdornment,
+  // TextField,
+  // InputAdornment,
   Button,
   Snackbar,
   Alert,
@@ -13,22 +13,20 @@ import {
   CardContent,
   Skeleton,
 } from '@mui/material';
-import { subCommunityService } from '../../services/subCommunityService';
-import { Search, Add } from '@mui/icons-material';
+import {
+  // Search,
+  Add,
+} from '@mui/icons-material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateSubCommunityDialog } from '../../components/SubCommunity/CreateSubCommunityDialog';
 import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubCommunityRequestDialog';
 import { SubCommunitySection } from '../../components/SubCommunity/SubCommunitySection';
-import { SubCommunityCard } from '../../components/SubCommunity/SubCommunityCard';
+// import { SubCommunityCard } from '../../components/SubCommunity/SubCommunityCard';
 // using manual SubCommunitySection instead of viewport-driven infinite loader
 import { ManageTypesDialog } from '../../components/SubCommunity/ManageTypesDialog';
-import SubCommunityFilter, {
-  SubCommunityFilterValue,
-} from '../../components/SubCommunity/SubCommunityFilter';
 import { SubCommunity, SubCommunityType } from '../../types/subCommunity';
 import { Link } from 'react-router-dom';
-import { getErrorMessage } from '@/utils/errorHandler';
 
 // Sections are built dynamically from types provided by context (plus 'all')
 
@@ -38,12 +36,11 @@ import { getErrorMessage } from '@/utils/errorHandler';
 // previously caused repeated API calls).
 // No module-level initiated set any more — we rely on context's loading
 // state and caching to determine whether a section has started loading.
-const LazySection: FC<{
+const LazySection: React.FC<{
   typeId: string;
   title: string;
   initialCount?: number;
-  filter?: { privacy?: 'all' | 'public' | 'private'; sort?: string };
-}> = ({ typeId, title, initialCount = 6, filter }) => {
+}> = ({ typeId, title, initialCount = 6 }) => {
   const {
     ensureTypeLoaded,
     ensureAllSubCommunities,
@@ -110,17 +107,9 @@ const LazySection: FC<{
               loadTimeoutRef.current = window.setTimeout(async () => {
                 try {
                   if (typeId === 'all') {
-                    await scheduleTypeLoad(
-                      'all',
-                      initialCount,
-                      filter as SubCommunityFilterValue
-                    );
+                    await scheduleTypeLoad('all', initialCount);
                   } else {
-                    await scheduleTypeLoad(
-                      typeId,
-                      initialCount,
-                      filter as SubCommunityFilterValue
-                    );
+                    await scheduleTypeLoad(typeId, initialCount);
                   }
                 } catch (err) {
                   console.warn('Failed to load type', typeId, err);
@@ -146,11 +135,7 @@ const LazySection: FC<{
                     // new intersection event which may not happen while the
                     // element remains visible.
                     if (isIntersectingRef.current) {
-                      scheduleTypeLoad(
-                        typeId,
-                        initialCount,
-                        filter as SubCommunityFilterValue
-                      ).catch(() => {});
+                      scheduleTypeLoad(typeId, initialCount).catch(() => {});
                     }
                   } else {
                     // we have data now; stop observing this element to avoid
@@ -200,10 +185,9 @@ const LazySection: FC<{
     isLoadingForType,
     subCommunities,
     subCommunitiesByType,
-    filter,
   ]);
 
-  let displayCommunities =
+  const displayCommunities =
     typeId === 'all'
       ? subCommunities
       : subCommunitiesByType.filter((subCom: SubCommunity) =>
@@ -211,25 +195,6 @@ const LazySection: FC<{
             ? subCom.type === typeId
             : subCom.type?.name === typeId
         );
-
-  // apply simple client-side filters (privacy)
-  if (filter?.privacy && filter.privacy !== 'all') {
-    displayCommunities = displayCommunities.filter((sc) =>
-      filter.privacy === 'public' ? !sc.isPrivate : sc.isPrivate
-    );
-  }
-
-  // apply simple client-side sort
-  if (filter?.sort === 'newest') {
-    displayCommunities = [...displayCommunities].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  } else if (filter?.sort === 'members') {
-    displayCommunities = [...displayCommunities].sort(
-      (a, b) => (b._count?.members ?? 0) - (a._count?.members ?? 0)
-    );
-  }
 
   const isLoading = isLoadingForType(typeId);
   const hasMore = hasMoreForType(typeId, initialCount);
@@ -344,13 +309,12 @@ const LazySection: FC<{
     </div>
   );
 };
-const SubCommunitiesPage: FC = () => {
+
+const SubCommunitiesPage: React.FC = () => {
   const {
     subCommunities,
     loading,
     ensureTypes,
-    ensureAllSubCommunities,
-    scheduleTypeLoad,
     error,
     clearError,
     types,
@@ -358,15 +322,7 @@ const SubCommunitiesPage: FC = () => {
   } = useSubCommunity();
 
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<SubCommunity[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [pendingFilter, setPendingFilter] = useState<SubCommunityFilterValue>({
-    privacy: 'all',
-    sort: 'recommended',
-  });
-  const [appliedFilter, setAppliedFilter] =
-    useState<SubCommunityFilterValue>(pendingFilter);
+  // const [searchTerm, setSearchTerm] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [manageTypesOpen, setManageTypesOpen] = useState(false);
@@ -393,45 +349,6 @@ const SubCommunitiesPage: FC = () => {
       mounted = false;
     };
   }, [ensureTypes]);
-
-  // When the user types a search term, query the server (debounced) and
-  // store results separately in `searchResults` so we don't replace the
-  // main `subCommunities` cache. This guarantees the search queries the
-  // database and returns matches even if they weren't previously loaded.
-  useEffect(() => {
-    const q = searchTerm?.trim();
-    if (!q) {
-      setSearchResults([]);
-      setSearchLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    const delay = 350; // debounce
-    const t = window.setTimeout(async () => {
-      setSearchLoading(true);
-      try {
-        const data = await subCommunityService.getAllSubCommunities({
-          q,
-          privacy: appliedFilter?.privacy,
-          sort: appliedFilter?.sort,
-          compact: false,
-          limit: 50,
-          page: 1,
-        });
-        if (!cancelled) setSearchResults(data || []);
-      } catch (err) {
-        if (!cancelled) console.warn('Search failed', err);
-      } finally {
-        if (!cancelled) setSearchLoading(false);
-      }
-    }, delay) as unknown as number;
-
-    return () => {
-      cancelled = true;
-      clearTimeout(t as number);
-    };
-  }, [searchTerm, appliedFilter]);
 
   useEffect(() => {
     if (error) {
@@ -482,26 +399,6 @@ const SubCommunitiesPage: FC = () => {
   //   });
   // };
 
-  // const applyListFilters = (communities: SubCommunity[]) => {
-  //   let list = [...communities];
-  //   if (appliedFilter.privacy !== 'all') {
-  //     list = list.filter((sc) =>
-  //       appliedFilter.privacy === 'public' ? !sc.isPrivate : sc.isPrivate
-  //     );
-  //   }
-  //   if (appliedFilter.sort === 'newest') {
-  //     list = list.sort(
-  //       (a, b) =>
-  //         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  //     );
-  //   } else if (appliedFilter.sort === 'members') {
-  //     list = list.sort(
-  //       (a, b) => (b._count?.members ?? 0) - (a._count?.members ?? 0)
-  //     );
-  //   }
-  //   return list;
-  // };
-
   // (Per-type display logic moved into LazySection to avoid inline async work)
 
   if (loading && subCommunities.length === 0) {
@@ -512,9 +409,7 @@ const SubCommunitiesPage: FC = () => {
     );
   }
 
-  // const filteredCommunities = applyListFilters(
-  //   filterCommunities(subCommunities)
-  // );
+  // const filteredCommunities = filterCommunities(subCommunities);
 
   const sections = [
     { id: 'all', title: 'Recommended Communities' },
@@ -525,7 +420,7 @@ const SubCommunitiesPage: FC = () => {
   ];
 
   return (
-    <Box className="w-full" sx={{ p: 3 }}>
+    <Box sx={{ maxWidth: 1200, margin: '0 auto', p: 3 }}>
       {/* Header Section */}
       <Box
         sx={{
@@ -592,11 +487,11 @@ const SubCommunitiesPage: FC = () => {
       </Box>
 
       {/* Search Bar */}
-      <TextField
+      {/* <TextField
         fullWidth
         placeholder="Search communities by name, description, or type..."
         value={searchTerm}
-        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
           setSearchTerm(e.target.value)
         }
         sx={{ mb: 4 }}
@@ -608,42 +503,10 @@ const SubCommunitiesPage: FC = () => {
           ),
           sx: { borderRadius: 2 },
         }}
-      />
+      /> */}
 
-      {/* Filters */}
-      <SubCommunityFilter
-        value={pendingFilter}
-        onChange={(v) => setPendingFilter(v)}
-        onApply={() => {
-          setAppliedFilter(pendingFilter);
-          // trigger a force refresh of the main 'all' list with new filters
-          ensureAllSubCommunities(
-            true,
-            pendingFilter as SubCommunityFilterValue
-          ).catch(() => {});
-          // Also schedule per-type loads immediately for currently known types
-          try {
-            // schedule the 'all' list too (non-blocking)
-            scheduleTypeLoad(
-              'all',
-              6,
-              pendingFilter as SubCommunityFilterValue
-            ).catch(() => {});
-            (types || []).forEach((t: SubCommunityType) => {
-              scheduleTypeLoad(
-                t.name,
-                6,
-                pendingFilter as SubCommunityFilterValue
-              ).catch(() => {});
-            });
-          } catch (e) {
-            /* best-effort scheduling */
-            getErrorMessage(e);
-          }
-        }}
-      />
       {/* Search Results */}
-      {searchTerm && (
+      {/* {searchTerm && (
         <Box sx={{ mb: 4 }}>
           <Typography
             variant="h5"
@@ -653,11 +516,7 @@ const SubCommunitiesPage: FC = () => {
           >
             Search Results for &quot;{searchTerm}&quot;
           </Typography>
-          {searchLoading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : searchResults.length === 0 ? (
+          {filteredCommunities.length === 0 ? (
             <Typography
               variant="body2"
               color="text.secondary"
@@ -667,7 +526,7 @@ const SubCommunitiesPage: FC = () => {
             </Typography>
           ) : (
             <Grid container spacing={3}>
-              {searchResults.map((subCom) => (
+              {filteredCommunities.map((subCom) => (
                 <Grid item xs={12} sm={6} md={6} key={subCom.id}>
                   <SubCommunityCard subCommunity={subCom} />
                 </Grid>
@@ -675,10 +534,11 @@ const SubCommunitiesPage: FC = () => {
             </Grid>
           )}
         </Box>
-      )}
+      )} */}
 
       {/* Community Sections */}
-      {!searchTerm &&
+      {
+        // !searchTerm &&
         sections.map((typeConfig) => {
           const typeId = typeConfig.id;
 
@@ -687,25 +547,25 @@ const SubCommunitiesPage: FC = () => {
               key={typeId}
               typeId={typeId}
               title={typeConfig.title}
-              filter={{
-                privacy: appliedFilter.privacy,
-                sort: appliedFilter.sort,
-              }}
             />
           );
-        })}
+        })
+      }
 
       {/* Empty State */}
-      {!searchTerm && subCommunities.length === 0 && (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No communities found
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Be the first to create a community!
-          </Typography>
-        </Box>
-      )}
+      {
+        // !searchTerm &&
+        subCommunities.length === 0 && (
+          <Box sx={{ textAlign: 'center', py: 8 }}>
+            <Typography variant="h6" color="text.secondary" gutterBottom>
+              No communities found
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Be the first to create a community!
+            </Typography>
+          </Box>
+        )
+      }
 
       {/* Dialogs */}
       <CreateSubCommunityDialog
@@ -720,13 +580,13 @@ const SubCommunitiesPage: FC = () => {
 
       {/* Manage Types dialog for admins */}
       {isAdmin && (
-        <Suspense fallback={null}>
+        <React.Suspense fallback={null}>
           {/* Lazy load to avoid bundling if not used often */}
           <ManageTypesDialog
             open={manageTypesOpen}
             onClose={() => setManageTypesOpen(false)}
           />
-        </Suspense>
+        </React.Suspense>
       )}
 
       {/* Error Snackbar */}

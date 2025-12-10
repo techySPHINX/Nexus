@@ -24,12 +24,6 @@ import {
 import { useAuth } from './AuthContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 
-type FilterOpts = {
-  privacy?: 'all' | 'public' | 'private';
-  sort?: string;
-  q?: string;
-};
-
 interface SubCommunityContextType {
   // State
   subCommunities: SubCommunity[];
@@ -46,32 +40,18 @@ interface SubCommunityContextType {
   // Actions - All return Promise<void>
   getAllSubCommunities: () => Promise<void>;
   // Ensure helpers - idempotent loaders to avoid duplicate requests
-  ensureAllSubCommunities: (
-    forceRefresh?: boolean,
-    opts?: FilterOpts
-  ) => Promise<void>;
+  ensureAllSubCommunities: (forceRefresh?: boolean) => Promise<void>;
   getSubCommunity: (id: string) => Promise<void>;
   getSubCommunityByType: (
     type: string,
     page?: number,
     limit?: number,
     q?: string,
-    opts?: FilterOpts,
     forceRefresh?: boolean
   ) => Promise<SubCommunityTypeResponse>;
   // Per-type paging helpers
-  ensureTypeLoaded: (
-    type: string,
-    limit?: number,
-    q?: string,
-    opts?: FilterOpts
-  ) => Promise<void>;
-  loadMoreForType: (
-    type: string,
-    limit?: number,
-    q?: string,
-    opts?: FilterOpts
-  ) => Promise<void>;
+  ensureTypeLoaded: (type: string, limit?: number, q?: string) => Promise<void>;
+  loadMoreForType: (type: string, limit?: number, q?: string) => Promise<void>;
   createSubCommunity: (data: {
     name: string;
     description: string;
@@ -141,11 +121,7 @@ interface SubCommunityContextType {
   }>;
   // Enqueue a type (or 'all') for scheduled loading. LazySection calls this
   // to ensure its type will be fetched eventually.
-  scheduleTypeLoad: (
-    type: string,
-    limit?: number,
-    opts?: FilterOpts
-  ) => Promise<void>;
+  scheduleTypeLoad: (type: string, limit?: number) => Promise<void>;
 }
 
 const SubCommunityContext = createContext<SubCommunityContextType>({
@@ -361,29 +337,16 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
   }
 
   const safeGetSubCommunityByType = useCallback(
-    async (
-      type: string,
-      page: number,
-      limit: number,
-      q?: string,
-      opts?: FilterOpts
-    ) => {
+    async (type: string, page: number, limit: number, q?: string) => {
       const release = await loadSemaphoreRef.current!.acquire();
       // mark a section load in progress so UI can block scrolling
       setSectionLoadInProgress(true);
       try {
-        const allowedSorts = new Set(['recommended', 'newest', 'members']);
-        const sortParam =
-          opts?.sort && allowedSorts.has(opts.sort)
-            ? (opts.sort as 'recommended' | 'newest' | 'members')
-            : undefined;
-        const passOpts = opts ? { ...opts, sort: sortParam } : undefined;
         return await subCommunityService.getSubCommunityByType(
           type,
           page,
           limit,
-          q,
-          passOpts
+          q
         );
       } finally {
         release();
@@ -394,7 +357,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
   );
 
   const ensureAllSubCommunities = useCallback(
-    async (forceRefresh = false, opts?: FilterOpts) => {
+    async (forceRefresh = false) => {
       if (!forceRefresh && allLoaded) return;
 
       // If recent failure recorded, avoid immediate retry and fail fast
@@ -416,18 +379,10 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
         // Acquire semaphore so 'all' loads are serialized with per-type loads
         const release = await loadSemaphoreRef.current!.acquire();
         try {
-          const allowedSorts = new Set(['recommended', 'newest', 'members']);
-          const sortParam =
-            opts?.sort && allowedSorts.has(opts.sort)
-              ? (opts.sort as 'recommended' | 'newest' | 'members')
-              : undefined;
           const data = await subCommunityService.getAllSubCommunities({
             compact: true,
             page: 1,
             limit: 6,
-            privacy: opts?.privacy,
-            sort: sortParam,
-            q: opts?.q,
           });
           setSubCommunities(data as SubCommunity[]);
           setAllLoaded(true);
@@ -524,10 +479,9 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       page: number = 1,
       limit: number = 20,
       q?: string,
-      opts?: FilterOpts,
       forceRefresh = false
     ) => {
-      const cacheKey = `${type}-${page}-${limit}-${q || ''}-${opts?.privacy ?? 'all'}-${opts?.sort ?? 'recommended'}`;
+      const cacheKey = `${type}-${page}-${limit}-${q || ''}`;
 
       // Check cache first
       if (!forceRefresh && subCommunityCache[cacheKey]) {
@@ -549,13 +503,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
       setLoading(true);
       try {
-        const response = await safeGetSubCommunityByType(
-          type,
-          page,
-          limit,
-          q,
-          opts
-        );
+        const response = await safeGetSubCommunityByType(type, page, limit, q);
 
         // Update cache
         setSubCommunityCache((prev) => ({
@@ -613,13 +561,8 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
   // Ensure the first page for a given type is loaded (idempotent)
   const ensureTypeLoaded = useCallback(
-    async (
-      type: string,
-      limit: number = 6,
-      q?: string,
-      opts?: FilterOpts
-    ): Promise<void> => {
-      const key = `${type}-1-${limit}-${q || ''}-${opts?.privacy ?? 'all'}-${opts?.sort ?? 'recommended'}`;
+    async (type: string, limit: number = 6, q?: string): Promise<void> => {
+      const key = `${type}-1-${limit}-${q || ''}`;
       if (subCommunityCache[key]) {
         setSubCommunityPages((prev) => ({ ...prev, [type]: 1 }));
         return;
@@ -634,14 +577,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
       const p: Promise<void> = (async () => {
         try {
-          const resp = await getSubCommunityByType(
-            type,
-            1,
-            limit,
-            q,
-            opts,
-            false
-          );
+          const resp = await getSubCommunityByType(type, 1, limit, q);
           if (resp?.data) {
             // mark page 1 loaded
             setSubCommunityPages((prev) => ({ ...prev, [type]: 1 }));
@@ -660,15 +596,10 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
   // Load next page for a type (idempotent per target page)
   const loadMoreForType = useCallback(
-    async (
-      type: string,
-      limit: number = 6,
-      q?: string,
-      opts?: FilterOpts
-    ): Promise<void> => {
+    async (type: string, limit: number = 6, q?: string): Promise<void> => {
       const current = subCommunityPages[type] ?? 1;
       const next = current + 1;
-      const key = `${type}-${next}-${limit}-${q || ''}-${opts?.privacy ?? 'all'}-${opts?.sort ?? 'recommended'}`;
+      const key = `${type}-${next}-${limit}-${q || ''}`;
       if (subCommunityCache[key]) {
         // already loaded
         setSubCommunityPages((prev) => ({ ...prev, [type]: next }));
@@ -682,14 +613,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
       const p: Promise<void> = (async () => {
         try {
-          const resp = await getSubCommunityByType(
-            type,
-            next,
-            limit,
-            q,
-            opts,
-            false
-          );
+          const resp = await getSubCommunityByType(type, next, limit, q);
           if (resp?.data) {
             setSubCommunityPages((prev) => ({ ...prev, [type]: next }));
           }
@@ -751,32 +675,17 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
   );
 
   // A small queue to ensure scheduled section loads are eventually processed.
-  // LazySection components enqueue their type id and optional filter opts here;
-  // the queue processor will call `ensureTypeLoaded` (or `ensureAllSubCommunities`)
-  // sequentially so no scheduled load is dropped due to transient flags.
-  const scheduledQueueRef = useRef<Array<{ type: string; opts?: FilterOpts }>>(
-    []
-  );
+  // LazySection components enqueue their type id here; the queue processor
+  // will call `ensureTypeLoaded` (or `ensureAllSubCommunities`) sequentially
+  // so no scheduled load is dropped due to transient flags.
+  const scheduledQueueRef = useRef<string[]>([]);
   const queueProcessingRef = useRef(false);
 
   const scheduleTypeLoad = useCallback(
-    async (
-      type: string,
-      limit = 6,
-      opts?: {
-        privacy?: 'all' | 'public' | 'private';
-        sort?: string;
-        q?: string;
-      }
-    ) => {
-      // Avoid enqueueing duplicates for same type+opts
-      const exists = scheduledQueueRef.current.find(
-        (s) =>
-          s.type === type && JSON.stringify(s.opts) === JSON.stringify(opts)
-      );
-      if (exists) return;
+    async (type: string, limit = 6) => {
+      if (scheduledQueueRef.current.includes(type)) return;
 
-      scheduledQueueRef.current.push({ type, opts });
+      scheduledQueueRef.current.push(type);
 
       // Kick off processor if not already running
       if (queueProcessingRef.current) return;
@@ -786,12 +695,12 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
         while (scheduledQueueRef.current.length > 0) {
           const next = scheduledQueueRef.current.shift()!;
           try {
-            if (next.type === 'all') {
+            if (next === 'all') {
               // Ensure 'all' loads use the compact loader
               // Acquire semaphore inside ensureAllSubCommunities
-              await ensureAllSubCommunities(false, next.opts);
+              await ensureAllSubCommunities();
             } else {
-              await ensureTypeLoaded(next.type, limit, next.opts?.q, next.opts);
+              await ensureTypeLoaded(next, limit);
             }
           } catch (err) {
             // swallow and continue; retry logic is handled by the enqueuing

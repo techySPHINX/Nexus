@@ -1,4 +1,4 @@
-import { FC, useState } from 'react';
+import React, { useState } from 'react';
 import { Box, Typography, Button, CircularProgress, Grid } from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { SubCommunityCard } from './SubCommunityCard';
@@ -15,7 +15,7 @@ interface SubCommunitySectionProps {
   remainingCount?: number | undefined;
 }
 
-export const SubCommunitySection: FC<SubCommunitySectionProps> = ({
+export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
   title,
   type,
   communities,
