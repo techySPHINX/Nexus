@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import { FC, useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -9,14 +9,12 @@ import {
   Avatar,
   Chip,
   Skeleton,
-  IconButton,
-  Tooltip,
   useTheme,
   ToggleButtonGroup,
   ToggleButton,
   alpha,
 } from '@mui/material';
-import { TrendingUp, Refresh } from '@mui/icons-material';
+import { TrendingUp } from '@mui/icons-material';
 import { useDashboardContext } from '@/contexts/DashBoardContext';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { useNavigate } from 'react-router-dom';
@@ -38,20 +36,20 @@ interface LeaderboardProps {
 }
 type TimePeriod = 'day' | 'week' | 'month';
 
-const Leaderboard: React.FC<LeaderboardProps> = ({
+const Leaderboard: FC<LeaderboardProps> = ({
   currentUserId,
   maxItems = 8,
   compact = true,
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
-  const [leaderboard, setLeaderboard] = React.useState<LeaderboardUser[]>([]);
+  const [leaderboard, setLeaderboard] = useState<LeaderboardUser[]>([]);
   const { getLeaderboard } = useDashboardContext();
-  const [isListLoading, setIsListLoading] = React.useState(true);
-  const [timePeriod, setTimePeriod] = React.useState<TimePeriod>('week');
+  const [isListLoading, setIsListLoading] = useState(true);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('day');
 
   const fetchLeaderboard = useCallback(
-    async (period: TimePeriod = 'week') => {
+    async (period: TimePeriod = 'day') => {
       try {
         setIsListLoading(true);
         if (!getLeaderboard) {
@@ -66,6 +64,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
         type UserObj = {
           name?: string;
           displayName?: string;
+          role?: Role;
           profile?: { avatarUrl?: string };
           avatarUrl?: string;
         };
@@ -81,6 +80,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
             (userObj.displayName as string | undefined) ||
             userId ||
             'Anonymous';
+          const userRole = userObj.role as Role;
 
           const totalPoints =
             (e.points as number) || (e.totalPoints as number) || 0;
@@ -92,6 +92,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
           return {
             userId,
             username,
+            role: userRole,
             totalPoints,
             rank,
             avatar,
@@ -108,7 +109,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
     [maxItems, getLeaderboard]
   );
 
-  React.useEffect(() => {
+  useEffect(() => {
     // only reload leaderboard entries when timePeriod changes
     fetchLeaderboard(timePeriod);
   }, [timePeriod, fetchLeaderboard]);
@@ -135,11 +136,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
     }
   };
 
-  const getCurrentUserRank = () => {
-    if (!currentUserId) return null;
-    return leaderboard.find((user) => user.userId === currentUserId);
-  };
-
   const formatPoints = (points: number) => {
     if (points >= 1000) {
       return `${(points / 1000).toFixed(1)}k`;
@@ -148,9 +144,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
   };
 
   // Render the full component; show skeleton only for the leaderboard list
-
-  const currentUserRank = getCurrentUserRank();
-
   return (
     <Box
       sx={{
@@ -185,7 +178,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
           </Typography>
         </Box>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        {/* <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Tooltip title="Refresh">
             <IconButton
               size="small"
@@ -195,7 +188,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
               <Refresh sx={{ fontSize: compact ? '16px' : '18px' }} />
             </IconButton>
           </Tooltip>
-        </Box>
+        </Box> */}
       </Box>
 
       {/* Time Period Selector */}
@@ -340,8 +333,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
                         role: user.role,
                       }}
                       showRoleBadge={true}
+                      showYouBadge={false}
                       fontSize={compact ? '0.75rem' : '0.875rem'}
-                      badgeSize={compact ? 16 : 18}
+                      badgeSize={10}
                     />
                   </Typography>
                 }
@@ -385,21 +379,6 @@ const Leaderboard: React.FC<LeaderboardProps> = ({
           ))
         )}
       </List>
-
-      {/* Current User Rank Footer */}
-      {currentUserId && !currentUserRank && leaderboard.length > 0 && (
-        <Box
-          sx={{
-            p: 1,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            bgcolor: alpha(theme.palette.primary.main, 0.04),
-          }}
-        >
-          <Typography variant="caption" color="text.secondary" align="center">
-            Your rank is outside top {maxItems}
-          </Typography>
-        </Box>
-      )}
 
       {compact && leaderboard.length > 0 && (
         <Box

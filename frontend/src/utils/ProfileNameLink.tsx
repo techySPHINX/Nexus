@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Role } from '@/types/engagement';
 import { useNavigate } from 'react-router-dom';
 import { Person, MenuBook, EmojiEvents, Security } from '@mui/icons-material';
+import { FC } from 'react';
 
 interface User {
   id?: string;
@@ -28,7 +29,7 @@ interface ProfileNameLinkProps {
   badgeSize?: number;
 }
 
-export const ProfileNameLink: React.FC<ProfileNameLinkProps> = ({
+export const ProfileNameLink: FC<ProfileNameLinkProps> = ({
   user,
   linkToProfile = true,
   showAvatar = false,

@@ -28,7 +28,7 @@ export class ReferralService {
     private emailService: EmailService,
     private gateway: ReferralGateway,
     private gamificationService: GamificationService,
-  ) {}
+  ) { }
 
   // Referral methods
 
@@ -64,7 +64,7 @@ export class ReferralService {
     if (!deadline) {
       throw new BadRequestException('Deadline is required for a referral.');
     }
-    
+
     const referral = await this.prisma.referral.create({
       data: {
         company,
@@ -273,6 +273,7 @@ export class ReferralService {
   ) {
     const referral = await this.prisma.referral.findUnique({
       where: { id: referralId },
+      select: { id: true, status: true, alumniId: true, jobTitle: true, company: true },
     });
     if (!referral) {
       throw new NotFoundException('Referral not found.');
@@ -313,12 +314,12 @@ export class ReferralService {
     if (status !== undefined) updateData.status = status;
 
     const oldStatus = referral.status;
-    
+
     // Only allow admins to change status
     if (dto.status && dto.status !== referral.status && user.role !== Role.ADMIN) {
       throw new ForbiddenException('Only admins can change referral status.');
     }
-    
+
     const updatedReferral = await this.prisma.referral.update({
       where: { id: referralId },
       data: updateData,
@@ -335,17 +336,21 @@ export class ReferralService {
 
     // Notify the alum if the referral status changed (only if changed by admin)
     if (dto.status && dto.status !== oldStatus && user.role === Role.ADMIN) {
-      const statusMessage = dto.status === ReferralStatus.APPROVED 
-        ? 'approved' 
-        : dto.status === ReferralStatus.REJECTED 
-          ? 'rejected' 
+      const statusMessage = dto.status === ReferralStatus.APPROVED
+        ? 'approved'
+        : dto.status === ReferralStatus.REJECTED
+          ? 'rejected'
           : dto.status.toLowerCase();
-      
+
       await this.notificationService.create({
         userId: referral.alumniId,
         message: `Your referral for ${referral.jobTitle} at ${referral.company} has been ${statusMessage}.`,
         type: NotificationType.REFERRAL_STATUS_UPDATE,
       });
+
+      // Broadcast update
+      this.gateway.emitReferralUpdated({ id: updatedReferral.id, status: updatedReferral.status });
+
 
       // Email alumnus about status change
       try {
@@ -359,25 +364,17 @@ export class ReferralService {
             updatedReferral.status,
           );
         }
-  } catch {}
+      } catch { }
     }
 
     // award gamification points for posting a referral (fire-and-forget)
-    if(user.role === Role.ALUM) {
+    if (user.role === Role.ADMIN) {
       try {
-        this.gamificationService.awardForEvent('REFERRAL_POSTED', userId, referral.id).catch(() => undefined);
+        const message = `Referral Posted: "${referral.jobTitle}"`;
+        this.gamificationService.awardForEvent('REFERRAL_POSTED', referral.alumniId, referral.id, message).catch(() => undefined);
       } catch {
         // ignore
       }
-   }
-
-    // Broadcast update
-    this.gateway.emitReferralUpdated({ id: updatedReferral.id, status: updatedReferral.status });
-    // award gamification points for posting a referral (fire-and-forget)
-    try {
-      this.gamificationService.awardForEvent('REFERRAL_POSTED', userId, referral.id).catch(() => undefined);
-    } catch {
-      // ignore
     }
     return updatedReferral;
   }
@@ -435,7 +432,7 @@ export class ReferralService {
     if (!user) {
       throw new NotFoundException('User not found.');
     }
-    
+
     // Allow both STUDENT and ALUM to apply
     if (user.role !== Role.STUDENT && user.role !== Role.ALUM) {
       throw new ForbiddenException('Only students or alumni can apply for referrals.');
@@ -497,7 +494,7 @@ export class ReferralService {
           referral.company,
         );
       }
-  } catch {}
+    } catch { }
 
     // Broadcast
     this.gateway.emitApplicationCreated({ id: application.id, referralId: application.referralId });
@@ -634,7 +631,7 @@ export class ReferralService {
             dto.status,
           );
         }
-  } catch {}
+      } catch { }
     }
 
     // Broadcast

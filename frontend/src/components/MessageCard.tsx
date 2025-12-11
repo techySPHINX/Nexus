@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Box, Typography, Avatar, Paper, Chip } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -20,7 +20,7 @@ interface MessageCardProps {
   showSenderName?: boolean;
 }
 
-const MessageCard: React.FC<MessageCardProps> = ({
+const MessageCard: FC<MessageCardProps> = ({
   message,
   isOwnMessage,
   showAvatar = true,

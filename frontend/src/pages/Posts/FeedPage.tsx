@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { FC, useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { useProfile } from '../../contexts/ProfileContext';
@@ -14,11 +14,15 @@ import {
   DialogContent,
   Snackbar,
   Alert,
+  Grid,
+  Container,
+  Paper,
 } from '@mui/material';
+import RecentNews from '@/components/News/RecentNews';
 import { CreatePostForm } from '../../components/Post/CreatePostForm';
 import { getErrorMessage } from '@/utils/errorHandler';
 
-const FeedPage: React.FC = () => {
+const FeedPage: FC = () => {
   const { feed, getFeed, pagination, loading, error, clearError } = usePosts();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
@@ -102,65 +106,92 @@ const FeedPage: React.FC = () => {
 
   return (
     <>
-      <Box sx={{ maxWidth: '800px', margin: '0 auto', p: 2 }}>
-        <Typography variant="h4" gutterBottom>
-          Your Feed
-        </Typography>
-        {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
-          <>
-            <Button
-              variant="contained"
-              onClick={() => setOpenForm(true)}
-              sx={{ mb: 2 }}
-            >
-              Create Post
-            </Button>
-            <Dialog
-              open={openForm}
-              onClose={() => setOpenForm(false)}
-              maxWidth="md"
-              fullWidth
-            >
-              <DialogTitle>Create a New Post</DialogTitle>
-              <DialogContent
+      <Container maxWidth="lg" sx={{ py: 3 }}>
+        <Grid container spacing={4}>
+          <Grid item xs={12} md={8}>
+            <Box sx={{ maxWidth: '800px', margin: '0 auto', p: 2 }}>
+              <Typography variant="h4" gutterBottom>
+                Your Feed
+              </Typography>
+              {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
+                <>
+                  <Button
+                    variant="contained"
+                    onClick={() => setOpenForm(true)}
+                    sx={{ mb: 2 }}
+                  >
+                    Create Post
+                  </Button>
+                  <Dialog
+                    open={openForm}
+                    onClose={() => setOpenForm(false)}
+                    maxWidth="md"
+                    fullWidth
+                  >
+                    <DialogTitle>Create a New Post</DialogTitle>
+                    <DialogContent
+                      sx={{
+                        minHeight: '400px',
+                        overflowY: 'auto',
+                      }}
+                    >
+                      <CreatePostForm
+                        profile={profile ?? undefined}
+                        onSuccess={handleCreatePostSuccess}
+                        onError={handleCreatePostError}
+                        onCancel={() => setOpenForm(false)}
+                      />
+                    </DialogContent>
+                  </Dialog>
+                </>
+              )}
+
+              {loading && pagination.page === 1 ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <>
+                  {renderPosts()}
+
+                  {pagination.hasNext && (
+                    <Box
+                      sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}
+                    >
+                      <Button
+                        variant="outlined"
+                        onClick={handleLoadMore}
+                        disabled={loading}
+                      >
+                        {loading ? <CircularProgress size={24} /> : 'Load More'}
+                      </Button>
+                    </Box>
+                  )}
+                </>
+              )}
+            </Box>
+          </Grid>
+
+          <Grid item xs={12} md={4}>
+            <Box sx={{ position: 'sticky', top: { xs: 16, md: 96 } }}>
+              <Paper
+                elevation={0}
                 sx={{
-                  minHeight: '400px',
-                  overflowY: 'auto',
+                  p: 2,
+                  borderRadius: 2,
+                  border: '1px solid',
+                  borderColor: 'divider',
                 }}
               >
-                <CreatePostForm
-                  profile={profile ?? undefined}
-                  onSuccess={handleCreatePostSuccess}
-                  onError={handleCreatePostError}
-                  onCancel={() => setOpenForm(false)}
-                />
-              </DialogContent>
-            </Dialog>
-          </>
-        )}
-
-        {loading && pagination.page === 1 ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <>
-            {renderPosts()}
-
-            {pagination.hasNext && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleLoadMore}
-                  disabled={loading}
-                >
-                  {loading ? <CircularProgress size={24} /> : 'Load More'}
-                </Button>
-              </Box>
-            )}
-          </>
-        )}
-      </Box>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
+                  Recent
+                </Typography>
+                <RecentNews />
+              </Paper>
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
       <Snackbar
         open={snackbarOpen}
         autoHideDuration={3000}

@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   AccessTime as ClockIcon,
   Done as CheckIcon,
@@ -30,7 +30,7 @@ interface MessageStatusProps {
  * - Double check (blue): Message read by recipient
  * - Error icon: Message failed to send
  */
-const MessageStatus: React.FC<MessageStatusProps> = ({
+const MessageStatus: FC<MessageStatusProps> = ({
   status,
   timestamp,
   size = 'small',

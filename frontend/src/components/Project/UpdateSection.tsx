@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC, useState } from 'react';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import {
   ProjectDetailInterface,
@@ -14,7 +14,7 @@ interface UpdateProjectModalProps {
   onUpdated?: (project: ProjectDetailInterface) => void;
 }
 
-const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
+const UpdateProjectModal: FC<UpdateProjectModalProps> = ({
   open,
   project: propProject,
   onClose,
@@ -25,7 +25,7 @@ const UpdateProjectModal: React.FC<UpdateProjectModalProps> = ({
   const effectiveProject: ProjectDetailInterface | null =
     (propProject as ProjectDetailInterface) || projectById || null;
 
-  const [saving, setSaving] = React.useState(false);
+  const [saving, setSaving] = useState(false);
   const { showNotification } = useNotification();
 
   const handleSubmit = async (data: CreateProjectInterface) => {

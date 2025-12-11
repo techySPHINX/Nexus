@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect } from 'react';
 import {
   Container,
   Paper,
@@ -57,7 +57,7 @@ interface Document {
   };
 }
 
-const AdminDocumentVerification: React.FC = () => {
+const AdminDocumentVerification: FC = () => {
   const { user } = useAuth();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);

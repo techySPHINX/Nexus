@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   IconButton,
   Dialog,
@@ -23,7 +23,7 @@ interface Props {
   commentId?: string;
 }
 
-const ReportButton: React.FC<Props> = ({ type, postId, commentId }) => {
+const ReportButton: FC<Props> = ({ type, postId, commentId }) => {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState('');
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

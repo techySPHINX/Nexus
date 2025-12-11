@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -29,7 +29,7 @@ import { useEventContext } from '@/contexts/eventContext';
 type ViewMode = 'grid' | 'list';
 type FilterType = 'all' | 'upcoming' | 'past' | 'today';
 
-const EventsPage: React.FC = () => {
+const EventsPage: FC = () => {
   const { events, loading, error, fetchEvents } = useEventContext();
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [filter, setFilter] = useState<FilterType>('upcoming');
@@ -261,6 +261,7 @@ const EventsPage: React.FC = () => {
                 <Grid
                   item
                   xs={12}
+                  sm={viewMode === 'grid' ? 6 : 12}
                   md={viewMode === 'grid' ? 6 : 12}
                   lg={viewMode === 'grid' ? 4 : 12}
                   key={event.id}

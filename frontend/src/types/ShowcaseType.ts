@@ -103,6 +103,7 @@ export interface FilterProjectInterface {
   search?: string;
   status?: status;
   seeking?: string[];
+  seekingCollaboration?: boolean;
   personalize?: boolean;
   pageSize?: number;
   cursor?: string;

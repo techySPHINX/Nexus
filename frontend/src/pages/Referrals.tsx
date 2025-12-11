@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { FC, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import {
   Container,
@@ -94,7 +94,7 @@ interface CreateApplicationDto {
   coverLetter?: string;
 }
 
-const Referrals: React.FC = () => {
+const Referrals: FC = () => {
   // Extract a human-friendly message from unknown errors
   const getErrorMessage = (err: unknown): string => {
     if (typeof err === 'string') return err;
@@ -157,7 +157,7 @@ const Referrals: React.FC = () => {
     coverLetter: '',
   });
 
-  const fetchReferrals = React.useCallback(async () => {
+  const fetchReferrals = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);

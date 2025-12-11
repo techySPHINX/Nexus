@@ -1,11 +1,11 @@
-import React from 'react';
+import { FC } from 'react';
 import { Box } from '@mui/material';
 
 interface PostImageProps {
   imageUrl: string;
 }
 
-export const PostImage: React.FC<PostImageProps> = ({ imageUrl }) => {
+export const PostImage: FC<PostImageProps> = ({ imageUrl }) => {
   return (
     <Box sx={{ mt: 2, mb: 2 }}>
       <img

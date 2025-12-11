@@ -1,4 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import {
+  useState,
+  useRef,
+  KeyboardEvent,
+  FC,
+  ChangeEvent,
+  useCallback,
+} from 'react';
 import {
   Box,
   TextField,
@@ -30,7 +37,7 @@ interface MessageInputProps {
  * - Auto-resize textarea
  * - Keyboard shortcuts (Enter to send, Shift+Enter for new line)
  */
-const MessageInput: React.FC<MessageInputProps> = ({
+const MessageInput: FC<MessageInputProps> = ({
   onSendMessage,
   onTyping,
   disabled = false,
@@ -45,7 +52,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
    * Handle message input change
    */
   const handleMessageChange = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    (event: ChangeEvent<HTMLInputElement>) => {
       const value = event.target.value;
       setMessage(value);
 
@@ -106,7 +113,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
    * Handle keyboard events
    */
   const handleKeyPress = useCallback(
-    (event: React.KeyboardEvent) => {
+    (event: KeyboardEvent) => {
       if (event.key === 'Enter' && !event.shiftKey) {
         event.preventDefault();
         handleSendMessage();

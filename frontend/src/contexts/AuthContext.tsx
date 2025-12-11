@@ -1,4 +1,5 @@
-import React, {
+import {
+  FC,
   createContext,
   useContext,
   useState,
@@ -47,6 +48,8 @@ export interface Profile {
   location?: string;
   interests?: string;
   avatarUrl?: string;
+  gender?: string;
+  skills?: { name: string }[];
 }
 
 interface AuthResponse {
@@ -103,7 +106,7 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Box, Grid, Skeleton } from '@mui/material';
 import StartupCard from './StartupCard';
 import { StartupSummary } from '@/types/StartupType';
@@ -17,7 +17,7 @@ interface Props {
   tab: number;
 }
 
-const StartupGrid: React.FC<Props> = ({
+const StartupGrid: FC<Props> = ({
   startups,
   loading = false,
   onFollowToggle,

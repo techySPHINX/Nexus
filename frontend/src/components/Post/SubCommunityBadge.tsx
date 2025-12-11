@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Chip } from '@mui/material';
 import { Link } from 'react-router-dom';
 
@@ -10,7 +10,7 @@ interface SubCommunityBadgeProps {
   };
 }
 
-export const SubCommunityBadge: React.FC<SubCommunityBadgeProps> = ({
+export const SubCommunityBadge: FC<SubCommunityBadgeProps> = ({
   subCommunity,
 }) => {
   return (

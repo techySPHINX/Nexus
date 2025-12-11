@@ -1,4 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  cloneElement,
+  FC,
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -65,7 +74,7 @@ import {
 import { User } from '@/types/profileType';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { useShowcase } from '@/contexts/ShowcaseContext';
-const UpdateSection = React.lazy(() => import('./UpdateSection'));
+const UpdateSection = lazy(() => import('./UpdateSection'));
 import { apiService } from '@/services/api';
 import { useNotification } from '@/contexts/NotificationContext';
 
@@ -193,7 +202,7 @@ const UpdateSkeleton = () => (
   </Box>
 );
 
-const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
+const ProjectDetailModal: FC<ProjectDetailModalProps> = ({
   project,
   open,
   comments,
@@ -475,7 +484,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
     color?: 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
   }
 
-  const MetricCard: React.FC<MetricCardProps> = ({
+  const MetricCard: FC<MetricCardProps> = ({
     icon,
     value,
     label,
@@ -503,7 +512,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
           mb: 1,
         }}
       >
-        {React.cloneElement(icon, {
+        {cloneElement(icon, {
           sx: {
             fontSize: 24,
             color: `${color}.main`,
@@ -1447,7 +1456,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
 
       {/* Modals and Snackbar */}
       {updateModalOpen && (
-        <React.Suspense fallback={<div>Loading editor...</div>}>
+        <Suspense fallback={<div>Loading editor...</div>}>
           <UpdateSection
             open={updateModalOpen}
             project={project}
@@ -1458,7 +1467,7 @@ const ProjectDetailModal: React.FC<ProjectDetailModalProps> = ({
               showNotification?.('Project updated successfully', 'success');
             }}
           />
-        </React.Suspense>
+        </Suspense>
       )}
 
       <Dialog

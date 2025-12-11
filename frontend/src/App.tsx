@@ -1,8 +1,11 @@
-import React, { lazy, Suspense } from 'react';
+import { FC, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box, CircularProgress } from '@mui/material';
-import { useNavbar } from './contexts/NavbarContext';
-import Navbar from './components/Navbar';
+import TopNavbar from './components/top-navbar';
+import { AppSidebarNexus } from './components/app-sidebar-nexus';
+import MobileTopNavbar from './components/mobile-top-navbar';
+import { SidebarProvider } from './components/ui/sidebar';
+import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './route/AdminRoute';
 import './App.css';
@@ -59,28 +62,31 @@ const StartupsMainPage = lazy(() => import('./pages/Startup/StartupMainPage'));
 const ProjectIdPage = lazy(() => import('./pages/Project/ProjectIdPage'));
 const UserProjectPage = lazy(() => import('./pages/Project/UserProjectPage'));
 const Gamification = lazy(() => import('./pages/Gamification'));
+const NewsPage = lazy(() => import('./pages/NewsPage'));
+const NewsDetail = lazy(() => import('./components/News/NewsDetail'));
+const AdminNews = lazy(() => import('./pages/AdminNews'));
 
-// Import context providers
-const ProfileProvider = lazy(() => import('./contexts/ProfileContext'));
-const PostProvider = lazy(() => import('./contexts/PostContext'));
+// Import context providers (MUST be non-lazy for proper context setup)
+import ProfileProvider from './contexts/ProfileContext';
+import PostProvider from './contexts/PostContext';
 import { SubCommunityProvider } from './contexts/SubCommunityContext';
 import DashboardProvider from './contexts/DashBoardContext';
-const ShowcaseProvider = lazy(() => import('./contexts/ShowcaseContext'));
-const StartupProvider = lazy(() => import('./contexts/StartupContext'));
+import ShowcaseProvider from './contexts/ShowcaseContext';
+import StartupProvider from './contexts/StartupContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider } from './contexts/AuthContext';
-import { NavbarProvider } from './contexts/NavbarContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { ReportProvider } from './contexts/reportContext';
 import { GamificationProvider } from './contexts/GamificationContext';
 import { EventProvider } from './contexts/eventContext';
 import TagProvider from './contexts/TagContext';
 import { EngagementProvider } from './contexts/engagementContext';
+import { NewsProvider } from './contexts/NewsContext';
 import { EngagementService } from './services/engagementService';
-import LandingPage2 from './pages/LandingPage2';
+import LandingOptimized from './pages/LandingPage2';
 
 // Loading component for Suspense fallback
-const LoadingSpinner: React.FC = () => (
+const LoadingSpinner: FC = () => (
   <Box
     sx={{
       display: 'flex',
@@ -93,29 +99,25 @@ const LoadingSpinner: React.FC = () => (
   </Box>
 );
 
-// Layout component that handles navbar positioning
-const Layout: React.FC = () => {
-  const { position, collapsed } = useNavbar();
+// Layout content component that uses auth
+const LayoutContent: FC = () => {
+  const { user } = useAuth();
 
   return (
-    <div className="App">
-      <Navbar />
-      <Box
-        sx={{
-          pt: position === 'top' ? { xs: 7, sm: 8 } : 0,
-          pl:
-            position === 'left'
-              ? { xs: 0, md: collapsed ? '80px' : '160px' }
-              : 0,
-          minHeight: '100vh',
-          bgcolor: 'background.default',
-          position: 'relative',
-        }}
+    <div className="flex flex-col min-h-screen w-full">
+      <TopNavbar />
+      {user && <MobileTopNavbar />}
+      <div
+        className="flex flex-1 overflow-hidden w-full"
+        style={{ paddingTop: '64px' }}
       >
-        {/* Main Content */}
-        <Box
-          sx={{
-            pr: position === 'left' ? 0 : 0,
+        {user && <AppSidebarNexus />}
+        <div
+          className="w-full flex-1 overflow-y-auto overflow-x-hidden"
+          style={{
+            minHeight: 'calc(100vh - 64px)',
+            backgroundColor: 'var(--background)',
+            position: 'relative',
             transition: 'all 0.3s ease',
           }}
         >
@@ -137,7 +139,7 @@ const Layout: React.FC = () => {
             }
           >
             <Routes>
-              <Route path="/" element={<LandingPage2 />} />
+              <Route path="/" element={<LandingOptimized />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<EnhancedRegister />} />
               <Route path="/register-enhanced" element={<Register />} />
@@ -392,6 +394,26 @@ const Layout: React.FC = () => {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/news"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <NewsPage />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/news/:slug"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <NewsDetail />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Admin-only routes with lazy loading */}
               <Route
@@ -412,6 +434,16 @@ const Layout: React.FC = () => {
                   <AdminRoute>
                     <Suspense fallback={<LoadingSpinner />}>
                       <ReportsPage />
+                    </Suspense>
+                  </AdminRoute>
+                }
+              />
+              <Route
+                path="/admin/news"
+                element={
+                  <AdminRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <AdminNews />
                     </Suspense>
                   </AdminRoute>
                 }
@@ -461,9 +493,20 @@ const Layout: React.FC = () => {
               <Route path="*" element={<RouteUnavailable />} />
             </Routes>
           </Suspense>
-        </Box>
-      </Box>
+        </div>
+      </div>
     </div>
+  );
+};
+
+// Layout component that wraps LayoutContent with SidebarProvider and Router
+const Layout: FC = () => {
+  return (
+    <Router>
+      <SidebarProvider>
+        <LayoutContent />
+      </SidebarProvider>
+    </Router>
   );
 };
 
@@ -473,29 +516,25 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <NavbarProvider>
-          <NotificationProvider>
-            <EngagementProvider engagementService={engagementService}>
-              <Router>
-                <Suspense fallback={<LoadingSpinner />}>
-                  {/* Keep a single SubCommunityProvider mounted for the whole app so
-                      sub-community state isn't re-created on every route change. */}
-                  <ReportProvider>
-                    <EventProvider>
-                      <SubCommunityProvider>
-                        <GamificationProvider>
-                          <ProfileProvider>
-                            <Layout />
-                          </ProfileProvider>
-                        </GamificationProvider>
-                      </SubCommunityProvider>
-                    </EventProvider>
-                  </ReportProvider>
-                </Suspense>
-              </Router>
-            </EngagementProvider>
-          </NotificationProvider>
-        </NavbarProvider>
+        <NotificationProvider>
+          <EngagementProvider engagementService={engagementService}>
+            {/* Keep a single SubCommunityProvider mounted for the whole app so
+                sub-community state isn't re-created on every route change. */}
+            <ReportProvider>
+              <EventProvider>
+                <SubCommunityProvider>
+                  <GamificationProvider>
+                    <NewsProvider>
+                      <ProfileProvider>
+                        <Layout />
+                      </ProfileProvider>
+                    </NewsProvider>
+                  </GamificationProvider>
+                </SubCommunityProvider>
+              </EventProvider>
+            </ReportProvider>
+          </EngagementProvider>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

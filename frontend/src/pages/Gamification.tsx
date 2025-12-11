@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Box,
   Typography,
@@ -52,16 +52,15 @@ interface Transaction {
   id: string;
   points: number;
   type: string;
+  message?: string;
   createdAt: string;
   description?: string;
 }
 
-const GamificationPage: React.FC = () => {
+const GamificationPage: FC = () => {
   const theme = useTheme();
   const { user } = useAuth();
-  const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'all'>(
-    'week'
-  );
+  const [period, setPeriod] = useState<'day' | 'week' | 'month' | 'all'>('day');
 
   const {
     leaderboard,
@@ -291,7 +290,7 @@ const GamificationPage: React.FC = () => {
             >
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <EmojiEvents sx={{ fontSize: 32, mr: 1.5 }} />
-                <Typography variant="h6" fontWeight="600">
+                <Typography variant="h6" fontWeight="600" color="white">
                   Your Points
                 </Typography>
               </Box>
@@ -307,6 +306,7 @@ const GamificationPage: React.FC = () => {
                 <Typography
                   variant="h1"
                   fontWeight="800"
+                  color="white"
                   sx={{
                     fontSize: { xs: '4rem', md: '5rem' },
                     textShadow: '0 4px 20px rgba(0,0,0,0.2)',
@@ -318,6 +318,7 @@ const GamificationPage: React.FC = () => {
 
               <Typography
                 variant="body2"
+                color="white"
                 sx={{ opacity: 0.9, textAlign: 'center' }}
               >
                 Total points earned
@@ -652,7 +653,7 @@ const GamificationPage: React.FC = () => {
                       <ListItemText
                         primary={
                           <Typography variant="body1" fontWeight="600">
-                            {transaction.type}
+                            {transaction.message || transaction.type}
                           </Typography>
                         }
                         secondary={

@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { FC, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-  Container,
   Box,
   Typography,
   Grid,
@@ -49,7 +48,7 @@ interface SearchUser {
 }
 // Removed empty interface Conversation
 
-const ChatPage: React.FC = () => {
+const ChatPage: FC = () => {
   const { user, token } = useAuth();
   const {
     conversations,
@@ -80,7 +79,7 @@ const ChatPage: React.FC = () => {
   const selectedConversation: StoreConversation | null = selectedConversationId
     ? conversations.find((c) => c.id === selectedConversationId) || null
     : null;
-  const messages: Message[] = React.useMemo(
+  const messages: Message[] = useMemo(
     () =>
       selectedConversationId
         ? storeMessages.get(selectedConversationId) || []
@@ -348,13 +347,19 @@ const ChatPage: React.FC = () => {
 
   if (!user)
     return (
-      <Container sx={{ py: 4 }}>
+      <Box
+        className="w-full mx-auto"
+        sx={{ py: 4, maxWidth: '1280px', px: { xs: 2, md: 3 } }}
+      >
         <Alert severity="warning">Please log in to access chat.</Alert>
-      </Container>
+      </Box>
     );
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
+    <Box
+      className="w-full mx-auto"
+      sx={{ py: 4, maxWidth: '1280px', px: { xs: 2, md: 3 } }}
+    >
       <Box
         sx={{
           mb: 3,
@@ -565,7 +570,7 @@ const ChatPage: React.FC = () => {
         </DialogActions>
       </Dialog>
       <div ref={messagesEndRef} />
-    </Container>
+    </Box>
   );
 };
 

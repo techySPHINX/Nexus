@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -21,7 +21,7 @@ interface Props {
   onClose: () => void;
 }
 
-export const ManageTypesDialog: React.FC<Props> = ({ open, onClose }) => {
+export const ManageTypesDialog: FC<Props> = ({ open, onClose }) => {
   const [types, setTypes] = useState<SubCommunityType[]>([]);
   const [newName, setNewName] = useState('');
   const [loading, setLoading] = useState(false);

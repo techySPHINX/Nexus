@@ -1,6 +1,8 @@
 import { ConnectionStats, ConnectionSuggestion } from '@/types/connections';
+import type { Event } from '@/types/Event';
 import { getErrorMessage } from '@/utils/errorHandler';
-import React, {
+import {
+  FC,
   createContext,
   useCallback,
   useContext,
@@ -11,6 +13,7 @@ import React, {
 import { useAuth } from './AuthContext';
 import { DashBoardService } from '@/services/DashBoardService';
 import gamificationService from '@/services/gamificationService';
+import { EventService } from '@/services/EventService';
 import { ProjectInterface } from '@/types/ShowcaseType';
 import { Post } from '@/types/post';
 import { ShowcaseService } from '@/services/ShowcaseService';
@@ -21,6 +24,7 @@ interface LoadingState {
   connections: boolean;
   connecting: boolean;
   projects: boolean;
+  events: boolean;
   profileCompletion: boolean;
   posts: boolean;
   gamification: boolean;
@@ -31,6 +35,7 @@ interface ErrorState {
   stats: string | null;
   connections: string | null;
   connecting: string | null;
+  events: string | null;
   projects: string | null;
   profileCompletion: string | null;
   posts: string | null;
@@ -58,6 +63,7 @@ type DashboardState = {
   suggestedConnections: ConnectionSuggestion[];
   projects: ProjectInterface[];
   posts: Post[];
+  upcomingEvents: Event[];
   loading: LoadingState;
   error: ErrorState;
 };
@@ -70,6 +76,7 @@ type DashboardActions = {
   connectToUser: (userId: string) => Promise<void>;
   getSuggestedProjects: () => Promise<void>;
   getSuggestedPosts: () => Promise<void>;
+  getUpcomingEvents: (limit?: number) => Promise<void>;
   // Gamification helpers
   getLeaderboard?: (
     period?: 'weekly' | 'monthly' | 'day',
@@ -83,9 +90,7 @@ const DashboardContext = createContext<DashboardContextType | undefined>(
   undefined
 );
 
-const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+const DashboardProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState<LoadingState>({
     dashboard: false,
@@ -94,6 +99,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     connections: false,
     connecting: false,
     projects: false,
+    events: false,
     posts: false,
     gamification: false,
   });
@@ -103,6 +109,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     stats: null,
     connections: null,
     connecting: null,
+    events: null,
     projects: null,
     posts: null,
     gamification: null,
@@ -123,6 +130,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
   >([]);
   const [projects, setProjects] = useState<ProjectInterface[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
+  const [upcomingEvents, setUpcomingEvents] = useState<Event[]>([]);
   const [profileCompletionStats, setProfileCompletionStats] =
     useState<ProfileCompletionStats>({});
 
@@ -133,6 +141,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
     stats: 60 * 1000, // 1 minute
     connections: 5 * 60 * 1000, // 5 minutes
     projects: 10 * 60 * 1000, // 10 minutes
+    events: 2 * 60 * 1000, // 2 minutes
     posts: 2 * 60 * 1000, // 2 minutes
     profileCompletion: 5 * 60 * 1000, // 5 minutes
     gamification: 2 * 60 * 1000, // 2 minutes
@@ -366,6 +375,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       const promise = (async () => {
         const response = await ShowcaseService.getAllProjects({
           personalize: true,
+          seekingCollaboration: true,
           pageSize: 5,
         });
         // debug: increment request counter for projects
@@ -428,6 +438,48 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading((prev) => ({ ...prev, posts: false }));
     }
   }, [user?.id, readCache, writeCache, TTL.posts]);
+
+  const getUpcomingEvents = useCallback(
+    async (limit = 3) => {
+      if (!user?.id) return;
+      setLoading((prev) => ({ ...prev, events: true }));
+      try {
+        const key = `upcoming:${limit}`;
+        if (inFlightRef.current[key]) {
+          await inFlightRef.current[key];
+          return;
+        }
+
+        const cached = readCache<Event[]>(key, TTL.events);
+        if (cached) {
+          setUpcomingEvents(cached);
+          setError((prev) => ({ ...prev, events: null }));
+          return;
+        }
+
+        const promise = (async () => {
+          incrRequestCount(key);
+          const data = await EventService.getUpcoming(limit);
+          const list: Event[] = Array.isArray(data) ? data : data?.data || [];
+          setUpcomingEvents(list);
+          writeCache(key, list);
+          setError((prev) => ({ ...prev, events: null }));
+        })();
+
+        inFlightRef.current[key] = promise;
+        try {
+          await promise;
+        } finally {
+          inFlightRef.current[key] = null;
+        }
+      } catch (err) {
+        setError((prev) => ({ ...prev, events: String(err || 'unknown') }));
+      } finally {
+        setLoading((prev) => ({ ...prev, events: false }));
+      }
+    },
+    [user?.id, readCache, writeCache, TTL.events]
+  );
 
   const refreshDashboard = useCallback(async () => {
     setLoading((prev) => ({ ...prev, dashboard: true }));
@@ -522,6 +574,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       connectionStats,
       projects,
       posts,
+      upcomingEvents,
       refreshDashboard,
       getProfileCompletionStats,
       getConnectionStats,
@@ -529,6 +582,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       getSuggestedProjects,
       connectToUser,
       getSuggestedPosts,
+      getUpcomingEvents,
       getLeaderboard,
     }),
     [
@@ -539,6 +593,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       connectionStats,
       projects,
       posts,
+      upcomingEvents,
       refreshDashboard,
       getProfileCompletionStats,
       getConnectionStats,
@@ -546,6 +601,7 @@ const DashboardProvider: React.FC<{ children: React.ReactNode }> = ({
       connectToUser,
       getSuggestedProjects,
       getSuggestedPosts,
+      getUpcomingEvents,
       getLeaderboard,
     ]
   );

@@ -592,7 +592,7 @@ const RealTimeActivityFeed = () => {
   );
 };
 
-const ActivityItem: React.FC<{ activity: Activity }> = ({ activity }) => {
+const ActivityItem: FC<{ activity: Activity }> = ({ activity }) => {
   const getIcon = (type: ActivityType) => {
     const iconMap = {
       CONNECTION_ACCEPTED: <PersonAdd color="success" />,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { FC, useEffect, useState, useCallback } from 'react';
 import { usePosts } from '../../contexts/PostContext';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { Post } from '../../components/Post/Post';
@@ -64,7 +64,7 @@ import { SubCommunity } from '../../types/subCommunity';
 //   );
 // }
 
-const AdminModerationPage: React.FC = () => {
+const AdminModerationPage: FC = () => {
   const {
     pendingPosts,
     getPendingPosts,
@@ -247,7 +247,7 @@ const AdminModerationPage: React.FC = () => {
     return subCommunities.find((sc) => sc.id === subCommunityId) || null;
   };
 
-  const SubCommunityInfoCard: React.FC<{ post: PostType }> = ({ post }) => {
+  const SubCommunityInfoCard: FC<{ post: PostType }> = ({ post }) => {
     const subCommunity = getSubCommunityInfo(post.subCommunityId);
 
     if (!subCommunity) return null;

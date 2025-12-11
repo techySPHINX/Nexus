@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   Grid,
   Card,
@@ -67,7 +67,7 @@ interface ConnectionTabProps {
   actionLoading?: string | null;
 }
 
-const SuggestionTab: React.FC<ConnectionTabProps> = ({
+const SuggestionTab: FC<ConnectionTabProps> = ({
   suggestions,
   sendRequest,
   setSelectedUser,

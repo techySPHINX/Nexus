@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { FilterProjectInterface, status, sortBy } from '@/types/ShowcaseType';
 import {
   Box,
@@ -21,15 +21,12 @@ interface ProjectFilterProps {
   onFilterChange: (filters: FilterProjectInterface) => void;
 }
 
-const ProjectFilter: React.FC<ProjectFilterProps> = ({
-  filters,
-  onFilterChange,
-}) => {
+const ProjectFilter: FC<ProjectFilterProps> = ({ filters, onFilterChange }) => {
   const [localFilters, setLocalFilters] = useState(filters);
   const [expanded, setExpanded] = useState(false);
 
   // Keep localFilters in sync when parent `filters` prop changes
-  React.useEffect(() => {
+  useEffect(() => {
     setLocalFilters(filters);
   }, [filters]);
 

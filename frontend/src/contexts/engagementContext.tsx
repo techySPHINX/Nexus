@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useCallback } from 'react';
+import { FC, createContext, useContext, useCallback, useState } from 'react';
 import { EngagementService } from '../services/engagementService';
 import { Comment, VoteType, Post } from '../types/engagement';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -51,12 +51,12 @@ interface EngagementProviderProps {
   engagementService: EngagementService;
 }
 
-export const EngagementProvider: React.FC<EngagementProviderProps> = ({
+export const EngagementProvider: FC<EngagementProviderProps> = ({
   children,
   engagementService,
 }) => {
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const clearError = useCallback(() => setError(null), []);
 

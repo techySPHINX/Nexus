@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   Card,
   CardContent,
@@ -57,7 +57,7 @@ interface ConnectionTabProps {
   actionLoading?: string | null;
 }
 
-const PendingSentTab: React.FC<ConnectionTabProps> = ({
+const PendingSentTab: FC<ConnectionTabProps> = ({
   pendingSent,
   handleCancelConnection,
   getRoleColor,

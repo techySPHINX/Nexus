@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import { FC, useEffect, useState, useRef, RefObject } from 'react';
 import {
   Box,
   Typography,
@@ -47,7 +47,7 @@ interface Conversation {
 interface MessageListProps {
   messages: Message[];
   conversation: Conversation;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: RefObject<HTMLDivElement>;
   onEditMessage?: (messageId: string, newContent: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   onLoadMore?: () => Promise<void>;
@@ -66,7 +66,7 @@ interface MessageListProps {
  * - Edit/Delete message controls (for own messages)
  * - Infinite scroll for loading older messages
  */
-const MessageList: React.FC<MessageListProps> = ({
+const MessageList: FC<MessageListProps> = ({
   messages,
   conversation,
   messagesEndRef,

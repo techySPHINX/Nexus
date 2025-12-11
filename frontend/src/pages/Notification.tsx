@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect, Fragment } from 'react';
 import {
   Box,
   Typography,
@@ -56,7 +56,7 @@ import { useNotification } from '@/contexts/NotificationContext';
 import { NotificationType, NotificationCategory } from '@/types/notification';
 import { formatDistanceToNow } from 'date-fns';
 
-const Notification: React.FC = () => {
+const Notification: FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const {
@@ -480,7 +480,7 @@ const Notification: React.FC = () => {
           <>
             <List sx={{ width: '100%' }}>
               {filteredNotifications.map((notification) => (
-                <React.Fragment key={notification.id}>
+                <Fragment key={notification.id}>
                   <ListItem
                     alignItems="flex-start"
                     sx={{
@@ -564,7 +564,7 @@ const Notification: React.FC = () => {
                     </Box>
                   </ListItem>
                   <Divider variant="inset" component="li" />
-                </React.Fragment>
+                </Fragment>
               ))}
             </List>
 

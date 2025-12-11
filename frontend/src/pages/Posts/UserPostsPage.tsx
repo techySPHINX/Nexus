@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { FC, useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -28,7 +28,7 @@ import {
 
 type PostStatusFilter = 'approved' | 'pending' | 'rejected';
 
-const UserPostsPage: React.FC = () => {
+const UserPostsPage: FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const { userPosts, getUserPosts, pagination, loading, clearUserPosts } =
     usePosts();

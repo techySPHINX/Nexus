@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
 interface LoadingSpinnerProps {
@@ -6,7 +6,7 @@ interface LoadingSpinnerProps {
   size?: number;
 }
 
-const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({
+const LoadingSpinner: FC<LoadingSpinnerProps> = ({
   message = 'Loading...',
   size = 40,
 }) => {

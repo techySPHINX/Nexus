@@ -10,6 +10,8 @@ export enum GamificationEvent {
   STARTUP_COMMENT = 'STARTUP_COMMENT',
   PROJECT_CREATED = 'PROJECT_CREATED',
   STARTUP_CREATED = 'STARTUP_CREATED',
+  PROJECT_FOLLOWED = 'PROJECT_FOLLOWED',
+  PROJECT_SUPPORTED = 'PROJECT_SUPPORTED',
   CONNECTION_STUDENT = 'CONNECTION_STUDENT',
   CONNECTION_ALUMNI = 'CONNECTION_ALUMNI',
   LIKE_RECEIVED = 'LIKE_RECEIVED',
@@ -35,57 +37,91 @@ export class GamificationService {
     [GamificationEvent.STARTUP_COMMENT]: 3,
     [GamificationEvent.PROJECT_CREATED]: 15,
     [GamificationEvent.STARTUP_CREATED]: 40,
+    [GamificationEvent.PROJECT_FOLLOWED]: 2,
+    [GamificationEvent.PROJECT_SUPPORTED]: 1,
     [GamificationEvent.CONNECTION_STUDENT]: 2,
     [GamificationEvent.CONNECTION_ALUMNI]: 3,
     [GamificationEvent.LIKE_RECEIVED]: 1,
     [GamificationEvent.REFERRAL_POSTED]: 50,
   };
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) { }
 
   /**
    * Atomically upsert the user's points and create a pointTransaction entry.
    * Returns the updated userPoints record and the transaction created.
    */
   async awardPoints(
-  userId: string,
-  points: number,
-  type: string,
-  entityId?: string,
-) {
-  return this.prisma.$transaction(async (tx) => {
-    // Upsert userPoints record
-    const userPoints = await tx.userPoints.upsert({
-      where: { userId },
-      update: { points: { increment: points } },
-      create: { userId, points },
-      select: { id: true, userId: true, points: true },
-    });
+    userId: string,
+    points: number,
+    type: string,
+    message: string,
+    entityId?: string,
+  ) {
+    return this.prisma.$transaction(async (tx) => {
+      // Upsert userPoints record
+      const userPoints = await tx.userPoints.upsert({
+        where: { userId },
+        update: { points: { increment: points } },
+        create: { userId, points },
+        select: { id: true, userId: true, points: true },
+      });
 
-    // Create the transaction entry
-    const transaction = await tx.pointTransaction.create({
-      data: {
-        userId,
-        userPointsId: userPoints.id,
-        points,
-        type,
-        entityId: entityId ?? null,
-      },
-    });
+      // Create the transaction entry
+      const transaction = await tx.pointTransaction.create({
+        data: {
+          userId,
+          userPointsId: userPoints.id,
+          points,
+          type,
+          message,
+          entityId: entityId ?? null,
+        },
+      });
 
-    return { userPoints, transaction };
-  });
-}
+      return { userPoints, transaction };
+    });
+  }
 
   /** Safer wrapper that accepts a GamificationEvent enum key */
-  async awardForEvent(eventKey: GamificationEvent | string, userId: string, entityId?: string) {
+  async awardForEvent(eventKey: GamificationEvent | string, userId: string, entityId?: string, message: string='') {
     const points = (this.pointsMap as Record<string, number>)[eventKey];
     if (!points) {
       this.logger.warn(`No points mapping for eventKey=${eventKey}`);
       return { success: false, message: 'Unknown eventKey' };
     }
-    const res = await this.awardPoints(userId, points, eventKey, entityId);
+    const res = await this.awardPoints(userId, points, eventKey, message, entityId);
     return { success: true, ...res };
+  }
+
+  /** Revoke points previously awarded for an event (by entityId if provided).
+   *  This will delete a single matching pointTransaction and decrement the user's points.
+   */
+  async revokeForEvent(eventKey: GamificationEvent | string, userId: string, entityId?: string) {
+    const points = (this.pointsMap as Record<string, number>)[eventKey];
+    if (!points) {
+      this.logger.warn(`No points mapping for eventKey=${eventKey}`);
+      return { success: false, message: 'Unknown eventKey' };
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Try to find a matching transaction for this user, type, and entityId (if provided).
+      const where: any = { userId, type: eventKey };
+      if (entityId) where.entityId = entityId;
+
+      const existing = await tx.pointTransaction.findFirst({ where, orderBy: { createdAt: 'desc' } });
+      if (!existing) {
+        return { success: false, message: 'No matching transaction found' };
+      }
+
+      // Delete the transaction and decrement the aggregate points (if userPoints exists)
+      await tx.pointTransaction.delete({ where: { id: existing.id } });
+
+      // Decrement userPoints if record exists; use updateMany to avoid throwing when missing
+      await tx.userPoints.updateMany({ where: { userId }, data: { points: { decrement: existing.points } } });
+
+      return { success: true, deletedTransactionId: existing.id };
+    });
   }
 
   /** Get total stored points (fast) */
@@ -97,30 +133,30 @@ export class GamificationService {
   }
 
   private getPeriodWhere(period: Period) {
-  const now = new Date();
+    const now = new Date();
 
-  if (period === 'day') {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    return { createdAt: { gte: start } };
+    if (period === 'day') {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      return { createdAt: { gte: start } };
+    }
+
+    if (period === 'week') {
+      const start = new Date(now);
+      const day = start.getDay();
+      const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+      start.setDate(diff);
+      start.setHours(0, 0, 0, 0);
+      return { createdAt: { gte: start } };
+    }
+
+    if (period === 'month') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { createdAt: { gte: start } };
+    }
+
+    return {};
   }
-
-  if (period === 'week') {
-    const start = new Date(now);
-    const day = start.getDay();
-    const diff = start.getDate() - day + (day === 0 ? -6 : 1); // Monday start
-    start.setDate(diff);
-    start.setHours(0, 0, 0, 0);
-    return { createdAt: { gte: start } };
-  }
-
-  if (period === 'month') {
-    const start = new Date(now.getFullYear(), now.getMonth(), 1);
-    return { createdAt: { gte: start } };
-  }
-
-  return {};
-}
 
   /**
    * Leaderboard for a given period.
@@ -129,31 +165,31 @@ export class GamificationService {
    *  - fetch user profiles in one query (no N+1)
    */
   async getLeaderboardByPeriod(period: Period = 'all', limit = 10) {
-  const where = this.getPeriodWhere(period);
+    const where = this.getPeriodWhere(period);
 
-  const groups = await this.prisma.pointTransaction.groupBy({
-    by: ['userId'],
-    _sum: { points: true },
-    where,
-    orderBy: { _sum: { points: 'desc' } },
-    take: limit,
-  });
+    const groups = await this.prisma.pointTransaction.groupBy({
+      by: ['userId'],
+      _sum: { points: true },
+      where,
+      orderBy: { _sum: { points: 'desc' } },
+      take: limit,
+    });
 
-  if (groups.length === 0) return [];
+    if (groups.length === 0) return [];
 
-  const users = await this.prisma.user.findMany({
-    where: { id: { in: groups.map((g) => g.userId) } },
-    select: { id: true, name: true, role: true, profile: { select: { avatarUrl: true } } },
-  });
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: groups.map((g) => g.userId) } },
+      select: { id: true, name: true, role: true, profile: { select: { avatarUrl: true } } },
+    });
 
-  const map = new Map(users.map((u) => [u.id, u]));
+    const map = new Map(users.map((u) => [u.id, u]));
 
-  return groups.map((g) => ({
-    userId: g.userId,
-    user: map.get(g.userId) ?? null,
-    points: g._sum.points ?? 0,
-  }));
-}
+    return groups.map((g) => ({
+      userId: g.userId,
+      user: map.get(g.userId) ?? null,
+      points: g._sum.points ?? 0,
+    }));
+  }
 
   async getTopToday(limit = 10) {
     return this.getLeaderboardByPeriod('day', limit);
