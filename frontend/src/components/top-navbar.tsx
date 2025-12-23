@@ -2,23 +2,16 @@ import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import ThemeToggle from './ThemeToggle';
 
 const TopNavbar: FC = () => {
-  const { user } = useAuth();
-
-  if (user) {
-    return null; // Hide top nav when user is logged in (use sidebar instead)
-  }
-
   return (
     <motion.nav
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-40 border-b border-transparent bg-gradient-to-r from-background via-background to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 shadow-lg"
+      className=" top-0 left-0 right-0 z-40 border-b border-transparent bg-gradient-to-r from-background via-background to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 shadow-lg"
     >
       <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}

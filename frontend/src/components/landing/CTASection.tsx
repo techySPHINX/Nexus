@@ -74,7 +74,7 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
             viewport={{ once: true }}
           >
             <motion.button
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/register')}
               className={`px-10 py-4 rounded-xl font-bold text-lg transition-all duration-300 ${
                 darkMode
                   ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500'
