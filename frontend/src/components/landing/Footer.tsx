@@ -38,12 +38,33 @@ const Footer: React.FC = () => {
 
   return (
     <footer
-      className={`relative py-12 md:py-16 ${
+      className={`relative overflow-hidden py-12 md:py-16 ${
         darkMode
           ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900'
           : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
       }`}
     >
+      {/* Decorative background accents; nudge up in light mode to avoid sitting too low on scroll */}
+      <div className="pointer-events-none absolute inset-0">
+        <div
+          className={`absolute right-[-60px] ${
+            darkMode ? 'top-[-40px]' : 'top-[-120px]'
+          } w-72 h-72 rounded-full blur-3xl transition-all duration-300 ${
+            darkMode
+              ? 'bg-gradient-to-br from-emerald-500/15 to-green-400/10'
+              : 'bg-gradient-to-br from-emerald-300/30 to-green-500/20'
+          }`}
+        />
+        <div
+          className={`absolute left-[-80px] ${
+            darkMode ? 'bottom-[-80px]' : 'bottom-[-140px]'
+          } w-60 h-60 rounded-full blur-3xl transition-all duration-300 ${
+            darkMode
+              ? 'bg-gradient-to-br from-blue-500/15 to-cyan-400/10'
+              : 'bg-gradient-to-br from-sky-300/30 to-cyan-400/20'
+          }`}
+        />
+      </div>
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
         {/* Main Footer Content */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">

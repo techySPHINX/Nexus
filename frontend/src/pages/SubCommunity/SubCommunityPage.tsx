@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -580,13 +580,13 @@ const SubCommunitiesPage: React.FC = () => {
 
       {/* Manage Types dialog for admins */}
       {isAdmin && (
-        <React.Suspense fallback={null}>
+        <Suspense fallback={null}>
           {/* Lazy load to avoid bundling if not used often */}
           <ManageTypesDialog
             open={manageTypesOpen}
             onClose={() => setManageTypesOpen(false)}
           />
-        </React.Suspense>
+        </Suspense>
       )}
 
       {/* Error Snackbar */}

@@ -105,12 +105,9 @@ const LayoutContent: FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen w-full">
-      <TopNavbar />
+      {!user && <TopNavbar />}
       {user && <MobileTopNavbar />}
-      <div
-        className="flex flex-1 overflow-hidden w-full"
-        style={{ paddingTop: '64px' }}
-      >
+      <div className="flex flex-1 overflow-hidden w-full">
         {user && <AppSidebarNexus />}
         <div
           className="w-full flex-1 overflow-y-auto overflow-x-hidden"

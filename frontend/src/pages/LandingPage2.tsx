@@ -189,13 +189,13 @@ const Landing: FC = () => {
   ];
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full overflow-x-hidden">
       <FloatingNetwork darkMode={darkMode} />
 
       {!darkMode && (
-        <>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
-            className="absolute top-0 left-1/4 w-[600px] h-[600px] rounded-full pointer-events-none"
+            className="absolute top-[-200px] left-[15%] w-[600px] h-[600px] rounded-full"
             style={{
               background:
                 'radial-gradient(circle, rgba(5, 150, 105, 0.45) 0%, rgba(5, 150, 105, 0.25) 40%, transparent 70%)',
@@ -203,7 +203,7 @@ const Landing: FC = () => {
             }}
           />
           <div
-            className="absolute -bottom-1/4 right-1/3 w-[700px] h-[700px] rounded-full pointer-events-none"
+            className="absolute top-[500px] right-[20%] w-[700px] h-[700px] rounded-full"
             style={{
               background:
                 'radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, rgba(6, 182, 212, 0.22) 40%, transparent 70%)',
@@ -211,7 +211,7 @@ const Landing: FC = () => {
             }}
           />
           <div
-            className="absolute top-1/3 right-1/4 w-[550px] h-[550px] rounded-full pointer-events-none"
+            className="absolute top-[800px] left-[25%] w-[550px] h-[550px] rounded-full"
             style={{
               background:
                 'radial-gradient(circle, rgba(34, 197, 94, 0.38) 0%, rgba(34, 197, 94, 0.22) 40%, transparent 70%)',
@@ -219,7 +219,7 @@ const Landing: FC = () => {
             }}
           />
           <div
-            className="absolute top-1/2 left-1/3 w-[500px] h-[500px] rounded-full pointer-events-none"
+            className="absolute top-[1200px] right-[30%] w-[500px] h-[500px] rounded-full"
             style={{
               background:
                 'radial-gradient(circle, rgba(20, 184, 166, 0.35) 0%, rgba(20, 184, 166, 0.18) 40%, transparent 70%)',
@@ -227,21 +227,14 @@ const Landing: FC = () => {
             }}
           />
           <div
-            className="absolute top-1/4 right-1/2 w-[400px] h-[400px] rounded-full pointer-events-none"
+            className="absolute top-[1600px] left-[20%] w-[400px] h-[400px] rounded-full"
             style={{
               background:
                 'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.16) 40%, transparent 70%)',
               filter: 'blur(75px)',
             }}
           />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background:
-                'radial-gradient(ellipse at 50% 50%, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%)',
-            }}
-          />
-        </>
+        </div>
       )}
 
       <div className="fixed right-6 z-50 flex items-center gap-3">

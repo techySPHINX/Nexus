@@ -65,9 +65,9 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
     .shimmer-text {
       background: linear-gradient(
         90deg,
-        #f3f4f6 25%,
-        #e5e7eb 50%,
-        #f3f4f6 75%
+        #090909ff 25%,
+        #686885ff 50%,
+        #070707ff 75%
       );
       background-size: 1000px 100%;
       animation: shimmer 2s infinite;
@@ -78,9 +78,9 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
     .shimmer-text-dark {
       background: linear-gradient(
         90deg,
-        #374151 25%,
-        #4b5563 50%,
-        #374151 75%
+        #f7f7f7ff 25%,
+        #aaabacff 50%,
+        #f8f8f9ff 75%
       );
       background-size: 1000px 100%;
       animation: shimmer 2s infinite;
@@ -165,17 +165,17 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
                   }`}
                 />
 
-                <motion.div
-                  className={`relative z-10 text-3xl mb-4 inline-block p-3 rounded-xl ${
+                <div
+                  className={`relative z-10 text-3xl mb-4 inline-block p-3 rounded-xl transition-all duration-300 group-hover:rotate-[10deg] group-hover:scale-110 ${
                     darkMode
                       ? 'bg-emerald-500/20 text-emerald-300'
                       : 'bg-emerald-200/50 text-emerald-700'
                   }`}
-                  whileHover={{ rotate: 10, scale: 1.1 }}
-                  transition={{ type: 'spring', stiffness: 400 }}
                 >
-                  {feature.icon}
-                </motion.div>
+                  <div className="transition-all duration-600 group-hover:rotate-[20deg] group-hover:scale-110">
+                    {feature.icon}
+                  </div>
+                </div>
 
                 <h3 className="relative z-10 text-xl font-bold mb-3">
                   <span

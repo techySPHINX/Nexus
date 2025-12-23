@@ -94,7 +94,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
 
   return (
     <motion.section
-      className={`relative py-6  bg-gradient-to-br ${sectionBackground}`}
+      className={`relative py-6 bg-gradient-to-br ${sectionBackground}`}
       initial="hidden"
       animate={isLoaded ? 'visible' : 'hidden'}
       variants={fastFadeIn}

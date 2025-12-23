@@ -1,24 +1,36 @@
-import { FC } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { LogIn, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import ThemeToggle from './ThemeToggle';
 
 const TopNavbar: FC = () => {
-  const { user } = useAuth();
+  const [scrolled, setScrolled] = useState(0);
 
-  if (user) {
-    return null; // Hide top nav when user is logged in (use sidebar instead)
-  }
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const maxScroll = 300;
+      const scrollProgress = Math.min(scrollPosition / maxScroll, 1);
+      setScrolled(scrollProgress);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <motion.nav
       initial={{ y: -100, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-40 border-b border-transparent bg-gradient-to-r from-background via-background to-background backdrop-blur-xl supports-[backdrop-filter]:bg-background/80 shadow-lg"
+      className="sticky top-0 left-0 right-0 z-40 border-b shadow-lg transition-all duration-300"
+      style={{
+        backgroundColor: `hsl(var(--background) / ${0.95 - scrolled * 0.35})`,
+        backdropFilter: `blur(${8 + scrolled * 8}px)`,
+        borderColor: `hsl(var(--border) / ${scrolled * 0.5})`,
+      }}
     >
       <div className="w-full px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}

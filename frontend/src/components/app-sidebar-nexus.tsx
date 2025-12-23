@@ -75,6 +75,10 @@ export function AppSidebarNexus() {
               url: '/subcommunities',
             },
             {
+              title: 'My Feed',
+              url: '/feed',
+            },
+            {
               title: 'My SubCommunities',
               url: '/subcommunities/my?myPage=1',
             },
@@ -93,32 +97,32 @@ export function AppSidebarNexus() {
           url: '/projects',
           icon: Frame,
           isActive: location.pathname.startsWith('/projects'),
-          items: [
-            {
-              title: 'All Projects',
-              url: '/projects',
-            },
-            {
-              title: 'My Projects',
-              url: '/projects/user',
-            },
-          ],
+          // items: [
+          //   {
+          //     title: 'All Projects',
+          //     url: '/projects',
+          //   },
+          //   {
+          //     title: 'My Projects',
+          //     url: '/projects/user',
+          //   },
+          // ],
         },
         {
           title: 'Startups',
           url: '/startups',
           icon: Lightbulb,
           isActive: location.pathname.startsWith('/startups'),
-          items: [
-            {
-              title: 'All Startups',
-              url: '/startups',
-            },
-            {
-              title: 'My Startups',
-              url: '/startups?tab=1',
-            },
-          ],
+          // items: [
+          //   {
+          //     title: 'All Startups',
+          //     url: '/startups',
+          //   },
+          //   {
+          //     title: 'My Startups',
+          //     url: '/startups?tab=1',
+          //   },
+          // ],
         },
         {
           title: 'Events',
@@ -141,15 +145,15 @@ export function AppSidebarNexus() {
                 isActive: location.pathname.startsWith('/admin'),
                 items: [
                   {
-                    title: 'Moderation',
+                    title: 'Post Moderation',
                     url: '/admin/moderation',
                   },
                   {
-                    title: 'Verification',
+                    title: 'Document Verification',
                     url: '/admin/document-verification',
                   },
                   {
-                    title: 'SubCommunities',
+                    title: 'SubCommunities Moderation',
                     url: '/admin/moderation/subcommunities',
                   },
                   {
@@ -157,7 +161,7 @@ export function AppSidebarNexus() {
                     url: '/admin/events/create',
                   },
                   {
-                    title: 'News Admin',
+                    title: 'News Administration',
                     url: '/admin/news',
                   },
                 ],
