@@ -16,7 +16,7 @@ async function seedProfileGenders() {
       return;
     }
 
-    for (const p of profiles) {
+    for (const p of profiles) {  
       // Skip profiles that already have a gender
       const existing = await prisma.profile.findUnique({ where: { id: p.id }, select: { gender: true } });
       if (existing?.gender) {
