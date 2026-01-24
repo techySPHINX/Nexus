@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { FC, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -11,7 +11,7 @@ import {
 import { useReportContext } from '@/contexts/reportContext';
 import { Link } from 'react-router-dom';
 
-const ReportsPage: React.FC = () => {
+const ReportsPage: FC = () => {
   const { reports, loading, fetchReports, nextCursor } = useReportContext();
 
   useEffect(() => {

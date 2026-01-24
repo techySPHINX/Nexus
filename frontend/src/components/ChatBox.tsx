@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC, RefObject } from 'react';
 import {
   Card,
   CardContent,
@@ -44,7 +44,7 @@ interface ChatBoxProps {
   isTyping?: boolean;
   typingUsers: Set<string>;
   loading: boolean;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: RefObject<HTMLDivElement>;
   onEditMessage?: (messageId: string, newContent: string) => void;
   onDeleteMessage?: (messageId: string) => void;
   onlineUsers?: Set<string>;
@@ -59,7 +59,7 @@ interface ChatBoxProps {
  * - Handles typing indicators
  * - Responsive design
  */
-const ChatBox: React.FC<ChatBoxProps> = ({
+const ChatBox: FC<ChatBoxProps> = ({
   conversation,
   messages,
   onSendMessage,

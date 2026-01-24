@@ -1,5 +1,5 @@
 // components/TabPanel.tsx
-import React from 'react';
+import { FC } from 'react';
 import { Box } from '@mui/material';
 
 interface TabPanelProps {
@@ -8,7 +8,7 @@ interface TabPanelProps {
   value: number;
 }
 
-export const TabPanel: React.FC<TabPanelProps> = ({
+export const TabPanel: FC<TabPanelProps> = ({
   children,
   value,
   index,

@@ -9,7 +9,7 @@ import {
   fetchNotificationStatsService,
 } from '@/services/notificationService';
 import { Notification, NotificationType } from '@/types/notification';
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { FC, createContext, useContext, useState, useCallback } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 import { useAuth } from './AuthContext';
 
@@ -69,7 +69,7 @@ const categoryToTypes: Record<string, NotificationType[]> = {
   ],
 };
 
-export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
+export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const { user } = useAuth();
@@ -111,7 +111,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     'success' | 'error' | 'info' | 'warning'
   >('info');
 
-  const showNotification = React.useCallback(
+  const showNotification = useCallback(
     (
       message: string,
       severity: 'success' | 'error' | 'info' | 'warning' = 'info'

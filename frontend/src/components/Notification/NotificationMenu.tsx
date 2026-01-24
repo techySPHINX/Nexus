@@ -20,7 +20,7 @@ import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import CheckIcon from '@mui/icons-material/Check';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
-import React, { useState } from 'react';
+import { FC, Fragment, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
@@ -36,7 +36,7 @@ interface NotificationMenuProps {
   inline?: boolean;
 }
 
-const NotificationMenu: React.FC<NotificationMenuProps> = ({
+const NotificationMenu: FC<NotificationMenuProps> = ({
   anchorEl = null,
   handleClose,
   open = false,
@@ -233,7 +233,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
         ) : (
           <List disablePadding>
             {unreadNotifications.slice(0, 5).map((notification) => (
-              <React.Fragment key={notification.id}>
+              <Fragment key={notification.id}>
                 <ListItemButton
                   onClick={() => handleNotificationClick(notification.id)}
                   sx={{
@@ -278,7 +278,7 @@ const NotificationMenu: React.FC<NotificationMenuProps> = ({
                   />
                 </ListItemButton>
                 <Divider component="li" />
-              </React.Fragment>
+              </Fragment>
             ))}
           </List>
         )}

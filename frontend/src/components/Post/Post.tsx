@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { CSSProperties, FC, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePosts } from '../../contexts/PostContext';
 import { useEngagement } from '../../contexts/engagementContext';
@@ -44,6 +44,7 @@ import { Post as PostType } from '@/types/post';
 import { VoteType } from '@/types/engagement';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { useNotification } from '@/contexts/NotificationContext';
+import { useTheme } from '@/contexts/ThemeContext';
 
 interface PostProps {
   post: PostType;
@@ -56,7 +57,7 @@ interface PostProps {
   onClick?: () => void;
 }
 
-export const Post: React.FC<PostProps> = ({
+export const Post: FC<PostProps> = ({
   post,
   onUpdate,
   onDelete,
@@ -76,6 +77,7 @@ export const Post: React.FC<PostProps> = ({
   } = usePosts();
   const { voteOnPost, loading: engagementLoading } = useEngagement();
   const navigate = useNavigate();
+  const { isDark } = useTheme();
 
   const isPostPage = window.location.pathname === `/posts/${post.id}`;
 
@@ -83,9 +85,7 @@ export const Post: React.FC<PostProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedContent, setEditedContent] = useState(post?.content || '');
   const [editedSubject, setEditedSubject] = useState(post?.subject || '');
-  const [isLiked, setIsLiked] = useState(
-    (post.Vote || []).some((vote) => vote.type === VoteType.UPVOTE)
-  );
+  const [isLiked, setIsLiked] = useState(!!post.hasVoted);
   const [likeCount, setLikeCount] = useState(post?._count?.Vote || 0);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | undefined>(
@@ -96,6 +96,7 @@ export const Post: React.FC<PostProps> = ({
     message: '',
     severity: 'success' as 'success' | 'error',
   });
+  const [expandedContent, setExpandedContent] = useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -279,6 +280,9 @@ export const Post: React.FC<PostProps> = ({
 
   const isAuthor = user?.id === post.author.id;
   const isAdmin = user?.role === 'ADMIN';
+  const postContentClass = isDark
+    ? 'text-neutral-300 text-sm mb-2 leading-relaxed'
+    : 'text-gray-700 text-sm mb-2 leading-relaxed';
 
   if (!post) {
     return (
@@ -510,32 +514,56 @@ export const Post: React.FC<PostProps> = ({
                 </Typography>
               )}
 
-              {/* Content - With truncation on list pages */}
-              {post.content &&
-                window.location.pathname === `/posts/${post.id}` && (
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mb: 1,
-                      whiteSpace: 'pre-line',
-                      ...(window.location.pathname !== `/posts/${post.id}` && {
-                        display: '-webkit-box',
-                        WebkitLineClamp: 3,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        fontSize: '1rem',
-                        '&:hover': { color: 'primary.main' },
-                      }),
-                    }}
-                  >
-                    {post.content.split('\n').map((line, idx) => (
-                      <span key={idx}>
-                        {line}
-                        <br />
-                      </span>
-                    ))}
-                  </Typography>
-                )}
+              {/* Content - full on post page; truncated with expand on list pages */}
+              {post.content && (
+                <>
+                  {isPostPage ? (
+                    <Typography
+                      variant="body2"
+                      sx={{ mb: 1, whiteSpace: 'pre-line' }}
+                    >
+                      {post.content.split('\n').map((line, idx) => (
+                        <span key={idx}>
+                          {line}
+                          <br />
+                        </span>
+                      ))}
+                    </Typography>
+                  ) : (
+                    <div>
+                      <p
+                        className={postContentClass}
+                        style={
+                          {
+                            display: expandedContent ? 'block' : '-webkit-box',
+                            WebkitLineClamp: expandedContent ? 'unset' : 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: expandedContent ? 'visible' : 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: expandedContent ? 'pre-line' : 'normal',
+                          } as CSSProperties
+                        }
+                      >
+                        {post.content}
+                      </p>
+
+                      {/* Show more / less button */}
+                      {post.content.length > 240 && (
+                        <Button
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedContent((s) => !s);
+                          }}
+                          sx={{ textTransform: 'none', mt: 0.5 }}
+                        >
+                          {expandedContent ? 'Show less' : 'Show more'}
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
 
               {isPostPage && post.imageUrl && (
                 <PostImage imageUrl={post.imageUrl} />
@@ -560,38 +588,59 @@ export const Post: React.FC<PostProps> = ({
       </CardContent>
 
       {showActions && !isEditing && (
-        <CardActions>
-          <IconButton
-            onClick={handleLike}
-            disabled={engagementLoading || !token}
-          >
-            {isLiked ? <Favorite color="error" /> : <FavoriteBorder />}
-          </IconButton>
-          <Typography variant="body2">{likeCount}</Typography>
+        <div className="flex justify-between">
+          <CardActions>
+            <IconButton
+              onClick={handleLike}
+              disabled={engagementLoading || !token}
+            >
+              {isLiked ? <Favorite color="error" /> : <FavoriteBorder />}
+            </IconButton>
+            <Typography variant="body2">{likeCount}</Typography>
 
-          <IconButton onClick={handleContentClick}>
-            <CommentIcon />
-          </IconButton>
-          <Typography variant="body2">{post?._count?.Comment || 0}</Typography>
+            <IconButton onClick={handleContentClick}>
+              <CommentIcon />
+            </IconButton>
+            <Typography variant="body2">
+              {post?._count?.Comment || 0}
+            </Typography>
 
-          <IconButton
-            onClick={() => {
-              return navigator.clipboard
-                .writeText(`${window.location.origin}/posts/${post.id}`)
-                .then(() =>
-                  showNotification?.('Post URL copied to clipboard', 'success')
-                )
-                .catch(() =>
-                  showNotification?.('Failed to copy post URL', 'error')
-                );
-            }}
-          >
-            <Tooltip title="Share Post">
-              <Share />
-            </Tooltip>
-          </IconButton>
-          <ReportButton type="POST" postId={post.id} />
-        </CardActions>
+            <IconButton
+              onClick={() => {
+                return navigator.clipboard
+                  .writeText(`${window.location.origin}/posts/${post.id}`)
+                  .then(() =>
+                    showNotification?.(
+                      'Post URL copied to clipboard',
+                      'success'
+                    )
+                  )
+                  .catch(() =>
+                    showNotification?.('Failed to copy post URL', 'error')
+                  );
+              }}
+            >
+              <Tooltip title="Share Post">
+                <Share />
+              </Tooltip>
+            </IconButton>
+            <ReportButton type="POST" postId={post.id} />
+          </CardActions>
+          <div>
+            <Box sx={{ display: 'flex', alignItems: 'center', pr: 1 }}>
+              <Tooltip title="Post score">
+                <Chip
+                  label={
+                    typeof post.score === 'number' ? post.score : likeCount
+                  }
+                  color="primary"
+                  size="small"
+                  sx={{ fontWeight: 600 }}
+                />
+              </Tooltip>
+            </Box>
+          </div>
+        </div>
       )}
 
       <Dialog open={confirmOpen} onClose={handleCancelDelete}>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { FC, useState, useMemo, lazy, Suspense, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Chip,
@@ -48,7 +48,7 @@ interface ProjectCardProps {
   onViewDetails: (project: ProjectInterface) => void;
 }
 
-const ProjectCard: React.FC<ProjectCardProps> = ({
+const ProjectCard: FC<ProjectCardProps> = ({
   project,
   tab,
   currentUserId,
@@ -74,7 +74,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 
   // lazy-load UpdateSection so we don't add a hard dependency at top
   const UpdateSection = useMemo(
-    () => React.lazy(() => import('./UpdateSection')),
+    () => lazy(() => import('./UpdateSection')),
     []
   );
 
@@ -774,7 +774,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
             )}
 
           {/* Update modal / panel — lazy-loaded UpdateSection */}
-          <React.Suspense
+          <Suspense
             fallback={
               <Box
                 sx={{
@@ -798,7 +798,7 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
               onClose={() => setUpdateModalOpen(false)}
               onUpdated={handleUpdateProjectDetails}
             />
-          </React.Suspense>
+          </Suspense>
           {/* Collaboration requests modal for project owners */}
           <ProjectCollaborationRequestsModal
             open={requestsOpen}
@@ -814,4 +814,4 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
 };
 
 // ✅ Prevent unnecessary re-renders when props don’t change
-export default React.memo(ProjectCard);
+export default memo(ProjectCard);

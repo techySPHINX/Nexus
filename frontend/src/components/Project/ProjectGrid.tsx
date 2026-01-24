@@ -1,8 +1,8 @@
-import React from 'react';
+import { FC, lazy } from 'react';
 import { Grid, Box, Typography, Button, Skeleton } from '@mui/material';
 import { motion } from 'framer-motion';
 import { ProjectInterface } from '@/types/ShowcaseType';
-const ProjectCard = React.lazy(() => import('./ProjectCard'));
+const ProjectCard = lazy(() => import('./ProjectCard'));
 import { Add } from '@mui/icons-material';
 
 interface ProjectsGridProps {
@@ -24,7 +24,7 @@ interface ProjectsGridProps {
   onViewDetails: (project: ProjectInterface) => void;
 }
 
-const ProjectGrid: React.FC<ProjectsGridProps> = ({
+const ProjectGrid: FC<ProjectsGridProps> = ({
   projects,
   tab,
   loading,

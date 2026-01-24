@@ -13,7 +13,7 @@ import { PostStatus, Role, VoteTargetType, VoteType } from '@prisma/client';
  */
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaService, private gamificationService: GamificationService) {}
+  constructor(private prisma: PrismaService, private gamificationService: GamificationService) { }
 
   /**
    * Creates a new post.
@@ -143,6 +143,7 @@ export class PostService {
           imageUrl: true,
           type: true,
           createdAt: true,
+          subCommunity: true,
           author: {
             select: {
               id: true,
@@ -168,7 +169,7 @@ export class PostService {
       this.prisma.post.count({ where: whereClause }),
     ]);
 
-    if(!posts){
+    if (!posts) {
       throw new NotFoundException('Posts not found');
     }
 
@@ -269,13 +270,22 @@ export class PostService {
 
     const posts = await this.prisma.post.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        subject: true,
+        content: true,
+        imageUrl: true,
+        type: true,
+        createdAt: true,
+        updatedAt: true,
+        subCommunity: true,
         author: {
-          include: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
             profile: {
-              include: {
-                skills: true,
-              },
+              select: { avatarUrl: true, skills: true },
             },
           },
         },
@@ -285,15 +295,29 @@ export class PostService {
             Comment: true,
           },
         },
+        Vote: {
+          where: { userId, targetType: VoteTargetType.POST },
+          select: { type: true },
+        }
       },
     });
 
-    const rankedPosts = posts
+    const isVotedPosts = posts.map((post) => {
+      const hasVoted = !!(post as any).Vote?.[0]?.type;
+      const rest = { ...(post as any) };
+      delete rest.Vote;
+      return {
+        ...rest,
+        hasVoted,
+      };
+    });
+
+    const rankedPosts = isVotedPosts
       .map((post) => {
         let score = 0;
 
         // Connection Score
-        if (connectionIds.includes(post.authorId)) {
+        if (connectionIds.includes(post.author.id)) {
           score += 3;
         }
 
@@ -325,6 +349,13 @@ export class PostService {
         return { ...post, score };
       })
       .sort((a, b) => b.score - a.score);
+
+    // Remove skills from author profile in ranked posts
+    for (const post of rankedPosts as any[]) {
+      if (post.author?.profile?.skills) {
+        delete post.author.profile.skills;
+      }
+    }
 
     const skip = (page - 1) * limit;
     const paginatedPosts = rankedPosts.slice(skip, skip + limit);
@@ -366,10 +397,10 @@ export class PostService {
     if (subCommunity.isPrivate) {
       // Private sub-community: user must be a member
       member = await this.prisma.subCommunityMember.findFirst({
-      where: {
-        userId: userId,
-        subCommunityId: subCommunityId,
-      },
+        where: {
+          userId: userId,
+          subCommunityId: subCommunityId,
+        },
       });
     } else {
       // Public sub-community: treat as implicitly accessible (avoid blocking later member check)
@@ -406,9 +437,9 @@ export class PostService {
           },
           Vote: userId
             ? {
-                where: { userId, targetType: VoteTargetType.POST },
-                select: { id: true, type: true },
-              }
+              where: { userId, targetType: VoteTargetType.POST },
+              select: { id: true, type: true },
+            }
             : false,
           _count: {
             select: {
@@ -463,9 +494,9 @@ export class PostService {
         },
         Vote: userId
           ? {
-              where: { userId, targetType: VoteTargetType.POST },
-              select: { id: true, type: true },
-            }
+            where: { userId, targetType: VoteTargetType.POST },
+            select: { id: true, type: true },
+          }
           : false,
         Comment: {
           take: 5,
@@ -921,6 +952,7 @@ export class PostService {
   async approvePost(id: string) {
     const post = await this.prisma.post.findUnique({
       where: { id },
+      select: { id: true, status: true, authorId: true, subject: true },
     });
 
     if (!post) {
@@ -930,24 +962,25 @@ export class PostService {
     if (post.status !== PostStatus.PENDING) {
       throw new BadRequestException('Post is not pending approval');
     }
-      const updated = await this.prisma.post.update({
+    const updated = await this.prisma.post.update({
       where: { id },
       data: {
         status: PostStatus.APPROVED,
         // Don't update updatedAt for approval - only when owner edits the post
       },
-      });
+    });
 
-      // Award points for creating a post. If this fails, rethrow to rollback the transaction.
-      // Note: for true DB-level atomicity the gamification service should use the same
-      // Prisma client / transaction (or accept `tx`) so its writes are part of the transaction.
-      try {
-      await this.gamificationService.awardForEvent('POST_CREATED', post.authorId, post.id);
-      } catch{
-        // Rethrow to rollback transaction
-      }
+    // Award points for creating a post. If this fails, rethrow to rollback the transaction.
+    // Note: for true DB-level atomicity the gamification service should use the same
+    // Prisma client / transaction (or accept `tx`) so its writes are part of the transaction.
+    try {
+      const message = `Post Created: "${post.subject}"`;
+      await this.gamificationService.awardForEvent('POST_CREATED', post.authorId, post.id, message);
+    } catch {
+      // Rethrow to rollback transaction
+    }
 
-      return updated;
+    return updated;
   }
 
   /**

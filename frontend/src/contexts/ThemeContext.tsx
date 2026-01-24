@@ -1,4 +1,5 @@
-import React, {
+import {
+  FC,
   createContext,
   useContext,
   useState,
@@ -34,7 +35,7 @@ interface ThemeProviderProps {
   children: ReactNode;
 }
 
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
+export const ThemeProvider: FC<ThemeProviderProps> = ({ children }) => {
   const [mode, setMode] = useState<ThemeMode>('light');
 
   useEffect(() => {
@@ -48,6 +49,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       setMode(prefersDark ? 'dark' : 'light');
     }
   }, []);
+
+  // Apply dark class to document element for Tailwind
+  useEffect(() => {
+    if (mode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [mode]);
 
   const toggleTheme = () => {
     const newMode = mode === 'light' ? 'dark' : 'light';

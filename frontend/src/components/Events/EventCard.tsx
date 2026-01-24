@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   Card,
@@ -32,12 +32,12 @@ interface EventCardProps {
   variant?: 'grid' | 'list';
 }
 
-const EventCard: React.FC<EventCardProps> = ({ event, variant = 'grid' }) => {
+const EventCard: FC<EventCardProps> = ({ event, variant = 'grid' }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { fetchEvents, fetchUpcoming } = useEventContext();
-  const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const canAdmin = user?.role === 'ADMIN' || user?.id === event.authorId;
 

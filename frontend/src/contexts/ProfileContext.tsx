@@ -1,4 +1,5 @@
-import React, {
+import {
+  FC,
   createContext,
   useContext,
   useState,
@@ -78,9 +79,7 @@ const ProfileContext = createContext<ProfileContextType>({
   getUserTransactions: async () => [],
 });
 
-const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
+const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [badges, setBadges] = useState<ProfileBadge[]>([]);

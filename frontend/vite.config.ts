@@ -18,7 +18,9 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     },
     base: '/', // <--- ✅ Add this line
     plugins: [
-      react(),
+      react({
+        jsxImportSource: 'react',
+      }),
       isAnalyze &&
         visualizer({
           filename: 'dist/stats.html',
@@ -49,7 +51,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       esbuild: {
         target: 'es2017',
       },
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 1200,
       terserOptions: {
         compress: {
           drop_console: mode === 'production',
@@ -58,38 +60,46 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       },
       rollupOptions: {
         output: {
-          manualChunks(id: string) {
+          manualChunks(id) {
+            const lower = id.toLowerCase();
+
+            // --- 1. Split vendor chunks strategically ---
             if (id.includes('node_modules')) {
-              //   if (id.includes('react')) return 'vendor-react';
-              //   if (id.includes('axios')) return 'vendor-axios';
-              //   if (id.includes('chart.js') || id.includes('recharts'))
-              //     return 'vendor-charts';
-              return 'vendor';
+              // Heavy dependencies that load separately
+              if (id.includes('three')) return 'vendor-three';
+              if (id.includes('tiptap') || id.includes('prosemirror'))
+                return 'vendor-editor';
+              if (id.includes('firebase')) return 'vendor-firebase';
+              if (id.includes('socket.io')) return 'vendor-socket';
+
+              // Core UI dependencies - keep together
+              return 'vendor-core';
             }
-            // Split only your **feature code**
-            if (id.toLowerCase().includes('admin')) return 'admin-features';
-            if (id.toLowerCase().includes('auth')) return 'auth-features';
-            if (id.toLowerCase().includes('profile')) return 'profile-features';
-            if (id.toLowerCase().includes('post')) return 'post-features';
-            if (id.toLowerCase().includes('messaging'))
-              return 'messaging-features';
-            if (
-              id.toLowerCase().includes('showcase') ||
-              id.toLowerCase().includes('project')
-            )
+
+            // --- 2. Feature chunks ---
+            if (lower.includes('dashboard')) return 'dashboard-features';
+            if (lower.includes('gamification')) return 'gamification-features';
+            if (lower.includes('admin')) return 'admin-features';
+            if (lower.includes('auth')) return 'auth-features';
+            if (lower.includes('profile')) return 'profile-features';
+            if (lower.includes('posts')) return 'post-features';
+            if (lower.includes('messaging')) return 'messaging-features';
+            if (lower.includes('startup')) return 'startup-features';
+            if (lower.includes('showcase') || lower.includes('project'))
               return 'showcase-features';
-            if (id.toLowerCase().includes('startup')) return 'startup-features';
-            if (id.toLowerCase().includes('dashboard'))
-              return 'dashboard-features';
-            if (id.toLowerCase().includes('home')) return 'home-features';
-            if (id.toLowerCase().includes('components'))
-              return 'shared-components';
-            // return 'NodeVendors';
-            // Let Vite handle all node_modules safely
-            return 'others';
+            if (lower.includes('events')) return 'events-features';
+
+            // --- 3. Shared ---
+            if (lower.includes('components')) return 'shared-components';
+
+            return undefined;
           },
           chunkFileNames: `assets/[name]-[hash].js`,
           assetFileNames: `assets/[name]-[hash].[ext]`,
+          entryFileNames: `assets/[name]-[hash].js`,
+        },
+        input: {
+          main: '/index.html',
         },
       },
     },
@@ -100,11 +110,16 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     },
     optimizeDeps: {
       include: [
+        'react',
+        'react-dom',
         '@mui/material',
         '@mui/material/styles',
         '@emotion/react',
         '@emotion/styled',
         '@mui/styled-engine',
+        '@floating-ui/react',
+        '@radix-ui/react-dropdown-menu',
+        '@radix-ui/react-tooltip',
       ],
     },
   };

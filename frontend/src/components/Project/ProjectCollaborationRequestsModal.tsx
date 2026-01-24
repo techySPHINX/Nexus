@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -29,7 +29,7 @@ interface Props {
   onClose: () => void;
 }
 
-const ProjectCollaborationRequestsModal: React.FC<Props> = ({
+const ProjectCollaborationRequestsModal: FC<Props> = ({
   open,
   projectId,
   onClose,

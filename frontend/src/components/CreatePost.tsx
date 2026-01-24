@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, KeyboardEvent, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -30,7 +30,7 @@ interface CreatePostProps {
   placeholder?: string;
 }
 
-const CreatePost: React.FC<CreatePostProps> = ({
+const CreatePost: FC<CreatePostProps> = ({
   onSubmit,
   placeholder = "What's on your mind?",
 }) => {
@@ -47,7 +47,7 @@ const CreatePost: React.FC<CreatePostProps> = ({
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();

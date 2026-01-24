@@ -11,6 +11,7 @@ import { UnifiedWebSocketGateway } from './gateways/unified-websocket.gateway';
 import { NotificationGateway } from './gateways/notification.gateway';
 import { DashboardGateway } from './gateways/dashboard.gateway';
 import { PrismaModule } from '../prisma/prisma.module';
+import { WinstonLoggerService } from './logger/winston-logger.service';
 
 /**
  * Global module for common services used across the application
@@ -27,6 +28,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     }),
   ],
   providers: [
+    WinstonLoggerService,
     CacheService,
     RedisService,
     FcmService,
@@ -38,6 +40,7 @@ import { PrismaModule } from '../prisma/prisma.module';
     DashboardGateway,
   ],
   exports: [
+    WinstonLoggerService,
     CacheService,
     RedisService,
     FcmService,

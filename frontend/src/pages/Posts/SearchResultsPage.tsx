@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { Post } from '../../components/Post/Post';
@@ -12,7 +12,7 @@ import {
 } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 
-const SearchResultsPage: React.FC = () => {
+const SearchResultsPage: FC = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const initialQuery = queryParams.get('q') || '';

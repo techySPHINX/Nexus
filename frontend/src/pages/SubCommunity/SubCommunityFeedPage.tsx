@@ -1,4 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import {
+  FC,
+  useEffect,
+  useState,
+  useCallback,
+  lazy,
+  MouseEvent,
+  ComponentType,
+  LazyExoticComponent,
+  Fragment,
+  ReactNode,
+  Suspense,
+} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -62,17 +74,17 @@ type CreatePostFormProps = {
   userRole?: SubCommunityRole | null;
 };
 
-const CreatePostForm = React.lazy(() =>
+const CreatePostForm = lazy(() =>
   import('../../components/Post/CreatePostForm').then((mod) => {
     return {
       default: (
         mod as unknown as {
-          CreatePostForm: React.ComponentType<CreatePostFormProps>;
+          CreatePostForm: ComponentType<CreatePostFormProps>;
         }
       ).CreatePostForm,
     };
   })
-) as React.LazyExoticComponent<React.ComponentType<CreatePostFormProps>>;
+) as LazyExoticComponent<ComponentType<CreatePostFormProps>>;
 
 type PostComponentProps = {
   post: PostType;
@@ -85,17 +97,17 @@ type PostComponentProps = {
   onReject?: () => void;
 };
 
-const Post = React.lazy(() =>
+const Post = lazy(() =>
   import('../../components/Post/Post').then((mod) => {
     return {
       default: (
         mod as unknown as {
-          Post: React.ComponentType<PostComponentProps>;
+          Post: ComponentType<PostComponentProps>;
         }
       ).Post,
     };
   })
-) as React.LazyExoticComponent<React.ComponentType<PostComponentProps>>;
+) as LazyExoticComponent<ComponentType<PostComponentProps>>;
 import { getErrorMessage } from '@/utils/errorHandler';
 import { Link } from 'react-router-dom';
 import { useTheme } from '@mui/material/styles';
@@ -105,12 +117,12 @@ import {
   SubCommunity,
 } from '../../types/subCommunity';
 import { Role } from '@/types/profileType';
-const SubCommunityEditBox = React.lazy(() =>
+const SubCommunityEditBox = lazy(() =>
   import('@/components/SubCommunity/SubCommunityEditBox').then((mod) => {
     return {
       default: (
         mod as unknown as {
-          SubCommunityEditBox: React.ComponentType<{
+          SubCommunityEditBox: ComponentType<{
             community: SubCommunity;
             open: boolean;
             onClose: () => void;
@@ -125,7 +137,7 @@ import { ProfileNameLink } from '@/utils/ProfileNameLink';
 
 // Tab panel component
 function TabPanel(props: {
-  children?: React.ReactNode;
+  children?: ReactNode;
   index: number;
   value: number;
 }) {
@@ -144,7 +156,7 @@ function TabPanel(props: {
   );
 }
 
-const SubCommunityFeedPage: React.FC = () => {
+const SubCommunityFeedPage: FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const {
@@ -373,7 +385,7 @@ const SubCommunityFeedPage: React.FC = () => {
   };
 
   const openMemberMenu = (
-    event: React.MouseEvent<HTMLElement>,
+    event: MouseEvent<HTMLElement>,
     member: SubCommunityMember
   ) => {
     setSelectedMember(member);
@@ -385,7 +397,7 @@ const SubCommunityFeedPage: React.FC = () => {
     setSelectedMember(null);
   };
 
-  const openCommunityMenu = (event: React.MouseEvent<HTMLElement>) => {
+  const openCommunityMenu = (event: MouseEvent<HTMLElement>) => {
     setCommunityMenuAnchor(event.currentTarget);
   };
 
@@ -545,7 +557,7 @@ const SubCommunityFeedPage: React.FC = () => {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {subCommunityFeed.map((post) => (
-          <React.Suspense
+          <Suspense
             key={post.id}
             fallback={
               <Card sx={{ mb: 3 }}>
@@ -651,7 +663,7 @@ const SubCommunityFeedPage: React.FC = () => {
                 })
               }
             />
-          </React.Suspense>
+          </Suspense>
         ))}
       </Box>
     );
@@ -743,7 +755,7 @@ const SubCommunityFeedPage: React.FC = () => {
     return (
       <List>
         {currentSubCommunity.members.map((member) => (
-          <React.Fragment key={member.id}>
+          <Fragment key={member.id}>
             <ListItem
               secondaryAction={
                 (userRole === SubCommunityRole.OWNER ||
@@ -788,7 +800,7 @@ const SubCommunityFeedPage: React.FC = () => {
               />
             </ListItem>
             <Divider variant="inset" component="li" />
-          </React.Fragment>
+          </Fragment>
         ))}
       </List>
     );
@@ -1326,7 +1338,7 @@ const SubCommunityFeedPage: React.FC = () => {
             Create Post in r/{currentSubCommunity.name}
           </DialogTitle>
           <DialogContent sx={{ p: 3, minHeight: '400px' }}>
-            <React.Suspense
+            <Suspense
               fallback={
                 <Box sx={{ py: 4, display: 'grid', gap: 2 }}>
                   <Skeleton
@@ -1353,7 +1365,7 @@ const SubCommunityFeedPage: React.FC = () => {
                 onCancel={() => setOpenForm(false)}
                 userRole={userRole}
               />
-            </React.Suspense>
+            </Suspense>
           </DialogContent>
         </Dialog>
       </Box>
@@ -1454,7 +1466,7 @@ const SubCommunityFeedPage: React.FC = () => {
         </Alert>
       </Snackbar>
 
-      <React.Suspense
+      <Suspense
         fallback={
           <Dialog
             open={editDialogOpen}
@@ -1499,7 +1511,7 @@ const SubCommunityFeedPage: React.FC = () => {
             }}
           />
         )}
-      </React.Suspense>
+      </Suspense>
     </>
   );
 };

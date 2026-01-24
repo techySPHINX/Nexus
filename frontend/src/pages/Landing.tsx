@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   Container,
   Typography,
@@ -78,7 +78,7 @@ const alumniSpotlights = [
   },
 ];
 
-const Landing: React.FC = () => {
+const Landing: FC = () => {
   const theme = useTheme();
   const isSm = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();

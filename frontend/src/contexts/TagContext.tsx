@@ -1,4 +1,5 @@
-import React, {
+import {
+  FC,
   createContext,
   useContext,
   useState,
@@ -22,7 +23,7 @@ export const useTagContext = (): TagContextType => {
   return ctx;
 };
 
-const TagProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+const TagProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [tags, setTags] = useState<Tags[]>([]);
   const [loading, setLoading] = useState(false);
 

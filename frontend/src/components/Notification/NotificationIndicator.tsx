@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Badge, IconButton, Tooltip } from '@mui/material';
 import { Notifications as NotificationsIcon } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';

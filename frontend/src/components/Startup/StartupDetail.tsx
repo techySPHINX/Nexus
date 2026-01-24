@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC } from 'react';
 import {
   DialogTitle,
   DialogContent,
@@ -36,7 +36,7 @@ interface Props {
   // onFollowToggle: () => Promise<void> | void;
 }
 
-const StartupDetail: React.FC<Props> = ({
+const StartupDetail: FC<Props> = ({
   startup,
   comments,
   commentsLoading,

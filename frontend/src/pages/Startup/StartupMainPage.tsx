@@ -1,8 +1,7 @@
 // StartupMainPage.tsx
-import React, { useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Box,
-  Container,
   Typography,
   Button,
   Dialog,
@@ -49,7 +48,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const StartupMainPage: React.FC = () => {
+const StartupMainPage: FC = () => {
   const {
     stats,
     all,
@@ -253,13 +252,13 @@ const StartupMainPage: React.FC = () => {
     setEditModalOpen(true);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     // fetch initial stats on mount
     getStartupStats();
   }, [getStartupStats]);
 
   // fetch startups when search/status/active tab change (debounced)
-  React.useEffect(() => {
+  useEffect(() => {
     const timer = setTimeout(async () => {
       try {
         if (activeTab === 0) {
@@ -303,7 +302,7 @@ const StartupMainPage: React.FC = () => {
   // }, [activeTab]);
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4, position: 'relative' }}>
+    <div className="w-full" style={{ padding: '1rem', position: 'relative' }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -624,7 +623,7 @@ const StartupMainPage: React.FC = () => {
           </Snackbar>
         )}
       </motion.div>
-    </Container>
+    </div>
   );
 };
 

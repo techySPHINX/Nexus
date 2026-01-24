@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -35,7 +35,7 @@ const MotionDialog = motion(Dialog);
 // mount/unmount in development) or repeated function references from parents.
 const seekingOptionsLoaded = new Set<string>();
 
-const CollaborationModal: React.FC<CollaborationModalProps> = ({
+const CollaborationModal: FC<CollaborationModalProps> = ({
   project,
   seekingOptions = [],
   onLoadSeekingOptions,

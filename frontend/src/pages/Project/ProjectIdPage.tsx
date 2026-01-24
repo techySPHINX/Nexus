@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { FC, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -32,7 +32,7 @@ import { useShowcase } from '@/contexts/ShowcaseContext';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { useAuth } from '@/contexts/AuthContext';
 
-const ProjectIdPage: React.FC = () => {
+const ProjectIdPage: FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
 

@@ -1,5 +1,5 @@
 // ProjectMainPage.tsx - Updated implementation
-import React, { useState, useEffect, useCallback } from 'react';
+import { FC, useState, useEffect, useCallback, useRef, memo } from 'react';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -23,7 +23,6 @@ import {
   Snackbar,
   Alert,
   Fade,
-  Container,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -57,7 +56,7 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const ProjectsMainPage: React.FC = () => {
+const ProjectsMainPage: FC = () => {
   const {
     projectCounts,
     allProjects,
@@ -116,7 +115,7 @@ const ProjectsMainPage: React.FC = () => {
   const [tabLoading, setTabLoading] = useState(false);
   // Short-lived cache to avoid repeated refetches when an API returns empty results
   // Keyed by `${activeTab}:${JSON.stringify(filters)}` -> timestamp of last empty response
-  const lastEmptyFetchRef = React.useRef<Record<string, number>>({});
+  const lastEmptyFetchRef = useRef<Record<string, number>>({});
   const EMPTY_FETCH_TTL = 60 * 1000; // 60 seconds
 
   useEffect(() => {
@@ -471,7 +470,7 @@ const ProjectsMainPage: React.FC = () => {
   const counts = getTabCounts();
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
+    <div className="w-full" style={{ padding: '1rem' }}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -899,8 +898,8 @@ const ProjectsMainPage: React.FC = () => {
           </Alert>
         </Snackbar>
       </motion.div>
-    </Container>
+    </div>
   );
 };
 
-export default React.memo(ProjectsMainPage);
+export default memo(ProjectsMainPage);

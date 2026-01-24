@@ -13,6 +13,7 @@ export interface Post {
   updatedAt: Date;
   hasVoted?: boolean;
   Vote?: [{ id: string; type: VoteType }];
+  score?: number;
   author: {
     id: string;
     name: string;

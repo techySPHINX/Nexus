@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect } from 'react';
 import {
   Box,
   Typography,
@@ -72,7 +72,7 @@ const getStatusChip = (status: string | RequestStatus) => {
   );
 };
 
-export const SubCommunityJoinRequestModeration: React.FC = () => {
+export const SubCommunityJoinRequestModeration: FC = () => {
   const { id: subCommunityId } = useParams<{ id: string }>();
   //   const navigate = useNavigate();
   const { user } = useAuth();
@@ -307,7 +307,7 @@ export const SubCommunityJoinRequestModeration: React.FC = () => {
 };
 
 // Join Request Card Component
-const JoinRequestCard: React.FC<{
+const JoinRequestCard: FC<{
   request: JoinRequest;
   onViewDetails: (request: JoinRequest) => void;
   onApprove: (requestId: string) => void;
@@ -399,7 +399,7 @@ const JoinRequestCard: React.FC<{
 };
 
 // Request Detail Dialog Component
-const RequestDetailDialog: React.FC<{
+const RequestDetailDialog: FC<{
   open: boolean;
   request: JoinRequest | null;
   onClose: () => void;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   Card,
   CardContent,
@@ -62,7 +62,7 @@ interface PendingReceivedTabProps {
   actionLoading?: string | null;
 }
 
-const PendingReceivedTab: React.FC<PendingReceivedTabProps> = ({
+const PendingReceivedTab: FC<PendingReceivedTabProps> = ({
   pendingReceived,
   respondToRequest,
   getRoleColor,

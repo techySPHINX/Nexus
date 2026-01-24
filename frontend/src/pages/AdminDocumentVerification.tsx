@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { FC, useEffect, useState, useCallback } from 'react';
 import {
   Container,
   Paper,
@@ -104,7 +104,7 @@ const documentTypes = [
   'Other',
 ];
 
-const DocumentVerification: React.FC = () => {
+const DocumentVerification: FC = () => {
   const { showNotification } = useNotification();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));

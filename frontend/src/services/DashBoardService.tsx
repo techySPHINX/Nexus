@@ -15,8 +15,8 @@ export const DashBoardService = {
   },
   getConnectionStats: async () => {
     try {
-      const response = await api.get(`/connection/stats`);
-      console.log('Connection Stats Response:', response);
+      const response = await api.get(`/dashboard/stats`);
+      console.log('Dashboard Stats Response:', response);
       return response.data;
     } catch (error) {
       throw new Error(

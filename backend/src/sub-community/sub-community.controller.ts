@@ -26,7 +26,7 @@ import { UpdateReportDto } from '../report/dto/update-report.dto';
 @Controller('sub-community')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SubCommunityController {
-  constructor(private readonly subCommunityService: SubCommunityService) {}
+  constructor(private readonly subCommunityService: SubCommunityService) { }
 
   // --- SubCommunity CRUD Endpoints ---
 
@@ -40,26 +40,17 @@ export class SubCommunityController {
   async findAll(
     @Query('compact') compact?: string,
     @Query('privacy') privacy?: string,
-    @Query('sort') sort?: string,
-    @Query('type') type?: string,
-    @Query('q') q?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @GetCurrentUser('userId') userId?: string,
   ) {
     // parse compact safely from query string
     const useCompact = compact === undefined ? true : compact === 'true' || compact === '1';
-    const usePrivacy = privacy ? (privacy as 'all' | 'public' | 'private') : 'all';
-    const useSort = sort ? (sort as 'recommended' | 'newest' | 'members') : 'recommended';
     // if pagination params provided, parse numbers
     const p = page ? Number(page) : undefined;
     const l = limit ? Number(limit) : undefined;
     return this.subCommunityService.findAllSubCommunities(userId, {
       compact: useCompact,
-      privacy: usePrivacy,
-      sort: useSort,
-      type: type,
-      q: q,
       page: p,
       limit: l,
     });

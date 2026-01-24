@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { FC, useState } from 'react';
 import {
   Card,
   CardHeader,
@@ -57,7 +57,7 @@ interface PostCardProps {
   onDelete?: (postId: string) => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onLike, onComment }) => {
+const PostCard: FC<PostCardProps> = ({ post, onLike, onComment }) => {
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState('');

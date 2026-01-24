@@ -48,6 +48,7 @@ if (require.main === module) {
     'seed-mentorship.js',
     'seed-referrals.js',
     'seed-showcase.js',
+    'seed-news.js',
     'seed-messages.js',
     'seed-notification.js',
   ];

@@ -52,6 +52,7 @@ export class GamificationController {
       dto.userId,
       dto.points,
       dto.type,
+      dto.message,
       dto.entityId,
     );
 

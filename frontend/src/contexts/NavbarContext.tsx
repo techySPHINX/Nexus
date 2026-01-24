@@ -1,4 +1,5 @@
-import React, {
+import {
+  FC,
   createContext,
   useContext,
   useState,
@@ -32,7 +33,7 @@ interface NavbarProviderProps {
   children: ReactNode;
 }
 
-export const NavbarProvider: React.FC<NavbarProviderProps> = ({ children }) => {
+export const NavbarProvider: FC<NavbarProviderProps> = ({ children }) => {
   const [position, setPosition] = useState<NavbarPosition>('top');
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const theme = useTheme();

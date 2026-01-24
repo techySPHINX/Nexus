@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -53,7 +53,7 @@ type Event = {
   capacity?: number;
 };
 
-const EventDetailPage: React.FC = () => {
+const EventDetailPage: FC = () => {
   const { id } = useParams<{ id: string }>();
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);

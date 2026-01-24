@@ -1,5 +1,5 @@
 // CreateStartupModal.tsx
-import React, { useState } from 'react';
+import { FC, useState, FormEvent } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -35,7 +35,7 @@ interface CreateStartupModalProps {
   loading?: boolean;
 }
 
-const CreateStartupModal: React.FC<CreateStartupModalProps> = ({
+const CreateStartupModal: FC<CreateStartupModalProps> = ({
   open,
   onClose,
   onSubmit,
@@ -52,7 +52,7 @@ const CreateStartupModal: React.FC<CreateStartupModalProps> = ({
     monetizationModel: '', // comma-separated editor, we'll convert on submit
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     await onSubmit({
       ...formData,

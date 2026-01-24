@@ -1,6 +1,7 @@
 import { useDashboardContext } from '@/contexts/DashBoardContext';
 import { CheckCircle2, Circle, AlertCircle, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Fade from '@mui/material/Fade';
 import { useTheme } from '@/contexts/ThemeContext';
 import Card from '@mui/material/Card';
 
@@ -27,6 +28,82 @@ export default function ProfileStrength() {
     : 'bg-white rounded-xl border border-emerald-100 p-6 shadow-sm';
 
   const [refreshing, setRefreshing] = useState(false);
+  // showQuickAccess becomes true a few seconds after profile is complete
+  const [showQuickAccess, setShowQuickAccess] = useState(false);
+  // whether to display the completed-profile card (only for first view in session)
+  const [showCompleteCard, setShowCompleteCard] = useState(false);
+  // determine completion early so hooks can use it
+  const isProfileComplete =
+    profileCompletionStats?.completionPercentage === 100;
+  const [QuickAccessComponent, setQuickAccessComponent] =
+    useState<React.ComponentType | null>(null);
+
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout> | undefined;
+
+    if (isProfileComplete) {
+      // check sessionStorage to show completed card only once per session
+      try {
+        const shown = sessionStorage.getItem('profileCompleteShown') === 'true';
+        if (!shown) {
+          setShowCompleteCard(true);
+          setShowQuickAccess(false);
+          // after delay, hide complete card, show quick access and mark as shown
+          t = setTimeout(() => {
+            setShowQuickAccess(true);
+            setShowCompleteCard(false);
+            try {
+              sessionStorage.setItem('profileCompleteShown', 'true');
+            } catch {
+              /* ignore storage errors */
+            }
+          }, 3000);
+        } else {
+          // already shown this session — show quick access immediately
+          setShowCompleteCard(false);
+          setShowQuickAccess(true);
+        }
+      } catch {
+        // if sessionStorage is unavailable, fall back to showing complete card then quick access
+        setShowCompleteCard(true);
+        setShowQuickAccess(false);
+        t = setTimeout(() => {
+          setShowQuickAccess(true);
+          setShowCompleteCard(false);
+        }, 3000);
+      }
+    } else {
+      // profile not complete — clear states
+      setShowQuickAccess(false);
+      setShowCompleteCard(false);
+      try {
+        sessionStorage.removeItem('profileCompleteShown');
+      } catch {
+        /* ignore */
+      }
+      setQuickAccessComponent(null);
+    }
+
+    return () => {
+      if (t) clearTimeout(t);
+    };
+  }, [isProfileComplete]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (showQuickAccess && !QuickAccessComponent) {
+      import('@/components/DashBoard/QuickAccessMenu')
+        .then((mod) => {
+          if (mounted) setQuickAccessComponent(() => mod.default ?? mod);
+        })
+        .catch((err) => {
+          console.error('Failed to load QuickAccessMenu', err);
+        });
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [showQuickAccess, QuickAccessComponent]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -36,10 +113,6 @@ export default function ProfileStrength() {
       setRefreshing(false);
     }
   };
-
-  // Check if profile is 100% complete
-  const isProfileComplete =
-    profileCompletionStats?.completionPercentage === 100;
 
   // Calculate completion items based on the API response
   const getCompletionItems = (): ProfileCompletionItem[] => {
@@ -296,77 +369,102 @@ export default function ProfileStrength() {
     );
   }
 
-  // Profile is 100% complete
+  // Profile is 100% complete: render the completed card first (once per session),
+  // then fade into the QuickAccess menu. If the QuickAccess component isn't
+  // yet loaded show a small placeholder while it loads.
   if (isProfileComplete) {
     return (
-      <Card className={containerClasses}>
-        <div className="flex items-center justify-between mb-4">
-          <h3
-            className={
-              isDark
-                ? 'text-lg font-bold text-neutral-100'
-                : 'text-lg font-bold text-gray-900'
-            }
-          >
-            Profile Strength
-          </h3>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className="text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
-            />
-          </button>
-        </div>
+      <>
+        <Fade in={showCompleteCard} timeout={{ enter: 400, exit: 300 }}>
+          <div style={{ display: showCompleteCard ? 'block' : 'none' }}>
+            <Card className={containerClasses}>
+              <div className="flex items-center justify-between mb-4">
+                <h3
+                  className={
+                    isDark
+                      ? 'text-lg font-bold text-neutral-100'
+                      : 'text-lg font-bold text-gray-900'
+                  }
+                >
+                  Profile Strength
+                </h3>
+                <button
+                  onClick={handleRefresh}
+                  disabled={refreshing}
+                  className="text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
+                >
+                  <RefreshCw
+                    className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
+                  />
+                </button>
+              </div>
 
-        <div className="text-center py-4">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
-          </div>
-          <h4
-            className={
-              isDark
-                ? 'font-bold text-emerald-100 text-lg mb-2'
-                : 'font-bold text-gray-900 text-lg mb-2'
-            }
-          >
-            Profile Complete!
-          </h4>
-          <p
-            className={
-              isDark
-                ? 'text-sm text-neutral-300 mb-4'
-                : 'text-sm text-gray-600 mb-4'
-            }
-          >
-            Your profile is fully optimized for networking and opportunities
-          </p>
-          <div className="w-full bg-emerald-200 rounded-full h-2.5 mb-2">
-            <div
-              className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2.5 rounded-full"
-              style={{ width: '100%' }}
-            />
-          </div>
-          <p
-            className={
-              isDark
-                ? 'text-xs text-emerald-200 font-semibold'
-                : 'text-xs text-emerald-600 font-semibold'
-            }
-          >
-            {completed}/{totalRequired} • 100% Complete
-          </p>
-        </div>
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+                </div>
+                <h4
+                  className={
+                    isDark
+                      ? 'font-bold text-emerald-100 text-lg mb-2'
+                      : 'font-bold text-gray-900 text-lg mb-2'
+                  }
+                >
+                  Profile Complete!
+                </h4>
+                <p
+                  className={
+                    isDark
+                      ? 'text-sm text-neutral-300 mb-4'
+                      : 'text-sm text-gray-600 mb-4'
+                  }
+                >
+                  Your profile is fully optimized for networking and
+                  opportunities
+                </p>
+                <div className="w-full bg-emerald-200 rounded-full h-2.5 mb-2">
+                  <div
+                    className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2.5 rounded-full"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <p
+                  className={
+                    isDark
+                      ? 'text-xs text-emerald-200 font-semibold'
+                      : 'text-xs text-emerald-600 font-semibold'
+                  }
+                >
+                  {completed}/{totalRequired} • 100% Complete
+                </p>
+              </div>
 
-        <button
-          onClick={() => (window.location.href = '/profile')}
-          className="w-full mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
-        >
-          View Profile
-        </button>
-      </Card>
+              <button
+                onClick={() => (window.location.href = '/profile')}
+                className="w-full mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition-colors"
+              >
+                View Profile
+              </button>
+            </Card>
+          </div>
+        </Fade>
+
+        <Fade in={showQuickAccess} timeout={{ enter: 400, exit: 300 }}>
+          <div style={{ display: showQuickAccess ? 'block' : 'none' }}>
+            {QuickAccessComponent ? (
+              // render loaded quick access
+              <QuickAccessComponent />
+            ) : (
+              // small placeholder while quick access loads
+              <Card className={containerClasses}>
+                <div style={{ padding: 16 }}>
+                  <div className="h-4 bg-emerald-100 rounded w-24 mb-2 animate-pulse" />
+                </div>
+              </Card>
+            )}
+          </div>
+        </Fade>
+      </>
     );
   }
 

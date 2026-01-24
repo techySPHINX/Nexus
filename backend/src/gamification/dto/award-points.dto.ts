@@ -22,5 +22,9 @@ export class AwardPointsDto {
 
   @IsString()
   @IsOptional()
+  message: string;
+
+  @IsString()
+  @IsOptional()
   entityId?: string;
 }

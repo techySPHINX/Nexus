@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { FC, useState, useEffect } from 'react';
 import {
   Box,
   TextField,
@@ -15,7 +15,7 @@ import { useEventContext } from '@/contexts/eventContext';
 import { useTagContext } from '@/contexts/TagContext';
 import type { Event } from '@/types/Event';
 
-const CreateEventPage: React.FC = () => {
+const CreateEventPage: FC = () => {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
