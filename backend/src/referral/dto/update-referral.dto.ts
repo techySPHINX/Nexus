@@ -1,5 +1,11 @@
-
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsDateString, IsUrl } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsDateString,
+  IsUrl,
+} from 'class-validator';
 import { ReferralStatus } from '@prisma/client';
 
 /**

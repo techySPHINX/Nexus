@@ -22,7 +22,7 @@ export class GdprController {
     private readonly gdprService: GdprService,
     private readonly auditLog: AuditLogService,
     private readonly logger: WinstonLoggerService,
-  ) { }
+  ) {}
 
   @Get('export')
   async exportData(@GetCurrentUser('sub') userId: string, @Request() req) {
@@ -31,15 +31,10 @@ export class GdprController {
     const ipAddress = req.ip || req.connection?.remoteAddress || '';
     const userData = await this.gdprService.exportUserData(userId, ipAddress);
 
-    await this.auditLog.logDataPrivacy(
-      AuditAction.DATA_EXPORTED,
-      userId,
-      req,
-      {
-        format: 'json',
-        sections: Object.keys(userData).length,
-      },
-    );
+    await this.auditLog.logDataPrivacy(AuditAction.DATA_EXPORTED, userId, req, {
+      format: 'json',
+      sections: Object.keys(userData).length,
+    });
 
     return {
       message: 'User data exported successfully',
@@ -56,12 +51,9 @@ export class GdprController {
       'GdprController',
     );
 
-    await this.auditLog.logDataPrivacy(
-      AuditAction.DATA_DELETED,
-      userId,
-      req,
-      { type: 'complete_deletion' },
-    );
+    await this.auditLog.logDataPrivacy(AuditAction.DATA_DELETED, userId, req, {
+      type: 'complete_deletion',
+    });
 
     const ipAddress = req.ip || req.connection?.remoteAddress || '';
     await this.gdprService.deleteUserData(userId, ipAddress);
@@ -84,12 +76,9 @@ export class GdprController {
       'GdprController',
     );
 
-    await this.auditLog.logDataPrivacy(
-      AuditAction.DATA_DELETED,
-      userId,
-      req,
-      { type: 'anonymization' },
-    );
+    await this.auditLog.logDataPrivacy(AuditAction.DATA_DELETED, userId, req, {
+      type: 'anonymization',
+    });
 
     const ipAddress = req.ip || req.connection?.remoteAddress || '';
     await this.gdprService.anonymizeUserData(userId, ipAddress);

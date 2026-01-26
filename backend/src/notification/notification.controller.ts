@@ -28,7 +28,7 @@ export class NotificationController {
   constructor(
     private readonly notificationService: NotificationService,
     private readonly pushNotificationService: PushNotificationService,
-  ) { }
+  ) {}
 
   /**
    * Creates a new notification.

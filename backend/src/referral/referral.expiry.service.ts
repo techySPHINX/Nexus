@@ -13,11 +13,14 @@ export class ReferralExpiryService implements OnModuleInit {
     this.expirePastDeadlines().catch((e) =>
       this.logger.error('Initial expiry check failed', e),
     );
-    setInterval(() => {
-      this.expirePastDeadlines().catch((e) =>
-        this.logger.error('Scheduled expiry check failed', e),
-      );
-    }, 15 * 60 * 1000);
+    setInterval(
+      () => {
+        this.expirePastDeadlines().catch((e) =>
+          this.logger.error('Scheduled expiry check failed', e),
+        );
+      },
+      15 * 60 * 1000,
+    );
   }
 
   private async expirePastDeadlines() {

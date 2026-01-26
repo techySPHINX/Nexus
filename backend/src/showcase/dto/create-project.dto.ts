@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsUrl, IsArray, IsEnum, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUrl,
+  IsArray,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 import { ProjectStatus } from '@prisma/client';
 
 export class CreateProjectDto {

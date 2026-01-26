@@ -97,4 +97,4 @@ import { FileSecurityService } from './common/services/file-security.service';
     FileSecurityService,
   ],
 })
-export class AppModule { }
+export class AppModule {}

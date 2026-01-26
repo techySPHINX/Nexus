@@ -26,7 +26,7 @@ import { RevokeUserActionDto } from './dto/revoke-user-action.dto';
 
 @Injectable()
 export class ReportService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   /**
    * Create a new report - FIX: Auto-extract postId from comment
@@ -48,7 +48,9 @@ export class ReportService {
 
     // Ensure the provided id matches the report type
     if (type === ReportedContentType.POST && !postId) {
-      throw new BadRequestException('postId must be provided for POST reports.');
+      throw new BadRequestException(
+        'postId must be provided for POST reports.',
+      );
     }
     if (type === ReportedContentType.COMMENT && !commentId) {
       throw new BadRequestException(
@@ -166,7 +168,8 @@ export class ReportService {
 
       if (filters.startDate || filters.endDate) {
         where.createdAt = {};
-        if (filters.startDate) where.createdAt.gte = new Date(filters.startDate);
+        if (filters.startDate)
+          where.createdAt.gte = new Date(filters.startDate);
         if (filters.endDate) where.createdAt.lte = new Date(filters.endDate);
       }
 
@@ -594,7 +597,10 @@ export class ReportService {
         targetUserId: deleted.authorId,
         details: `Post deleted: ${dto.reason}`,
       });
-    } else if (report.commentId && report.type === ReportedContentType.COMMENT) {
+    } else if (
+      report.commentId &&
+      report.type === ReportedContentType.COMMENT
+    ) {
       deleted = await this.prisma.comment.update({
         where: { id: report.commentId },
         data: {
@@ -800,10 +806,7 @@ export class ReportService {
       }),
       this.prisma.contentReport.findMany({
         where: {
-          OR: [
-            { post: { authorId: userId } },
-            { comment: { userId } },
-          ],
+          OR: [{ post: { authorId: userId } }, { comment: { userId } }],
         },
         orderBy: { createdAt: 'desc' },
         include: {

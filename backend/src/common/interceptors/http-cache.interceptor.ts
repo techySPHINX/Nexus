@@ -22,7 +22,7 @@ export class HttpCacheInterceptor implements NestInterceptor {
   constructor(
     private cacheService: CacheService,
     private reflector: Reflector,
-  ) { }
+  ) {}
 
   async intercept(
     context: ExecutionContext,
@@ -42,7 +42,8 @@ export class HttpCacheInterceptor implements NestInterceptor {
     }
 
     // Get TTL from decorator or use default
-    const ttl = this.reflector.get<number>('cache_ttl', context.getHandler()) || 300;
+    const ttl =
+      this.reflector.get<number>('cache_ttl', context.getHandler()) || 300;
 
     // Generate cache key based on URL and user (for personalized content)
     const userId = user?.id || 'anonymous';

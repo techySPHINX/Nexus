@@ -20,7 +20,7 @@ import { FilterMessagesDto } from './dto/filter-messages.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('messages')
 export class MessagingController {
-  constructor(private readonly messagingService: MessagingService) { }
+  constructor(private readonly messagingService: MessagingService) {}
 
   /**
    * Sends a new message from the current user to a specified recipient.

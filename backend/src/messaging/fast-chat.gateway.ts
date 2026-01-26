@@ -44,7 +44,7 @@ interface TypingData {
  */
 @WebSocketGateway({
   cors: {
-    origin: process.env.ALLOWED_ORIGIN || "https://localhost:3001",
+    origin: process.env.ALLOWED_ORIGIN || 'https://localhost:3001',
     credentials: true,
   },
   namespace: '/ws',
@@ -54,7 +54,8 @@ interface TypingData {
 })
 @Injectable()
 export class FastChatGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -75,9 +76,7 @@ export class FastChatGateway
     if (redisUrl) {
       this.redis = new Redis(redisUrl);
     } else {
-      this.redis = new Redis(
-        this.configService.get('REDIS_URL'),
-      );
+      this.redis = new Redis(this.configService.get('REDIS_URL'));
     }
 
     this.redis.on('connect', () => {
@@ -234,9 +233,7 @@ export class FastChatGateway
         timestamp: new Date().toISOString(),
       });
 
-      this.logger.log(
-        `📊 Total connected users: ${this.connectedUsers.size}`,
-      );
+      this.logger.log(`📊 Total connected users: ${this.connectedUsers.size}`);
     } else {
       this.logger.log(`👋 Unauthenticated client ${client.id} disconnected`);
     }
@@ -255,9 +252,7 @@ export class FastChatGateway
 
       // Validate message data
       if (!data.receiverId || !data.content) {
-        this.logger.warn(
-          `❌ Invalid message data from user ${client.userId}`,
-        );
+        this.logger.warn(`❌ Invalid message data from user ${client.userId}`);
         client.emit('MESSAGE_ERROR', {
           error: 'Invalid message data',
           timestamp: new Date().toISOString(),
@@ -362,9 +357,7 @@ export class FastChatGateway
               message.id,
             );
 
-            this.logger.log(
-              `✅ Push notification sent to ${data.receiverId}`,
-            );
+            this.logger.log(`✅ Push notification sent to ${data.receiverId}`);
           } catch (fcmError) {
             if (fcmError.message === 'INVALID_TOKEN') {
               // Remove invalid device token
@@ -376,7 +369,10 @@ export class FastChatGateway
                 data: { fcmDeviceToken: null },
               });
             } else {
-              this.logger.error('❌ Failed to send push notification:', fcmError);
+              this.logger.error(
+                '❌ Failed to send push notification:',
+                fcmError,
+              );
             }
           }
         } else {
@@ -618,7 +614,9 @@ export class FastChatGateway
     @ConnectedSocket() client: AuthenticatedSocket,
   ) {
     if (!client.userId) {
-      this.logger.warn('❌ Unauthenticated user attempted to mark message as read');
+      this.logger.warn(
+        '❌ Unauthenticated user attempted to mark message as read',
+      );
       return { error: 'Not authenticated' };
     }
 
@@ -699,8 +697,12 @@ export class FastChatGateway
         timestamp: new Date().toISOString(),
       };
 
-      this.server.to(`user_${updatedMessage.senderId}`).emit('MESSAGE_EDITED', messageUpdate);
-      this.server.to(`user_${updatedMessage.receiverId}`).emit('MESSAGE_EDITED', messageUpdate);
+      this.server
+        .to(`user_${updatedMessage.senderId}`)
+        .emit('MESSAGE_EDITED', messageUpdate);
+      this.server
+        .to(`user_${updatedMessage.receiverId}`)
+        .emit('MESSAGE_EDITED', messageUpdate);
 
       return { success: true, message: updatedMessage };
     } catch (error) {
@@ -748,8 +750,12 @@ export class FastChatGateway
         timestamp: new Date().toISOString(),
       };
 
-      this.server.to(`user_${deletedMessage.senderId}`).emit('MESSAGE_DELETED', messageDeletion);
-      this.server.to(`user_${deletedMessage.receiverId}`).emit('MESSAGE_DELETED', messageDeletion);
+      this.server
+        .to(`user_${deletedMessage.senderId}`)
+        .emit('MESSAGE_DELETED', messageDeletion);
+      this.server
+        .to(`user_${deletedMessage.receiverId}`)
+        .emit('MESSAGE_DELETED', messageDeletion);
 
       return { success: true, message: deletedMessage };
     } catch (error) {

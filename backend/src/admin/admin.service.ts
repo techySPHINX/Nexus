@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AdminService {
   private readonly logger = new Logger(AdminService.name);
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Get comprehensive admin dashboard statistics
@@ -25,7 +25,9 @@ export class AdminService {
       ] = await Promise.all([
         this.prisma.user.count(),
         this.prisma.user.count({ where: { isAccountActive: true } }),
-        this.prisma.verificationDocument.count({ where: { status: 'PENDING' } }),
+        this.prisma.verificationDocument.count({
+          where: { status: 'PENDING' },
+        }),
         this.prisma.verificationDocument.count({
           where: {
             status: 'APPROVED',
@@ -79,36 +81,38 @@ export class AdminService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const [newUsers, activeSessions, newPosts, newProjects] = await Promise.all([
-      this.prisma.user.count({
-        where: {
-          createdAt: {
-            gte: startDate,
+    const [newUsers, activeSessions, newPosts, newProjects] = await Promise.all(
+      [
+        this.prisma.user.count({
+          where: {
+            createdAt: {
+              gte: startDate,
+            },
           },
-        },
-      }),
-      this.prisma.userSession.count({
-        where: {
-          lastActivity: {
-            gte: startDate,
+        }),
+        this.prisma.userSession.count({
+          where: {
+            lastActivity: {
+              gte: startDate,
+            },
           },
-        },
-      }),
-      this.prisma.post.count({
-        where: {
-          createdAt: {
-            gte: startDate,
+        }),
+        this.prisma.post.count({
+          where: {
+            createdAt: {
+              gte: startDate,
+            },
           },
-        },
-      }),
-      this.prisma.project.count({
-        where: {
-          createdAt: {
-            gte: startDate,
+        }),
+        this.prisma.project.count({
+          where: {
+            createdAt: {
+              gte: startDate,
+            },
           },
-        },
-      }),
-    ]);
+        }),
+      ],
+    );
 
     return {
       period: `Last ${days} days`,

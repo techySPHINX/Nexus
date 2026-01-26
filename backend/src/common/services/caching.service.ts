@@ -14,7 +14,7 @@ export class CachingService {
   constructor(
     private readonly redisService: RedisService,
     private readonly logger: WinstonLoggerService,
-  ) { }
+  ) {}
 
   /**
    * Cache key builder with namespace
@@ -164,11 +164,7 @@ export class CachingService {
   /**
    * Cache feed (paginated)
    */
-  async cacheFeed(
-    userId: string,
-    page: number,
-    feed: any[],
-  ): Promise<void> {
+  async cacheFeed(userId: string, page: number, feed: any[]): Promise<void> {
     const key = `${userId}:page:${page}`;
     await this.set('feed', key, feed, CacheTTL.SHORT);
   }
@@ -203,10 +199,7 @@ export class CachingService {
   /**
    * Get cached search results
    */
-  async getSearchResults(
-    query: string,
-    filters: any,
-  ): Promise<any[] | null> {
+  async getSearchResults(query: string, filters: any): Promise<any[] | null> {
     const key = `${query}:${JSON.stringify(filters)}`;
     return this.get('search', key);
   }
@@ -214,10 +207,7 @@ export class CachingService {
   /**
    * Cache leaderboard
    */
-  async cacheLeaderboard(
-    type: string,
-    leaderboard: any[],
-  ): Promise<void> {
+  async cacheLeaderboard(type: string, leaderboard: any[]): Promise<void> {
     await this.set('leaderboard', type, leaderboard, CacheTTL.LONG);
   }
 

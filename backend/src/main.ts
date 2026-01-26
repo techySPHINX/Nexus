@@ -52,11 +52,10 @@ async function bootstrap() {
   loggerService.log('✅ Helmet security headers enabled', 'Bootstrap');
 
   app.enableCors({
-    origin: process.env.ALLOWED_ORIGIN || "https://localhost:3001",
+    origin: process.env.ALLOWED_ORIGIN || 'https://localhost:3001',
     credentials: true,
   });
 
-  console.log('Cors allowed origin:', process.env.ALLOWED_ORIGIN || "https://localhost:3001");
   loggerService.log('✅ CORS configured', 'Bootstrap');
 
   // CORS - Configure Cross-Origin Resource Sharing
@@ -97,7 +96,11 @@ async function bootstrap() {
   redisIoAdapter.connectToRedis().catch((err) => {
     // Use the Nest logger to surface the error but continue startup
     const fallbackLogger = new WinstonLoggerService();
-    fallbackLogger.error('Redis adapter background connection failed', err?.stack || String(err), 'Bootstrap');
+    fallbackLogger.error(
+      'Redis adapter background connection failed',
+      err?.stack || String(err),
+      'Bootstrap',
+    );
   });
   app.useWebSocketAdapter(redisIoAdapter);
   loggerService.log(

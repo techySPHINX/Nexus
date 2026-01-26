@@ -28,7 +28,7 @@ export class GdprService {
     private readonly prisma: PrismaService,
     private readonly logger: WinstonLoggerService,
     private readonly auditLog: AuditLogService,
-  ) { }
+  ) {}
 
   /**
    * Export all user data (GDPR Right to Data Portability)

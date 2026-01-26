@@ -64,7 +64,7 @@ interface UserPresence {
 
 /**
  * Unified Production-Grade WebSocket Gateway
- * 
+ *
  * Features:
  * ✅ Horizontal scaling with Redis
  * ✅ Connection pooling and management
@@ -93,7 +93,8 @@ interface UserPresence {
 })
 @Injectable()
 export class UnifiedWebSocketGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -225,30 +226,36 @@ export class UnifiedWebSocketGateway
     }, 10000); // 10 seconds
 
     // Handle authentication
-    client.once('authenticate', async (data: {
-      userId: string;
-      token: string;
-      deviceInfo?: {
-        type: string;
-        browser?: string;
-        os?: string;
-      };
-    }) => {
-      clearTimeout(authTimeout);
+    client.once(
+      'authenticate',
+      async (data: {
+        userId: string;
+        token: string;
+        deviceInfo?: {
+          type: string;
+          browser?: string;
+          os?: string;
+        };
+      }) => {
+        clearTimeout(authTimeout);
 
-      try {
-        await this.authenticateClient(client, data);
-      } catch (error) {
-        this.logger.error(`❌ Authentication failed for ${connectionId}:`, error.message);
-        client.emit('auth:error', {
-          error: 'Authentication failed',
-          code: 'AUTH_FAILED',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
-        client.disconnect();
-      }
-    });
+        try {
+          await this.authenticateClient(client, data);
+        } catch (error) {
+          this.logger.error(
+            `❌ Authentication failed for ${connectionId}:`,
+            error.message,
+          );
+          client.emit('auth:error', {
+            error: 'Authentication failed',
+            code: 'AUTH_FAILED',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+          });
+          client.disconnect();
+        }
+      },
+    );
 
     // Handle errors
     client.on('error', (error) => {
@@ -283,7 +290,10 @@ export class UnifiedWebSocketGateway
     try {
       payload = await this.jwtService.verifyAsync(token);
     } catch (error) {
-      this.logger.error(`❌ JWT verification failed for ${userId}: ${error.message}`, error.stack);
+      this.logger.error(
+        `❌ JWT verification failed for ${userId}: ${error.message}`,
+        error.stack,
+      );
       throw new Error('Invalid or expired token');
     }
 
@@ -373,7 +383,9 @@ export class UnifiedWebSocketGateway
           timestamp: new Date().toISOString(),
         });
       } else {
-        this.logger.log(`ℹ️ User ${userId} still has ${userSockets.size} device(s) connected`);
+        this.logger.log(
+          `ℹ️ User ${userId} still has ${userSockets.size} device(s) connected`,
+        );
       }
     }
 
@@ -409,7 +421,9 @@ export class UnifiedWebSocketGateway
         await client.join(channel);
       }
 
-      this.logger.log(`📡 User ${client.userId} subscribed to: ${validChannels.join(', ')}`);
+      this.logger.log(
+        `📡 User ${client.userId} subscribed to: ${validChannels.join(', ')}`,
+      );
 
       return { success: true, channels: validChannels };
     } catch (error) {
@@ -435,7 +449,9 @@ export class UnifiedWebSocketGateway
         await client.leave(channel);
       }
 
-      this.logger.log(`📡 User ${client.userId} unsubscribed from: ${data.channels.join(', ')}`);
+      this.logger.log(
+        `📡 User ${client.userId} unsubscribed from: ${data.channels.join(', ')}`,
+      );
 
       return { success: true };
     } catch (error) {
@@ -518,7 +534,9 @@ export class UnifiedWebSocketGateway
           timestamp: new Date().toISOString(),
         });
 
-        this.logger.log(`📤 Broadcast ${event} to user ${userId} (${userSockets.size} device(s))`);
+        this.logger.log(
+          `📤 Broadcast ${event} to user ${userId} (${userSockets.size} device(s))`,
+        );
       } else {
         // User is offline, queue the message
         await this.queueMessage(userId, event, data);
@@ -547,11 +565,7 @@ export class UnifiedWebSocketGateway
   /**
    * Broadcast to room (channel)
    */
-  async broadcastToRoom(
-    room: string,
-    event: string,
-    data: any,
-  ): Promise<void> {
+  async broadcastToRoom(room: string, event: string, data: any): Promise<void> {
     this.server.to(room).emit(event, {
       ...data,
       timestamp: new Date().toISOString(),
@@ -653,7 +667,9 @@ export class UnifiedWebSocketGateway
       const messages = await this.redis.lrange(queueKey, 0, -1);
 
       if (messages.length > 0) {
-        this.logger.log(`📬 Delivering ${messages.length} queued messages to ${userId}`);
+        this.logger.log(
+          `📬 Delivering ${messages.length} queued messages to ${userId}`,
+        );
 
         for (const msgStr of messages.reverse()) {
           const message = JSON.parse(msgStr);
@@ -664,7 +680,10 @@ export class UnifiedWebSocketGateway
         await this.redis.del(queueKey);
       }
     } catch (error) {
-      this.logger.error(`❌ Error delivering queued messages for ${userId}:`, error);
+      this.logger.error(
+        `❌ Error delivering queued messages for ${userId}:`,
+        error,
+      );
     }
   }
 
@@ -706,7 +725,10 @@ export class UnifiedWebSocketGateway
       await this.prismaService.$queryRaw`SELECT 1`;
       return true;
     } catch (error) {
-      this.logger.error(`❌ Database health check failed: ${error.message}`, error.stack);
+      this.logger.error(
+        `❌ Database health check failed: ${error.message}`,
+        error.stack,
+      );
       return false;
     }
   }
@@ -732,7 +754,9 @@ export class UnifiedWebSocketGateway
             break;
 
           case 'server:user_event':
-            this.server.to(`user:${data.userId}`).emit(data.event, data.payload);
+            this.server
+              .to(`user:${data.userId}`)
+              .emit(data.event, data.payload);
             break;
 
           case 'server:room_event':
@@ -773,7 +797,10 @@ export class UnifiedWebSocketGateway
 
     for (const [userId, sockets] of this.connectedUsers.entries()) {
       for (const socket of sockets) {
-        if (socket.lastActivity && now - socket.lastActivity > this.IDLE_TIMEOUT) {
+        if (
+          socket.lastActivity &&
+          now - socket.lastActivity > this.IDLE_TIMEOUT
+        ) {
           // Mark as idle
           socket.emit('presence:idle', {
             reason: 'Inactivity detected',

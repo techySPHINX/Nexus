@@ -29,22 +29,24 @@ export class ShowcaseService {
 
     const project = await this.prisma.project.create({
       data: {
-      ownerId: userId,
-      imageUrl: optimizedImageUrl ?? (createProjectDto as any).imageUrl,
-      ...createProjectDto,
-      teamMembers: {
-        create: {
-        userId,
-        role: 'OWNER',
+        ownerId: userId,
+        imageUrl: optimizedImageUrl ?? (createProjectDto as any).imageUrl,
+        ...createProjectDto,
+        teamMembers: {
+          create: {
+            userId,
+            role: 'OWNER',
+          },
         },
-      },
       },
     });
 
     // award points for creating a project (fire-and-forget)
     try {
       const message = 'Created a new project';
-      this.gamificationService.awardForEvent('PROJECT_CREATED', userId, project.id, message).catch(() => undefined);
+      this.gamificationService
+        .awardForEvent('PROJECT_CREATED', userId, project.id, message)
+        .catch(() => undefined);
     } catch {
       // ignore
     }
@@ -91,10 +93,10 @@ export class ShowcaseService {
     // If update includes an imageUrl, optimize it first
     if ((updateProjectDto as any).imageUrl) {
       const optimized = await this.getOptimizedImageUrl(
-      (updateProjectDto as any).imageUrl,
+        (updateProjectDto as any).imageUrl,
       );
       (updateProjectDto as any).imageUrl =
-      optimized ?? (updateProjectDto as any).imageUrl;
+        optimized ?? (updateProjectDto as any).imageUrl;
     }
 
     // determine which keys actually changed (simple shallow comparison)
@@ -120,106 +122,104 @@ export class ShowcaseService {
 
       // handle tags/skills as array diffs (show only added/removed)
       if (k === 'tags' || k === 'skills') {
-      const oldArr: any[] = Array.isArray(oldVal) ? oldVal : [];
-      const newArr: any[] = Array.isArray(newVal) ? newVal : [];
+        const oldArr: any[] = Array.isArray(oldVal) ? oldVal : [];
+        const newArr: any[] = Array.isArray(newVal) ? newVal : [];
 
-      const oldSet = new Set(oldArr.map((x) => JSON.stringify(x)));
-      const newSet = new Set(newArr.map((x) => JSON.stringify(x)));
+        const oldSet = new Set(oldArr.map((x) => JSON.stringify(x)));
+        const newSet = new Set(newArr.map((x) => JSON.stringify(x)));
 
-      const added = newArr.filter((x) => !oldSet.has(JSON.stringify(x)));
-      const removed = oldArr.filter((x) => !newSet.has(JSON.stringify(x)));
+        const added = newArr.filter((x) => !oldSet.has(JSON.stringify(x)));
+        const removed = oldArr.filter((x) => !newSet.has(JSON.stringify(x)));
 
-      if (added.length > 0) {
-        summaries.push(
-        `${k.charAt(0).toUpperCase() + k.slice(1)} added: ${added
-          .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
-          .join(', ')}`,
-        );
-      }
-      if (removed.length > 0) {
-        summaries.push(
-        `${k.charAt(0).toUpperCase() + k.slice(1)} removed: ${removed
-          .map((r) => (typeof r === 'string' ? r : JSON.stringify(r)))
-          .join(', ')}`,
-        );
-      }
-      // if neither, it's an unusual case but fall through to generic
-      if (added.length === 0 && removed.length === 0) {
-        summaries.push(
-        `${k.charAt(0).toUpperCase() + k.slice(1)} changed.`,
-        );
-      }
-      continue;
+        if (added.length > 0) {
+          summaries.push(
+            `${k.charAt(0).toUpperCase() + k.slice(1)} added: ${added
+              .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+              .join(', ')}`,
+          );
+        }
+        if (removed.length > 0) {
+          summaries.push(
+            `${k.charAt(0).toUpperCase() + k.slice(1)} removed: ${removed
+              .map((r) => (typeof r === 'string' ? r : JSON.stringify(r)))
+              .join(', ')}`,
+          );
+        }
+        // if neither, it's an unusual case but fall through to generic
+        if (added.length === 0 && removed.length === 0) {
+          summaries.push(`${k.charAt(0).toUpperCase() + k.slice(1)} changed.`);
+        }
+        continue;
       }
 
       // handle collaboration/seeking fields specially
       if (k === 'seeking' || k === 'seekingCollaboration') {
-      // if explicitly set to null/undefined or empty array → project no longer seeking collaboration
-      if (newVal === null || newVal === undefined) {
-        summaries.push('Project no longer seeking collaboration');
+        // if explicitly set to null/undefined or empty array → project no longer seeking collaboration
+        if (newVal === null || newVal === undefined) {
+          summaries.push('Project no longer seeking collaboration');
+          continue;
+        }
+        const oldArr: any[] = Array.isArray(oldVal) ? oldVal : [];
+        const newArr: any[] = Array.isArray(newVal) ? newVal : [];
+
+        if (newArr.length === 0) {
+          summaries.push('Project no longer seeking collaboration');
+          continue;
+        }
+
+        const oldSet = new Set(oldArr.map((x) => JSON.stringify(x)));
+        const newSet = new Set(newArr.map((x) => JSON.stringify(x)));
+
+        const added = newArr.filter((x) => !oldSet.has(JSON.stringify(x)));
+        const removed = oldArr.filter((x) => !newSet.has(JSON.stringify(x)));
+
+        if (added.length > 0) {
+          summaries.push(
+            `Seeking added: ${added
+              .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
+              .join(', ')}`,
+          );
+        }
+        if (removed.length > 0) {
+          summaries.push(
+            `Seeking removed: ${removed
+              .map((r) => (typeof r === 'string' ? r : JSON.stringify(r)))
+              .join(', ')}`,
+          );
+        }
+        if (added.length === 0 && removed.length === 0) {
+          summaries.push('Seeking changed.');
+        }
         continue;
-      }
-      const oldArr: any[] = Array.isArray(oldVal) ? oldVal : [];
-      const newArr: any[] = Array.isArray(newVal) ? newVal : [];
-
-      if (newArr.length === 0) {
-        summaries.push('Project no longer seeking collaboration');
-        continue;
-      }
-
-      const oldSet = new Set(oldArr.map((x) => JSON.stringify(x)));
-      const newSet = new Set(newArr.map((x) => JSON.stringify(x)));
-
-      const added = newArr.filter((x) => !oldSet.has(JSON.stringify(x)));
-      const removed = oldArr.filter((x) => !newSet.has(JSON.stringify(x)));
-
-      if (added.length > 0) {
-        summaries.push(
-        `Seeking added: ${added
-          .map((a) => (typeof a === 'string' ? a : JSON.stringify(a)))
-          .join(', ')}`,
-        );
-      }
-      if (removed.length > 0) {
-        summaries.push(
-        `Seeking removed: ${removed
-          .map((r) => (typeof r === 'string' ? r : JSON.stringify(r)))
-          .join(', ')}`,
-        );
-      }
-      if (added.length === 0 && removed.length === 0) {
-        summaries.push('Seeking changed.');
-      }
-      continue;
       }
 
       // fallback: generic field change message (stringify values to handle objects/arrays)
       summaries.push(
-      `Field "${k}" changed from "${JSON.stringify(oldVal)}" to "${JSON.stringify(
-        newVal,
-      )}"`,
+        `Field "${k}" changed from "${JSON.stringify(oldVal)}" to "${JSON.stringify(
+          newVal,
+        )}"`,
       );
     }
 
     const changeSummary =
       summaries.length > 0
-      ? summaries.join('\n')
-      : 'No significant field changes detected.';
+        ? summaries.join('\n')
+        : 'No significant field changes detected.';
 
     // create projectUpdate record alongside updating the project in a transaction
     const [updatedProject] = await this.prisma.$transaction([
       this.prisma.project.update({
-      where: { id: projectId },
-      data: updateProjectDto,
-      select: selectObj,
+        where: { id: projectId },
+        data: updateProjectDto,
+        select: selectObj,
       }),
       this.prisma.projectUpdate.create({
-      data: {
-        projectId,
-        authorId: userId,
-        title: `Project updated: ${project.title}`,
-        content: changeSummary,
-      },
+        data: {
+          projectId,
+          authorId: userId,
+          title: `Project updated: ${project.title}`,
+          content: changeSummary,
+        },
       }),
     ]);
 
@@ -584,7 +584,7 @@ export class ShowcaseService {
 
   async getProjectById(projectId: string, detailed?: boolean, userId?: string) {
     let project;
-    if(!detailed) {
+    if (!detailed) {
       project = await this.prisma.project.findUnique({
         where: { id: projectId },
         select: {
@@ -605,7 +605,7 @@ export class ShowcaseService {
               teamMembers: true,
               updates: true,
             },
-          }
+          },
         },
       });
     } else {
@@ -1016,7 +1016,9 @@ export class ShowcaseService {
     // award points for creating a startup
     try {
       const message = 'Created a new startup';
-      this.gamificationService.awardForEvent('STARTUP_CREATED', userId, startup.id, message).catch(() => undefined);
+      this.gamificationService
+        .awardForEvent('STARTUP_CREATED', userId, startup.id, message)
+        .catch(() => undefined);
     } catch {
       // ignore
     }
@@ -1025,36 +1027,36 @@ export class ShowcaseService {
   }
 
   async getStartupStats(userId: string) {
-  const [totalStartups, userStats] = await Promise.all([
-    this.prisma.startup.count(),
+    const [totalStartups, userStats] = await Promise.all([
+      this.prisma.startup.count(),
 
-    this.prisma.startup.findMany({
-      where: {
-        OR: [
-          { startupFollower: { some: { userId } } },
-          { founderId: userId },
-        ]
-      },
-      select: {
-        founderId: true,
-        startupFollower: {
-          where: { userId },
-          select: { id: true }
-        }
-      }
-    })
-  ]);
+      this.prisma.startup.findMany({
+        where: {
+          OR: [
+            { startupFollower: { some: { userId } } },
+            { founderId: userId },
+          ],
+        },
+        select: {
+          founderId: true,
+          startupFollower: {
+            where: { userId },
+            select: { id: true },
+          },
+        },
+      }),
+    ]);
 
-  let followedStartups = 0;
-  let myStartups = 0;
+    let followedStartups = 0;
+    let myStartups = 0;
 
-  for (const s of userStats) {
-    if (s.founderId === userId) myStartups++;
-    if (s.startupFollower.length > 0) followedStartups++;
+    for (const s of userStats) {
+      if (s.founderId === userId) myStartups++;
+      if (s.startupFollower.length > 0) followedStartups++;
+    }
+
+    return { totalStartups, followedStartups, myStartups };
   }
-
-  return { totalStartups, followedStartups, myStartups };
-}
 
   async updateStartup(
     userId: string,
@@ -1085,195 +1087,225 @@ export class ShowcaseService {
   }
 
   async getStartups(
-  userId: string,
-  filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
-) {
-  const { search, status, cursor } = filterDto;
-  const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
+    userId: string,
+    filterDto: {
+      search?: string;
+      status?: string;
+      cursor?: string;
+      pageSize?: number;
+    } = {},
+  ) {
+    const { search, status, cursor } = filterDto;
+    const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
 
-  const where: any = {
-    ...(status && { status }),
-    ...(search && {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
+    const where: any = {
+      ...(status && { status }),
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const startups = await this.prisma.startup.findMany({
+      where,
+      orderBy: [
+        { createdAt: 'desc' },
+        { id: 'desc' }, // tie-breaker for stable pagination
       ],
-    }),
-  };
+      take: pageSize,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        websiteUrl: true,
+        status: true,
+        createdAt: true,
+        fundingGoal: true,
+        fundingRaised: true,
+        monetizationModel: true,
+        founderId: true,
+        _count: { select: { startupFollower: true } },
+        startupFollower: {
+          where: { userId },
+          select: { userId: true },
+          take: 1,
+        },
+      },
+    });
 
-  const startups = await this.prisma.startup.findMany({
-    where,
-    orderBy: [
-      { createdAt: 'desc' },
-      { id: 'desc' }, // tie-breaker for stable pagination
-    ],
-    take: pageSize,
-    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-    select: {
-      id: true,
-      name: true,
-      imageUrl: true,
-      websiteUrl: true,
-      status: true,
-      createdAt: true,
-      fundingGoal: true,
-      fundingRaised: true,
-      monetizationModel: true,
-      founderId: true,
-      _count: { select: { startupFollower: true } },
-      startupFollower: { where: { userId }, select: { userId: true }, take: 1 },
-    },
-  });
+    // 🧹 Strip internal fields before returning
+    const formatted = startups.map(({ _count, startupFollower, ...rest }) => ({
+      ...rest,
+      followersCount: _count?.startupFollower ?? 0,
+      isFollowing: startupFollower?.length > 0,
+    }));
 
-  // 🧹 Strip internal fields before returning
-  const formatted = startups.map(({ _count, startupFollower, ...rest }) => ({
-    ...rest,
-    followersCount: _count?.startupFollower ?? 0,
-    isFollowing: startupFollower?.length > 0,
-  }));
+    const nextCursor = startups.length
+      ? startups[startups.length - 1].id
+      : null;
+    const hasNext = startups.length === pageSize;
 
-  const nextCursor = startups.length ? startups[startups.length - 1].id : null;
-  const hasNext = startups.length === pageSize;
-
-  return {
-    data: formatted,
-    pagination: {
-      nextCursor,
-      hasNext,
-      pageSize,
-    },
-  };
-}
-
+    return {
+      data: formatted,
+      pagination: {
+        nextCursor,
+        hasNext,
+        pageSize,
+      },
+    };
+  }
 
   async getMyStartups(
-  userId: string,
-  filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
-) {
-  const { search, status, cursor } = filterDto;
-  const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
+    userId: string,
+    filterDto: {
+      search?: string;
+      status?: string;
+      cursor?: string;
+      pageSize?: number;
+    } = {},
+  ) {
+    const { search, status, cursor } = filterDto;
+    const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
 
-  const where: any = {
-    founderId: userId,
-    ...(status && { status }),
-    ...(search && {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
+    const where: any = {
+      founderId: userId,
+      ...(status && { status }),
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const startups = await this.prisma.startup.findMany({
+      where,
+      orderBy: [
+        { createdAt: 'desc' },
+        { id: 'desc' }, // tie-breaker for stable pagination
       ],
-    }),
-  };
+      take: pageSize,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        websiteUrl: true,
+        status: true,
+        founderId: true,
+        createdAt: true,
+        fundingGoal: true,
+        fundingRaised: true,
+        monetizationModel: true,
+        _count: { select: { startupFollower: true } },
+        startupFollower: {
+          where: { userId },
+          select: { userId: true },
+          take: 1,
+        },
+      },
+    });
 
-  const startups = await this.prisma.startup.findMany({
-    where,
-    orderBy: [
-      { createdAt: 'desc' },
-      { id: 'desc' }, // tie-breaker for stable pagination
-    ],
-    take: pageSize,
-    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-    select: {
-      id: true,
-      name: true,
-      imageUrl: true,
-      websiteUrl: true,
-      status: true,
-      founderId: true,
-      createdAt: true,
-      fundingGoal: true,
-      fundingRaised: true,
-      monetizationModel: true,
-      _count: { select: { startupFollower: true } },
-      startupFollower: { where: { userId }, select: { userId: true }, take: 1 },
-    },
-  });
+    // 🧹 Clean & normalize — remove internal fields before returning
+    const formattedStartups = startups.map(
+      ({ _count, startupFollower, ...rest }) => ({
+        ...rest,
+        followersCount: _count?.startupFollower ?? 0,
+        isFollowing: startupFollower?.length > 0,
+      }),
+    );
 
-  // 🧹 Clean & normalize — remove internal fields before returning
-  const formattedStartups = startups.map(({ _count, startupFollower, ...rest }) => ({
-    ...rest,
-    followersCount: _count?.startupFollower ?? 0,
-    isFollowing: startupFollower?.length > 0,
-  }));
+    const nextCursor = startups.length
+      ? startups[startups.length - 1].id
+      : null;
+    const hasNext = startups.length === pageSize;
 
-  const nextCursor = startups.length ? startups[startups.length - 1].id : null;
-  const hasNext = startups.length === pageSize;
-
-  return {
-    data: formattedStartups,
-    pagination: {
-      nextCursor,
-      hasNext,
-      pageSize,
-    },
-  };
-}
+    return {
+      data: formattedStartups,
+      pagination: {
+        nextCursor,
+        hasNext,
+        pageSize,
+      },
+    };
+  }
 
   async getFollowedStartups(
-  userId: string,
-  filterDto: { search?: string; status?: string; cursor?: string; pageSize?: number } = {},
-) {
-  const { search, status, cursor } = filterDto;
-  const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
+    userId: string,
+    filterDto: {
+      search?: string;
+      status?: string;
+      cursor?: string;
+      pageSize?: number;
+    } = {},
+  ) {
+    const { search, status, cursor } = filterDto;
+    const pageSize = filterDto.pageSize ? Number(filterDto.pageSize) : 12;
 
-  const where: any = {
-    startupFollower: { some: { userId } }, // direct relational filter
-    ...(status && { status }),
-    ...(search && {
-      OR: [
-        { name: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } },
+    const where: any = {
+      startupFollower: { some: { userId } }, // direct relational filter
+      ...(status && { status }),
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { description: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
+
+    const startups = await this.prisma.startup.findMany({
+      where,
+      orderBy: [
+        { createdAt: 'desc' }, // main ordering
+        { id: 'desc' }, // tie-breaker for stable pagination
       ],
-    }),
-  };
-
-  const startups = await this.prisma.startup.findMany({
-    where,
-    orderBy: [
-      { createdAt: 'desc' }, // main ordering
-      { id: 'desc' },        // tie-breaker for stable pagination
-    ],
-    take: pageSize,
-    ...(cursor && { cursor: { id: cursor }, skip: 1 }),
-    select: {
-      id: true,
-      name: true,
-      imageUrl: true,
-      websiteUrl: true,
-      status: true,
-      founderId: true,
-      createdAt: true,
-      fundingGoal: true,
-      fundingRaised: true,
-      monetizationModel: true,
-      _count: { select: { startupFollower: true } },
-      startupFollower: {
-        where: { userId },
-        select: { userId: true },
-        take: 1,
+      take: pageSize,
+      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
+      select: {
+        id: true,
+        name: true,
+        imageUrl: true,
+        websiteUrl: true,
+        status: true,
+        founderId: true,
+        createdAt: true,
+        fundingGoal: true,
+        fundingRaised: true,
+        monetizationModel: true,
+        _count: { select: { startupFollower: true } },
+        startupFollower: {
+          where: { userId },
+          select: { userId: true },
+          take: 1,
+        },
       },
-    },
-  });
+    });
 
-  const formattedStartups = startups.map(({ _count, startupFollower, ...rest }) => ({
-  ...rest,
-  followersCount: _count?.startupFollower ?? 0,
-  isFollowing: startupFollower?.length > 0,
-}));
-  
-  const nextCursor = startups.length ? startups[startups.length - 1].id : null;
-  const hasNext = startups.length === pageSize;
+    const formattedStartups = startups.map(
+      ({ _count, startupFollower, ...rest }) => ({
+        ...rest,
+        followersCount: _count?.startupFollower ?? 0,
+        isFollowing: startupFollower?.length > 0,
+      }),
+    );
 
-  
+    const nextCursor = startups.length
+      ? startups[startups.length - 1].id
+      : null;
+    const hasNext = startups.length === pageSize;
 
-  return {
-    data: formattedStartups,
-    pagination: {
-      nextCursor,
-      hasNext,
-      pageSize,
-    },
-  };
-}
+    return {
+      data: formattedStartups,
+      pagination: {
+        nextCursor,
+        hasNext,
+        pageSize,
+      },
+    };
+  }
 
   async getStartupById(startupId: string) {
     return this.prisma.startup.findUnique({
@@ -1284,7 +1316,9 @@ export class ShowcaseService {
 
   // Follow a startup
   async followStartup(userId: string, startupId: string) {
-    const startup = await this.prisma.startup.findUnique({ where: { id: startupId } });
+    const startup = await this.prisma.startup.findUnique({
+      where: { id: startupId },
+    });
     if (!startup) {
       throw new Error('Startup not found');
     }
@@ -1301,7 +1335,9 @@ export class ShowcaseService {
     // });
 
     // return updated follower count and status
-    const followersCount = await this.prisma.startupFollower.count({ where: { startupId } });
+    const followersCount = await this.prisma.startupFollower.count({
+      where: { startupId },
+    });
     return { isFollowing: true, followersCount };
   }
 
@@ -1315,12 +1351,18 @@ export class ShowcaseService {
       },
     });
 
-    const followersCount = await this.prisma.startupFollower.count({ where: { startupId } });
+    const followersCount = await this.prisma.startupFollower.count({
+      where: { startupId },
+    });
     return { isFollowing: false, followersCount };
   }
 
-  async createStartupComment(userId: string, startupId: string, commentText: string) {
-    const startup = await this.prisma.startup.findUnique({ 
+  async createStartupComment(
+    userId: string,
+    startupId: string,
+    commentText: string,
+  ) {
+    const startup = await this.prisma.startup.findUnique({
       where: { id: startupId },
       select: { id: true, name: true, founderId: true },
     });
@@ -1335,7 +1377,13 @@ export class ShowcaseService {
         comment: commentText,
       },
       include: {
-        user: { select: { id: true, name: true, profile: { select: { avatarUrl: true } } } },
+        user: {
+          select: {
+            id: true,
+            name: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
       },
     });
 
@@ -1348,7 +1396,9 @@ export class ShowcaseService {
     // award gamification points for startup comment
     try {
       const message = `Commented on a ${startup.name} startup`;
-      this.gamificationService.awardForEvent('STARTUP_COMMENT', userId, comment.id, message).catch(() => undefined);
+      this.gamificationService
+        .awardForEvent('STARTUP_COMMENT', userId, comment.id, message)
+        .catch(() => undefined);
     } catch {
       // ignore
     }
@@ -1370,12 +1420,19 @@ export class ShowcaseService {
         comment: true,
         createdAt: true,
         user: {
-          select: { id: true, name: true, role: true, profile: { select: { avatarUrl: true } } },
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
         },
       },
     });
 
-    const total = await this.prisma.startupComment.count({ where: { startupId } });
+    const total = await this.prisma.startupComment.count({
+      where: { startupId },
+    });
     return {
       comments,
       pagination: {
@@ -1413,7 +1470,12 @@ export class ShowcaseService {
     try {
       const message = `You got a supporter on project "${project.title}".`;
       this.gamificationService
-        .awardForEvent('PROJECT_SUPPORTED', project.ownerId, support.id, message)
+        .awardForEvent(
+          'PROJECT_SUPPORTED',
+          project.ownerId,
+          support.id,
+          message,
+        )
         .catch(() => undefined);
     } catch {}
 
@@ -1434,13 +1496,18 @@ export class ShowcaseService {
       },
     });
 
-     // Revoke gamification points if necessary
+    // Revoke gamification points if necessary
 
     try {
       if (existing) {
-        const project = await this.prisma.project.findUnique({ where: { id: projectId }, select: { ownerId: true } });
+        const project = await this.prisma.project.findUnique({
+          where: { id: projectId },
+          select: { ownerId: true },
+        });
         if (project && project.ownerId !== userId) {
-          await this.gamificationService.revokeForEvent('PROJECT_SUPPORTED', project.ownerId, existing.id).catch(() => undefined);
+          await this.gamificationService
+            .revokeForEvent('PROJECT_SUPPORTED', project.ownerId, existing.id)
+            .catch(() => undefined);
         }
       }
     } catch {}
@@ -1491,10 +1558,15 @@ export class ShowcaseService {
 
     try {
       if (existing) {
-        const project = await this.prisma.project.findUnique({ where: { id: projectId }, select: { ownerId: true } });
+        const project = await this.prisma.project.findUnique({
+          where: { id: projectId },
+          select: { ownerId: true },
+        });
         if (project && project.ownerId !== userId) {
           // Revoke the points previously awarded for this follow (entityId was follow.id when created)
-          await this.gamificationService.revokeForEvent('PROJECT_FOLLOWED', project.ownerId, existing.id).catch(() => undefined);
+          await this.gamificationService
+            .revokeForEvent('PROJECT_FOLLOWED', project.ownerId, existing.id)
+            .catch(() => undefined);
         }
       }
     } catch {}
@@ -1651,7 +1723,9 @@ export class ShowcaseService {
     // award gamification points for project comment
     try {
       const message = `Commented on a project "${project.title}"`;
-      this.gamificationService.awardForEvent('PROJECT_COMMENT', userId, comment.id, message).catch(() => undefined);
+      this.gamificationService
+        .awardForEvent('PROJECT_COMMENT', userId, comment.id, message)
+        .catch(() => undefined);
     } catch {
       // ignore
     }

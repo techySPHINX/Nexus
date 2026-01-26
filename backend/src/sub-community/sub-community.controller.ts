@@ -26,7 +26,7 @@ import { UpdateReportDto } from '../report/dto/update-report.dto';
 @Controller('sub-community')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SubCommunityController {
-  constructor(private readonly subCommunityService: SubCommunityService) { }
+  constructor(private readonly subCommunityService: SubCommunityService) {}
 
   // --- SubCommunity CRUD Endpoints ---
 
@@ -45,7 +45,8 @@ export class SubCommunityController {
     @GetCurrentUser('userId') userId?: string,
   ) {
     // parse compact safely from query string
-    const useCompact = compact === undefined ? true : compact === 'true' || compact === '1';
+    const useCompact =
+      compact === undefined ? true : compact === 'true' || compact === '1';
     // if pagination params provided, parse numbers
     const p = page ? Number(page) : undefined;
     const l = limit ? Number(limit) : undefined;
@@ -90,7 +91,6 @@ export class SubCommunityController {
     const l = limit ? Number(limit) : 6;
     return this.subCommunityService.findMyMemberSubCommunities(userId, p, l);
   }
-
 
   @Get(':id')
   async findOne(

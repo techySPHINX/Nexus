@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  UseGuards,
+} from '@nestjs/common';
 import { SubCommunityTypeService } from './sub-community-type.service';
 import { CreateSubCommunityTypeDto } from './dto/create-sub-community-type.dto';
 import { UpdateSubCommunityTypeDto } from './dto/update-sub-community-type.dto';
@@ -14,7 +23,7 @@ export class SubCommunityTypeController {
 
   @Get()
   async list() {
-    console.log("getting subcommunity types");
+    console.log('getting subcommunity types');
     return this.svc.listTypes();
   }
 
@@ -31,7 +40,10 @@ export class SubCommunityTypeController {
 
   @Patch(':id')
   @Roles(Role.ADMIN)
-  async update(@Param('id') id: string, @Body() dto: UpdateSubCommunityTypeDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateSubCommunityTypeDto,
+  ) {
     return this.svc.updateType(id, dto as any);
   }
 

@@ -22,7 +22,7 @@ interface AuthenticatedSocket extends Socket {
 
 /**
  * WebSocket Gateway for real-time dashboard updates.
- * 
+ *
  * Features:
  * - Real-time notifications
  * - Live activity feed
@@ -39,7 +39,8 @@ interface AuthenticatedSocket extends Socket {
   namespace: '/dashboard',
 })
 export class DashboardGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -47,7 +48,7 @@ export class DashboardGateway
   private connectedUsers = new Map<string, Set<string>>(); // userId -> Set of socketIds
   private socketToUser = new Map<string, string>(); // socketId -> userId
 
-  constructor(private readonly jwtService: JwtService) { }
+  constructor(private readonly jwtService: JwtService) {}
 
   /**
    * Called after the gateway has been initialized.

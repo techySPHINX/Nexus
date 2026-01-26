@@ -33,7 +33,7 @@ interface AuthenticatedSocket extends Socket {
  */
 @WebSocketGateway({
   cors: {
-    origin: process.env.ALLOWED_ORIGIN || "https://localhost:3001",
+    origin: process.env.ALLOWED_ORIGIN || 'https://localhost:3001',
     credentials: true,
   },
   namespace: '/ws',

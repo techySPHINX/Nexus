@@ -1,4 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
 
@@ -10,7 +15,8 @@ import { ConfigService } from '@nestjs/config';
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy {
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
 
   constructor(private configService: ConfigService) {
@@ -18,10 +24,7 @@ export class PrismaService
       process.env.DATABASE_CONNECTION_LIMIT || '10',
       10,
     );
-    const poolTimeout = parseInt(
-      process.env.DATABASE_POOL_TIMEOUT || '30',
-      10,
-    );
+    const poolTimeout = parseInt(process.env.DATABASE_POOL_TIMEOUT || '30', 10);
 
     // Construct DATABASE_URL with connection pooling parameters
     const baseUrl = process.env.DATABASE_URL || '';
@@ -37,15 +40,15 @@ export class PrismaService
       log:
         process.env.NODE_ENV === 'development'
           ? [
-            { emit: 'event', level: 'query' },
-            { emit: 'event', level: 'info' },
-            { emit: 'event', level: 'warn' },
-            { emit: 'event', level: 'error' },
-          ]
+              { emit: 'event', level: 'query' },
+              { emit: 'event', level: 'info' },
+              { emit: 'event', level: 'warn' },
+              { emit: 'event', level: 'error' },
+            ]
           : [
-            { emit: 'event', level: 'error' },
-            { emit: 'event', level: 'warn' },
-          ],
+              { emit: 'event', level: 'error' },
+              { emit: 'event', level: 'warn' },
+            ],
       errorFormat: 'pretty',
     });
 

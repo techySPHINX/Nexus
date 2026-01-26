@@ -8,7 +8,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   private subscriber: Redis;
   private publisher: Redis;
 
-  constructor(private readonly logger: WinstonLoggerService) { }
+  constructor(private readonly logger: WinstonLoggerService) {}
 
   async onModuleInit() {
     const redisUrl = process.env.REDIS_URL;
@@ -29,8 +29,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       client = new Redis(redisUrl, options);
       subscriber = new Redis(redisUrl, options);
       publisher = new Redis(redisUrl, options);
-    }
-    else {
+    } else {
       const redisConfig = {
         url: process.env.REDIS_URL,
         retryStrategy: (times: number) => {

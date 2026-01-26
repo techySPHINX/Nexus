@@ -360,6 +360,9 @@ model Connection {
   requester   User             @relation("RequestedConnections", fields: [requesterId], references: [id])
 
   @@unique([requesterId, recipientId])
+  @@index([requesterId, status])
+  @@index([recipientId, status])
+  @@index([status, createdAt])
   @@map("connection")
 }
 
@@ -378,6 +381,10 @@ model Message {
   sender           User          @relation("SentMessages", fields: [senderId], references: [id])
   readReceipts     ReadReceipt[]
 
+  @@index([senderId, receiverId])
+  @@index([receiverId, timestamp])
+  @@index([senderId, timestamp])
+  @@index([timestamp])
   @@map("message")
 }
 
@@ -404,6 +411,9 @@ model Notification {
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@index([createdAt])
   @@map("notification")
 }
 
@@ -493,6 +503,11 @@ model Referral {
   applications ReferralApplication[]
   postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
 
+  @@index([alumniId])
+  @@index([status, createdAt])
+  @@index([company])
+  @@index([location])
+  @@index([deadline])
   @@map("referrals")
 }
 
@@ -509,6 +524,10 @@ model ReferralApplication {
   referral       Referral          @relation(fields: [referralId], references: [id])
   applicant      User              @relation(fields: [applicantId], references: [id])
 
+  @@unique([referralId, applicantId])
+  @@index([referralId, status])
+  @@index([applicantId])
+  @@index([status, createdAt])
   @@map("referral_applications")
 }
 

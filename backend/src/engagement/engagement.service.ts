@@ -19,7 +19,7 @@ export class EngagementService {
     private prisma: PrismaService,
     private notificationService: NotificationService,
     private gamificationService: GamificationService,
-  ) { }
+  ) {}
 
   /**
    * Allows a user to vote on a specific post.
@@ -33,7 +33,7 @@ export class EngagementService {
   async voteOnPost(userId: string, postId: string, voteType: VoteType) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
-      select: { id: true, authorId: true, subject: true }
+      select: { id: true, authorId: true, subject: true },
     });
     if (!post) {
       throw new NotFoundException('Post not found');
@@ -56,10 +56,12 @@ export class EngagementService {
           if (existingVote.type === VoteType.UPVOTE) {
             const postAuthor = post.authorId;
             if (postAuthor && postAuthor !== userId) {
-              this.gamificationService.revokeForEvent('LIKE_RECEIVED', postAuthor, existingVote.id).catch(() => undefined);
+              this.gamificationService
+                .revokeForEvent('LIKE_RECEIVED', postAuthor, existingVote.id)
+                .catch(() => undefined);
             }
           }
-        } catch { }
+        } catch {}
 
         return this.prisma.vote.delete({ where: { id: existingVote.id } });
       } else {
@@ -73,15 +75,26 @@ export class EngagementService {
           if (voteType === VoteType.UPVOTE && post.authorId !== userId) {
             const message = `Upvoted on post: ${post.subject}`;
             this.gamificationService
-              .awardForEvent('LIKE_RECEIVED', post.authorId, updated.id, message)
+              .awardForEvent(
+                'LIKE_RECEIVED',
+                post.authorId,
+                updated.id,
+                message,
+              )
               .catch(() => undefined);
           }
 
           // If the vote was changed from upvote -> downvote, revoke previous award
-          if (voteType !== VoteType.UPVOTE && existingVote.type === VoteType.UPVOTE && post.authorId !== userId) {
-            this.gamificationService.revokeForEvent('LIKE_RECEIVED', post.authorId, existingVote.id).catch(() => undefined);
+          if (
+            voteType !== VoteType.UPVOTE &&
+            existingVote.type === VoteType.UPVOTE &&
+            post.authorId !== userId
+          ) {
+            this.gamificationService
+              .revokeForEvent('LIKE_RECEIVED', post.authorId, existingVote.id)
+              .catch(() => undefined);
           }
-        } catch { }
+        } catch {}
 
         return updated;
       }
@@ -105,7 +118,7 @@ export class EngagementService {
             .awardForEvent('LIKE_RECEIVED', post.authorId, created.id, message)
             .catch(() => undefined);
         }
-      } catch { }
+      } catch {}
 
       return created;
     }
@@ -123,7 +136,7 @@ export class EngagementService {
   async voteOnComment(userId: string, commentId: string, voteType: VoteType) {
     const comment = await this.prisma.comment.findUnique({
       where: { id: commentId },
-      select: { id: true, userId: true, content: true }
+      select: { id: true, userId: true, content: true },
     });
     if (!comment) {
       throw new NotFoundException('Comment not found');
@@ -154,15 +167,26 @@ export class EngagementService {
           const message = `Upvoted on comment: ${comment.content.substring(0, 30)}`;
           if (voteType === VoteType.UPVOTE && comment.userId !== userId) {
             this.gamificationService
-              .awardForEvent('LIKE_RECEIVED', comment.userId, updated.id, message)
+              .awardForEvent(
+                'LIKE_RECEIVED',
+                comment.userId,
+                updated.id,
+                message,
+              )
               .catch(() => undefined);
           }
 
           // If changing from upvote -> downvote, revoke previous award
-          if (voteType !== VoteType.UPVOTE && existingVote.type === VoteType.UPVOTE && comment.userId !== userId) {
-            this.gamificationService.revokeForEvent('LIKE_RECEIVED', comment.userId, existingVote.id).catch(() => undefined);
+          if (
+            voteType !== VoteType.UPVOTE &&
+            existingVote.type === VoteType.UPVOTE &&
+            comment.userId !== userId
+          ) {
+            this.gamificationService
+              .revokeForEvent('LIKE_RECEIVED', comment.userId, existingVote.id)
+              .catch(() => undefined);
           }
-        } catch { }
+        } catch {}
 
         return updated;
       }
@@ -185,7 +209,7 @@ export class EngagementService {
             .awardForEvent('LIKE_RECEIVED', comment.userId, created.id, message)
             .catch(() => undefined);
         }
-      } catch { }
+      } catch {}
 
       return created;
     }
@@ -216,20 +240,28 @@ export class EngagementService {
     try {
       if (existingVote.type === VoteType.UPVOTE) {
         if (existingVote.postId) {
-          const post = await this.prisma.post.findUnique({ where: { id: existingVote.postId } });
+          const post = await this.prisma.post.findUnique({
+            where: { id: existingVote.postId },
+          });
           if (post && post.authorId !== existingVote.userId) {
-            this.gamificationService.revokeForEvent('LIKE_RECEIVED', post.authorId, existingVote.id).catch(() => undefined);
+            this.gamificationService
+              .revokeForEvent('LIKE_RECEIVED', post.authorId, existingVote.id)
+              .catch(() => undefined);
           }
         }
 
         if (existingVote.commentId) {
-          const comment = await this.prisma.comment.findUnique({ where: { id: existingVote.commentId } });
+          const comment = await this.prisma.comment.findUnique({
+            where: { id: existingVote.commentId },
+          });
           if (comment && comment.userId !== existingVote.userId) {
-            this.gamificationService.revokeForEvent('LIKE_RECEIVED', comment.userId, existingVote.id).catch(() => undefined);
+            this.gamificationService
+              .revokeForEvent('LIKE_RECEIVED', comment.userId, existingVote.id)
+              .catch(() => undefined);
           }
         }
       }
-    } catch { }
+    } catch {}
 
     return this.prisma.vote.delete({ where: { id: voteId } });
   }
@@ -252,7 +284,7 @@ export class EngagementService {
   ) {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
-      select: { id: true, authorId: true, subject: true }
+      select: { id: true, authorId: true, subject: true },
     });
     if (!post) {
       throw new NotFoundException('Post not found');
@@ -314,9 +346,13 @@ export class EngagementService {
 
     // award points: if this was a reply (parentId) give reply points, else comment points
     try {
-      const message = parentId ? `Replied to comment: ${newComment.content.substring(0, 30)}` : `Commented on post: ${post.subject}`;
+      const message = parentId
+        ? `Replied to comment: ${newComment.content.substring(0, 30)}`
+        : `Commented on post: ${post.subject}`;
       const eventKey = parentId ? 'COMMENT_REPLY' : 'COMMENT_CREATED';
-      this.gamificationService.awardForEvent(eventKey, userId, newComment.id, message).catch(() => undefined);
+      this.gamificationService
+        .awardForEvent(eventKey, userId, newComment.id, message)
+        .catch(() => undefined);
     } catch {
       // ignore gamification errors
     }

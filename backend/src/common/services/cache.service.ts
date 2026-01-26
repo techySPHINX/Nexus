@@ -40,9 +40,7 @@ export class CacheService {
       });
     } else {
       // Local Redis (development)
-      this.redis = new Redis(
-        this.configService.get<string>('REDIS_URL'),
-      );
+      this.redis = new Redis(this.configService.get<string>('REDIS_URL'));
     }
 
     this.redis.on('connect', () => {
@@ -196,10 +194,7 @@ export class CacheService {
     try {
       return await this.redis.sadd(key, ...members);
     } catch (error) {
-      this.logger.error(
-        `Failed to add to set ${key}:`,
-        error.message,
-      );
+      this.logger.error(`Failed to add to set ${key}:`, error.message);
       return 0;
     }
   }
@@ -211,10 +206,7 @@ export class CacheService {
     try {
       return await this.redis.srem(key, ...members);
     } catch (error) {
-      this.logger.error(
-        `Failed to remove from set ${key}:`,
-        error.message,
-      );
+      this.logger.error(`Failed to remove from set ${key}:`, error.message);
       return 0;
     }
   }
@@ -226,10 +218,7 @@ export class CacheService {
     try {
       return await this.redis.smembers(key);
     } catch (error) {
-      this.logger.error(
-        `Failed to get set members ${key}:`,
-        error.message,
-      );
+      this.logger.error(`Failed to get set members ${key}:`, error.message);
       return [];
     }
   }
@@ -257,10 +246,7 @@ export class CacheService {
     try {
       return await this.redis.scard(key);
     } catch (error) {
-      this.logger.error(
-        `Failed to get set cardinality ${key}:`,
-        error.message,
-      );
+      this.logger.error(`Failed to get set cardinality ${key}:`, error.message);
       return 0;
     }
   }
@@ -273,10 +259,7 @@ export class CacheService {
       await this.redis.hset(key, field, JSON.stringify(value));
       return true;
     } catch (error) {
-      this.logger.error(
-        `Failed to set hash ${key}:`,
-        error.message,
-      );
+      this.logger.error(`Failed to set hash ${key}:`, error.message);
       return false;
     }
   }
@@ -292,10 +275,7 @@ export class CacheService {
       }
       return JSON.parse(value) as T;
     } catch (error) {
-      this.logger.error(
-        `Failed to get hash ${key}:`,
-        error.message,
-      );
+      this.logger.error(`Failed to get hash ${key}:`, error.message);
       return null;
     }
   }
@@ -322,10 +302,7 @@ export class CacheService {
 
       return parsed as T;
     } catch (error) {
-      this.logger.error(
-        `Failed to get hash all ${key}:`,
-        error.message,
-      );
+      this.logger.error(`Failed to get hash all ${key}:`, error.message);
       return null;
     }
   }
@@ -337,10 +314,7 @@ export class CacheService {
     try {
       return await this.redis.hdel(key, ...fields);
     } catch (error) {
-      this.logger.error(
-        `Failed to delete hash field ${key}:`,
-        error.message,
-      );
+      this.logger.error(`Failed to delete hash field ${key}:`, error.message);
       return 0;
     }
   }
@@ -448,11 +422,7 @@ export class CacheService {
   /**
    * Cache search results
    */
-  async cacheSearch(
-    query: string,
-    results: any,
-    ttl = 600,
-  ): Promise<void> {
+  async cacheSearch(query: string, results: any, ttl = 600): Promise<void> {
     const key = `${this.PREFIXES.SEARCH}${this.hashString(query)}`;
     await this.set(key, results, ttl);
   }

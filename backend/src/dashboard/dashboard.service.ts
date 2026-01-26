@@ -11,9 +11,8 @@ export class DashboardService {
 
   async getDashboardStats(userId: string) {
     // Reuse connection service for connection related stats
-    const connectionStats = await this.connectionService.getConnectionStats(
-      userId,
-    );
+    const connectionStats =
+      await this.connectionService.getConnectionStats(userId);
 
     // Fetch gender from profile (nullable string)
     const profile = await this.prisma.profile.findUnique({

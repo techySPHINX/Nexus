@@ -38,7 +38,11 @@ export class GamificationController {
     );
 
     // res is { userPoints, transaction }
-    return { success: true, userPoints: res.userPoints, transaction: res.transaction };
+    return {
+      success: true,
+      userPoints: res.userPoints,
+      transaction: res.transaction,
+    };
   }
 
   // Create a transaction and return the transaction object (alias of award, explicit intent)
@@ -56,7 +60,11 @@ export class GamificationController {
       dto.entityId,
     );
 
-    return { success: true, transaction: res.transaction, userPoints: res.userPoints };
+    return {
+      success: true,
+      transaction: res.transaction,
+      userPoints: res.userPoints,
+    };
   }
 
   // Get stored total points for a user
@@ -69,10 +77,14 @@ export class GamificationController {
   // Leaderboard endpoint - supports period query: all|day|week|month
   @Get('leaderboard')
   async leaderboard(
-    @Query('period', new DefaultValuePipe('all')) period: 'all' | 'day' | 'week' | 'month',
+    @Query('period', new DefaultValuePipe('all'))
+    period: 'all' | 'day' | 'week' | 'month',
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
   ) {
-    const data = await this.gamificationService.getLeaderboardByPeriod(period, limit);
+    const data = await this.gamificationService.getLeaderboardByPeriod(
+      period,
+      limit,
+    );
     return { period, limit, data };
   }
 
@@ -82,7 +94,10 @@ export class GamificationController {
     @Param('userId') userId: string,
     @Query('limit', new DefaultValuePipe(20), ParseIntPipe) limit: number,
   ) {
-    const data = await this.gamificationService.getRecentTransactions(userId, limit);
+    const data = await this.gamificationService.getRecentTransactions(
+      userId,
+      limit,
+    );
     return { userId, data };
   }
 }

@@ -35,7 +35,7 @@ interface NotificationPayload {
 
 /**
  * Dedicated Notification Gateway for Real-Time Push Notifications
- * 
+ *
  * Features:
  * ✅ Real-time notification delivery
  * ✅ Multi-device support
@@ -58,7 +58,8 @@ interface NotificationPayload {
 })
 @Injectable()
 export class NotificationGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
@@ -111,72 +112,83 @@ export class NotificationGateway
       }
     }, 10000);
 
-    client.once('authenticate', async (data: { userId: string; token: string }) => {
-      clearTimeout(authTimeout);
+    client.once(
+      'authenticate',
+      async (data: { userId: string; token: string }) => {
+        clearTimeout(authTimeout);
 
-      try {
-        const { userId, token } = data;
-
-        if (!userId || !token) {
-          throw new Error('Missing credentials');
-        }
-
-        // Verify JWT
-        let payload: any;
         try {
-          payload = await this.jwtService.verifyAsync(token);
+          const { userId, token } = data;
+
+          if (!userId || !token) {
+            throw new Error('Missing credentials');
+          }
+
+          // Verify JWT
+          let payload: any;
+          try {
+            payload = await this.jwtService.verifyAsync(token);
+          } catch (error) {
+            this.logger.error(
+              `❌ JWT verification failed: ${error.message}`,
+              error.stack,
+            );
+            throw new Error('Invalid or expired token');
+          }
+
+          // Set user info
+          client.userId = payload.sub || userId;
+          client.userEmail = payload.email;
+          client.lastActivity = Date.now();
+
+          // Store connection
+          if (!this.connectedUsers.has(client.userId)) {
+            this.connectedUsers.set(client.userId, new Set());
+          }
+          this.connectedUsers.get(client.userId)!.add(client);
+          this.socketToUser.set(client.id, client.userId);
+
+          // Join user-specific room
+          await client.join(`notifications:${client.userId}`);
+
+          // Send pending notifications
+          await this.deliverPendingNotifications(client.userId, client);
+
+          // Send unread count
+          const unreadCount = await this.getUnreadCount(client.userId);
+
+          client.emit('notification:connected', {
+            userId: client.userId,
+            unreadCount,
+            timestamp: new Date().toISOString(),
+          });
+
+          this.logger.log(
+            `✅ Notification client authenticated: ${client.userId} (${this.connectedUsers.get(client.userId)!.size} device(s))`,
+          );
         } catch (error) {
-          this.logger.error(`❌ JWT verification failed: ${error.message}`, error.stack);
-          throw new Error('Invalid or expired token');
+          this.logger.error(
+            `❌ Notification auth failed for ${client.id}:`,
+            error.message,
+          );
+          client.emit('notification:auth_error', {
+            error: 'Authentication failed',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+          });
+          client.disconnect();
         }
-
-        // Set user info
-        client.userId = payload.sub || userId;
-        client.userEmail = payload.email;
-        client.lastActivity = Date.now();
-
-        // Store connection
-        if (!this.connectedUsers.has(client.userId)) {
-          this.connectedUsers.set(client.userId, new Set());
-        }
-        this.connectedUsers.get(client.userId)!.add(client);
-        this.socketToUser.set(client.id, client.userId);
-
-        // Join user-specific room
-        await client.join(`notifications:${client.userId}`);
-
-        // Send pending notifications
-        await this.deliverPendingNotifications(client.userId, client);
-
-        // Send unread count
-        const unreadCount = await this.getUnreadCount(client.userId);
-
-        client.emit('notification:connected', {
-          userId: client.userId,
-          unreadCount,
-          timestamp: new Date().toISOString(),
-        });
-
-        this.logger.log(
-          `✅ Notification client authenticated: ${client.userId} (${this.connectedUsers.get(client.userId)!.size} device(s))`,
-        );
-      } catch (error) {
-        this.logger.error(`❌ Notification auth failed for ${client.id}:`, error.message);
-        client.emit('notification:auth_error', {
-          error: 'Authentication failed',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        });
-        client.disconnect();
-      }
-    });
+      },
+    );
   }
 
   async handleDisconnect(client: AuthenticatedSocket): Promise<void> {
     const userId = client.userId || this.socketToUser.get(client.id);
 
     if (!userId) {
-      this.logger.log(`👋 Unauthenticated notification client ${client.id} disconnected`);
+      this.logger.log(
+        `👋 Unauthenticated notification client ${client.id} disconnected`,
+      );
       return;
     }
 
@@ -200,7 +212,16 @@ export class NotificationGateway
    */
   async sendNotification(payload: NotificationPayload): Promise<void> {
     try {
-      const { userId, type, title, message, data, priority, actionUrl, imageUrl } = payload;
+      const {
+        userId,
+        type,
+        title,
+        message,
+        data,
+        priority,
+        actionUrl,
+        imageUrl,
+      } = payload;
 
       // Create notification in database
       const notification = await this.prismaService.notification.create({
@@ -230,7 +251,9 @@ export class NotificationGateway
 
       if (userSockets && userSockets.size > 0) {
         // User is online - send real-time notification
-        this.server.to(`notifications:${userId}`).emit('notification:new', notificationData);
+        this.server
+          .to(`notifications:${userId}`)
+          .emit('notification:new', notificationData);
 
         this.logger.log(
           `📤 Real-time notification sent to ${userId} (${userSockets.size} device(s)): ${type}`,
@@ -272,7 +295,9 @@ export class NotificationGateway
           }
         }
 
-        this.logger.log(`💾 Notification queued for offline user ${userId}: ${type}`);
+        this.logger.log(
+          `💾 Notification queued for offline user ${userId}: ${type}`,
+        );
       }
     } catch (error) {
       this.logger.error('❌ Error sending notification:', error);
@@ -296,7 +321,9 @@ export class NotificationGateway
   /**
    * Broadcast notification to all users
    */
-  async broadcastNotification(payload: Omit<NotificationPayload, 'userId'>): Promise<void> {
+  async broadcastNotification(
+    payload: Omit<NotificationPayload, 'userId'>,
+  ): Promise<void> {
     this.server.emit('notification:broadcast', {
       ...payload,
       timestamp: new Date().toISOString(),
@@ -329,10 +356,12 @@ export class NotificationGateway
       });
 
       // Broadcast to all user's devices
-      this.server.to(`notifications:${client.userId}`).emit('notification:read', {
-        notificationId: data.notificationId,
-        timestamp: new Date().toISOString(),
-      });
+      this.server
+        .to(`notifications:${client.userId}`)
+        .emit('notification:read', {
+          notificationId: data.notificationId,
+          timestamp: new Date().toISOString(),
+        });
 
       return { success: true };
     } catch (error) {
@@ -364,9 +393,11 @@ export class NotificationGateway
       });
 
       // Broadcast to all user's devices
-      this.server.to(`notifications:${client.userId}`).emit('notification:all_read', {
-        timestamp: new Date().toISOString(),
-      });
+      this.server
+        .to(`notifications:${client.userId}`)
+        .emit('notification:all_read', {
+          timestamp: new Date().toISOString(),
+        });
 
       return { success: true, count: result.count };
     } catch (error) {
@@ -453,10 +484,12 @@ export class NotificationGateway
       });
 
       // Broadcast to all user's devices
-      this.server.to(`notifications:${client.userId}`).emit('notification:deleted', {
-        notificationId: data.notificationId,
-        timestamp: new Date().toISOString(),
-      });
+      this.server
+        .to(`notifications:${client.userId}`)
+        .emit('notification:deleted', {
+          notificationId: data.notificationId,
+          timestamp: new Date().toISOString(),
+        });
 
       return { success: true };
     } catch (error) {
@@ -468,7 +501,10 @@ export class NotificationGateway
   /**
    * Queue notification for offline user
    */
-  private async queueNotification(userId: string, notification: any): Promise<void> {
+  private async queueNotification(
+    userId: string,
+    notification: any,
+  ): Promise<void> {
     try {
       const queueKey = `notification_queue:${userId}`;
 
@@ -492,7 +528,9 @@ export class NotificationGateway
       const notifications = await this.redis.lrange(queueKey, 0, -1);
 
       if (notifications.length > 0) {
-        this.logger.log(`📬 Delivering ${notifications.length} pending notifications to ${userId}`);
+        this.logger.log(
+          `📬 Delivering ${notifications.length} pending notifications to ${userId}`,
+        );
 
         for (const notifStr of notifications.reverse()) {
           const notification = JSON.parse(notifStr);
@@ -502,7 +540,10 @@ export class NotificationGateway
         await this.redis.del(queueKey);
       }
     } catch (error) {
-      this.logger.error(`❌ Error delivering pending notifications for ${userId}:`, error);
+      this.logger.error(
+        `❌ Error delivering pending notifications for ${userId}:`,
+        error,
+      );
     }
   }
 

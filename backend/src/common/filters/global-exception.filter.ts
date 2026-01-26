@@ -92,7 +92,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const errorResponse: ErrorResponse = {
       statusCode,
       timestamp: new Date().toISOString(),
-      path: request.url,
+      path: this.sanitizePath(request.url),
       method: request.method,
       message,
       error,
@@ -217,6 +217,40 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   }
 
   private generateRequestId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `req-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Sanitize URL path to remove sensitive query parameters from error logs
+   */
+  private sanitizePath(url: string): string {
+    try {
+      const urlObj = new URL(url, 'http://localhost');
+      const sensitiveParams = [
+        'token',
+        'password',
+        'secret',
+        'api_key',
+        'apikey',
+        'key',
+        'authorization',
+        'refresh_token',
+        'access_token',
+      ];
+
+      sensitiveParams.forEach((param) => {
+        if (urlObj.searchParams.has(param)) {
+          urlObj.searchParams.set(param, '[REDACTED]');
+        }
+      });
+
+      return urlObj.pathname + urlObj.search;
+    } catch {
+      // If URL parsing fails, sanitize using regex
+      return url.replace(
+        /([?&])(token|password|secret|api_key|apikey|key|authorization|refresh_token|access_token)=([^&]*)/gi,
+        '$1$2=[REDACTED]',
+      );
+    }
   }
 }

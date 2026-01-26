@@ -20,4 +20,4 @@ import { WinstonLoggerService } from '../common/logger/winston-logger.service';
   ],
   exports: [UserService],
 })
-export class UserModule { }
+export class UserModule {}

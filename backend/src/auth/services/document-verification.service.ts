@@ -17,7 +17,7 @@ export class DocumentVerificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
-  ) { }
+  ) {}
 
   /**
    * Submit documents for verification
@@ -421,7 +421,11 @@ export class DocumentVerificationService {
     });
 
     const results = {
-      successful: [] as Array<{ userId: string; email: string; userName: string }>,
+      successful: [] as Array<{
+        userId: string;
+        email: string;
+        userName: string;
+      }>,
       failed: [] as Array<{ userId: string; email: string; reason: string }>,
       alreadyApproved: [] as Array<{ userId: string; email: string }>,
     };
@@ -432,13 +436,17 @@ export class DocumentVerificationService {
         const user = userDocs[0].user;
 
         // Check if any documents are already approved
-        const alreadyApproved = userDocs.some((doc) => doc.status === 'APPROVED');
+        const alreadyApproved = userDocs.some(
+          (doc) => doc.status === 'APPROVED',
+        );
         if (alreadyApproved) {
           results.alreadyApproved.push({
             userId,
             email: user.email,
           });
-          this.logger.warn(`⚠️ Some documents already approved for user ${userId}`);
+          this.logger.warn(
+            `⚠️ Some documents already approved for user ${userId}`,
+          );
           continue;
         }
 
@@ -452,7 +460,7 @@ export class DocumentVerificationService {
           continue;
         }
 
-        const userDocIds = userDocs.map(d => d.id);
+        const userDocIds = userDocs.map((d) => d.id);
 
         // Use transaction for atomic operation per user
         const result = await this.prisma.$transaction(async (tx) => {
@@ -517,7 +525,10 @@ export class DocumentVerificationService {
           `✅ Documents approved for user ${userId} (${user.email}) by admin ${adminId}`,
         );
       } catch (error) {
-        this.logger.error(`Failed to approve documents for user ${userId}:`, error);
+        this.logger.error(
+          `Failed to approve documents for user ${userId}:`,
+          error,
+        );
         results.failed.push({
           userId,
           email: userDocs[0].user.email,
@@ -578,7 +589,11 @@ export class DocumentVerificationService {
     });
 
     const results = {
-      successful: [] as Array<{ userId: string; email: string; userName: string }>,
+      successful: [] as Array<{
+        userId: string;
+        email: string;
+        userName: string;
+      }>,
       failed: [] as Array<{ userId: string; email: string; reason: string }>,
     };
 
@@ -586,7 +601,7 @@ export class DocumentVerificationService {
     for (const [userId, userDocs] of documentsByUser) {
       try {
         const user = userDocs[0].user;
-        const userDocIds = userDocs.map(d => d.id);
+        const userDocIds = userDocs.map((d) => d.id);
 
         // Update documents status
         await this.prisma.verificationDocument.updateMany({
@@ -632,7 +647,10 @@ export class DocumentVerificationService {
           `❌ Documents rejected for user ${userId} (${user.email}) by admin ${adminId}`,
         );
       } catch (error) {
-        this.logger.error(`Failed to reject documents for user ${userId}:`, error);
+        this.logger.error(
+          `Failed to reject documents for user ${userId}:`,
+          error,
+        );
         results.failed.push({
           userId,
           email: userDocs[0].user.email,

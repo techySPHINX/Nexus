@@ -1,7 +1,12 @@
-import { IsString, IsOptional, IsBoolean, IsUrl, IsNotEmpty } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsBoolean,
+  IsUrl,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class CreateNewsDto {
-    
   @IsNotEmpty()
   @IsString()
   title: string;

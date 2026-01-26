@@ -32,12 +32,16 @@ export class TakeUserActionDto {
   durationDays?: number;
 
   // Required for TEMPORARY_BAN (alternative to durationDays)
-  @ValidateIf((o) => o.actionType === UserActionType.TEMPORARY_BAN && !o.durationDays)
+  @ValidateIf(
+    (o) => o.actionType === UserActionType.TEMPORARY_BAN && !o.durationDays,
+  )
   @IsDateString()
   expiresAt?: string;
 
   @IsString()
   @IsOptional()
-  @MaxLength(2000, { message: 'Additional notes cannot exceed 2000 characters' })
+  @MaxLength(2000, {
+    message: 'Additional notes cannot exceed 2000 characters',
+  })
   notes?: string;
 }

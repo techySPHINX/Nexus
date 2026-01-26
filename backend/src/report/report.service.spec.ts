@@ -1,6 +1,6 @@
 /**
  * Production-Grade Report System Test Suite
- * 
+ *
  * Tests all critical functionality:
  * - Report creation with auto postId extraction
  * - Report resolution and dismissal
@@ -20,10 +20,7 @@ import {
   UserActionType,
   ModerationActionType,
 } from '@prisma/client';
-import {
-  BadRequestException,
-  ForbiddenException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 
 describe('ReportService - Production Grade', () => {
   let service: ReportService;
@@ -109,7 +106,9 @@ describe('ReportService - Production Grade', () => {
 
   describe('createReport - PostId Auto-Extraction Fix', () => {
     it('should auto-extract postId from comment when reporting comment', async () => {
-      jest.spyOn(prisma.comment, 'findUnique').mockResolvedValue(mockComment as any);
+      jest
+        .spyOn(prisma.comment, 'findUnique')
+        .mockResolvedValue(mockComment as any);
       jest.spyOn(prisma.contentReport, 'findFirst').mockResolvedValue(null);
       jest.spyOn(prisma.contentReport, 'create').mockResolvedValue({
         id: 'report-id',
@@ -155,13 +154,15 @@ describe('ReportService - Production Grade', () => {
         commentId: 'comment-id',
       };
 
-      await expect(service.createReport(dto as any, 'reporter-id')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.createReport(dto as any, 'reporter-id'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should prevent duplicate reports', async () => {
-      jest.spyOn(prisma.comment, 'findUnique').mockResolvedValue(mockComment as any);
+      jest
+        .spyOn(prisma.comment, 'findUnique')
+        .mockResolvedValue(mockComment as any);
       jest.spyOn(prisma.contentReport, 'findFirst').mockResolvedValue({
         id: 'existing-report',
       } as any);
@@ -172,15 +173,17 @@ describe('ReportService - Production Grade', () => {
         commentId: 'comment-id',
       };
 
-      await expect(service.createReport(dto as any, 'reporter-id')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.createReport(dto as any, 'reporter-id'),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('User Actions', () => {
     it('should create temporary ban with expiration', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockAdminUser as any);
+      jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValue(mockAdminUser as any);
       jest.spyOn(prisma.contentReport, 'findUnique').mockResolvedValue({
         id: 'report-id',
         post: { authorId: 'violator-id' },
@@ -200,7 +203,11 @@ describe('ReportService - Production Grade', () => {
         durationDays: 7,
       };
 
-      const result = await service.takeUserAction('report-id', 'admin-id', dto as any);
+      const result = await service.takeUserAction(
+        'report-id',
+        'admin-id',
+        dto as any,
+      );
 
       expect(result.actionType).toBe(UserActionType.TEMPORARY_BAN);
       expect(prisma.user.update).toHaveBeenCalledWith({
@@ -212,7 +219,9 @@ describe('ReportService - Production Grade', () => {
     });
 
     it('should revoke user action and restore account', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockAdminUser as any);
+      jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValue(mockAdminUser as any);
       jest.spyOn(prisma.userAction, 'findUnique').mockResolvedValue({
         id: 'action-id',
         userId: 'user-id',
@@ -242,7 +251,9 @@ describe('ReportService - Production Grade', () => {
 
   describe('Content Soft Deletion', () => {
     it('should soft delete post with audit trail', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockAdminUser as any);
+      jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValue(mockAdminUser as any);
       jest.spyOn(prisma.contentReport, 'findUnique').mockResolvedValue({
         id: 'report-id',
         postId: 'post-id',
@@ -275,12 +286,15 @@ describe('ReportService - Production Grade', () => {
 
   describe('Batch Operations', () => {
     it('should batch resolve multiple reports', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockAdminUser as any);
-      jest.spyOn(prisma.contentReport, 'findMany').mockResolvedValue([
-        { id: 'report-1' },
-        { id: 'report-2' },
-      ] as any);
-      jest.spyOn(prisma.contentReport, 'updateMany').mockResolvedValue({ count: 2 });
+      jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValue(mockAdminUser as any);
+      jest
+        .spyOn(prisma.contentReport, 'findMany')
+        .mockResolvedValue([{ id: 'report-1' }, { id: 'report-2' }] as any);
+      jest
+        .spyOn(prisma.contentReport, 'updateMany')
+        .mockResolvedValue({ count: 2 });
       jest.spyOn(prisma.moderationLog, 'create').mockResolvedValue({} as any);
 
       const dto = {
@@ -301,15 +315,19 @@ describe('ReportService - Production Grade', () => {
 
   describe('Security & Authorization', () => {
     it('should prevent non-admin from accessing reports', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockRegularUser as any);
+      jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValue(mockRegularUser as any);
 
-      await expect(
-        service.getAllReports('user-id', 20, null),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.getAllReports('user-id', 20, null)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should prevent non-admin from taking user actions', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockRegularUser as any);
+      jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValue(mockRegularUser as any);
 
       const dto = {
         actionType: UserActionType.WARNING,
@@ -324,7 +342,9 @@ describe('ReportService - Production Grade', () => {
 
   describe('Analytics', () => {
     it('should generate comprehensive analytics', async () => {
-      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(mockAdminUser as any);
+      jest
+        .spyOn(prisma.user, 'findUnique')
+        .mockResolvedValue(mockAdminUser as any);
       jest.spyOn(prisma.contentReport, 'count').mockResolvedValue(100);
       // Use Object.assign to bypass Prisma's complex groupBy types
       Object.assign(prisma.contentReport, {

@@ -49,7 +49,7 @@ export interface RealtimeEvent {
 
 /**
  * Production-Grade WebSocket Monitoring and Analytics Service
- * 
+ *
  * Features:
  * ✅ Real-time metrics collection
  * ✅ Performance monitoring (latency, throughput)
@@ -335,14 +335,19 @@ export class WebSocketMonitoringService {
    */
   async getNamespaceStats(namespace: string): Promise<any> {
     try {
-      const [connections, messagesSent, messagesReceived, messagesQueued, messagesFailed] =
-        await Promise.all([
-          this.redis.get(`metrics:connections:${namespace}`),
-          this.redis.get(`metrics:messages:${namespace}:sent`),
-          this.redis.get(`metrics:messages:${namespace}:received`),
-          this.redis.get(`metrics:messages:${namespace}:queued`),
-          this.redis.get(`metrics:messages:${namespace}:failed`),
-        ]);
+      const [
+        connections,
+        messagesSent,
+        messagesReceived,
+        messagesQueued,
+        messagesFailed,
+      ] = await Promise.all([
+        this.redis.get(`metrics:connections:${namespace}`),
+        this.redis.get(`metrics:messages:${namespace}:sent`),
+        this.redis.get(`metrics:messages:${namespace}:received`),
+        this.redis.get(`metrics:messages:${namespace}:queued`),
+        this.redis.get(`metrics:messages:${namespace}:failed`),
+      ]);
 
       return {
         namespace,
@@ -355,7 +360,10 @@ export class WebSocketMonitoringService {
         },
       };
     } catch (error) {
-      this.logger.error(`❌ Error getting namespace stats for ${namespace}:`, error);
+      this.logger.error(
+        `❌ Error getting namespace stats for ${namespace}:`,
+        error,
+      );
       return null;
     }
   }

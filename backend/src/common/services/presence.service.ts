@@ -62,7 +62,7 @@ export interface ActivityEvent {
 
 /**
  * Production-Grade Presence and Activity Tracking Service
- * 
+ *
  * Features:
  * ✅ Real-time presence tracking
  * ✅ Multi-device support
@@ -178,7 +178,9 @@ export class PresenceService {
   /**
    * Get presence for multiple users
    */
-  async getPresenceForUsers(userIds: string[]): Promise<Map<string, PresenceData>> {
+  async getPresenceForUsers(
+    userIds: string[],
+  ): Promise<Map<string, PresenceData>> {
     const presenceMap = new Map<string, PresenceData>();
 
     try {
@@ -197,7 +199,10 @@ export class PresenceService {
               const presence = JSON.parse(result[1] as string) as PresenceData;
               presenceMap.set(userIds[index], presence);
             } catch (err) {
-              this.logger.error(`Error parsing presence for ${userIds[index]}:`, err);
+              this.logger.error(
+                `Error parsing presence for ${userIds[index]}:`,
+                err,
+              );
             }
           }
         });
@@ -249,7 +254,10 @@ export class PresenceService {
 
       this.logger.debug(`📊 Activity tracked: ${userId} -> ${type}`);
     } catch (error) {
-      this.logger.error(`❌ Error tracking activity for ${event.userId}:`, error);
+      this.logger.error(
+        `❌ Error tracking activity for ${event.userId}:`,
+        error,
+      );
     }
   }
 
@@ -264,9 +272,14 @@ export class PresenceService {
       const activityKey = `activity:${userId}`;
       const activities = await this.redis.lrange(activityKey, 0, limit - 1);
 
-      return activities.map((activity) => JSON.parse(activity) as ActivityEvent);
+      return activities.map(
+        (activity) => JSON.parse(activity) as ActivityEvent,
+      );
     } catch (error) {
-      this.logger.error(`❌ Error getting activity history for ${userId}:`, error);
+      this.logger.error(
+        `❌ Error getting activity history for ${userId}:`,
+        error,
+      );
       return [];
     }
   }
@@ -278,7 +291,10 @@ export class PresenceService {
     try {
       return (await this.redis.sismember('online_users', userId)) === 1;
     } catch (error) {
-      this.logger.error(`❌ Error checking online status for ${userId}:`, error);
+      this.logger.error(
+        `❌ Error checking online status for ${userId}:`,
+        error,
+      );
       return false;
     }
   }
@@ -357,7 +373,9 @@ export class PresenceService {
         await this.redis.srem(typingKey, userId);
       }
 
-      this.logger.debug(`⌨️ Typing status: ${userId} -> ${targetId} (${isTyping})`);
+      this.logger.debug(
+        `⌨️ Typing status: ${userId} -> ${targetId} (${isTyping})`,
+      );
     } catch (error) {
       this.logger.error(`❌ Error setting typing status:`, error);
     }
@@ -371,7 +389,10 @@ export class PresenceService {
       const typingKey = `typing:${targetId}`;
       return await this.redis.smembers(typingKey);
     } catch (error) {
-      this.logger.error(`❌ Error getting typing users for ${targetId}:`, error);
+      this.logger.error(
+        `❌ Error getting typing users for ${targetId}:`,
+        error,
+      );
       return [];
     }
   }
@@ -404,7 +425,9 @@ export class PresenceService {
         await this.redis.srem(viewingKey, userId);
       }
 
-      this.logger.debug(`👁️ Viewing status: ${userId} -> ${resourceType}:${resourceId} (${isViewing})`);
+      this.logger.debug(
+        `👁️ Viewing status: ${userId} -> ${resourceType}:${resourceId} (${isViewing})`,
+      );
     } catch (error) {
       this.logger.error(`❌ Error setting viewing status:`, error);
     }
@@ -413,7 +436,10 @@ export class PresenceService {
   /**
    * Get users viewing a resource
    */
-  async getViewingUsers(resourceType: string, resourceId: string): Promise<string[]> {
+  async getViewingUsers(
+    resourceType: string,
+    resourceId: string,
+  ): Promise<string[]> {
     try {
       const viewingKey = `viewing:${resourceType}:${resourceId}`;
       return await this.redis.smembers(viewingKey);
@@ -443,7 +469,10 @@ export class PresenceService {
         newStatus = PresenceStatus.AWAY;
       } else if (timeSinceLastActivity >= this.IDLE_THRESHOLD) {
         newStatus = PresenceStatus.IDLE;
-      } else if (presence.status === PresenceStatus.IDLE || presence.status === PresenceStatus.AWAY) {
+      } else if (
+        presence.status === PresenceStatus.IDLE ||
+        presence.status === PresenceStatus.AWAY
+      ) {
         newStatus = PresenceStatus.ONLINE;
       }
 
@@ -538,7 +567,10 @@ export class PresenceService {
 
       this.logger.debug(`📝 Presence history stored: ${userId} -> ${status}`);
     } catch (error) {
-      this.logger.error(`❌ Error storing presence history for ${userId}:`, error);
+      this.logger.error(
+        `❌ Error storing presence history for ${userId}:`,
+        error,
+      );
     }
   }
 

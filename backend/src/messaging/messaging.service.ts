@@ -22,11 +22,12 @@ export class MessagingService {
     @Inject(forwardRef(() => ImprovedMessagingGateway))
     private messagingGateway: ImprovedMessagingGateway,
     private pushNotificationService: PushNotificationService,
-  ) { }
+  ) {}
 
   /**
    * Sends a new message from a sender to a receiver.
    * Requires an existing accepted connection between sender and receiver.
+   * Uses transaction to ensure atomicity of message creation and related operations.
    * @param senderId - The ID of the user sending the message.
    * @param dto - The data transfer object containing the receiver ID and message content.
    * @returns A promise that resolves to the created message object.
@@ -36,6 +37,7 @@ export class MessagingService {
   async sendMessage(senderId: string, dto: CreateMessageDto) {
     const { receiverId, content } = dto;
 
+    // Validate receiver exists
     const receiver = await this.prisma.user.findUnique({
       where: { id: receiverId },
     });
@@ -44,6 +46,7 @@ export class MessagingService {
       throw new NotFoundException('Receiver user not found');
     }
 
+    // Check connection status
     const isConnected = await this.prisma.connection.findFirst({
       where: {
         status: 'ACCEPTED',
@@ -60,28 +63,33 @@ export class MessagingService {
       );
     }
 
-    const message = await this.prisma.message.create({
-      data: {
-        content,
-        senderId,
-        receiverId,
-      },
-      include: {
-        sender: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+    // Use transaction for atomic message creation
+    const message = await this.prisma.$transaction(async (tx) => {
+      const newMessage = await tx.message.create({
+        data: {
+          content,
+          senderId,
+          receiverId,
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+          receiver: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
           },
         },
-        receiver: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+      });
+
+      return newMessage;
     });
 
     // Broadcast the message via WebSocket for real-time delivery
@@ -114,10 +122,10 @@ export class MessagingService {
   /**
    * Retrieves the conversation history between two users.
    * Requires an existing accepted connection between the two users.
-   * Supports pagination for fetching messages.
+   * Supports pagination and filtering for fetching messages.
    * @param userId - The ID of the current user.
    * @param otherUserId - The ID of the other user in the conversation.
-   * @param dto - Data transfer object for filtering messages (e.g., skip, take).
+   * @param dto - Data transfer object for filtering messages (e.g., skip, take, before, after).
    * @returns A promise that resolves to an array of message objects in the conversation.
    * @throws {ForbiddenException} If there is no accepted connection between the two users.
    */
@@ -126,7 +134,7 @@ export class MessagingService {
     otherUserId: string,
     dto: FilterMessagesDto,
   ) {
-    const { skip = 0, take = 20 } = dto;
+    const { skip = 0, take = 20, before, after } = dto;
 
     const isConnected = await this.prisma.connection.findFirst({
       where: {
@@ -144,13 +152,26 @@ export class MessagingService {
       );
     }
 
+    // Build the where clause with timestamp filters
+    const where: any = {
+      OR: [
+        { senderId: userId, receiverId: otherUserId },
+        { senderId: otherUserId, receiverId: userId },
+      ],
+    };
+
+    if (before || after) {
+      where.timestamp = {};
+      if (before) {
+        where.timestamp.lt = new Date(before);
+      }
+      if (after) {
+        where.timestamp.gt = new Date(after);
+      }
+    }
+
     return this.prisma.message.findMany({
-      where: {
-        OR: [
-          { senderId: userId, receiverId: otherUserId },
-          { senderId: otherUserId, receiverId: userId },
-        ],
-      },
+      where,
       orderBy: { timestamp: 'desc' },
       skip,
       take,

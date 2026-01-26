@@ -26,4 +26,4 @@ import { CommonModule } from '../common/common.module';
   ],
   exports: [ImprovedMessagingGateway, FastChatGateway, MessagingService],
 })
-export class MessagingModule { }
+export class MessagingModule {}

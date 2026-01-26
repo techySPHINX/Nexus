@@ -83,24 +83,23 @@ export class ProfileService {
 
     if (completionPercentage === 100) {
       return {
-      completionPercentage,
+        completionPercentage,
       };
     }
 
     return {
       details: {
-      avatar: avatarFilled,
-      bio: bioFilled,
-      location: locationFilled,
-      branch: branchFilled,
-      year: yearFilled,
-      dept: deptFilled,
-      skillsCount,
-      interestsCount,
-      courseCount,
+        avatar: avatarFilled,
+        bio: bioFilled,
+        location: locationFilled,
+        branch: branchFilled,
+        year: yearFilled,
+        dept: deptFilled,
+        skillsCount,
+        interestsCount,
+        courseCount,
       },
     };
-    
   }
 
   /**
