@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NewsService } from '../../src/news/news.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 
-
 describe('NewsService Unit Tests', () => {
   let service: NewsService;
   let prisma: PrismaService;

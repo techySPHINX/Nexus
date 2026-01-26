@@ -32,11 +32,11 @@ export class AdminController {
   constructor(
     private readonly documentVerificationService: DocumentVerificationService,
     private readonly adminService: AdminService,
-  ) { }
+  ) {}
 
   /**
    * Get all pending document verification requests with advanced filtering
-   * 
+   *
    * Supports filters:
    * - Pagination: page, limit
    * - Sorting: sortBy, sortOrder
@@ -45,7 +45,7 @@ export class AdminController {
    * - Document filters: documentType, documentTypes
    * - Date filters: submittedAfter, submittedBefore
    * - Stats: includeStats (boolean)
-   * 
+   *
    * Example: /admin/pending-documents?page=1&limit=10&role=STUDENT&department=CSE&graduationYear=2024&includeStats=true
    */
   @Get('pending-documents')
@@ -115,7 +115,8 @@ export class AdminController {
     filters.includeStats = true;
     filters.limit = 1; // Minimal data fetch for stats only
 
-    const result = await this.documentVerificationService.getPendingDocuments(filters);
+    const result =
+      await this.documentVerificationService.getPendingDocuments(filters);
     return result.stats;
   }
 
@@ -127,7 +128,8 @@ export class AdminController {
   @Post('bulk-approve')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async bulkApproveByFilters(
-    @Body() body: { filters: GetPendingDocumentsFilterDto; adminComments?: string },
+    @Body()
+    body: { filters: GetPendingDocumentsFilterDto; adminComments?: string },
     @GetCurrentUser('sub') adminId: string,
   ) {
     // First, get all documents matching the filters
@@ -148,14 +150,15 @@ export class AdminController {
       };
     }
 
-    const documentIds = result.data.map(doc => doc.id);
+    const documentIds = result.data.map((doc) => doc.id);
 
     // Approve all matching documents (now supports multiple users)
-    const approvalResult = await this.documentVerificationService.approveDocuments(
-      documentIds,
-      adminId,
-      body.adminComments,
-    );
+    const approvalResult =
+      await this.documentVerificationService.approveDocuments(
+        documentIds,
+        adminId,
+        body.adminComments,
+      );
 
     return approvalResult;
   }
@@ -167,7 +170,8 @@ export class AdminController {
   @Post('bulk-reject')
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async bulkRejectByFilters(
-    @Body() body: {
+    @Body()
+    body: {
       filters: GetPendingDocumentsFilterDto;
       reason: string;
       adminComments?: string;
@@ -175,7 +179,9 @@ export class AdminController {
     @GetCurrentUser('sub') adminId: string,
   ) {
     if (!body.reason || body.reason.trim().length < 10) {
-      throw new BadRequestException('Rejection reason must be at least 10 characters');
+      throw new BadRequestException(
+        'Rejection reason must be at least 10 characters',
+      );
     }
 
     // Get all documents matching the filters
@@ -195,15 +201,16 @@ export class AdminController {
       };
     }
 
-    const documentIds = result.data.map(doc => doc.id);
+    const documentIds = result.data.map((doc) => doc.id);
 
     // Reject all matching documents (now supports multiple users)
-    const rejectionResult = await this.documentVerificationService.rejectDocuments(
-      documentIds,
-      adminId,
-      body.reason,
-      body.adminComments,
-    );
+    const rejectionResult =
+      await this.documentVerificationService.rejectDocuments(
+        documentIds,
+        adminId,
+        body.reason,
+        body.adminComments,
+      );
 
     return rejectionResult;
   }
@@ -214,9 +221,10 @@ export class AdminController {
    */
   @Get('filter-options')
   async getFilterOptions() {
-    const allPendingUsers = await this.documentVerificationService.getPendingDocuments({
-      limit: 1000,
-    });
+    const allPendingUsers =
+      await this.documentVerificationService.getPendingDocuments({
+        limit: 1000,
+      });
 
     const departments = new Set<string>();
     const branches = new Set<string>();
@@ -228,7 +236,8 @@ export class AdminController {
       if (doc.user?.profile?.dept) departments.add(doc.user.profile.dept);
       if (doc.user?.profile?.branch) branches.add(doc.user.profile.branch);
       if (doc.user?.profile?.course) courses.add(doc.user.profile.course);
-      if (doc.user?.graduationYear) graduationYears.add(doc.user.graduationYear);
+      if (doc.user?.graduationYear)
+        graduationYears.add(doc.user.graduationYear);
       if (doc.user?.profile?.location) locations.add(doc.user.profile.location);
     });
 
@@ -239,7 +248,13 @@ export class AdminController {
       graduationYears: Array.from(graduationYears).sort((a, b) => b - a),
       locations: Array.from(locations).sort(),
       roles: ['STUDENT', 'ALUMNI'],
-      documentTypes: ['STUDENT_ID', 'ALUMNI_PROOF', 'GRADUATION_CERTIFICATE', 'ENROLLMENT_LETTER', 'OTHERS'],
+      documentTypes: [
+        'STUDENT_ID',
+        'ALUMNI_PROOF',
+        'GRADUATION_CERTIFICATE',
+        'ENROLLMENT_LETTER',
+        'OTHERS',
+      ],
     };
   }
 

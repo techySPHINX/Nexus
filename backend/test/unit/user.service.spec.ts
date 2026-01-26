@@ -1,8 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { UserService } from '../../src/user/user.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { CacheService } from '../../src/common/services/cache.service';
@@ -15,7 +12,13 @@ jest.mock('bcryptjs');
 describe('UserService - Unit Tests', () => {
   let service: UserService;
   let prisma: {
-    user: { findMany: jest.Mock; findUnique: jest.Mock; count: jest.Mock; update: jest.Mock; delete: jest.Mock };
+    user: {
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      count: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
+    };
     profile: { upsert: jest.Mock; deleteMany: jest.Mock };
     skill: { findFirst: jest.Mock; create: jest.Mock };
   };

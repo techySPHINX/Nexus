@@ -13,7 +13,12 @@ import * as bcrypt from 'bcrypt';
 describe('AuthService - Unit Tests (Production Grade)', () => {
   let service: AuthService;
   let prisma: {
-    user: { findUnique: jest.Mock; create: jest.Mock; update: jest.Mock; delete: jest.Mock };
+    user: {
+      findUnique: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
+    };
     profile: { create: jest.Mock };
     $transaction: jest.Mock;
   };
@@ -116,10 +121,16 @@ describe('AuthService - Unit Tests (Production Grade)', () => {
         role: dto.role,
       } as any);
 
-      const result = await service.registerWithDocuments(dto, '127.0.0.1', 'test-agent');
+      const result = await service.registerWithDocuments(
+        dto,
+        '127.0.0.1',
+        'test-agent',
+      );
 
       expect(result).toHaveProperty('message');
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({ where: { email: dto.email } });
+      expect(prisma.user.findUnique).toHaveBeenCalledWith({
+        where: { email: dto.email },
+      });
     });
   });
 
@@ -166,7 +177,9 @@ describe('AuthService - Unit Tests (Production Grade)', () => {
       const plainPassword = 'MySecretPassword123!';
 
       // Mock bcrypt
-      jest.spyOn(bcrypt, 'hash').mockImplementation(async () => '$2b$10$hashed...');
+      jest
+        .spyOn(bcrypt, 'hash')
+        .mockImplementation(async () => '$2b$10$hashed...');
 
       const dto = {
         email: 'test@kiit.ac.in',

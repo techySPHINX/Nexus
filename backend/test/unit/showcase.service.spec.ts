@@ -255,7 +255,9 @@ describe('ShowcaseService Unit Tests', () => {
         { id: 'update-id', projectId },
       ]);
 
-      await service.updateProject(userId, projectId, { title: 'Updated Title' });
+      await service.updateProject(userId, projectId, {
+        title: 'Updated Title',
+      });
 
       expect(notificationService.create).toHaveBeenCalledTimes(2);
       expect(notificationService.create).toHaveBeenCalledWith(
@@ -644,7 +646,9 @@ describe('ShowcaseService Unit Tests', () => {
       });
 
       await expect(
-        service.updateProject('other-user-id', 'project-id', { title: 'Updated' }),
+        service.updateProject('other-user-id', 'project-id', {
+          title: 'Updated',
+        }),
       ).rejects.toThrow('You are not the owner of this project');
     });
 

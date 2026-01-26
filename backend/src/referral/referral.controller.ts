@@ -31,9 +31,7 @@ import { GetCurrentUser } from '../common/decorators/get-current-user.decorator'
 @Controller('referral')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ReferralController {
-  constructor(
-    private readonly referralService: ReferralService,
-  ) {}
+  constructor(private readonly referralService: ReferralService) {}
 
   // Referral Endpoints
 
@@ -70,7 +68,11 @@ export class ReferralController {
   ) {
     // If user is not authenticated, userId and userRole will be undefined
     // Service will handle this and show only APPROVED referrals
-    return this.referralService.getFilteredReferrals(filterDto, userId, userRole);
+    return this.referralService.getFilteredReferrals(
+      filterDto,
+      userId,
+      userRole,
+    );
   }
 
   /**
@@ -96,7 +98,9 @@ export class ReferralController {
     @GetCurrentUser('userId') userId: string,
     @Param('id') id: string,
   ) {
-    return this.referralService.updateReferral(userId, id, { status: ReferralStatus.APPROVED });
+    return this.referralService.updateReferral(userId, id, {
+      status: ReferralStatus.APPROVED,
+    });
   }
 
   /**
@@ -112,7 +116,9 @@ export class ReferralController {
     @GetCurrentUser('userId') userId: string,
     @Param('id') id: string,
   ) {
-    return this.referralService.updateReferral(userId, id, { status: ReferralStatus.REJECTED });
+    return this.referralService.updateReferral(userId, id, {
+      status: ReferralStatus.REJECTED,
+    });
   }
 
   /**

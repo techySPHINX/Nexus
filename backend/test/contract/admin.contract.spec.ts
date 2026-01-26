@@ -398,9 +398,7 @@ describe('Admin API Contract Tests', () => {
     });
 
     it('should return 401 without authentication', async () => {
-      await request(app.getHttpServer())
-        .get('/admin/users/search')
-        .expect(401);
+      await request(app.getHttpServer()).get('/admin/users/search').expect(401);
     });
 
     it('should not expose passwords in search results', async () => {

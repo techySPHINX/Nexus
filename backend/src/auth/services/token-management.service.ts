@@ -2,7 +2,10 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { RedisService } from '../../common/services/redis.service';
 import { WinstonLoggerService } from '../../common/logger/winston-logger.service';
-import { AuditLogService, AuditAction } from '../../common/services/audit-log.service';
+import {
+  AuditLogService,
+  AuditAction,
+} from '../../common/services/audit-log.service';
 import * as crypto from 'crypto';
 
 interface TokenPayload {
@@ -24,7 +27,7 @@ export class TokenManagementService {
     private readonly redisService: RedisService,
     private readonly logger: WinstonLoggerService,
     private readonly auditLog: AuditLogService,
-  ) { }
+  ) {}
 
   /**
    * Generate access and refresh tokens
@@ -66,7 +69,10 @@ export class TokenManagementService {
       refreshTokenTTL,
     );
 
-    this.logger.log(`Tokens generated for user ${userId}`, 'TokenManagementService');
+    this.logger.log(
+      `Tokens generated for user ${userId}`,
+      'TokenManagementService',
+    );
 
     return { accessToken, refreshToken };
   }

@@ -55,7 +55,7 @@ export class FileSecurityService {
   constructor(
     private readonly logger: WinstonLoggerService,
     private readonly auditLog: AuditLogService,
-  ) { }
+  ) {}
 
   /**
    * Validate uploaded file
@@ -244,9 +244,7 @@ export class FileSecurityService {
   /**
    * Validate image dimensions
    */
-  async validateImageDimensions(
-    file: Express.Multer.File,
-  ): Promise<boolean> {
+  async validateImageDimensions(file: Express.Multer.File): Promise<boolean> {
     // This is a basic check - for production, use sharp or jimp
     // to properly validate image dimensions
 

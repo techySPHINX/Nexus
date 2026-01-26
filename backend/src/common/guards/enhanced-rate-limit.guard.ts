@@ -1,7 +1,10 @@
 import { Injectable, ExecutionContext } from '@nestjs/common';
 import { RedisService } from '../../common/services/redis.service';
 import { WinstonLoggerService } from '../../common/logger/winston-logger.service';
-import { AuditLogService, AuditAction } from '../../common/services/audit-log.service';
+import {
+  AuditLogService,
+  AuditAction,
+} from '../../common/services/audit-log.service';
 
 export interface RateLimitConfig {
   ttl: number; // Time window in seconds
@@ -14,7 +17,7 @@ export class EnhancedRateLimitGuard {
     private readonly redisService: RedisService,
     private readonly logger: WinstonLoggerService,
     private readonly auditLog: AuditLogService,
-  ) { }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -150,7 +153,7 @@ export class RateLimitService {
   constructor(
     private readonly redisService: RedisService,
     private readonly logger: WinstonLoggerService,
-  ) { }
+  ) {}
 
   /**
    * Check if action is allowed for user

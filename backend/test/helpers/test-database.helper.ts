@@ -11,7 +11,9 @@ export class TestDatabaseHelper {
     this.prisma = new PrismaClient({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL || 'postgresql://test:test@localhost:5432/nexus_test',
+          url:
+            process.env.DATABASE_URL ||
+            'postgresql://test:test@localhost:5432/nexus_test',
         },
       },
     });
@@ -51,7 +53,9 @@ export class TestDatabaseHelper {
 
     for (const table of tables) {
       try {
-        await this.prisma.$executeRawUnsafe(`TRUNCATE TABLE "${table}" CASCADE;`);
+        await this.prisma.$executeRawUnsafe(
+          `TRUNCATE TABLE "${table}" CASCADE;`,
+        );
       } catch (error) {
         // Table might not exist in some test scenarios
         console.warn(`Failed to truncate ${table}:`, error.message);

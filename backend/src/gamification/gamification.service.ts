@@ -20,7 +20,12 @@ export enum GamificationEvent {
 
 export interface LeaderboardEntry {
   userId: string;
-  user: { id: string; name?: string | null; role?: string | null; profile?: { avatarUrl?: string | null } | null } | null;
+  user: {
+    id: string;
+    name?: string | null;
+    role?: string | null;
+    profile?: { avatarUrl?: string | null } | null;
+  } | null;
   points: number;
 }
 
@@ -45,7 +50,7 @@ export class GamificationService {
     [GamificationEvent.REFERRAL_POSTED]: 50,
   };
 
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * Atomically upsert the user's points and create a pointTransaction entry.
@@ -84,20 +89,35 @@ export class GamificationService {
   }
 
   /** Safer wrapper that accepts a GamificationEvent enum key */
-  async awardForEvent(eventKey: GamificationEvent | string, userId: string, entityId?: string, message: string='') {
+  async awardForEvent(
+    eventKey: GamificationEvent | string,
+    userId: string,
+    entityId?: string,
+    message: string = '',
+  ) {
     const points = (this.pointsMap as Record<string, number>)[eventKey];
     if (!points) {
       this.logger.warn(`No points mapping for eventKey=${eventKey}`);
       return { success: false, message: 'Unknown eventKey' };
     }
-    const res = await this.awardPoints(userId, points, eventKey, message, entityId);
+    const res = await this.awardPoints(
+      userId,
+      points,
+      eventKey,
+      message,
+      entityId,
+    );
     return { success: true, ...res };
   }
 
   /** Revoke points previously awarded for an event (by entityId if provided).
    *  This will delete a single matching pointTransaction and decrement the user's points.
    */
-  async revokeForEvent(eventKey: GamificationEvent | string, userId: string, entityId?: string) {
+  async revokeForEvent(
+    eventKey: GamificationEvent | string,
+    userId: string,
+    entityId?: string,
+  ) {
     const points = (this.pointsMap as Record<string, number>)[eventKey];
     if (!points) {
       this.logger.warn(`No points mapping for eventKey=${eventKey}`);
@@ -109,7 +129,10 @@ export class GamificationService {
       const where: any = { userId, type: eventKey };
       if (entityId) where.entityId = entityId;
 
-      const existing = await tx.pointTransaction.findFirst({ where, orderBy: { createdAt: 'desc' } });
+      const existing = await tx.pointTransaction.findFirst({
+        where,
+        orderBy: { createdAt: 'desc' },
+      });
       if (!existing) {
         return { success: false, message: 'No matching transaction found' };
       }
@@ -118,7 +141,10 @@ export class GamificationService {
       await tx.pointTransaction.delete({ where: { id: existing.id } });
 
       // Decrement userPoints if record exists; use updateMany to avoid throwing when missing
-      await tx.userPoints.updateMany({ where: { userId }, data: { points: { decrement: existing.points } } });
+      await tx.userPoints.updateMany({
+        where: { userId },
+        data: { points: { decrement: existing.points } },
+      });
 
       return { success: true, deletedTransactionId: existing.id };
     });
@@ -179,7 +205,12 @@ export class GamificationService {
 
     const users = await this.prisma.user.findMany({
       where: { id: { in: groups.map((g) => g.userId) } },
-      select: { id: true, name: true, role: true, profile: { select: { avatarUrl: true } } },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        profile: { select: { avatarUrl: true } },
+      },
     });
 
     const map = new Map(users.map((u) => [u.id, u]));

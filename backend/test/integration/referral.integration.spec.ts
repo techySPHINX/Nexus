@@ -28,7 +28,9 @@ describe('Referral Integration Tests - Complete Workflows', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
 
     prisma = app.get<PrismaService>(PrismaService);
     jwtService = app.get<JwtService>(JwtService);
@@ -63,8 +65,14 @@ describe('Referral Integration Tests - Complete Workflows', () => {
       isAccountActive: true,
     });
 
-    alumniToken = jwtService.sign({ sub: alumniUser.id, email: alumniUser.email });
-    studentToken = jwtService.sign({ sub: studentUser.id, email: studentUser.email });
+    alumniToken = jwtService.sign({
+      sub: alumniUser.id,
+      email: alumniUser.email,
+    });
+    studentToken = jwtService.sign({
+      sub: studentUser.id,
+      email: studentUser.email,
+    });
   });
 
   describe('✅ Complete Referral Creation Workflow', () => {
@@ -287,8 +295,8 @@ describe('Referral Integration Tests - Complete Workflows', () => {
       });
 
       expect(notifications.length).toBeGreaterThan(0);
-      const acceptedNotification = notifications.find(
-        (n) => n.message.includes('accepted'),
+      const acceptedNotification = notifications.find((n) =>
+        n.message.includes('accepted'),
       );
       expect(acceptedNotification).toBeDefined();
     });
@@ -332,15 +340,17 @@ describe('Referral Integration Tests - Complete Workflows', () => {
       });
 
       // Simulate concurrent requests
-      const promises = Array(5).fill(null).map(() =>
-        request(app.getHttpServer())
-          .post('/referral/apply')
-          .set('Authorization', `Bearer ${studentToken}`)
-          .send({
-            referralId: referral.id,
-            coverLetter: 'Concurrent application',
-          })
-      );
+      const promises = Array(5)
+        .fill(null)
+        .map(() =>
+          request(app.getHttpServer())
+            .post('/referral/apply')
+            .set('Authorization', `Bearer ${studentToken}`)
+            .send({
+              referralId: referral.id,
+              coverLetter: 'Concurrent application',
+            }),
+        );
 
       const responses = await Promise.all(promises);
 

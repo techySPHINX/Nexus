@@ -5,15 +5,30 @@ import { NotificationService } from '../../src/notification/notification.service
 import { EmailService } from '../../src/email/email.service';
 import { ReferralGateway } from '../../src/referral/referral.gateway';
 import { GamificationService } from '../../src/gamification/gamification.service';
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Role, ReferralStatus } from '@prisma/client';
 
 describe('ReferralService - Unit Tests (Production Grade)', () => {
   let service: ReferralService;
   let prisma: {
     user: { findUnique: jest.Mock };
-    referral: { create: jest.Mock; findUnique: jest.Mock; findMany: jest.Mock; update: jest.Mock; delete: jest.Mock };
-    referralApplication: { findFirst: jest.Mock; findMany: jest.Mock; create: jest.Mock; update: jest.Mock };
+    referral: {
+      create: jest.Mock;
+      findUnique: jest.Mock;
+      findMany: jest.Mock;
+      update: jest.Mock;
+      delete: jest.Mock;
+    };
+    referralApplication: {
+      findFirst: jest.Mock;
+      findMany: jest.Mock;
+      create: jest.Mock;
+      update: jest.Mock;
+    };
   };
   let gamificationService: jest.Mocked<GamificationService>;
 
@@ -71,7 +86,9 @@ describe('ReferralService - Unit Tests (Production Grade)', () => {
 
     service = module.get<ReferralService>(ReferralService);
     prisma = module.get(PrismaService) as any;
-    gamificationService = module.get(GamificationService) as jest.Mocked<GamificationService>;
+    gamificationService = module.get(
+      GamificationService,
+    ) as jest.Mocked<GamificationService>;
   });
 
   afterEach(() => {
@@ -139,7 +156,9 @@ describe('ReferralService - Unit Tests (Production Grade)', () => {
         deadline: '2025-12-31',
       };
 
-      await expect(service.createReferral(adminUser.id, dto)).resolves.toBeDefined();
+      await expect(
+        service.createReferral(adminUser.id, dto),
+      ).resolves.toBeDefined();
     });
 
     it('should reject STUDENT from creating referral', async () => {
@@ -161,7 +180,9 @@ describe('ReferralService - Unit Tests (Production Grade)', () => {
         deadline: '2025-12-31',
       };
 
-      await expect(service.createReferral(studentUser.id, dto)).rejects.toThrow(ForbiddenException);
+      await expect(service.createReferral(studentUser.id, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
       expect(prisma.referral.create).not.toHaveBeenCalled();
     });
 
@@ -184,7 +205,9 @@ describe('ReferralService - Unit Tests (Production Grade)', () => {
         deadline: '2025-12-31',
       };
 
-      await expect(service.createReferral(mentorUser.id, dto)).rejects.toThrow(ForbiddenException);
+      await expect(service.createReferral(mentorUser.id, dto)).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 
@@ -206,7 +229,9 @@ describe('ReferralService - Unit Tests (Production Grade)', () => {
         deadline: null as any,
       };
 
-      await expect(service.createReferral(alumniUser.id, dto)).rejects.toThrow(BadRequestException);
+      await expect(service.createReferral(alumniUser.id, dto)).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should reject referral with empty company name', async () => {
@@ -421,7 +446,9 @@ describe('ReferralService - Unit Tests (Production Grade)', () => {
         deadline: '2025-12-31',
       };
 
-      await expect(service.createReferral(userId, dto)).rejects.toThrow(NotFoundException);
+      await expect(service.createReferral(userId, dto)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 

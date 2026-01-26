@@ -19,7 +19,7 @@ import {
 
 @Injectable()
 export class SubCommunityService {
-  constructor(private prisma: PrismaService) { }
+  constructor(private prisma: PrismaService) {}
 
   private async getOrCreateTypeId(typeName?: string) {
     if (!typeName) return null;
@@ -121,9 +121,9 @@ export class SubCommunityService {
           _count: { select: { members: true, posts: true } },
           members: userId
             ? {
-              where: { userId },
-              select: { userId: true, role: true },
-            }
+                where: { userId },
+                select: { userId: true, role: true },
+              }
             : undefined,
           type: true,
         },
@@ -169,7 +169,14 @@ export class SubCommunityService {
     const subCommunity = await this.prisma.subCommunity.findUnique({
       where: { id },
       include: {
-        owner: { select: { id: true, name: true, role: true, profile: { select: { avatarUrl: true } } } },
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
         members: {
           select: {
             id: true,
@@ -238,16 +245,16 @@ export class SubCommunityService {
 
     const where = q
       ? {
-        AND: [
-          whereBase,
-          {
-            OR: [
-              { name: { contains: q, mode: 'insensitive' } },
-              { description: { contains: q, mode: 'insensitive' } },
-            ],
-          },
-        ],
-      }
+          AND: [
+            whereBase,
+            {
+              OR: [
+                { name: { contains: q, mode: 'insensitive' } },
+                { description: { contains: q, mode: 'insensitive' } },
+              ],
+            },
+          ],
+        }
       : whereBase;
 
     // Find sub-communities and total count, and mark if user is a member
@@ -264,9 +271,9 @@ export class SubCommunityService {
           },
           members: userId
             ? {
-              where: { userId },
-              select: { userId: true, role: true },
-            }
+                where: { userId },
+                select: { userId: true, role: true },
+              }
             : undefined,
         },
         orderBy: { updatedAt: 'desc' },
@@ -334,11 +341,18 @@ export class SubCommunityService {
     };
 
     return {
-      owned: { data: ownedData, pagination: makePagination(ownedPage, ownedLimit, ownedTotal) },
+      owned: {
+        data: ownedData,
+        pagination: makePagination(ownedPage, ownedLimit, ownedTotal),
+      },
     };
   }
 
-  async findMyModeratedSubCommunities(userId: string | undefined, moderatedPage: number, moderatedLimit: number) {
+  async findMyModeratedSubCommunities(
+    userId: string | undefined,
+    moderatedPage: number,
+    moderatedLimit: number,
+  ) {
     if (!userId) {
       throw new NotFoundException('User not found');
     }
@@ -379,12 +393,22 @@ export class SubCommunityService {
     };
 
     return {
-      moderated: { data: moderatedData, pagination: makePagination(moderatedPage, moderatedLimit, moderatedTotal) },
+      moderated: {
+        data: moderatedData,
+        pagination: makePagination(
+          moderatedPage,
+          moderatedLimit,
+          moderatedTotal,
+        ),
+      },
     };
-  };
+  }
 
-  async findMyMemberSubCommunities(userId: string | undefined, memberPage: number, memberLimit: number) {
-
+  async findMyMemberSubCommunities(
+    userId: string | undefined,
+    memberPage: number,
+    memberLimit: number,
+  ) {
     const [memberData, memberTotal] = await Promise.all([
       this.prisma.subCommunity.findMany({
         where: {
@@ -427,9 +451,12 @@ export class SubCommunityService {
     };
 
     return {
-      member: { data: memberData, pagination: makePagination(memberPage, memberLimit, memberTotal) },
+      member: {
+        data: memberData,
+        pagination: makePagination(memberPage, memberLimit, memberTotal),
+      },
     };
-  };
+  }
 
   async updateSubCommunity(
     id: string,
@@ -696,7 +723,17 @@ export class SubCommunityService {
         subCommunityId: subCommunityId,
         status: 'PENDING',
       },
-      include: { user: { select: { id: true, name: true, email: true, role: true, profile: { select: { avatarUrl: true } } } } },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            profile: { select: { avatarUrl: true } },
+          },
+        },
+      },
     });
   }
 

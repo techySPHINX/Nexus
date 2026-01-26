@@ -42,7 +42,7 @@ export class NotificationService {
   constructor(
     private prisma: PrismaService,
     private pushNotificationService: PushNotificationService,
-  ) { }
+  ) {}
 
   /**
    * Creates a new notification.

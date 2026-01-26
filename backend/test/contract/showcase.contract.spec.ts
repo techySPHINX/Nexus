@@ -91,7 +91,10 @@ describe('Showcase API Contract Tests (e2e)', () => {
 
       expect(response.body).toHaveProperty('id');
       expect(response.body).toHaveProperty('title', 'Test Project');
-      expect(response.body).toHaveProperty('description', createDto.description);
+      expect(response.body).toHaveProperty(
+        'description',
+        createDto.description,
+      );
       expect(response.body).toHaveProperty('tags');
       expect(response.body.tags).toEqual(createDto.tags);
       expect(response.body).toHaveProperty('ownerId', testUserId);

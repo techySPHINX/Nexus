@@ -131,8 +131,14 @@ describe('User Integration Tests', () => {
         })
         .expect(200);
 
-      expect(response.body.profile).toHaveProperty('bio', 'New bio about myself');
-      expect(response.body.profile).toHaveProperty('location', 'San Francisco, CA');
+      expect(response.body.profile).toHaveProperty(
+        'bio',
+        'New bio about myself',
+      );
+      expect(response.body.profile).toHaveProperty(
+        'location',
+        'San Francisco, CA',
+      );
     });
 
     it('should update user password with hashing', async () => {
@@ -242,7 +248,9 @@ describe('User Integration Tests', () => {
         .expect(200);
 
       expect(response.body).toBeInstanceOf(Array);
-      expect(response.body.some((u: any) => u.email.includes('jane.smith'))).toBe(true);
+      expect(
+        response.body.some((u: any) => u.email.includes('jane.smith')),
+      ).toBe(true);
     });
 
     it('should return empty array for queries less than 2 characters', async () => {

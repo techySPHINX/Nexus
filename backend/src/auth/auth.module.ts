@@ -51,4 +51,4 @@ import { AuditLogService } from '../common/services/audit-log.service';
     DocumentVerificationService,
   ],
 })
-export class AuthModule { }
+export class AuthModule {}

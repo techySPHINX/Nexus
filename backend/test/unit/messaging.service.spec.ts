@@ -1,8 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import {
-  ForbiddenException,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { MessagingService } from '../../src/messaging/messaging.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { ImprovedMessagingGateway } from '../../src/messaging/messaging.gateway.improved';
@@ -15,7 +12,12 @@ describe('MessagingService - Unit Tests', () => {
   let prisma: {
     user: { findUnique: jest.Mock };
     connection: { findFirst: jest.Mock };
-    message: { create: jest.Mock; findMany: jest.Mock; findUnique: jest.Mock; update: jest.Mock };
+    message: {
+      create: jest.Mock;
+      findMany: jest.Mock;
+      findUnique: jest.Mock;
+      update: jest.Mock;
+    };
     readReceipt: { findUnique: jest.Mock; create: jest.Mock };
   };
   let messagingGateway: jest.Mocked<ImprovedMessagingGateway>;
@@ -533,9 +535,7 @@ describe('MessagingService - Unit Tests', () => {
       ).rejects.toThrow(ForbiddenException);
       await expect(
         service.markMessageAsRead('different-user-id', mockMessageId),
-      ).rejects.toThrow(
-        'You can only mark messages addressed to you as read',
-      );
+      ).rejects.toThrow('You can only mark messages addressed to you as read');
 
       expect(prisma.readReceipt.create).not.toHaveBeenCalled();
     });
@@ -752,10 +752,7 @@ describe('MessagingService - Unit Tests', () => {
         where: {
           AND: [
             {
-              OR: [
-                { senderId: mockSenderId },
-                { receiverId: mockSenderId },
-              ],
+              OR: [{ senderId: mockSenderId }, { receiverId: mockSenderId }],
             },
             {
               timestamp: {

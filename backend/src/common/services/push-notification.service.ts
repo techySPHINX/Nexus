@@ -4,7 +4,7 @@ import { DashboardGateway } from '../gateways/dashboard.gateway';
 
 /**
  * Push Notification Service
- * 
+ *
  * Handles sending push notifications via:
  * - Firebase Cloud Messaging (FCM) for mobile/web push
  * - WebSocket for real-time in-app notifications
@@ -17,7 +17,7 @@ export class PushNotificationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly dashboardGateway: DashboardGateway,
-  ) { }
+  ) {}
 
   /**
    * Send push notification to a user
@@ -81,7 +81,10 @@ export class PushNotificationService {
 
       return true;
     } catch (error) {
-      this.logger.error(`Failed to send notification to user ${userId}:`, error);
+      this.logger.error(
+        `Failed to send notification to user ${userId}:`,
+        error,
+      );
       return false;
     }
   }
@@ -234,7 +237,10 @@ export class PushNotificationService {
       this.logger.log(`FCM token registered for user ${userId}`);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to register FCM token for user ${userId}:`, error);
+      this.logger.error(
+        `Failed to register FCM token for user ${userId}:`,
+        error,
+      );
       return false;
     }
   }
@@ -251,7 +257,10 @@ export class PushNotificationService {
       this.logger.log(`FCM token unregistered for user ${userId}`);
       return true;
     } catch (error) {
-      this.logger.error(`Failed to unregister FCM token for user ${userId}:`, error);
+      this.logger.error(
+        `Failed to unregister FCM token for user ${userId}:`,
+        error,
+      );
       return false;
     }
   }

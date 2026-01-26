@@ -22,7 +22,9 @@ describe('Auth Integration Tests - Complete Workflows', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
 
     prisma = app.get<PrismaService>(PrismaService);
     jwtService = app.get<JwtService>(JwtService);
@@ -232,9 +234,7 @@ describe('Auth Integration Tests - Complete Workflows', () => {
     });
 
     it('should reject missing JWT token', async () => {
-      await request(app.getHttpServer())
-        .get('/user/profile')
-        .expect(401);
+      await request(app.getHttpServer()).get('/user/profile').expect(401);
     });
   });
 
@@ -298,11 +298,13 @@ describe('Auth Integration Tests - Complete Workflows', () => {
       const email = 'ratelimit@kiit.ac.in';
       await dbHelper.createTestUser({ email });
 
-      const attempts = Array(10).fill(null).map(() =>
-        request(app.getHttpServer())
-          .post('/auth/login')
-          .send({ email, password: 'wrong-password' })
-      );
+      const attempts = Array(10)
+        .fill(null)
+        .map(() =>
+          request(app.getHttpServer())
+            .post('/auth/login')
+            .send({ email, password: 'wrong-password' }),
+        );
 
       const responses = await Promise.all(attempts);
 

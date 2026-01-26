@@ -460,7 +460,9 @@ describe('Messaging API Contract Tests', () => {
 
       response.body.forEach((conversation: any) => {
         expect(conversation.otherUser).not.toHaveProperty('password');
-        expect(conversation.latestMessage.sender).not.toHaveProperty('password');
+        expect(conversation.latestMessage.sender).not.toHaveProperty(
+          'password',
+        );
         expect(conversation.latestMessage.receiver).not.toHaveProperty(
           'password',
         );

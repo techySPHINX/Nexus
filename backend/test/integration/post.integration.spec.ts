@@ -545,7 +545,9 @@ describe('Post Integration Tests', () => {
         .set('Authorization', `Bearer ${studentToken}`)
         .expect(200);
 
-      const feedPost = feedResponse.body.posts.find((p: any) => p.id === postId);
+      const feedPost = feedResponse.body.posts.find(
+        (p: any) => p.id === postId,
+      );
       expect(feedPost).toBeDefined();
 
       // 5. Verify database consistency

@@ -37,7 +37,7 @@ describe('NewsService Integration Tests', () => {
       const createData = {
         title: 'Integration Test Article',
         content: 'This is a test article for integration testing',
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(),
       };
 
@@ -77,7 +77,7 @@ describe('NewsService Integration Tests', () => {
       const articles = Array.from({ length: 25 }, (_, i) => ({
         title: `Article ${i + 1}`,
         content: `Content for article ${i + 1}`,
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(Date.now() + i * 1000), // Different timestamps
       }));
 
@@ -107,7 +107,7 @@ describe('NewsService Integration Tests', () => {
       const created = await service.create({
         title: 'Concurrent Test Article',
         content: 'Original content',
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(),
       });
 
@@ -137,7 +137,7 @@ describe('NewsService Integration Tests', () => {
       const first = await service.create({
         title: 'Duplicate Title Test',
         content: 'First article',
-        authorId: 'author-1',
+        author: { connect: { id: 'author-1' } },
         publishedAt: new Date(),
       });
       expect(first.slug).toBe('duplicate-title-test');
@@ -146,7 +146,7 @@ describe('NewsService Integration Tests', () => {
       const second = await service.create({
         title: 'Duplicate Title Test',
         content: 'Second article',
-        authorId: 'author-2',
+        author: { connect: { id: 'author-2' } },
         publishedAt: new Date(),
       });
       expect(second.slug).toBe('duplicate-title-test-1');
@@ -155,7 +155,7 @@ describe('NewsService Integration Tests', () => {
       const third = await service.create({
         title: 'Duplicate Title Test',
         content: 'Third article',
-        authorId: 'author-3',
+        author: { connect: { id: 'author-3' } },
         publishedAt: new Date(),
       });
       expect(third.slug).toBe('duplicate-title-test-2');
@@ -194,7 +194,7 @@ describe('NewsService Integration Tests', () => {
         const created = await service.create({
           title: testCase.title,
           content: 'Test content',
-          authorId: 'test-author-id',
+          author: { connect: { id: 'test-author-id' } },
           publishedAt: new Date(),
         });
 
@@ -211,14 +211,14 @@ describe('NewsService Integration Tests', () => {
       const created = await service.create({
         title: 'Original Title',
         content: 'Content',
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(),
       });
       expect(created.slug).toBe('original-title');
 
       // Update with explicit slug change (if supported)
       // Note: The service might not support slug updates, verify behavior
-      const updated = await service.update(created.id, {
+      await service.update(created.id, {
         title: 'Updated Title',
       });
 
@@ -236,7 +236,7 @@ describe('NewsService Integration Tests', () => {
       const articles = Array.from({ length: 15 }, (_, i) => ({
         title: `Test Article ${String(i + 1).padStart(2, '0')}`,
         content: `Content ${i + 1}`,
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(2025, 0, i + 1), // Jan 1-15, 2025
       }));
 
@@ -303,7 +303,7 @@ describe('NewsService Integration Tests', () => {
       await service.create({
         title: 'Case Test Article',
         content: 'Content',
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(),
       });
 
@@ -318,7 +318,7 @@ describe('NewsService Integration Tests', () => {
       await service.create({
         title: 'Multi-Word-Slug-Test',
         content: 'Content',
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(),
       });
 
@@ -333,7 +333,7 @@ describe('NewsService Integration Tests', () => {
       const created = await service.create({
         title: 'Original Title',
         content: 'Original Content',
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(),
       });
 
@@ -366,7 +366,7 @@ describe('NewsService Integration Tests', () => {
       const created = await service.create({
         title: 'Article to Delete',
         content: 'Content',
-        authorId: 'test-author-id',
+        author: { connect: { id: 'test-author-id' } },
         publishedAt: new Date(),
       });
 

@@ -1,6 +1,4 @@
-
 import { IsString, IsNotEmpty, IsOptional, IsUrl } from 'class-validator';
-
 
 /**
  * Data transfer object for creating a new referral application.

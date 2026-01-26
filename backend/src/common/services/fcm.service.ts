@@ -21,7 +21,7 @@ export class FcmService implements OnModuleInit {
   private readonly logger = new Logger(FcmService.name);
   private app: admin.app.App;
 
-  constructor(private readonly configService: ConfigService) { }
+  constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
     try {
@@ -35,7 +35,9 @@ export class FcmService implements OnModuleInit {
         this.app = admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
         });
-        this.logger.log('✅ Firebase Admin initialized with service account JSON');
+        this.logger.log(
+          '✅ Firebase Admin initialized with service account JSON',
+        );
       } else {
         // Try individual credentials
         const projectId = this.configService.get<string>('FCM_PROJECT_ID');
@@ -52,7 +54,9 @@ export class FcmService implements OnModuleInit {
               clientEmail,
             }),
           });
-          this.logger.log('✅ Firebase Admin initialized with individual credentials');
+          this.logger.log(
+            '✅ Firebase Admin initialized with individual credentials',
+          );
         } else {
           this.logger.warn(
             '⚠️ Firebase Admin not initialized - FCM credentials not found. Push notifications will be disabled.',
@@ -129,9 +133,13 @@ export class FcmService implements OnModuleInit {
     } catch (error) {
       this.logger.error('❌ Error sending notification:', error);
       // If token is invalid, it should be removed from the database
-      if (error.code === 'messaging/invalid-registration-token' ||
-        error.code === 'messaging/registration-token-not-registered') {
-        this.logger.warn(`⚠️ Invalid device token detected: ${deviceToken.substring(0, 20)}...`);
+      if (
+        error.code === 'messaging/invalid-registration-token' ||
+        error.code === 'messaging/registration-token-not-registered'
+      ) {
+        this.logger.warn(
+          `⚠️ Invalid device token detected: ${deviceToken.substring(0, 20)}...`,
+        );
         // Return special code to indicate token should be removed
         throw new Error('INVALID_TOKEN');
       }
@@ -237,10 +245,13 @@ export class FcmService implements OnModuleInit {
 
     try {
       // Try to send a dry run message to validate the token
-      await admin.messaging().send({
-        token: deviceToken,
-        data: { test: 'validation' },
-      }, true); // dry run = true
+      await admin.messaging().send(
+        {
+          token: deviceToken,
+          data: { test: 'validation' },
+        },
+        true,
+      ); // dry run = true
 
       return true;
     } catch (error) {

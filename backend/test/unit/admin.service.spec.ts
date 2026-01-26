@@ -130,9 +130,7 @@ describe('AdminService - Unit Tests', () => {
     });
 
     it('should calculate inactive users correctly', async () => {
-      prisma.user.count
-        .mockResolvedValueOnce(50)
-        .mockResolvedValueOnce(30);
+      prisma.user.count.mockResolvedValueOnce(50).mockResolvedValueOnce(30);
 
       prisma.verificationDocument.count
         .mockResolvedValueOnce(0)
@@ -150,9 +148,7 @@ describe('AdminService - Unit Tests', () => {
     });
 
     it('should handle zero counts gracefully', async () => {
-      prisma.user.count
-        .mockResolvedValueOnce(0)
-        .mockResolvedValueOnce(0);
+      prisma.user.count.mockResolvedValueOnce(0).mockResolvedValueOnce(0);
 
       prisma.verificationDocument.count
         .mockResolvedValueOnce(0)
@@ -172,9 +168,7 @@ describe('AdminService - Unit Tests', () => {
     });
 
     it('should filter verifications by today only', async () => {
-      prisma.user.count
-        .mockResolvedValueOnce(10)
-        .mockResolvedValueOnce(10);
+      prisma.user.count.mockResolvedValueOnce(10).mockResolvedValueOnce(10);
 
       prisma.verificationDocument.count
         .mockResolvedValueOnce(5)

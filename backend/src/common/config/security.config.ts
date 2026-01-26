@@ -7,11 +7,11 @@ export const securityConfig = {
    */
   cors: {
     development: {
-      origin: process.env.ALLOWED_ORIGIN || "https://localhost:3001",
+      origin: process.env.ALLOWED_ORIGIN || 'https://localhost:3001',
       credentials: true,
     },
     production: {
-      origin: process.env.ALLOWED_ORIGIN || "https://localhost:3001",
+      origin: process.env.ALLOWED_ORIGIN || 'https://localhost:3001',
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
@@ -38,7 +38,7 @@ export const securityConfig = {
       },
     },
     crossOriginEmbedderPolicy: false, // Allow cross-origin resources
-    crossOriginResourcePolicy: { policy: "cross-origin" },
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   },
 
   /**

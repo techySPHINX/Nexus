@@ -20,7 +20,7 @@ export class UserService {
   constructor(
     private prisma: PrismaService,
     private cacheService: CacheService,
-  ) { }
+  ) {}
 
   /**
    * Retrieves all users with their profiles and skills.

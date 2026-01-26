@@ -32,7 +32,7 @@ import { RevokeUserActionDto } from './dto/revoke-user-action.dto';
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportController {
-  constructor(private readonly reportService: ReportService) { }
+  constructor(private readonly reportService: ReportService) {}
 
   /**
    * POST /reports - Create a new report

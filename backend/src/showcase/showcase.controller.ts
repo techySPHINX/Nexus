@@ -139,9 +139,7 @@ export class ShowcaseController {
   }
 
   @Get('startup/stats')
-  getStartupStats(
-    @GetCurrentUser('userId') userId: string,
-  ) {
+  getStartupStats(@GetCurrentUser('userId') userId: string) {
     return this.showcaseService.getStartupStats(userId);
   }
 
@@ -169,7 +167,13 @@ export class ShowcaseController {
   @Get('startup')
   getStartups(
     @GetCurrentUser('userId') userId: string,
-    @Query() filterStartupDto?: { search?: string; status?: string; cursor?: string; pageSize?: number },
+    @Query()
+    filterStartupDto?: {
+      search?: string;
+      status?: string;
+      cursor?: string;
+      pageSize?: number;
+    },
   ) {
     return this.showcaseService.getStartups(userId, filterStartupDto);
   }
@@ -177,7 +181,13 @@ export class ShowcaseController {
   @Get('startup/my')
   getMyStartups(
     @GetCurrentUser('userId') userId: string,
-    @Query() filterStartupDto?: { search?: string; status?: string; cursor?: string; pageSize?: number },
+    @Query()
+    filterStartupDto?: {
+      search?: string;
+      status?: string;
+      cursor?: string;
+      pageSize?: number;
+    },
   ) {
     return this.showcaseService.getMyStartups(userId, filterStartupDto);
   }
@@ -185,7 +195,13 @@ export class ShowcaseController {
   @Get('startup/followed')
   getFollowedStartups(
     @GetCurrentUser('userId') userId: string,
-    @Query() filterStartupDto?: { search?: string; status?: string; cursor?: string; pageSize?: number },
+    @Query()
+    filterStartupDto?: {
+      search?: string;
+      status?: string;
+      cursor?: string;
+      pageSize?: number;
+    },
   ) {
     return this.showcaseService.getFollowedStartups(userId, filterStartupDto);
   }
@@ -225,10 +241,7 @@ export class ShowcaseController {
   }
 
   @Get('startup/:id/comments')
-  getStartupComments(
-    @Param('id') startupId: string,
-    @Query('page') page = 1,
-  ) {
+  getStartupComments(@Param('id') startupId: string, @Query('page') page = 1) {
     return this.showcaseService.getStartupComments(startupId, page);
   }
 

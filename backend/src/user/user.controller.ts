@@ -24,7 +24,7 @@ import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) { }
+  constructor(private readonly userService: UserService) {}
 
   /**
    * Retrieves all users. Requires ADMIN role.

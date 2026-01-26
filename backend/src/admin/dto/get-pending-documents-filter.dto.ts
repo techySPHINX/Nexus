@@ -1,4 +1,13 @@
-import { IsOptional, IsEnum, IsString, IsInt, Min, Max, IsArray, IsDateString } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsString,
+  IsInt,
+  Min,
+  Max,
+  IsArray,
+  IsDateString,
+} from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
 export enum SortOrder {

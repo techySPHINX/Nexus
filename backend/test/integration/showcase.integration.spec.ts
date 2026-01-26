@@ -34,12 +34,10 @@ describe('ShowcaseService Integration Tests', () => {
 
     service = moduleFixture.get<ShowcaseService>(ShowcaseService);
     prisma = moduleFixture.get<PrismaService>(PrismaService);
-    notificationService = moduleFixture.get<NotificationService>(
-      NotificationService,
-    );
-    gamificationService = moduleFixture.get<GamificationService>(
-      GamificationService,
-    );
+    notificationService =
+      moduleFixture.get<NotificationService>(NotificationService);
+    gamificationService =
+      moduleFixture.get<GamificationService>(GamificationService);
   });
 
   afterAll(async () => {
@@ -690,5 +688,3 @@ describe('ShowcaseService Integration Tests', () => {
     });
   });
 });
-
-

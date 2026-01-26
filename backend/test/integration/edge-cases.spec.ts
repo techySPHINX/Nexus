@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../../../src/app.module';
-import { TestDatabaseHelper } from '../../helpers/test-database.helper';
+import { AppModule } from '../../src/app.module';
+import { TestDatabaseHelper } from '../helpers/test-database.helper';
 import { JwtService } from '@nestjs/jwt';
-import { Role } from '@prisma/client';
-import { PrismaService } from '../../../src/prisma/prisma.service';
+import { Role, ReferralStatus } from '@prisma/client';
+import { PrismaService } from '../../src/prisma/prisma.service';
 
 /**
  * Edge Case and Idempotency Tests
@@ -89,7 +89,9 @@ describe('Edge Case and Idempotency Tests', () => {
           description: null, // null value
           requirements: 'CS',
           location: 'Remote',
-          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          deadline: new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
         })
         .expect(400);
     });
@@ -241,7 +243,7 @@ describe('Edge Case and Idempotency Tests', () => {
           requirements: 'CS',
           location: 'Remote',
           deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          status: 'ACTIVE',
+          status: ReferralStatus.ACTIVE,
           alumniId: alumni.id,
         },
       });
@@ -249,15 +251,17 @@ describe('Edge Case and Idempotency Tests', () => {
       const token = jwtService.sign({ sub: student.id });
 
       // Simulate concurrent requests
-      const promises = Array(5).fill(null).map(() =>
-        request(app.getHttpServer())
-          .post('/referral/apply')
-          .set('Authorization', `Bearer ${token}`)
-          .send({
-            referralId: referral.id,
-            coverLetter: 'Application',
-          })
-      );
+      const promises = Array(5)
+        .fill(null)
+        .map(() =>
+          request(app.getHttpServer())
+            .post('/referral/apply')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+              referralId: referral.id,
+              coverLetter: 'Application',
+            }),
+        );
 
       const responses = await Promise.all(promises);
 
@@ -273,13 +277,15 @@ describe('Edge Case and Idempotency Tests', () => {
       const user = await dbHelper.createTestUser();
 
       // Simulate concurrent point awards
-      const promises = Array(10).fill(null).map((_, i) =>
-        prisma.userPoints.upsert({
-          where: { userId: user.id },
-          create: { userId: user.id, points: 10 },
-          update: { points: { increment: 10 } },
-        })
-      );
+      const promises = Array(10)
+        .fill(null)
+        .map(() =>
+          prisma.userPoints.upsert({
+            where: { userId: user.id },
+            create: { userId: user.id, points: 10 },
+            update: { points: { increment: 10 } },
+          }),
+        );
 
       await Promise.all(promises);
 
@@ -292,21 +298,21 @@ describe('Edge Case and Idempotency Tests', () => {
     });
 
     it('should handle duplicate login attempts simultaneously', async () => {
-      const user = await dbHelper.createTestUser({
+      await dbHelper.createTestUser({
         email: 'concurrent@kiit.ac.in',
         password: '$2b$10$abcdefghijklmnopqrstuv',
         isEmailVerified: true,
         isAccountActive: true,
       });
 
-      const promises = Array(5).fill(null).map(() =>
-        request(app.getHttpServer())
-          .post('/auth/login')
-          .send({
+      const promises = Array(5)
+        .fill(null)
+        .map(() =>
+          request(app.getHttpServer()).post('/auth/login').send({
             email: 'concurrent@kiit.ac.in',
             password: 'password123',
-          })
-      );
+          }),
+        );
 
       const responses = await Promise.all(promises);
 
@@ -378,24 +384,28 @@ describe('Edge Case and Idempotency Tests', () => {
       const user = await dbHelper.createTestUser({ role: Role.ALUM });
       const token = jwtService.sign({ sub: user.id });
 
-      const promises = Array(20).fill(null).map((_, i) =>
-        request(app.getHttpServer())
-          .post('/referral')
-          .set('Authorization', `Bearer ${token}`)
-          .send({
-            company: `Company ${i}`,
-            jobTitle: `Role ${i}`,
-            description: 'Job',
-            requirements: 'CS',
-            location: 'Remote',
-            deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          })
-      );
+      const promises = Array(20)
+        .fill(null)
+        .map((_, i) =>
+          request(app.getHttpServer())
+            .post('/referral')
+            .set('Authorization', `Bearer ${token}`)
+            .send({
+              company: `Company ${i}`,
+              jobTitle: `Role ${i}`,
+              description: 'Job',
+              requirements: 'CS',
+              location: 'Remote',
+              deadline: new Date(
+                Date.now() + 30 * 24 * 60 * 60 * 1000,
+              ).toISOString(),
+            }),
+        );
 
-      const responses = await Promise.all(promises);
+      await Promise.all(promises);
 
       // Some may be rate limited (429) or all succeed
-      const rateLimited = responses.some((r) => r.status === 429);
+      // const rateLimited = responses.some((r) => r.status === 429);
 
       // Test documents expected behavior
     });
@@ -427,7 +437,7 @@ describe('Edge Case and Idempotency Tests', () => {
           // Force failure
           throw new Error('Forced rollback');
         });
-      } catch (error) {
+      } catch {
         // Expected
       }
 

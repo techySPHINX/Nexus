@@ -69,11 +69,17 @@ export class TestModuleHelper {
         create: jest.fn(),
         delete: jest.fn(),
       },
-      $transaction: jest.fn((callback) => callback({
-        user: { findUnique: jest.fn(), update: jest.fn() },
-        userPoints: { upsert: jest.fn(), updateMany: jest.fn() },
-        pointTransaction: { create: jest.fn(), delete: jest.fn(), findFirst: jest.fn() },
-      })),
+      $transaction: jest.fn((callback) =>
+        callback({
+          user: { findUnique: jest.fn(), update: jest.fn() },
+          userPoints: { upsert: jest.fn(), updateMany: jest.fn() },
+          pointTransaction: {
+            create: jest.fn(),
+            delete: jest.fn(),
+            findFirst: jest.fn(),
+          },
+        }),
+      ),
       $executeRawUnsafe: jest.fn(),
       $connect: jest.fn(),
       $disconnect: jest.fn(),
@@ -86,8 +92,12 @@ export class TestModuleHelper {
   static createMockJwtService() {
     return {
       sign: jest.fn().mockReturnValue('mock-jwt-token'),
-      verify: jest.fn().mockReturnValue({ sub: 'user-id', email: 'test@kiit.ac.in' }),
-      decode: jest.fn().mockReturnValue({ sub: 'user-id', email: 'test@kiit.ac.in' }),
+      verify: jest
+        .fn()
+        .mockReturnValue({ sub: 'user-id', email: 'test@kiit.ac.in' }),
+      decode: jest
+        .fn()
+        .mockReturnValue({ sub: 'user-id', email: 'test@kiit.ac.in' }),
     };
   }
 

@@ -25,7 +25,9 @@ jest.mock('firebase-admin', () => ({
   },
   messaging: jest.fn().mockReturnValue({
     send: jest.fn().mockResolvedValue('message-id'),
-    sendMulticast: jest.fn().mockResolvedValue({ successCount: 1, failureCount: 0 }),
+    sendMulticast: jest
+      .fn()
+      .mockResolvedValue({ successCount: 1, failureCount: 0 }),
   }),
 }));
 

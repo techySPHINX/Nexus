@@ -20,7 +20,7 @@ export class EmailService {
       to: '',
       from: {
         email: process.env.SENDGRID_EMAIL_FROM || 'noreply@nexus.com',
-        name: 'Nexus Platform'
+        name: 'Nexus Platform',
       },
       subject: `${subject} | Nexus`,
       html: `

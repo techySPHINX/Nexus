@@ -11,10 +11,13 @@ import { PostStatus, Role } from '@prisma/client';
 
 describe('PostService - Unit Tests', () => {
   let service: PostService;
-  let prismaService: PrismaService;
-  let gamificationService: GamificationService;
+  // let prismaService: PrismaService;
+  // let gamificationService: GamificationService;
 
-  const mockPrismaService = {
+  let mockPrismaService: any;
+  let gamificationService: any;
+
+  const baseMockPrismaService = {
     user: {
       findUnique: jest.fn(),
     },
@@ -37,11 +40,23 @@ describe('PostService - Unit Tests', () => {
     },
   };
 
-  const mockGamificationService = {
-    awardPoints: jest.fn(),
-  };
 
   beforeEach(async () => {
+    mockPrismaService = JSON.parse(JSON.stringify(baseMockPrismaService));
+    // Re-assign jest.fn() after JSON parse
+    mockPrismaService.user.findUnique = jest.fn();
+    mockPrismaService.post.create = jest.fn();
+    mockPrismaService.post.findUnique = jest.fn();
+    mockPrismaService.post.findMany = jest.fn();
+    mockPrismaService.post.update = jest.fn();
+    mockPrismaService.post.delete = jest.fn();
+    mockPrismaService.post.count = jest.fn();
+    mockPrismaService.subCommunityMember.findFirst = jest.fn();
+    mockPrismaService.comment.deleteMany = jest.fn();
+    mockPrismaService.vote.deleteMany = jest.fn();
+
+    gamificationService = { awardPoints: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PostService,
@@ -51,14 +66,12 @@ describe('PostService - Unit Tests', () => {
         },
         {
           provide: GamificationService,
-          useValue: mockGamificationService,
+          useValue: gamificationService,
         },
       ],
     }).compile();
 
     service = module.get<PostService>(PostService);
-    prismaService = module.get<PrismaService>(PrismaService);
-    gamificationService = module.get<GamificationService>(GamificationService);
 
     jest.clearAllMocks();
   });
@@ -192,7 +205,9 @@ describe('PostService - Unit Tests', () => {
 
       await service.create(userId, dtoWithCommunity);
 
-      expect(mockPrismaService.subCommunityMember.findFirst).toHaveBeenCalledWith(
+      expect(
+        mockPrismaService.subCommunityMember.findFirst,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
             userId,
@@ -404,7 +419,11 @@ describe('PostService - Unit Tests', () => {
       mockPrismaService.post.findMany.mockResolvedValue([]);
       mockPrismaService.post.count.mockResolvedValue(0);
 
-      const result = await service.getRecentPosts(userId, '2' as any, '10' as any);
+      const result = await service.getRecentPosts(
+        userId,
+        '2' as any,
+        '10' as any,
+      );
 
       expect(result.pagination.page).toBe(2);
       expect(result.pagination.limit).toBe(10);

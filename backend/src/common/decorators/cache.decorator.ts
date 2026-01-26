@@ -2,9 +2,9 @@ import { SetMetadata } from '@nestjs/common';
 
 /**
  * Decorator to set cache TTL (Time To Live) in seconds for a route handler
- * 
+ *
  * @param ttl - Time to live in seconds
- * 
+ *
  * @example
  * ```typescript
  * @Get('users')
@@ -18,7 +18,7 @@ export const CacheTTL = (ttl: number) => SetMetadata('cache_ttl', ttl);
 
 /**
  * Decorator to skip caching for a specific route
- * 
+ *
  * @example
  * ```typescript
  * @Get('sensitive-data')

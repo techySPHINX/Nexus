@@ -82,7 +82,10 @@ export class EventsService {
       return this.prisma.event.delete({ where: { id } });
     }
     // soft delete by marking the event as CANCELLED
-    return this.prisma.event.update({ where: { id }, data: { status: 'CANCELLED' } });
+    return this.prisma.event.update({
+      where: { id },
+      data: { status: 'CANCELLED' },
+    });
   }
 
   async getEventStats() {

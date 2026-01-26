@@ -23,7 +23,9 @@ describe('Referral API Contract Tests', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
     dbHelper = new TestDatabaseHelper();
     jwtService = app.get<JwtService>(JwtService);
 
@@ -201,9 +203,7 @@ describe('Referral API Contract Tests', () => {
     });
 
     it('❌ should return 401 without authentication', async () => {
-      await request(app.getHttpServer())
-        .get('/referral')
-        .expect(401);
+      await request(app.getHttpServer()).get('/referral').expect(401);
     });
   });
 
@@ -219,7 +219,9 @@ describe('Referral API Contract Tests', () => {
           description: 'Job',
           requirements: 'CS',
           location: 'Remote',
-          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          deadline: new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
         });
 
       const referralId = createResponse.body.id;
@@ -258,9 +260,7 @@ describe('Referral API Contract Tests', () => {
     });
 
     it('❌ should return 401 without authentication', async () => {
-      await request(app.getHttpServer())
-        .get('/referral/some-id')
-        .expect(401);
+      await request(app.getHttpServer()).get('/referral/some-id').expect(401);
     });
   });
 
@@ -277,7 +277,9 @@ describe('Referral API Contract Tests', () => {
           description: 'Job',
           requirements: 'CS',
           location: 'Remote',
-          deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          deadline: new Date(
+            Date.now() + 30 * 24 * 60 * 60 * 1000,
+          ).toISOString(),
         });
 
       referralId = response.body.id;

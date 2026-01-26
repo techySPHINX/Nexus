@@ -1,4 +1,10 @@
-import { IsArray, IsString, IsOptional, IsNotEmpty, ArrayMinSize } from 'class-validator';
+import {
+  IsArray,
+  IsString,
+  IsOptional,
+  IsNotEmpty,
+  ArrayMinSize,
+} from 'class-validator';
 
 export class ApproveDocumentsDto {
   @IsArray()

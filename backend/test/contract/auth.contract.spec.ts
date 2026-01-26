@@ -18,7 +18,9 @@ describe('Auth API Contract Tests', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
+    );
     dbHelper = new TestDatabaseHelper();
 
     await app.init();
@@ -171,7 +173,9 @@ describe('Auth API Contract Tests', () => {
         });
 
         // Validate JWT format
-        expect(response.body.accessToken).toMatch(/^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/);
+        expect(response.body.accessToken).toMatch(
+          /^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/,
+        );
       }
     });
 

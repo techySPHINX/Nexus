@@ -15,8 +15,12 @@ export class ResolveReportDto {
 
   @IsString()
   @IsNotEmpty()
-  @MinLength(10, { message: 'Resolution reason must be at least 10 characters' })
-  @MaxLength(1000, { message: 'Resolution reason cannot exceed 1000 characters' })
+  @MinLength(10, {
+    message: 'Resolution reason must be at least 10 characters',
+  })
+  @MaxLength(1000, {
+    message: 'Resolution reason cannot exceed 1000 characters',
+  })
   reason: string;
 
   @IsString()

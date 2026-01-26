@@ -13,7 +13,10 @@ import { PostStatus, Role, VoteTargetType, VoteType } from '@prisma/client';
  */
 @Injectable()
 export class PostService {
-  constructor(private prisma: PrismaService, private gamificationService: GamificationService) { }
+  constructor(
+    private prisma: PrismaService,
+    private gamificationService: GamificationService,
+  ) {}
 
   /**
    * Creates a new post.
@@ -114,7 +117,13 @@ export class PostService {
     page = Number(page) || 1;
     limit = Number(limit) || 6;
 
-    if (!Number.isInteger(page) || !Number.isInteger(limit) || page < 1 || limit < 1 || limit > 50) {
+    if (
+      !Number.isInteger(page) ||
+      !Number.isInteger(limit) ||
+      page < 1 ||
+      limit < 1 ||
+      limit > 50
+    ) {
       throw new BadRequestException('Invalid pagination parameters');
     }
 
@@ -128,7 +137,11 @@ export class PostService {
     const skip = (page - 1) * limit;
 
     // Remove explicit subCommunityId: null filter so posts from any community are considered.
-    const whereClause: any = { status: PostStatus.APPROVED, subCommunityId: null, authorId: { not: userId } };
+    const whereClause: any = {
+      status: PostStatus.APPROVED,
+      subCommunityId: null,
+      authorId: { not: userId },
+    };
 
     const [posts, total] = await Promise.all([
       this.prisma.post.findMany({
@@ -163,7 +176,7 @@ export class PostService {
           Vote: {
             where: { userId, targetType: VoteTargetType.POST },
             select: { type: true },
-          }
+          },
         },
       }),
       this.prisma.post.count({ where: whereClause }),
@@ -298,7 +311,7 @@ export class PostService {
         Vote: {
           where: { userId, targetType: VoteTargetType.POST },
           select: { type: true },
-        }
+        },
       },
     });
 
@@ -437,9 +450,9 @@ export class PostService {
           },
           Vote: userId
             ? {
-              where: { userId, targetType: VoteTargetType.POST },
-              select: { id: true, type: true },
-            }
+                where: { userId, targetType: VoteTargetType.POST },
+                select: { id: true, type: true },
+              }
             : false,
           _count: {
             select: {
@@ -494,9 +507,9 @@ export class PostService {
         },
         Vote: userId
           ? {
-            where: { userId, targetType: VoteTargetType.POST },
-            select: { id: true, type: true },
-          }
+              where: { userId, targetType: VoteTargetType.POST },
+              select: { id: true, type: true },
+            }
           : false,
         Comment: {
           take: 5,
@@ -975,7 +988,12 @@ export class PostService {
     // Prisma client / transaction (or accept `tx`) so its writes are part of the transaction.
     try {
       const message = `Post Created: "${post.subject}"`;
-      await this.gamificationService.awardForEvent('POST_CREATED', post.authorId, post.id, message);
+      await this.gamificationService.awardForEvent(
+        'POST_CREATED',
+        post.authorId,
+        post.id,
+        message,
+      );
     } catch {
       // Rethrow to rollback transaction
     }

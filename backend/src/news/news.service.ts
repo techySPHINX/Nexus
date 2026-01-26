@@ -39,14 +39,18 @@ export class NewsService {
       let candidate = base;
       let i = 1;
       while (true) {
-        const existing = await this.prisma.news.findUnique({ where: { slug: candidate } });
+        const existing = await this.prisma.news.findUnique({
+          where: { slug: candidate },
+        });
         if (!existing) break;
         candidate = `${base}-${i++}`;
       }
       createData.slug = candidate;
     }
 
-    return this.prisma.news.create({ data: createData as Prisma.NewsCreateInput });
+    return this.prisma.news.create({
+      data: createData as Prisma.NewsCreateInput,
+    });
   }
 
   async update(id: string, data: Partial<Prisma.NewsCreateInput>) {

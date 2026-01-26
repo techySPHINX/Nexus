@@ -51,7 +51,7 @@ describe('Profile Integration Tests', () => {
     alumniUser = await dbHelper.createTestUser({
       email: 'alumni@kiit.ac.in',
       name: 'Test Alumni',
-      role: Role.ALUMNI,
+      role: Role.ALUM,
     });
 
     studentToken = jwtService.sign({
@@ -117,7 +117,7 @@ describe('Profile Integration Tests', () => {
           year: '2024',
           dept: 'Computer Science',
           interests: 'AI,ML,Web,Cloud,Database,Security',
-          courses: 'DS,Algo,DBMS,OS,Networks,Compiler',
+          course: 'DS,Algo,DBMS,OS,Networks,Compiler',
         },
       });
 
@@ -153,7 +153,7 @@ describe('Profile Integration Tests', () => {
           year: '2024',
           dept: 'CS',
           interests: 'A,B,C,D,E,F',
-          courses: 'A,B,C,D,E,F',
+          course: 'A,B,C,D,E,F',
         },
       });
 
@@ -190,7 +190,7 @@ describe('Profile Integration Tests', () => {
           year: '2024',
           dept: 'CS',
           interests: 'A,B,C', // Only 3
-          courses: 'A,B,C,D,E,F',
+          course: 'A,B,C,D,E,F',
         },
       });
 
@@ -251,6 +251,7 @@ describe('Profile Integration Tests', () => {
 
       await prisma.endorsement.create({
         data: {
+          profileId: studentUser.id,
           skillId: skill.id,
           endorserId: alumniUser.id,
         },
@@ -287,7 +288,11 @@ describe('Profile Integration Tests', () => {
             userId: studentUser.id,
             points: 10,
             type: 'EARN',
-            description: `Transaction ${i}`,
+            userPoints: {
+              connect: {
+                userId: studentUser.id,
+              },
+            },
           },
         });
       }
@@ -535,6 +540,7 @@ describe('Profile Integration Tests', () => {
       // Create first endorsement
       await prisma.endorsement.create({
         data: {
+          profileId: studentUser.id,
           skillId: skill.id,
           endorserId: alumniUser.id,
         },
@@ -563,7 +569,7 @@ describe('Profile Integration Tests', () => {
 
   describe('✅ Remove Endorsement Workflow', () => {
     let skill: any;
-    let endorsement: any;
+    // let endorsement: any;
 
     beforeEach(async () => {
       await prisma.profile.create({
@@ -582,8 +588,9 @@ describe('Profile Integration Tests', () => {
         },
       });
 
-      endorsement = await prisma.endorsement.create({
+      await prisma.endorsement.create({
         data: {
+          profileId: studentUser.id,
           skillId: skill.id,
           endorserId: alumniUser.id,
         },
@@ -599,9 +606,10 @@ describe('Profile Integration Tests', () => {
       // Verify deletion
       const deleted = await prisma.endorsement.findUnique({
         where: {
-          endorserId_skillId: {
-            endorserId: alumniUser.id,
+          profileId_skillId_endorserId: {
+            profileId: studentUser.id,
             skillId: skill.id,
+            endorserId: alumniUser.id,
           },
         },
       });
@@ -729,7 +737,7 @@ describe('Profile Integration Tests', () => {
           year: '2024',
           dept: 'CS',
           interests: 'A,B,C,D,E,F',
-          courses: 'A,B,C,D,E,F',
+          course: 'A,B,C,D,E,F',
         },
       });
 

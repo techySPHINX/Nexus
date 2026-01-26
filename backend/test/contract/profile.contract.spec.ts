@@ -644,7 +644,7 @@ describe('Profile Contract Tests - API Validation', () => {
     it('should handle very long skill names gracefully', async () => {
       const longSkillName = 'a'.repeat(500);
 
-      const response = await request(app.getHttpServer())
+      await request(app.getHttpServer())
         .patch('/profile')
         .set('Authorization', `Bearer ${studentToken}`)
         .send({

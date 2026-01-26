@@ -1,14 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfileService } from '../../src/profile/profile.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
-import {
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { NotFoundException, ConflictException } from '@nestjs/common';
+import { Role } from '@prisma/client';
 
 describe('ProfileService - Unit Tests', () => {
   let service: ProfileService;
-  let prismaService: PrismaService;
+  // let prismaService: PrismaService;
 
   const mockPrismaService = {
     profile: {
@@ -47,7 +45,7 @@ describe('ProfileService - Unit Tests', () => {
     }).compile();
 
     service = module.get<ProfileService>(ProfileService);
-    prismaService = module.get<PrismaService>(PrismaService);
+    // prismaService = module.get<PrismaService>(PrismaService);
 
     jest.clearAllMocks();
   });
@@ -112,7 +110,9 @@ describe('ProfileService - Unit Tests', () => {
         _count: { skills: 4 },
       };
 
-      mockPrismaService.profile.findUnique.mockResolvedValue(profileWith4Skills);
+      mockPrismaService.profile.findUnique.mockResolvedValue(
+        profileWith4Skills,
+      );
 
       const result = await service.getProfileCompletionStats(userId);
 
@@ -133,7 +133,9 @@ describe('ProfileService - Unit Tests', () => {
         _count: { skills: 5 },
       };
 
-      mockPrismaService.profile.findUnique.mockResolvedValue(profileWith3Interests);
+      mockPrismaService.profile.findUnique.mockResolvedValue(
+        profileWith3Interests,
+      );
 
       const result = await service.getProfileCompletionStats(userId);
 
@@ -165,7 +167,9 @@ describe('ProfileService - Unit Tests', () => {
         _count: { skills: 0 },
       };
 
-      mockPrismaService.profile.findUnique.mockResolvedValue(profileWithEmptyStrings);
+      mockPrismaService.profile.findUnique.mockResolvedValue(
+        profileWithEmptyStrings,
+      );
 
       const result = await service.getProfileCompletionStats(userId);
 
@@ -308,7 +312,7 @@ describe('ProfileService - Unit Tests', () => {
     });
 
     it('should filter profiles by roles', async () => {
-      const filterDto = { roles: ['STUDENT', 'ALUMNI'] };
+      const filterDto = { roles: [Role.STUDENT, Role.ALUM] };
       mockPrismaService.profile.findMany.mockResolvedValue([]);
 
       await service.getFilteredProfiles(filterDto);
@@ -317,7 +321,7 @@ describe('ProfileService - Unit Tests', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             user: expect.objectContaining({
-              role: { in: ['STUDENT', 'ALUMNI'] },
+              role: { in: [Role.STUDENT, Role.ALUM] },
             }),
           }),
         }),
@@ -375,7 +379,7 @@ describe('ProfileService - Unit Tests', () => {
     it('should combine multiple filters', async () => {
       const filterDto = {
         name: 'John',
-        roles: ['STUDENT'],
+        roles: [Role.STUDENT],
         location: 'CA',
         dept: 'CSE',
       };
@@ -411,7 +415,7 @@ describe('ProfileService - Unit Tests', () => {
         userId,
       });
 
-      const result = await service.updateProfile(userId, updateDto);
+      await service.updateProfile(userId, updateDto);
 
       expect(mockPrismaService.profile.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -428,7 +432,10 @@ describe('ProfileService - Unit Tests', () => {
       };
 
       mockPrismaService.profile.findUnique.mockResolvedValue({ userId });
-      mockPrismaService.skill.upsert.mockResolvedValue({ id: 'skill-1', name: 'JavaScript' });
+      mockPrismaService.skill.upsert.mockResolvedValue({
+        id: 'skill-1',
+        name: 'JavaScript',
+      });
       mockPrismaService.profile.update.mockResolvedValue({});
 
       await service.updateProfile(userId, updateDto);
@@ -487,7 +494,8 @@ describe('ProfileService - Unit Tests', () => {
         skillId,
       });
 
-      await service.endorseSkill(endorserId, skillId);
+      const profileId = 'profile-123';
+      await service.endorseSkill(endorserId, profileId, skillId);
 
       expect(mockPrismaService.skillEndorsement.create).toHaveBeenCalledWith({
         data: { endorserId, skillId },
@@ -497,7 +505,8 @@ describe('ProfileService - Unit Tests', () => {
     it('should throw NotFoundException if skill does not exist', async () => {
       mockPrismaService.skill.findUnique.mockResolvedValue(null);
 
-      await expect(service.endorseSkill(endorserId, skillId)).rejects.toThrow(
+      const profileId = 'profile-123';
+      await expect(service.endorseSkill(endorserId, profileId, skillId)).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -509,10 +518,11 @@ describe('ProfileService - Unit Tests', () => {
         skillId,
       });
 
-      await expect(service.endorseSkill(endorserId, skillId)).rejects.toThrow(
+      const profileId = 'profile-123';
+      await expect(service.endorseSkill(endorserId, profileId, skillId)).rejects.toThrow(
         ConflictException,
       );
-      await expect(service.endorseSkill(endorserId, skillId)).rejects.toThrow(
+      await expect(service.endorseSkill(endorserId, profileId, skillId)).rejects.toThrow(
         'You have already endorsed this skill',
       );
     });
@@ -639,7 +649,10 @@ describe('ProfileService - Unit Tests', () => {
       };
 
       mockPrismaService.profile.findUnique.mockResolvedValue({ userId });
-      mockPrismaService.skill.upsert.mockResolvedValue({ id: 'skill-1', name: 'C++' });
+      mockPrismaService.skill.upsert.mockResolvedValue({
+        id: 'skill-1',
+        name: 'C++',
+      });
       mockPrismaService.profile.update.mockResolvedValue({});
 
       await service.updateProfile(userId, updateDto);
@@ -676,7 +689,10 @@ describe('ProfileService - Unit Tests', () => {
       const updateDto = { skills: manySkills };
 
       mockPrismaService.profile.findUnique.mockResolvedValue({ userId });
-      mockPrismaService.skill.upsert.mockResolvedValue({ id: 'skill-1', name: 'Test' });
+      mockPrismaService.skill.upsert.mockResolvedValue({
+        id: 'skill-1',
+        name: 'Test',
+      });
       mockPrismaService.profile.update.mockResolvedValue({});
 
       await service.updateProfile(userId, updateDto);
@@ -719,7 +735,8 @@ describe('ProfileService - Unit Tests', () => {
     it('should enforce skill existence before endorsement', async () => {
       mockPrismaService.skill.findUnique.mockResolvedValue(null);
 
-      await expect(service.endorseSkill('user-1', 'skill-1')).rejects.toThrow(
+      const profileId = 'profile-1';
+      await expect(service.endorseSkill('user-1', profileId, 'skill-1')).rejects.toThrow(
         NotFoundException,
       );
 
@@ -733,7 +750,8 @@ describe('ProfileService - Unit Tests', () => {
         skillId: 'skill-1',
       });
 
-      await expect(service.endorseSkill('user-1', 'skill-1')).rejects.toThrow(
+      const profileId = 'profile-1';
+      await expect(service.endorseSkill('user-1', profileId, 'skill-1')).rejects.toThrow(
         ConflictException,
       );
 

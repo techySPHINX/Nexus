@@ -1,12 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { GamificationService, GamificationEvent } from '../../src/gamification/gamification.service';
+import {
+  GamificationService,
+  GamificationEvent,
+} from '../../src/gamification/gamification.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 
 describe('GamificationService - Unit Tests (Production Grade)', () => {
   let service: GamificationService;
   let prisma: {
-    userPoints: { findUnique: jest.Mock; upsert: jest.Mock; updateMany: jest.Mock };
-    pointTransaction: { create: jest.Mock; findFirst: jest.Mock; findMany: jest.Mock; delete: jest.Mock };
+    userPoints: {
+      findUnique: jest.Mock;
+      upsert: jest.Mock;
+      updateMany: jest.Mock;
+    };
+    pointTransaction: {
+      create: jest.Mock;
+      findFirst: jest.Mock;
+      findMany: jest.Mock;
+      delete: jest.Mock;
+    };
     $transaction: jest.Mock;
   };
 
@@ -68,7 +80,11 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const result = await service.awardForEvent(GamificationEvent.POST_CREATED, userId, 'post-1');
+      const result = await service.awardForEvent(
+        GamificationEvent.POST_CREATED,
+        userId,
+        'post-1',
+      );
 
       expect(result.success).toBe(true);
       if (result.success && 'userPoints' in result) {
@@ -101,7 +117,11 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const result = await service.awardForEvent(GamificationEvent.REFERRAL_POSTED, userId, 'referral-1');
+      const result = await service.awardForEvent(
+        GamificationEvent.REFERRAL_POSTED,
+        userId,
+        'referral-1',
+      );
 
       expect(result.success).toBe(true);
       if (result.success && 'userPoints' in result) {
@@ -134,7 +154,10 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const alumniResult = await service.awardForEvent(GamificationEvent.CONNECTION_ALUMNI, userId);
+      const alumniResult = await service.awardForEvent(
+        GamificationEvent.CONNECTION_ALUMNI,
+        userId,
+      );
       expect(alumniResult.success).toBe(true);
       if (alumniResult.success && 'userPoints' in alumniResult) {
         expect(alumniResult.userPoints.points).toBe(3);
@@ -162,7 +185,10 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const studentResult = await service.awardForEvent(GamificationEvent.CONNECTION_STUDENT, userId);
+      const studentResult = await service.awardForEvent(
+        GamificationEvent.CONNECTION_STUDENT,
+        userId,
+      );
       expect(studentResult.success).toBe(true);
       if (studentResult.success && 'userPoints' in studentResult) {
         expect(studentResult.userPoints.points).toBe(2);
@@ -223,7 +249,10 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const result = await service.awardForEvent(GamificationEvent.POST_CREATED, userId);
+      const result = await service.awardForEvent(
+        GamificationEvent.POST_CREATED,
+        userId,
+      );
 
       expect(result.success).toBe(true);
       if (result.success && 'userPoints' in result) {
@@ -255,7 +284,10 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const result = await service.awardForEvent(GamificationEvent.POST_CREATED, userId);
+      const result = await service.awardForEvent(
+        GamificationEvent.POST_CREATED,
+        userId,
+      );
 
       expect(result.success).toBe(true);
       if (result.success && 'userPoints' in result) {
@@ -288,7 +320,11 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const result = await service.revokeForEvent(GamificationEvent.POST_CREATED, userId, entityId);
+      const result = await service.revokeForEvent(
+        GamificationEvent.POST_CREATED,
+        userId,
+        entityId,
+      );
 
       expect(result.success).toBe(true);
       if (result.success && 'deletedTransactionId' in result) {
@@ -312,7 +348,11 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const result = await service.revokeForEvent(GamificationEvent.POST_CREATED, userId, entityId);
+      const result = await service.revokeForEvent(
+        GamificationEvent.POST_CREATED,
+        userId,
+        entityId,
+      );
 
       expect(result.success).toBe(false);
       expect(result.message).toBe('No matching transaction found');
@@ -341,7 +381,11 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      await service.revokeForEvent(GamificationEvent.POST_CREATED, userId, entityId);
+      await service.revokeForEvent(
+        GamificationEvent.POST_CREATED,
+        userId,
+        entityId,
+      );
 
       // In production, you'd want to ensure points never go negative
       // This test documents the requirement
@@ -406,8 +450,16 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
         return callback(txMock);
       });
 
-      const result1 = await service.awardForEvent(GamificationEvent.POST_CREATED, userId, entityId);
-      const result2 = await service.awardForEvent(GamificationEvent.POST_CREATED, userId, entityId);
+      const result1 = await service.awardForEvent(
+        GamificationEvent.POST_CREATED,
+        userId,
+        entityId,
+      );
+      const result2 = await service.awardForEvent(
+        GamificationEvent.POST_CREATED,
+        userId,
+        entityId,
+      );
 
       // Both should succeed, but in production you'd want to check for duplicates
       // This test documents the requirement for idempotency checks
@@ -433,8 +485,16 @@ describe('GamificationService - Unit Tests (Production Grade)', () => {
       // Simulate concurrent updates
       const promises = [
         service.awardForEvent(GamificationEvent.POST_CREATED, userId, 'post-1'),
-        service.awardForEvent(GamificationEvent.COMMENT_CREATED, userId, 'comment-1'),
-        service.awardForEvent(GamificationEvent.LIKE_RECEIVED, userId, 'like-1'),
+        service.awardForEvent(
+          GamificationEvent.COMMENT_CREATED,
+          userId,
+          'comment-1',
+        ),
+        service.awardForEvent(
+          GamificationEvent.LIKE_RECEIVED,
+          userId,
+          'like-1',
+        ),
       ];
 
       prisma.$transaction.mockImplementation(async (callback: any) => {

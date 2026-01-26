@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { GamificationService } from 'src/gamification/gamification.service';
 import { UpdateConnectionStatusDto } from './dto/connection.dto';
 import { NotificationService } from 'src/notification/notification.service';
+import { WinstonLoggerService } from 'src/common/logger/winston-logger.service';
 
 /**
  * Service for managing user connections, including sending/accepting requests, and retrieving connection data.
@@ -19,7 +20,8 @@ export class ConnectionService {
     private prisma: PrismaService,
     private notificationService: NotificationService,
     private gamificationService: GamificationService,
-  ) {}
+    private logger: WinstonLoggerService,
+  ) { }
 
   /**
    * Sends a connection request from one user to another.
@@ -147,6 +149,7 @@ export class ConnectionService {
   /**
    * Updates the status of a connection request (e.g., ACCEPTED, REJECTED).
    * Only the recipient of the request can update its status.
+   * Uses transaction to ensure data consistency.
    * @param userId - The ID of the user attempting to update the status (must be the recipient).
    * @param dto - Data transfer object containing the connection ID and the new status.
    * @returns A promise that resolves to a success message and the updated connection.
@@ -155,6 +158,7 @@ export class ConnectionService {
    * @throws {BadRequestException} If the request is not in PENDING status.
    */
   async updateStatus(userId: string, dto: UpdateConnectionStatusDto) {
+    // First, fetch and validate the connection
     const connection = await this.prisma.connection.findUnique({
       where: { id: dto.connectionId },
       include: {
@@ -205,43 +209,70 @@ export class ConnectionService {
       );
     }
 
-    const updatedConnection = await this.prisma.connection.update({
-      where: { id: dto.connectionId },
-      data: {
-        status: dto.status,
-      },
-      include: {
-        requester: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            profile: {
-              select: {
-                bio: true,
-                avatarUrl: true,
+    // Use transaction to ensure atomicity
+    const updatedConnection = await this.prisma.$transaction(async (tx) => {
+      const updatedConnection = await tx.connection.update({
+        where: { id: dto.connectionId },
+        data: {
+          status: dto.status,
+        },
+        include: {
+          requester: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              profile: {
+                select: {
+                  bio: true,
+                  avatarUrl: true,
+                },
+              },
+            },
+          },
+          recipient: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              profile: {
+                select: {
+                  bio: true,
+                  avatarUrl: true,
+                },
               },
             },
           },
         },
-        recipient: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            role: true,
-            profile: {
-              select: {
-                bio: true,
-                avatarUrl: true,
-              },
-            },
-          },
-        },
-      },
+      });
+
+      // Award gamification points if accepted
+      if (dto.status === 'ACCEPTED') {
+        try {
+          await this.gamificationService.awardPoints(
+            connection.requesterId,
+            10,
+            'CONNECTION_ACCEPTED',
+            'Connection request accepted',
+          );
+          await this.gamificationService.awardPoints(
+            connection.recipientId,
+            10,
+            'CONNECTION_ACCEPTED',
+            'Connection request accepted',
+          );
+        } catch (error) {
+          this.logger.error('Failed to award gamification points', error, 'ConnectionService');
+          // Don't fail the transaction for gamification errors
+        }
+      }
+
+      return updatedConnection;
     });
 
+    // Send notification after successful transaction
     if (dto.status === 'ACCEPTED') {
       await this.notificationService.createConnectionAcceptedNotification(
         connection.requesterId,
@@ -256,12 +287,26 @@ export class ConnectionService {
         const recipientRole = updatedConnection.recipient.role;
         const requesterRole = updatedConnection.requester.role;
 
-        const requesterEvent = recipientRole === 'ALUM' ? 'CONNECTION_ALUMNI' : 'CONNECTION_STUDENT';
-        const recipientEvent = requesterRole === 'ALUM' ? 'CONNECTION_ALUMNI' : 'CONNECTION_STUDENT';
+        const requesterEvent =
+          recipientRole === 'ALUM' ? 'CONNECTION_ALUMNI' : 'CONNECTION_STUDENT';
+        const recipientEvent =
+          requesterRole === 'ALUM' ? 'CONNECTION_ALUMNI' : 'CONNECTION_STUDENT';
 
         // fire-and-forget
-        this.gamificationService.awardForEvent(requesterEvent, updatedConnection.requesterId, updatedConnection.id).catch(() => undefined);
-        this.gamificationService.awardForEvent(recipientEvent, updatedConnection.recipientId, updatedConnection.id).catch(() => undefined);
+        this.gamificationService
+          .awardForEvent(
+            requesterEvent,
+            updatedConnection.requesterId,
+            updatedConnection.id,
+          )
+          .catch(() => undefined);
+        this.gamificationService
+          .awardForEvent(
+            recipientEvent,
+            updatedConnection.recipientId,
+            updatedConnection.id,
+          )
+          .catch(() => undefined);
       } catch {
         // ignore gamification errors
       }
@@ -838,36 +883,36 @@ export class ConnectionService {
             OR: [
               userSkills.length > 0
                 ? {
-                    profile: {
-                      skills: {
-                        some: {
-                          name: {
-                            in: userSkills,
-                          },
+                  profile: {
+                    skills: {
+                      some: {
+                        name: {
+                          in: userSkills,
                         },
                       },
                     },
-                  }
+                  },
+                }
                 : {},
               user.profile.interests
                 ? {
-                    profile: {
-                      interests: {
-                        contains: user.profile.interests,
-                        mode: 'insensitive',
-                      },
+                  profile: {
+                    interests: {
+                      contains: user.profile.interests,
+                      mode: 'insensitive',
                     },
-                  }
+                  },
+                }
                 : {},
               user.profile.location
                 ? {
-                    profile: {
-                      location: {
-                        contains: user.profile.location,
-                        mode: 'insensitive',
-                      },
+                  profile: {
+                    location: {
+                      contains: user.profile.location,
+                      mode: 'insensitive',
                     },
-                  }
+                  },
+                }
                 : {},
             ],
           },

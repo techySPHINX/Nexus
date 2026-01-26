@@ -415,9 +415,7 @@ describe('Post Contract Tests - API Validation', () => {
     });
 
     it('should return 401 for missing authentication', async () => {
-      await request(app.getHttpServer())
-        .get(`/posts/${post.id}`)
-        .expect(401);
+      await request(app.getHttpServer()).get(`/posts/${post.id}`).expect(401);
     });
   });
 

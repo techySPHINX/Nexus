@@ -1,4 +1,11 @@
-import { IsString, IsOptional, IsUrl, IsEnum, IsNumber, IsArray } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsUrl,
+  IsEnum,
+  IsNumber,
+  IsArray,
+} from 'class-validator';
 import { StartupStatus } from '@prisma/client';
 
 export class UpdateStartupDto {

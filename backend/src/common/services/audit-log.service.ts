@@ -72,7 +72,7 @@ export class AuditLogService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly logger: WinstonLoggerService,
-  ) { }
+  ) {}
 
   /**
    * Log an audit event
@@ -272,10 +272,7 @@ export class AuditLogService {
       where: {
         createdAt: { gte: since },
         eventType: {
-          in: [
-            'LOGIN_FAILED',
-            'ACCOUNT_LOCKED',
-          ],
+          in: ['LOGIN_FAILED', 'ACCOUNT_LOCKED'],
         },
       },
       orderBy: { createdAt: 'desc' },

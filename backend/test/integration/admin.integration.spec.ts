@@ -283,7 +283,9 @@ describe('Admin Integration Tests', () => {
       expect(response.body).toHaveProperty('users');
       expect(response.body).toHaveProperty('pagination');
       expect(response.body.users).toBeInstanceOf(Array);
-      expect(response.body.users.some((u: any) => u.name.includes('John'))).toBe(true);
+      expect(
+        response.body.users.some((u: any) => u.name.includes('John')),
+      ).toBe(true);
     });
 
     it('should filter users by role', async () => {
@@ -524,8 +526,7 @@ describe('Admin Integration Tests', () => {
     it('should handle SQL injection attempts in search', async () => {
       const response = await request(app.getHttpServer())
         .get(
-          '/admin/users/search?query=' +
-          encodeURIComponent("' OR '1'='1' --"),
+          '/admin/users/search?query=' + encodeURIComponent("' OR '1'='1' --"),
         )
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
@@ -548,9 +549,7 @@ describe('Admin Integration Tests', () => {
         .get(`/admin/users/${studentUser.id}/details`)
         .expect(401);
 
-      await request(app.getHttpServer())
-        .get('/admin/users/search')
-        .expect(401);
+      await request(app.getHttpServer()).get('/admin/users/search').expect(401);
 
       await request(app.getHttpServer())
         .get('/admin/platform/health')
