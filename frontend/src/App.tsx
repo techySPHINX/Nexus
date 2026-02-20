@@ -1,6 +1,7 @@
 import { FC, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Box, CircularProgress } from '@mui/material';
+import { Box } from '@mui/material';
+import Loader from '@/utils/loader';
 import TopNavbar from './components/top-navbar';
 import { AppSidebarNexus } from './components/app-sidebar-nexus';
 import MobileTopNavbar from './components/mobile-top-navbar';
@@ -95,7 +96,7 @@ const LoadingSpinner: FC = () => (
       minHeight: '400px',
     }}
   >
-    <CircularProgress />
+    <Loader />
   </Box>
 );
 
@@ -118,23 +119,7 @@ const LayoutContent: FC = () => {
             transition: 'all 0.3s ease',
           }}
         >
-          <Suspense
-            fallback={
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  height: '50vh',
-                  flexDirection: 'column',
-                  gap: 2,
-                }}
-              >
-                <CircularProgress size={40} />
-                <Box sx={{ color: 'text.secondary' }}>Loading...</Box>
-              </Box>
-            }
-          >
+          <Suspense fallback={<Loader />}>
             <Routes>
               <Route path="/" element={<LandingOptimized />} />
               <Route path="/login" element={<Login />} />
