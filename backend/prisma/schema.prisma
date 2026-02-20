@@ -13,7 +13,6 @@ model User {
   password                              String?                       @db.VarChar(255)
   name                                  String?
   role                                  Role                          @default(STUDENT)
-  graduationYear                        Int?
   description                           String?
   iconUrl                               String?
   bannerUrl                             String?
@@ -29,12 +28,19 @@ model User {
   passwordResetToken                    String?
   twoFactorEnabled                      Boolean                       @default(false)
   twoFactorSecret                       String?
+  graduationYear                        Int?
+  fcmDeviceToken                        String?
+  publicEncryptionKey                   String?
+  ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
+  ReportsMade                           ContentReport[]               @relation("ReportsMade")
   joinRequests                          JoinRequest[]
+  News                                  News[]
   ownedSubCommunities                   SubCommunity[]                @relation("OwnedSubCommunities")
   adminSubCommunityCreationRequests     SubCommunityCreationRequest[] @relation("AdminSubCommunityCreationRequests")
   requesterSubCommunityCreationRequests SubCommunityCreationRequest[] @relation("RequesterSubCommunityCreationRequests")
   subCommunityMemberships               SubCommunityMember[]
   badges                                UsersOnBadges[]
+  deletedComments                       Comment[]                     @relation("DeletedComments")
   Comment                               Comment[]
   receivedConnections                   Connection[]                  @relation("ReceivedConnections")
   requestedConnections                  Connection[]                  @relation("RequestedConnections")
@@ -52,11 +58,11 @@ model User {
   mentorshipRequestsAsMentor            MentorshipRequest[]           @relation("MentorshipRequestMentor")
   receivedMessages                      Message[]                     @relation("ReceivedMessages")
   sentMessages                          Message[]                     @relation("SentMessages")
-  readReceipts                          ReadReceipt[]                 @relation("ReadReceipts")
-  fcmDeviceToken                        String?
-  publicEncryptionKey                   String?
+  moderationLogsPerformed               ModerationLog[]               @relation("ModerationLogsPerformed")
+  moderationLogsTargeted                ModerationLog[]               @relation("ModerationLogsTargeted")
   Notification                          Notification[]
   Post                                  Post[]
+  deletedPosts                          Post[]                        @relation("DeletedPosts")
   profile                               Profile?
   collaborationRequests                 ProjectCollaborationRequest[]
   projectComments                       ProjectComment[]
@@ -65,6 +71,7 @@ model User {
   teamMemberships                       ProjectTeamMember[]
   projectUpdates                        ProjectUpdate[]
   projects                              Project[]
+  readReceipts                          ReadReceipt[]                 @relation("ReadReceipts")
   referralApplications                  ReferralApplication[]
   postedReferrals                       Referral[]                    @relation("PostedReferrals")
   refreshTokens                         RefreshToken[]
@@ -72,39 +79,32 @@ model User {
   startupComment                        StartupComment[]
   startupFollowers                      StartupFollower[]
   startups                              Startup[]
+  userActionsPerformed                  UserAction[]                  @relation("UserActionsPerformed")
+  userActionsRevoked                    UserAction[]                  @relation("UserActionsRevoked")
+  userActionsReceived                   UserAction[]                  @relation("UserActionsReceived")
   userPoints                            UserPoints?
   userSessions                          UserSession[]
   verificationDocuments                 VerificationDocument[]
   Vote                                  Vote[]
-  News                                  News[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
-  ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
-  ReportsMade                           ContentReport[]               @relation("ReportsMade")
-  userActionsReceived                   UserAction[]                  @relation("UserActionsReceived")
-  userActionsPerformed                  UserAction[]                  @relation("UserActionsPerformed")
-  userActionsRevoked                    UserAction[]                  @relation("UserActionsRevoked")
-  moderationLogsPerformed               ModerationLog[]               @relation("ModerationLogsPerformed")
-  moderationLogsTargeted                ModerationLog[]               @relation("ModerationLogsTargeted")
-  deletedPosts                          Post[]                        @relation("DeletedPosts")
-  deletedComments                       Comment[]                     @relation("DeletedComments")
 
   @@map("users")
 }
 
 model News {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  slug        String   @unique
+  slug        String    @unique
   summary     String?
   content     String
-  topic       String?
   imageUrl    String?
-  published   Boolean  @default(false)
+  published   Boolean   @default(false)
   publishedAt DateTime?
   authorId    String?
-  author      User?    @relation(fields: [authorId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  topic       String?
+  author      User?     @relation(fields: [authorId], references: [id])
 }
 
 model Project {
@@ -281,18 +281,18 @@ model Feedback {
 model Profile {
   id           String        @id @default(uuid())
   userId       String        @unique
-  studentId    String?
   bio          String?
   location     String?       @db.VarChar(100)
   interests    String?
   avatarUrl    String?       @db.VarChar(512)
-  gender       String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   branch       String?
   course       String?
   dept         String?
   year         String?
+  studentId    String?
+  gender       String?
   endorsements Endorsement[]
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   skills       Skill[]       @relation("ProfileSkills")
@@ -367,19 +367,19 @@ model Connection {
 }
 
 model Message {
-  id               String        @id @default(uuid())
-  content          String
-  timestamp        DateTime      @default(now())
-  senderId         String
-  receiverId       String
-  isEdited         Boolean       @default(false)
-  editedAt         DateTime?
-  deletedAt        DateTime?
-  isEncrypted      Boolean       @default(false)
-  encryptionKeyId  String?
-  receiver         User          @relation("ReceivedMessages", fields: [receiverId], references: [id])
-  sender           User          @relation("SentMessages", fields: [senderId], references: [id])
-  readReceipts     ReadReceipt[]
+  id              String        @id @default(uuid())
+  content         String
+  timestamp       DateTime      @default(now())
+  senderId        String
+  receiverId      String
+  deletedAt       DateTime?
+  editedAt        DateTime?
+  encryptionKeyId String?
+  isEdited        Boolean       @default(false)
+  isEncrypted     Boolean       @default(false)
+  receiver        User          @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  sender          User          @relation("SentMessages", fields: [senderId], references: [id])
+  readReceipts    ReadReceipt[]
 
   @@index([senderId, receiverId])
   @@index([receiverId, timestamp])
@@ -430,18 +430,18 @@ model Post {
   updatedAt      DateTime        @default(now()) @updatedAt
   isUrgent       Boolean         @default(false)
   subject        String
-  isDeleted      Boolean         @default(false)
   deletedAt      DateTime?
   deletedBy      String?
   deletionReason String?
+  isDeleted      Boolean         @default(false)
   reports        ContentReport[]
   Comment        Comment[]
+  moderationLogs ModerationLog[]
   author         User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  deletedByUser  User?           @relation("DeletedPosts", fields: [deletedBy], references: [id], onDelete: SetNull)
+  deletedByUser  User?           @relation("DeletedPosts", fields: [deletedBy], references: [id])
   flair          Flair?          @relation(fields: [flairId], references: [id])
   subCommunity   SubCommunity?   @relation(fields: [subCommunityId], references: [id])
   Vote           Vote[]
-  moderationLogs ModerationLog[]
 
   @@index([isDeleted])
   @@map("post")
@@ -469,19 +469,19 @@ model Comment {
   postId         String
   parentId       String?
   createdAt      DateTime        @default(now())
-  isDeleted      Boolean         @default(false)
   deletedAt      DateTime?
   deletedBy      String?
   deletionReason String?
+  isDeleted      Boolean         @default(false)
   reports        ContentReport[]
+  deletedByUser  User?           @relation("DeletedComments", fields: [deletedBy], references: [id])
   parent         Comment?        @relation("CommentReplies", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   replies        Comment[]       @relation("CommentReplies")
   post           Post            @relation(fields: [postId], references: [id])
   user           User            @relation(fields: [userId], references: [id])
-  deletedByUser  User?           @relation("DeletedComments", fields: [deletedBy], references: [id], onDelete: SetNull)
+  moderationLogs ModerationLog[]
   votes          Vote[]
   mentionedUsers User[]          @relation("mentionedUsers")
-  moderationLogs ModerationLog[]
 
   @@index([isDeleted])
   @@map("comment")
@@ -494,12 +494,12 @@ model Referral {
   description  String
   requirements String
   location     String
-  deadline     DateTime
-  referralLink String?
   status       ReferralStatus        @default(PENDING)
   alumniId     String
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
+  deadline     DateTime
+  referralLink String?
   applications ReferralApplication[]
   postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
 
@@ -514,15 +514,15 @@ model Referral {
 model ReferralApplication {
   id             String            @id @default(uuid())
   referralId     String
-  applicantId    String
   resumeUrl      String
   coverLetter    String?
-  additionalLink String?
   status         ApplicationStatus @default(PENDING)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
-  referral       Referral          @relation(fields: [referralId], references: [id])
+  additionalLink String?
+  applicantId    String
   applicant      User              @relation(fields: [applicantId], references: [id])
+  referral       Referral          @relation(fields: [referralId], references: [id])
 
   @@unique([referralId, applicantId])
   @@index([referralId, status])
@@ -697,9 +697,9 @@ model PointTransaction {
   userPointsId String
   points       Int
   type         String
-  message      String?
   entityId     String?
   createdAt    DateTime   @default(now())
+  message      String?
   userPoints   UserPoints @relation(fields: [userPointsId], references: [id])
 
   @@map("point_transactions")
@@ -782,8 +782,8 @@ model ContentReport {
   post           Post?               @relation(fields: [postId], references: [id])
   reporter       User                @relation("ReportsMade", fields: [reporterId], references: [id])
   subCommunity   SubCommunity?       @relation(fields: [subCommunityId], references: [id])
-  userActions    UserAction[]
   moderationLogs ModerationLog[]
+  userActions    UserAction[]
 
   @@index([subCommunityId, status])
 }
@@ -895,6 +895,58 @@ model EmailVerification {
 
   @@map("email_verifications")
 }
+
+model UserAction {
+  id           String         @id @default(cuid())
+  userId       String
+  actionType   UserActionType
+  reason       String
+  reportId     String?
+  adminId      String
+  createdAt    DateTime       @default(now())
+  expiresAt    DateTime?
+  isActive     Boolean        @default(true)
+  revokedAt    DateTime?
+  revokedBy    String?
+  revokeReason String?
+  metadata     Json?
+  admin        User           @relation("UserActionsPerformed", fields: [adminId], references: [id])
+  report       ContentReport? @relation(fields: [reportId], references: [id])
+  revoker      User?          @relation("UserActionsRevoked", fields: [revokedBy], references: [id])
+  user         User           @relation("UserActionsReceived", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@index([reportId])
+  @@index([adminId])
+  @@index([expiresAt])
+  @@map("user_actions")
+}
+
+model ModerationLog {
+  id            String               @id @default(cuid())
+  actionType    ModerationActionType
+  performedById String
+  targetUserId  String?
+  reportId      String?
+  postId        String?
+  commentId     String?
+  details       String
+  metadata      Json?
+  createdAt     DateTime             @default(now())
+  comment       Comment?             @relation(fields: [commentId], references: [id])
+  performedBy   User                 @relation("ModerationLogsPerformed", fields: [performedById], references: [id])
+  post          Post?                @relation(fields: [postId], references: [id])
+  report        ContentReport?       @relation(fields: [reportId], references: [id])
+  targetUser    User?                @relation("ModerationLogsTargeted", fields: [targetUserId], references: [id])
+
+  @@index([performedById])
+  @@index([targetUserId])
+  @@index([reportId])
+  @@index([createdAt])
+  @@index([actionType])
+  @@map("moderation_logs")
+}
+
 enum ProjectStatus {
   IDEA
   IN_PROGRESS
@@ -991,57 +1043,6 @@ enum RequestStatus {
   REJECTED
 }
 
-model UserAction {
-  id           String          @id @default(cuid())
-  userId       String
-  actionType   UserActionType
-  reason       String
-  reportId     String?
-  adminId      String
-  createdAt    DateTime        @default(now())
-  expiresAt    DateTime?
-  isActive     Boolean         @default(true)
-  revokedAt    DateTime?
-  revokedBy    String?
-  revokeReason String?
-  metadata     Json?
-  user         User            @relation("UserActionsReceived", fields: [userId], references: [id], onDelete: Cascade)
-  admin        User            @relation("UserActionsPerformed", fields: [adminId], references: [id], onDelete: Restrict)
-  revoker      User?           @relation("UserActionsRevoked", fields: [revokedBy], references: [id], onDelete: SetNull)
-  report       ContentReport?  @relation(fields: [reportId], references: [id], onDelete: SetNull)
-
-  @@index([userId, isActive])
-  @@index([reportId])
-  @@index([adminId])
-  @@index([expiresAt])
-  @@map("user_actions")
-}
-
-model ModerationLog {
-  id            String               @id @default(cuid())
-  actionType    ModerationActionType
-  performedById String
-  targetUserId  String?
-  reportId      String?
-  postId        String?
-  commentId     String?
-  details       String
-  metadata      Json?
-  createdAt     DateTime             @default(now())
-  performedBy   User                 @relation("ModerationLogsPerformed", fields: [performedById], references: [id], onDelete: Restrict)
-  targetUser    User?                @relation("ModerationLogsTargeted", fields: [targetUserId], references: [id], onDelete: SetNull)
-  report        ContentReport?       @relation(fields: [reportId], references: [id], onDelete: SetNull)
-  post          Post?                @relation(fields: [postId], references: [id], onDelete: SetNull)
-  comment       Comment?             @relation(fields: [commentId], references: [id], onDelete: SetNull)
-
-  @@index([performedById])
-  @@index([targetUserId])
-  @@index([reportId])
-  @@index([createdAt])
-  @@index([actionType])
-  @@map("moderation_logs")
-}
-
 enum MentorshipListingStatus {
   OPEN
   CLOSED
@@ -1099,6 +1100,7 @@ enum EventCategory {
   NETWORKING
   COMMUNITY
 }
+
 enum AccountStatus {
   PENDING_VERIFICATION
   PENDING_DOCUMENT_REVIEW
