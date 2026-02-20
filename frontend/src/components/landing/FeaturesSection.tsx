@@ -10,195 +10,194 @@ import {
   TrendingUp,
 } from '@mui/icons-material';
 
+/**
+ * Feature interface: structure for each feature card
+ */
 interface Feature {
   icon: React.ReactNode;
   title: string;
   desc: string;
 }
 
+/**
+ * Props for FeaturesSection component
+ */
 interface FeaturesProps {
   sectionBackground: string;
 }
 
+/**
+ * Features data array
+ * Contains 6 core features of the Nexus platform
+ * Each feature has an icon, title, and description
+ */
 const FEATURES: Feature[] = [
   {
     icon: <ConnectWithoutContact sx={{ fontSize: 28 }} />,
     title: 'Smart Connections',
-    desc: 'AI-powered matching to connect students with relevant alumni mentors and career opportunities.',
+    desc: 'AI-powered matching that introduces students to alumni mentors based on goals and domain.',
   },
   {
     icon: <Work sx={{ fontSize: 28 }} />,
     title: 'Career Guidance',
-    desc: 'Get career advice, internship opportunities, and industry insights from experienced alumni.',
+    desc: 'Actionable guidance from industry professionals for resumes, internships, and interview prep.',
   },
   {
     icon: <School sx={{ fontSize: 28 }} />,
     title: 'Mentorship Programs',
-    desc: 'Structured mentorship with alumni across various industries and experience levels.',
+    desc: 'Structured mentorship journeys with milestones to keep progress transparent and motivating.',
   },
   {
     icon: <Groups sx={{ fontSize: 28 }} />,
     title: 'Community Groups',
-    desc: 'Join specialized groups by major, interests, and career paths with verified members.',
+    desc: 'Topic-specific communities where students and alumni collaborate on meaningful conversations.',
   },
   {
     icon: <RocketLaunch sx={{ fontSize: 28 }} />,
     title: 'Project Collaboration',
-    desc: 'Find project partners, research collaborators, and startup co-founders within our trusted network.',
+    desc: 'Build side projects, startups, and research teams with trusted contributors from campus network.',
   },
   {
     icon: <TrendingUp sx={{ fontSize: 28 }} />,
     title: 'Skill Development',
-    desc: 'Access workshops, resources, and learning paths curated by industry professionals.',
+    desc: 'Learn through expert sessions, curated paths, and peer-backed progress checkpoints.',
   },
 ];
 
+/**
+ * FeaturesSection Component
+ * Showcases the 6 core features of Nexus platform
+ * Features:
+ * - Responsive 2-3 column grid layout (auto-rows-fr ensures equal heights)
+ * - Header with badge and title (side-by-side on desktop)
+ * - Individual feature cards with:
+ *   - Staggered fade-in animation on scroll
+ *   - Icon container with scale/rotate hover effect
+ *   - Smooth background gradient reveal on hover
+ *   - Border glow effect on interaction
+ *   - Bottom accent line that expands on hover
+ * - Flex column layout ensures content fills card height
+ * - Theme-aware colors (dark/light mode)
+ */
 const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
   const { isDark } = useTheme();
   const darkMode = isDark;
 
-  const shimmerStyle = `
-    @keyframes shimmer {
-      0% { background-position: -1000px 0; }
-      100% { background-position: 1000px 0; }
-    }
-    .shimmer-text {
-      background: linear-gradient(
-        90deg,
-        #090909ff 25%,
-        #686885ff 50%,
-        #070707ff 75%
-      );
-      background-size: 1000px 100%;
-      animation: shimmer 2s infinite;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .shimmer-text-dark {
-      background: linear-gradient(
-        90deg,
-        #f7f7f7ff 25%,
-        #aaabacff 50%,
-        #f8f8f9ff 75%
-      );
-      background-size: 1000px 100%;
-      animation: shimmer 2s infinite;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-  `;
-
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.1,
-      },
-    },
-  };
-
-  const cardVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: 'easeOut' },
-    },
-  };
-
   return (
-    <>
-      <style>{shimmerStyle}</style>
-      <section
-        className={`relative py-20 md:py-32 bg-gradient-to-br ${sectionBackground}`}
-      >
-        <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-4xl md:text-5xl font-black mb-4">
-              <span className={darkMode ? 'shimmer-text-dark' : 'shimmer-text'}>
-                Powerful Features
-              </span>
-            </h2>
+    <section className={`relative py-20 md:py-28 ${sectionBackground}`}>
+      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
+        {/* Section header with title and description */}
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+          className="grid lg:grid-cols-[1.1fr_1fr] gap-10 items-end mb-14"
+        >
+          <div>
+            {/* Label badge */}
             <p
-              className={`text-lg md:text-xl ${
-                darkMode ? 'text-gray-400' : 'text-gray-600'
+              className={`text-sm uppercase tracking-[0.25em] mb-3 ${
+                darkMode ? 'text-cyan-300/80' : 'text-cyan-700'
               }`}
             >
-              Everything you need to build meaningful connections
+              Features built for growth
             </p>
-          </motion.div>
+            {/* Main heading */}
+            <h2
+              className={`text-4xl md:text-5xl font-black leading-tight ${
+                darkMode ? 'text-white' : 'text-slate-900'
+              }`}
+            >
+              Diverse tools, one smooth mentorship journey.
+            </h2>
+          </div>
+        </motion.div>
 
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-          >
-            {FEATURES.map((feature, index) => (
-              <motion.div
-                key={index}
-                variants={cardVariants}
-                className={`group relative p-8 rounded-2xl border backdrop-blur-xl transition-all duration-300 overflow-hidden ${
+        {/* Features grid: 2 cols on tablet, 3 on desktop, equal heights */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+          {FEATURES.map((feature, index) => (
+            <motion.article
+              key={feature.title}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: index * 0.05 }}
+              whileHover={{
+                y: -6,
+                transition: { duration: 0.25, ease: 'easeOut' },
+              }}
+              className={`group relative flex flex-col h-full overflow-hidden rounded-3xl border p-7 md:p-8 backdrop-blur-xl transition-all duration-300 cursor-pointer ${
+                darkMode
+                  ? 'border-cyan-400/20 bg-slate-900/40 hover:bg-slate-900/70 hover:border-cyan-400/40 hover:shadow-[0_20px_40px_rgba(8,145,178,0.15)]'
+                  : 'border-cyan-200 bg-white/70 hover:bg-white/95 hover:border-cyan-300 hover:shadow-[0_20px_40px_rgba(14,165,233,0.15)]'
+              }`}
+            >
+              {/* Animated gradient background on hover */}
+              <div
+                className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
                   darkMode
-                    ? 'border-emerald-500/20 bg-emerald-900/10 hover:bg-emerald-900/20'
-                    : 'border-emerald-200 bg-emerald-50/30 hover:bg-emerald-50/60'
+                    ? 'bg-gradient-to-br from-cyan-500/10 via-blue-500/5 to-transparent'
+                    : 'bg-gradient-to-br from-cyan-100/70 via-blue-100/30 to-transparent'
                 }`}
-                whileHover={{ y: -8, transition: { duration: 0.3 } }}
+              />
+
+              {/* Subtle border glow on hover */}
+              <div
+                className={`absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                  darkMode
+                    ? 'shadow-[inset_0_0_20px_rgba(34,211,238,0.1)]'
+                    : 'shadow-[inset_0_0_20px_rgba(14,165,233,0.1)]'
+                }`}
+              />
+
+              {/* Icon container with scale and rotation on hover */}
+              <motion.div
+                whileHover={{ scale: 1.1, rotate: 5 }}
+                transition={{ duration: 0.3 }}
+                className={`relative z-10 inline-flex items-center justify-center rounded-2xl p-3 mb-5 transition-all duration-300 w-fit group-hover:rotate-12 ${
+                  darkMode
+                    ? 'bg-cyan-400/15 text-cyan-300 group-hover:bg-cyan-400/25'
+                    : 'bg-cyan-100 text-cyan-700 group-hover:bg-cyan-200'
+                }`}
               >
-                {/* Gradient background on hover */}
-                <div
-                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                    darkMode
-                      ? 'bg-gradient-to-br from-emerald-500/10 to-teal-500/10'
-                      : 'bg-gradient-to-br from-emerald-400/10 to-cyan-400/10'
-                  }`}
-                />
-
-                <div
-                  className={`relative z-10 text-3xl mb-4 inline-block p-3 rounded-xl transition-all duration-300 group-hover:rotate-[10deg] group-hover:scale-110 ${
-                    darkMode
-                      ? 'bg-emerald-500/20 text-emerald-300'
-                      : 'bg-emerald-200/50 text-emerald-700'
-                  }`}
-                >
-                  <div className="transition-all duration-600 group-hover:rotate-[20deg] group-hover:scale-110">
-                    {feature.icon}
-                  </div>
-                </div>
-
-                <h3 className="relative z-10 text-xl font-bold mb-3">
-                  <span
-                    className={`inline-block ${
-                      darkMode ? 'shimmer-text-dark' : 'shimmer-text'
-                    }`}
-                  >
-                    {feature.title}
-                  </span>
-                </h3>
-                <p
-                  className={`relative z-10 text-sm md:text-base ${
-                    darkMode ? 'text-gray-400' : 'text-gray-600'
-                  }`}
-                >
-                  {feature.desc}
-                </p>
+                {feature.icon}
               </motion.div>
-            ))}
-          </motion.div>
+
+              {/* Feature title */}
+              <h3
+                className={`relative z-10 text-xl md:text-2xl font-bold mb-3 transition-colors duration-300 ${
+                  darkMode
+                    ? 'text-white group-hover:text-cyan-100'
+                    : 'text-slate-900 group-hover:text-cyan-900'
+                }`}
+              >
+                {feature.title}
+              </h3>
+              {/* Feature description - uses flex-grow to push bottom accent line down */}
+              <p
+                className={`relative z-10 flex-grow leading-relaxed text-sm md:text-base transition-colors duration-300 ${
+                  darkMode
+                    ? 'text-slate-300 group-hover:text-slate-200'
+                    : 'text-slate-600 group-hover:text-slate-700'
+                }`}
+              >
+                {feature.desc}
+              </p>
+
+              {/* Bottom accent line that expands on hover */}
+              <div
+                className={`absolute bottom-0 left-0 h-1 w-0 group-hover:w-full transition-all duration-500 ${
+                  darkMode
+                    ? 'bg-gradient-to-r from-cyan-400 to-blue-500'
+                    : 'bg-gradient-to-r from-cyan-500 to-blue-600'
+                }`}
+              />
+            </motion.article>
+          ))}
         </div>
-      </section>
-    </>
+      </div>
+    </section>
   );
 };
 

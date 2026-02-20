@@ -53,9 +53,10 @@ export function NavMainNexus({
                     <SidebarMenuButton
                       tooltip={item.title}
                       isActive={item.isActive}
+                      className="gap-3"
                     >
-                      {item.icon && <item.icon />}
-                      <span>{item.title}</span>
+                      {item.icon && <item.icon className="h-8 w-8" />}
+                      <span className="text-[1.25rem]">{item.title}</span>
                     </SidebarMenuButton>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
@@ -95,15 +96,15 @@ export function NavMainNexus({
                     isActive={item.isActive}
                   >
                     {!item.items || item.items.length === 0 ? (
-                      <Link to={item.url}>
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
+                      <Link to={item.url} className="flex items-center gap-3">
+                        {item.icon && <item.icon className="h-8 w-8" />}
+                        <span className="text-[1.25rem]">{item.title}</span>
                       </Link>
                     ) : (
                       <>
-                        {item.icon && <item.icon />}
-                        <span>{item.title}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                        {item.icon && <item.icon className="h-8 w-8" />}
+                        <span className="text-[1.25rem]">{item.title}</span>
+                        <ChevronRight className="ml-auto h-6 w-6 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </>
                     )}
                   </SidebarMenuButton>
@@ -114,8 +115,13 @@ export function NavMainNexus({
                       {item.items.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton asChild>
-                            <Link to={subItem.url}>
-                              <span>{subItem.title}</span>
+                            <Link
+                              to={subItem.url}
+                              className="flex items-center gap-3"
+                            >
+                              <span className="text-[1.12rem]">
+                                {subItem.title}
+                              </span>
                             </Link>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
