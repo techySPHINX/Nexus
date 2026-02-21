@@ -61,13 +61,16 @@ export default function RecentNews() {
                         </Typography>
                       </Link>
                     }
-                    secondary={
-                      <Typography variant="body2" color="text.secondary">
-                        {n.summary}
-                      </Typography>
-                    }
                   />
                 </ListItem>
+                <ListItemText
+                  primary={
+                    <Typography variant="body2" color="text.secondary">
+                      {(n.summary || '').slice(0, 100) + '...'}
+                    </Typography>
+                  }
+                  sx={{ pl: 2, mt: -1 }}
+                />
                 <Divider component="li" />
               </React.Fragment>
             ))}

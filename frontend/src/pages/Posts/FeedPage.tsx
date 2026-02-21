@@ -16,7 +16,6 @@ import {
   Alert,
   Grid,
   Container,
-  Paper,
 } from '@mui/material';
 import RecentNews from '@/components/News/RecentNews';
 import { CreatePostForm } from '../../components/Post/CreatePostForm';
@@ -174,20 +173,7 @@ const FeedPage: FC = () => {
 
           <Grid item xs={12} md={4}>
             <Box sx={{ position: 'sticky', top: { xs: 16, md: 96 } }}>
-              <Paper
-                elevation={0}
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 1 }}>
-                  Recent
-                </Typography>
-                <RecentNews />
-              </Paper>
+              <RecentNews />
             </Box>
           </Grid>
         </Grid>

@@ -54,6 +54,7 @@ import {
 } from '@/types/profileType';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getErrorMessage } from '@/utils/errorHandler';
+import Loader from '@/utils/loader';
 // import RecentTransactions from '@/components/Profile/RecentTransaction';
 
 const Profile: FC = () => {
@@ -297,21 +298,7 @@ const Profile: FC = () => {
   );
 
   if (loading || profileLoading) {
-    return (
-      <Container maxWidth="lg">
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '80vh',
-          }}
-        >
-          <CircularProgress />
-          <Typography sx={{ ml: 2 }}>Loading profile data...</Typography>
-        </Box>
-      </Container>
-    );
+    return <Loader fullScreen={false} />;
   }
 
   if (error || apiError) {

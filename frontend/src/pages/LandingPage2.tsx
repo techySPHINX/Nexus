@@ -161,9 +161,10 @@ const Landing: FC = () => {
   const { user } = useAuth();
   const darkMode = isDark;
 
-  const [cursorGlow, setCursorGlow] = useState({ x: 50, y: 20 });
+  // const [cursorGlow, setCursorGlow] = useState({ x: 50, y: 20 });
 
   const [travelingGlow, setTravelingGlow] = useState({ x: 30, y: 50 });
+  const [travelingGlow2, setTravelingGlow2] = useState({ x: 100, y: 30 });
   const targetPositionRef = useRef({ x: 30, y: 50 });
 
   useEffect(() => {
@@ -200,14 +201,48 @@ const Landing: FC = () => {
     };
   }, []);
 
-  const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-    const { clientX, clientY, currentTarget } = event;
-    const rect = currentTarget.getBoundingClientRect();
-    setCursorGlow({
-      x: ((clientX - rect.left) / rect.width) * 100,
-      y: ((clientY - rect.top) / rect.height) * 100,
-    });
-  };
+  useEffect(() => {
+    let animationFrameId: number;
+
+    const updateTravelingGlow2 = () => {
+      setTravelingGlow2((prev) => {
+        const target = targetPositionRef.current;
+        const dx = target.x - prev.x;
+        const dy = target.y - prev.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < 2) {
+          targetPositionRef.current = {
+            x: Math.random() * 100,
+            y: Math.random() * 100,
+          };
+        }
+
+        const speed = 0.3;
+        return {
+          x: prev.x + dx * speed * 0.02,
+          y: prev.y + dy * speed * 0.02,
+        };
+      });
+
+      animationFrameId = requestAnimationFrame(updateTravelingGlow2);
+    };
+
+    animationFrameId = requestAnimationFrame(updateTravelingGlow2);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  // const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
+  //   // const { clientX, clientY, currentTarget } = event;
+  //   // const rect = currentTarget.getBoundingClientRect();
+  //   // setCursorGlow({
+  //   //   x: ((clientX - rect.left) / rect.width) * 100,
+  //   //   y: ((clientY - rect.top) / rect.height) * 100,
+  //   // });
+  // };
 
   const sectionBackgrounds = darkMode
     ? [
@@ -234,7 +269,7 @@ const Landing: FC = () => {
   return (
     <div
       className="relative w-full overflow-x-hidden"
-      onMouseMove={handleMouseMove}
+      // onMouseMove={handleMouseMove}
     >
       <div
         className={`fixed inset-0 -z-20 transition-colors duration-500 ${
@@ -244,28 +279,36 @@ const Landing: FC = () => {
         }`}
       />
 
-      <div
+      {/* <div
         className={`fixed inset-0 -z-10 pointer-events-none ${
           darkMode
             ? 'bg-[linear-gradient(rgba(16,185,129,0.06)_1px,transparent_100px),linear-gradient(90deg,rgba(16,185,129,0.06)_1px,transparent_100px)]'
             : 'bg-[linear-gradient(rgba(236, 90, 28, 0.05)_1px,transparent_100px),linear-gradient(90deg,rgba(233, 97, 47, 0.05)_1px,transparent_100px)]'
         } bg-[size:72px_72px] opacity-35`}
-      />
+      /> */}
 
-      <div
+      {/* <div
         className="fixed inset-0 pointer-events-none -z-10 transition-opacity duration-300"
         style={{
           background: `radial-gradient(420px circle at ${cursorGlow.x}% ${cursorGlow.y}%, ${
             darkMode ? 'rgba(16, 185, 129, 0.18)' : 'rgba(34, 197, 94, 0.6)'
           } 0%, transparent 62%)`,
         }}
-      />
+      /> */}
 
       <div
         className="fixed inset-0 pointer-events-none -z-10 transition-all duration-1000 ease-out"
         style={{
           background: `radial-gradient(600px circle at ${travelingGlow.x}% ${travelingGlow.y}%, ${
-            darkMode ? 'rgba(52, 211, 153, 0.25)' : 'rgba(16, 185, 129, 0.35)'
+            darkMode ? 'rgba(52, 211, 153, 0.25)' : 'rgba(16, 185, 129, 0.4)'
+          } 0%, transparent 70%)`,
+        }}
+      />
+      <div
+        className="fixed inset-0 pointer-events-none -z-10 transition-all duration-1000 ease-out"
+        style={{
+          background: `radial-gradient(600px circle at ${travelingGlow2.x}% ${travelingGlow2.y}%, ${
+            darkMode ? 'rgba(52, 153, 211, 0.25)' : 'rgba(16, 129, 185, 0.4)'
           } 0%, transparent 70%)`,
         }}
       />

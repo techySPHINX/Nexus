@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { FC, MouseEvent, useRef } from 'react';
 import {
   motion,
   useMotionTemplate,
@@ -10,7 +10,7 @@ import { Sparkles, ArrowRight } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Highlight } from '../ui/hero-highlight';
 
-const ROTATING_TEXTS = ['Networking', 'Mentorship', 'Collaboration', 'Success'];
+// const ROTATING_TEXTS = ['Networking', 'Mentorship', 'Collaboration', 'Success'];
 
 const HERO_PREVIEW_IMAGE =
   'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
@@ -19,9 +19,9 @@ interface HeroSectionProps {
   sectionBackground: string;
 }
 
-const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
-  const [textIndex, setTextIndex] = useState(0);
-  const [isLoaded, setIsLoaded] = useState(false);
+const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
+  // const [textIndex, setTextIndex] = useState(0);
+  // const [isLoaded, setIsLoaded] = useState(false);
   const darkMode = useTheme().isDark;
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -50,15 +50,15 @@ const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
   );
   const previewTransform = useMotionTemplate`translateZ(${previewDepth}px) scale(${previewScale})`;
 
-  useEffect(() => {
-    setIsLoaded(true);
-    const timer = setInterval(() => {
-      setTextIndex((prev) => (prev + 1) % ROTATING_TEXTS.length);
-    }, 2000);
-    return () => clearInterval(timer);
-  }, []);
+  // useEffect(() => {
+  //   setIsLoaded(true);
+  //   const timer = setInterval(() => {
+  //     setTextIndex((prev) => (prev + 1) % ROTATING_TEXTS.length);
+  //   }, 2000);
+  //   return () => clearInterval(timer);
+  // }, []);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
 
     const rect = cardRef.current.getBoundingClientRect();
@@ -93,14 +93,14 @@ const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
     },
   };
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-    },
-  };
+  // const itemVariants = {
+  //   hidden: { opacity: 0, y: 20 },
+  //   visible: {
+  //     opacity: 1,
+  //     y: 0,
+  //     transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+  //   },
+  // };
 
   return (
     <section
@@ -127,11 +127,14 @@ const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
         <motion.div
           className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8 lg:gap-16 items-center"
           variants={containerVariants}
-          initial="hidden"
-          animate={isLoaded ? 'visible' : 'hidden'}
+          // initial="hidden"
+          // animate={isLoaded ? 'visible' : 'hidden'}
         >
           <div className="space-y-6 lg:space-y-8 text-top lg:text-left">
-            <motion.div variants={itemVariants} className="space-y-4">
+            <motion.div
+              // variants={itemVariants}
+              className="space-y-4"
+            >
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-tight">
                 <span className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 dark:from-emerald-400 dark:via-green-400 dark:to-teal-400 bg-clip-text text-transparent">
                   Nexus
@@ -139,29 +142,28 @@ const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
               </h1>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 text-3xl sm:text-4xl md:text-5xl font-bold">
-                <div className="relative h-[1.2em] w-[280px] sm:w-[320px] overflow-hidden">
-                  {ROTATING_TEXTS.map((text, index) => (
-                    <motion.span
-                      key={text}
-                      initial={{ opacity: 0, y: 50, filter: 'blur(10px)' }}
-                      animate={{
-                        opacity: textIndex === index ? 1 : 0,
-                        y: textIndex === index ? 0 : -50,
-                        filter:
-                          textIndex === index ? 'blur(0px)' : 'blur(10px)',
-                      }}
-                      transition={{ duration: 0.5, ease: 'easeOut' }}
-                      className="absolute inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent"
-                    >
-                      {text}
-                    </motion.span>
-                  ))}
-                </div>
+                {/* <div className="relative h-[1.2em] w-[280px] sm:w-[320px] overflow-hidden"> */}
+                {/* {ROTATING_TEXTS.map((text, index) => ( */}
+                <motion.span
+                  // key={text}
+                  // initial={{ opacity: 0, y: 50, filter: 'blur(10px)' }}
+                  // animate={{
+                  //   opacity: textIndex === index ? 1 : 0,
+                  //   y: textIndex === index ? 0 : -50,
+                  //   filter: textIndex === index ? 'blur(0px)' : 'blur(10px)',
+                  // }}
+                  // transition={{ duration: 0.5, ease: 'easeOut' }}
+                  className="inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent"
+                >
+                  Collaboration
+                </motion.span>
+                {/* ))} */}
+                {/* </div> */}
                 <span className="text-gray-900 dark:text-white">Redefined</span>
               </div>
             </motion.div>
             <motion.p
-              variants={itemVariants}
+              // variants={itemVariants}
               className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
             >
               Connect with KIIT alumni worldwide through{' '}
@@ -172,7 +174,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
             </motion.p>
 
             <motion.div
-              variants={itemVariants}
+              // variants={itemVariants}
               className="flex flex-wrap gap-2 justify-center lg:justify-start"
             >
               {['AI Matching', 'Live Mentors', 'Career Boost'].map((chip) => (
@@ -187,7 +189,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
             </motion.div>
 
             <motion.div
-              variants={itemVariants}
+              // variants={itemVariants}
               className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4"
             >
               <motion.button
@@ -222,7 +224,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ sectionBackground }) => {
 
           <motion.div
             ref={cardRef}
-            variants={itemVariants}
+            // variants={itemVariants}
             className="relative h-[400px] sm:h-[450px] lg:h-[500px] perspective-1000 z-500"
             onMouseEnter={handleMouseEnter}
             onMouseMove={handleMouseMove}

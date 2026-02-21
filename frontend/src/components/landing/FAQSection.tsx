@@ -43,19 +43,7 @@ const FAQSection: React.FC<FAQSectionProps> = ({ sectionBackground }) => {
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
         <div className="grid lg:grid-cols-[0.95fr_1.2fr] gap-8 items-start">
           <div className="p-7">
-            <motion.div
-              animate={{
-                rotate: [-1, -6, 6, -4, -2],
-                scale: [1, 1.2, 1, 1.2, 1],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                repeatDelay: 1,
-                ease: 'easeInOut',
-              }}
-              className="mb-6"
-            >
+            <motion.div className="mb-6">
               <svg
                 viewBox="0 0 300 120"
                 className="w-full h-auto max-w-md"
@@ -105,7 +93,7 @@ const FAQSection: React.FC<FAQSectionProps> = ({ sectionBackground }) => {
                 </text>
               </svg>
             </motion.div>
-            <div className="grid grid-cols-[1fr_auto] gap-4 items-center">
+            <div className="grid grid-cols-[1fr_auto] gap-1 items-center">
               <h3
                 className={`text-2xl md:text-3xl font-bold leading-tight ${
                   darkMode ? 'text-white' : 'text-slate-900'

@@ -4,9 +4,9 @@ import { cn } from '@/lib/utils';
 
 export interface TextFlipProps {
   /** Array of exactly 3 sentences to cycle through */
-  sentences?: [string, string, string];
+  sentences?: [string, string];
   /** Colors for the last word of each sentence */
-  wordColors?: [string, string, string];
+  wordColors?: [string, string];
   /** Time in milliseconds between sentence transitions */
   interval?: number;
   /** Additional CSS classes to apply to the container */
@@ -15,17 +15,12 @@ export interface TextFlipProps {
   animationDuration?: number;
 }
 
-const DEFAULT_SENTENCES: [string, string, string] = [
+const DEFAULT_SENTENCES: [string, string] = [
   'Design that is beautiful',
   'Code that is powerful',
-  'Experience that is effortless',
 ];
 
-const DEFAULT_COLORS: [string, string, string] = [
-  '#f97316',
-  '#8b5cf6',
-  '#06b6d4',
-];
+const DEFAULT_COLORS: [string, string] = ['#f97316', '#8b5cf6'];
 
 export function TextFlip({
   sentences = DEFAULT_SENTENCES,

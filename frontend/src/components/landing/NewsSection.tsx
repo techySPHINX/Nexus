@@ -72,13 +72,7 @@ const NewsSection: React.FC<NewsSectionProps> = ({ sectionBackground }) => {
                 darkMode ? 'text-white' : 'text-slate-900'
               }`}
             >
-              <TextFlip
-                sentences={[
-                  'Campus pulse.',
-                  'Platform updates.',
-                  'Career wins.',
-                ]}
-              />
+              <TextFlip sentences={['Campus pulse.', 'Platform updates.']} />
             </h2>
           </div>
           {user && (

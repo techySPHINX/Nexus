@@ -96,7 +96,7 @@ const LoadingSpinner: FC = () => (
       minHeight: '400px',
     }}
   >
-    <Loader />
+    <Loader fullScreen={false} />
   </Box>
 );
 
@@ -119,7 +119,7 @@ const LayoutContent: FC = () => {
             transition: 'all 0.3s ease',
           }}
         >
-          <Suspense fallback={<Loader />}>
+          <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               <Route path="/" element={<LandingOptimized />} />
               <Route path="/login" element={<Login />} />
