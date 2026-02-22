@@ -102,6 +102,36 @@ export class ProfileService {
     };
   }
 
+  async getProfilePreview(userId: string, avatarUrl: boolean) {
+    console.log(`Fetching profile preview for userId: ${userId} with avatarUrl: ${avatarUrl}`);
+    const profile = await this.prisma.profile.findUnique({
+      where: { userId },
+      select: {
+        avatarUrl: avatarUrl,
+        bio: true,
+        location: true,
+        dept: true,
+        year: true,
+        user: {
+          select: {
+            id: true,
+            _count: {
+              select: {
+                Post: {
+                  where: { status: 'APPROVED' },
+                },
+                projects: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!profile) throw new NotFoundException('Profile not found');
+    return profile;
+  }
+  
   /**
    * Retrieves a user's profile by their user ID.
    * Includes associated skills, user details, and endorsements.

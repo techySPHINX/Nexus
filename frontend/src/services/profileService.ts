@@ -63,6 +63,47 @@ export async function searchedProfileDataService(userId: string) {
   }
 }
 
+export interface ProfilePreviewResponse {
+  user?: {
+    id?: string;
+    name?: string;
+    role?: string;
+    _count?: {
+      Post?: number;
+      projects?: number;
+    };
+  };
+  bio?: string;
+  location?: string;
+  dept?: string;
+  year?: string;
+  avatarUrl?: string;
+  skills?: Array<{ id?: string; name?: string }>;
+}
+
+export async function getProfilePreviewService(
+  userId: string,
+  avatarUrl: boolean = false
+): Promise<ProfilePreviewResponse> {
+  try {
+    console.log(
+      `Requesting profile preview for userId: ${userId} with avatarUrl: ${avatarUrl}`
+    );
+    const response = await api.get(`/profile/${userId}/preview`, {
+      params: { avatarUrl },
+    });
+    console.log('Profile preview data:', response.data);
+    return response.data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to fetch profile preview'
+      );
+    }
+    throw new Error('Failed to fetch profile preview');
+  }
+}
+
 export async function updateProfileService(
   userId: string,
   profileData: UpdateProfileInput
