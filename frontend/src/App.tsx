@@ -13,7 +13,6 @@ import './App.css';
 
 // Lazy load all pages for better code splitting
 const Login = lazy(() => import('./pages/Login'));
-const Register = lazy(() => import('./pages/Register'));
 const EnhancedRegister = lazy(
   () => import('./components/Auth/EnhancedRegister')
 );
@@ -124,7 +123,6 @@ const LayoutContent: FC = () => {
               <Route path="/" element={<LandingOptimized />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<EnhancedRegister />} />
-              <Route path="/register-enhanced" element={<Register />} />
               <Route
                 path="/registration-success"
                 element={<RegistrationSuccess />}
