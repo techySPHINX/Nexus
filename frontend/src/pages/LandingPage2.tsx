@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo, useRef } from 'react';
+import { FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import ThemeToggle from '@/components/ThemeToggle';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
@@ -16,6 +16,12 @@ import Footer from '@/components/landing/Footer';
 
 interface FloatingNetworkProps {
   darkMode: boolean;
+}
+
+interface DeferredSectionProps {
+  children: ReactNode;
+  minHeight?: number;
+  eager?: boolean;
 }
 
 const isFirefoxBrowser = () =>
@@ -167,10 +173,47 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
   );
 };
 
+const DeferredSection: FC<DeferredSectionProps> = ({
+  children,
+  minHeight = 480,
+  eager = false,
+}) => {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(eager);
+
+  useEffect(() => {
+    if (visible || eager) return;
+    const element = sectionRef.current;
+    if (!element) return;
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '400px 0px' }
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [eager, visible]);
+
+  return (
+    <div ref={sectionRef} style={!visible ? { minHeight } : undefined}>
+      {visible ? children : null}
+    </div>
+  );
+};
+
 const Landing: FC = () => {
   const { isDark } = useTheme();
   const { user } = useAuth();
   const darkMode = isDark;
+  const isFirefox = useMemo(() => isFirefoxBrowser(), []);
 
   const sectionBackgrounds = useMemo(
     () =>
@@ -227,7 +270,7 @@ const Landing: FC = () => {
 
       <div
         className={`fixed inset-0 pointer-events-none -z-10 ${
-          !isFirefoxBrowser ? 'landing-animated-glow' : ''
+          !isFirefox ? 'landing-animated-glow' : ''
         }`}
         style={{
           background: `radial-gradient(600px circle at 30% 50%, ${
@@ -235,7 +278,7 @@ const Landing: FC = () => {
           } 0%, transparent 72%)`,
         }}
       />
-      {!isFirefoxBrowser && (
+      {!isFirefox && (
         <div
           className="landing-animated-glow landing-animated-glow-reverse fixed inset-0 pointer-events-none -z-10"
           style={{
@@ -256,7 +299,7 @@ const Landing: FC = () => {
         }}
       />
 
-      {!isFirefoxBrowser && <FloatingNetwork darkMode={darkMode} />}
+      {!isFirefox && <FloatingNetwork darkMode={darkMode} />}
 
       <div className="fixed right-6 z-50 flex items-center gap-3">
         {user && <ThemeToggle />}
@@ -264,14 +307,30 @@ const Landing: FC = () => {
       </div>
 
       <HeroSection sectionBackground={sectionBackgrounds[0]} />
-      <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
-      <StatsSection sectionBackground={sectionBackgrounds[2]} />
-      <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
-      <NewsSection sectionBackground={sectionBackgrounds[4]} />
-      <CTASection sectionBackground={sectionBackgrounds[5]} />
-      <FAQSection sectionBackground={sectionBackgrounds[6]} />
-      <ContactSection sectionBackground={sectionBackgrounds[7]} />
-      <Footer />
+      <DeferredSection eager={!isFirefox} minHeight={700}>
+        <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
+      </DeferredSection>
+      <DeferredSection minHeight={620}>
+        <StatsSection sectionBackground={sectionBackgrounds[2]} />
+      </DeferredSection>
+      <DeferredSection minHeight={760}>
+        <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
+      </DeferredSection>
+      <DeferredSection minHeight={700}>
+        <NewsSection sectionBackground={sectionBackgrounds[4]} />
+      </DeferredSection>
+      <DeferredSection minHeight={520}>
+        <CTASection sectionBackground={sectionBackgrounds[5]} />
+      </DeferredSection>
+      <DeferredSection minHeight={560}>
+        <FAQSection sectionBackground={sectionBackgrounds[6]} />
+      </DeferredSection>
+      <DeferredSection minHeight={700}>
+        <ContactSection sectionBackground={sectionBackgrounds[7]} />
+      </DeferredSection>
+      <DeferredSection minHeight={200}>
+        <Footer />
+      </DeferredSection>
     </div>
   );
 };
