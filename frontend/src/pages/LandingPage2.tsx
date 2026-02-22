@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef, useState } from 'react';
+import { FC, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import ThemeToggle from '@/components/ThemeToggle';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
@@ -18,6 +18,9 @@ interface FloatingNetworkProps {
   darkMode: boolean;
 }
 
+const isFirefoxBrowser = () =>
+  typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
 const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef(false);
@@ -35,9 +38,15 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
       0.1,
       1000
     );
+
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const firefox = isFirefoxBrowser();
+
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
-      antialias: true,
+      antialias: !firefox,
       powerPreference: 'high-performance',
     });
 
@@ -46,7 +55,7 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
     container.appendChild(renderer.domElement);
 
     const nodes: THREE.Mesh[] = [];
-    const nodeCount = 15;
+    const nodeCount = firefox ? 8 : 12;
     const connections: THREE.Line[] = [];
 
     for (let i = 0; i < nodeCount; i++) {
@@ -98,9 +107,10 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      scene.rotation.y += 0.002;
-      scene.rotation.x += 0.001;
-
+      if (!reduceMotion) {
+        scene.rotation.y += 0.0015;
+        scene.rotation.x += 0.0008;
+      }
       const time = Date.now() * 0.001;
       nodes.forEach((node, i) => {
         node.scale.x =
@@ -111,7 +121,7 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
 
       renderer.render(scene, camera);
     };
-    animate();
+    const startTimeoutId = window.setTimeout(animate, 60);
 
     const handleResize = () => {
       if (!container) return;
@@ -124,6 +134,7 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.clearTimeout(startTimeoutId);
       cancelAnimationFrame(animationFrameId);
 
       nodes.forEach((node) => {
@@ -161,116 +172,34 @@ const Landing: FC = () => {
   const { user } = useAuth();
   const darkMode = isDark;
 
-  // const [cursorGlow, setCursorGlow] = useState({ x: 50, y: 20 });
-
-  const [travelingGlow, setTravelingGlow] = useState({ x: 30, y: 50 });
-  const [travelingGlow2, setTravelingGlow2] = useState({ x: 100, y: 30 });
-  const targetPositionRef = useRef({ x: 30, y: 50 });
-
-  useEffect(() => {
-    let animationFrameId: number;
-
-    const updateTravelingGlow = () => {
-      setTravelingGlow((prev) => {
-        const target = targetPositionRef.current;
-        const dx = target.x - prev.x;
-        const dy = target.y - prev.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < 2) {
-          targetPositionRef.current = {
-            x: Math.random() * 100,
-            y: Math.random() * 100,
-          };
-        }
-
-        const speed = 0.3;
-        return {
-          x: prev.x + dx * speed * 0.02,
-          y: prev.y + dy * speed * 0.02,
-        };
-      });
-
-      animationFrameId = requestAnimationFrame(updateTravelingGlow);
-    };
-
-    animationFrameId = requestAnimationFrame(updateTravelingGlow);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  useEffect(() => {
-    let animationFrameId: number;
-
-    const updateTravelingGlow2 = () => {
-      setTravelingGlow2((prev) => {
-        const target = targetPositionRef.current;
-        const dx = target.x - prev.x;
-        const dy = target.y - prev.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
-
-        if (distance < 2) {
-          targetPositionRef.current = {
-            x: Math.random() * 100,
-            y: Math.random() * 100,
-          };
-        }
-
-        const speed = 0.3;
-        return {
-          x: prev.x + dx * speed * 0.02,
-          y: prev.y + dy * speed * 0.02,
-        };
-      });
-
-      animationFrameId = requestAnimationFrame(updateTravelingGlow2);
-    };
-
-    animationFrameId = requestAnimationFrame(updateTravelingGlow2);
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, []);
-
-  // const handleMouseMove = (event: React.MouseEvent<HTMLDivElement>) => {
-  //   // const { clientX, clientY, currentTarget } = event;
-  //   // const rect = currentTarget.getBoundingClientRect();
-  //   // setCursorGlow({
-  //   //   x: ((clientX - rect.left) / rect.width) * 100,
-  //   //   y: ((clientY - rect.top) / rect.height) * 100,
-  //   // });
-  // };
-
-  const sectionBackgrounds = darkMode
-    ? [
-        'bg-transparent',
-        'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
-        'bg-transparent',
-        'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
-        'bg-transparent',
-        'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
-        'bg-transparent',
-        'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
-      ]
-    : [
-        'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
-        'bg-white/40',
-        'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
-        'bg-white/40',
-        'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
-        'bg-white/40',
-        'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
-        'bg-white/40',
-      ];
+  const sectionBackgrounds = useMemo(
+    () =>
+      darkMode
+        ? [
+            'bg-transparent',
+            'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
+            'bg-transparent',
+            'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
+            'bg-transparent',
+            'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
+            'bg-transparent',
+            'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
+          ]
+        : [
+            'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
+            'bg-white/40',
+            'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
+            'bg-white/40',
+            'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
+            'bg-white/40',
+            'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
+            'bg-white/40',
+          ],
+    [darkMode]
+  );
 
   return (
-    <div
-      className="relative w-full overflow-x-hidden"
-      // onMouseMove={handleMouseMove}
-    >
+    <div className="relative w-full overflow-x-hidden">
       <div
         className={`fixed inset-0 -z-20 transition-colors duration-500 ${
           darkMode
@@ -297,21 +226,25 @@ const Landing: FC = () => {
       /> */}
 
       <div
-        className="fixed inset-0 pointer-events-none -z-10 transition-all duration-1000 ease-out"
+        className={`fixed inset-0 pointer-events-none -z-10 ${
+          !isFirefoxBrowser ? 'landing-animated-glow' : ''
+        }`}
         style={{
-          background: `radial-gradient(600px circle at ${travelingGlow.x}% ${travelingGlow.y}%, ${
-            darkMode ? 'rgba(52, 211, 153, 0.25)' : 'rgba(16, 185, 129, 0.4)'
-          } 0%, transparent 70%)`,
+          background: `radial-gradient(600px circle at 30% 50%, ${
+            darkMode ? 'rgba(52, 211, 153, 0.22)' : 'rgba(16, 185, 129, 0.35)'
+          } 0%, transparent 72%)`,
         }}
       />
-      <div
-        className="fixed inset-0 pointer-events-none -z-10 transition-all duration-1000 ease-out"
-        style={{
-          background: `radial-gradient(600px circle at ${travelingGlow2.x}% ${travelingGlow2.y}%, ${
-            darkMode ? 'rgba(52, 153, 211, 0.25)' : 'rgba(16, 129, 185, 0.4)'
-          } 0%, transparent 70%)`,
-        }}
-      />
+      {!isFirefoxBrowser && (
+        <div
+          className="landing-animated-glow landing-animated-glow-reverse fixed inset-0 pointer-events-none -z-10"
+          style={{
+            background: `radial-gradient(600px circle at 70% 30%, ${
+              darkMode ? 'rgba(52, 153, 211, 0.25)' : 'rgba(16, 129, 185, 0.4)'
+            } 0%, transparent 70%)`,
+          }}
+        />
+      )}
 
       <div
         className="fixed inset-0 -z-10 pointer-events-none"
@@ -323,7 +256,7 @@ const Landing: FC = () => {
         }}
       />
 
-      <FloatingNetwork darkMode={darkMode} />
+      {!isFirefoxBrowser && <FloatingNetwork darkMode={darkMode} />}
 
       <div className="fixed right-6 z-50 flex items-center gap-3">
         {user && <ThemeToggle />}

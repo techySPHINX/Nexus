@@ -9,6 +9,7 @@ import {
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Highlight } from '../ui/hero-highlight';
+import { CanvasText } from '../ui/canvas-text';
 
 // const ROTATING_TEXTS = ['Networking', 'Mentorship', 'Collaboration', 'Success'];
 
@@ -136,9 +137,24 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
               className="space-y-4"
             >
               <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-tight">
-                <span className="bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 dark:from-emerald-400 dark:via-green-400 dark:to-teal-400 bg-clip-text text-transparent">
-                  Nexus
-                </span>
+                <CanvasText
+                  text="Nexus"
+                  backgroundClassName="bg-green-600 dark:bg-green-700"
+                  colors={[
+                    'rgba(0, 255, 153, 1)',
+                    'rgba(0, 255, 153, 0.9)',
+                    'rgba(0, 255, 153, 0.8)',
+                    'rgba(0, 255, 153, 0.7)',
+                    'rgba(0, 255, 153, 0.6)',
+                    'rgba(0, 255, 153, 0.5)',
+                    'rgba(0, 255, 153, 0.4)',
+                    'rgba(0, 255, 153, 0.3)',
+                    'rgba(0, 255, 153, 0.2)',
+                    'rgba(0, 255, 153, 0.1)',
+                  ]}
+                  lineGap={4}
+                  animationDuration={20}
+                />
               </h1>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 text-3xl sm:text-4xl md:text-5xl font-bold">

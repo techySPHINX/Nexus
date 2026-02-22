@@ -102,6 +102,7 @@ const StartupDetail: FC<Props> = ({
                 user={startup.founder}
                 showAvatar={false}
                 variant="subtitle1"
+                showAvaterPopUp={true}
               />
             )}
           </Box>
