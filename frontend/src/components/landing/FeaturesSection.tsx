@@ -73,10 +73,10 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header with title and description */}
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
+          initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.6 }}
           className="grid lg:grid-cols-[1.1fr_1fr] gap-10 items-end mb-14"
         >
           <div>
@@ -99,13 +99,9 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
 
         {/* Features grid: 2 cols on tablet, 3 on desktop, equal heights */}
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 lg:gap-6 auto-rows-fr">
-          {FEATURES.map((feature, index) => (
+          {FEATURES.map((feature) => (
             <motion.article
               key={feature.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.45, delay: index * 0.05 }}
               whileHover={{
                 y: -6,
                 transition: { duration: 0.25, ease: 'easeOut' },

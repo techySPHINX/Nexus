@@ -2,7 +2,6 @@ import React, { useCallback, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
-import { CanvasText } from '../ui/canvas-text';
 
 interface CTASectionProps {
   sectionBackground: string;
@@ -100,24 +99,9 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
               }`}
             >
               Join{' '}
-              <CanvasText
-                text="Nexus"
-                backgroundClassName="bg-green-600 dark:bg-green-700"
-                colors={[
-                  'rgba(0, 255, 153, 1)',
-                  'rgba(0, 255, 153, 0.9)',
-                  'rgba(0, 255, 153, 0.8)',
-                  'rgba(0, 255, 153, 0.7)',
-                  'rgba(0, 255, 153, 0.6)',
-                  'rgba(0, 255, 153, 0.5)',
-                  'rgba(0, 255, 153, 0.4)',
-                  'rgba(0, 255, 153, 0.3)',
-                  'rgba(0, 255, 153, 0.2)',
-                  'rgba(0, 255, 153, 0.1)',
-                ]}
-                lineGap={4}
-                animationDuration={20}
-              />{' '}
+              <span className="leading-tight font-black bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 bg-clip-text text-transparent">
+                Nexus
+              </span>{' '}
               and start building your future circle.
             </h2>
             <div className="flex flex-col sm:flex-row gap-4">

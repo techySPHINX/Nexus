@@ -105,29 +105,54 @@ export default function NetworkOverview() {
     },
   ];
 
+  // keep the light theme classes identical; change to darker surfaces for dark mode
+  const containerClasses = isDark
+    ? 'rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow bg-neutral-900 border-neutral-700 text-neutral-100'
+    : 'bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow';
+
+  const headerTitleClass = isDark
+    ? 'text-xl font-bold text-neutral-100'
+    : 'text-xl font-bold text-gray-900';
+
   // Skeleton Loading
   if (statsLoading && !connectionStats) {
     return (
-      <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+      <div className={containerClasses}>
         <div className="flex items-center justify-between mb-6">
-          <div className="h-7 w-48 bg-emerald-100 rounded animate-pulse" />
-          <div className="h-5 w-20 bg-emerald-100 rounded animate-pulse" />
+          <h2 className={headerTitleClass}>Network Overview</h2>
+          <div
+            className={`h-5 w-20 bg-emerald-100 rounded animate-pulse ${isDark ? 'dark:bg-neutral-700' : ''}`}
+          />
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {[...Array(4)].map((_, index) => (
             <div key={index} className="text-center">
               <div className="flex justify-center mb-3">
-                <div className="w-10 h-10 bg-emerald-100 rounded-lg animate-pulse" />
+                <div
+                  className={`w-10 h-10 bg-emerald-100 rounded-lg animate-pulse ${isDark ? 'dark:bg-neutral-700' : ''}`}
+                />
               </div>
-              <div className="h-8 bg-emerald-100 rounded animate-pulse mb-2 mx-auto w-16" />
-              <div className="h-4 bg-emerald-100 rounded animate-pulse w-20 mx-auto" />
+              <div
+                className={`h-8 bg-emerald-100 rounded animate-pulse mb-2 mx-auto w-16 ${isDark ? 'dark:bg-neutral-700' : ''}`}
+              />
+              <div
+                className={`h-4 bg-emerald-100 rounded animate-pulse w-20 mx-auto ${isDark ? 'dark:bg-neutral-700' : ''}`}
+              />
             </div>
           ))}
         </div>
 
-        <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 animate-pulse">
-          <div className="h-4 bg-emerald-100 rounded w-3/4" />
+        <div
+          className={`p-4 bg-emerald-50 rounded-lg border border-emerald-200 animate-pulse ${
+            isDark ? 'dark:bg-neutral-800 dark:border-neutral-700' : ''
+          }`}
+        >
+          <div
+            className={`h-4 bg-emerald-100 rounded w-3/4 ${
+              isDark ? 'dark:bg-neutral-700' : ''
+            }`}
+          />
         </div>
       </div>
     );
@@ -136,13 +161,13 @@ export default function NetworkOverview() {
   // Error State
   if (statsError) {
     return (
-      <div className="bg-white rounded-xl border border-rose-100 p-6 shadow-sm">
+      <div className={containerClasses}>
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Network Overview</h2>
+          <h2 className={headerTitleClass}>Network Overview</h2>
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="text-rose-600 hover:text-rose-700 transition-colors disabled:opacity-50"
+            className="text-green-600 hover:text-green-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw
               className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
@@ -150,13 +175,13 @@ export default function NetworkOverview() {
           </button>
         </div>
 
-        <div className="flex items-center gap-3 p-4 bg-rose-50 rounded-lg border border-rose-200 mb-6">
-          <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+        <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200 mb-6">
+          <AlertCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-rose-800">
+            <p className="text-sm font-medium text-green-800">
               Failed to load stats
             </p>
-            <p className="text-sm text-rose-600">{statsError}</p>
+            <p className="text-sm text-green-600">{statsError}</p>
           </div>
         </div>
 
@@ -164,7 +189,7 @@ export default function NetworkOverview() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             <RefreshCw
               className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
@@ -175,15 +200,6 @@ export default function NetworkOverview() {
       </div>
     );
   }
-
-  // keep the light theme classes identical; change to darker surfaces for dark mode
-  const containerClasses = isDark
-    ? 'rounded-xl border p-6 shadow-sm hover:shadow-md transition-shadow bg-neutral-900 border-neutral-700 text-neutral-100'
-    : 'bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-shadow';
-
-  const headerTitleClass = isDark
-    ? 'text-xl font-bold text-neutral-100'
-    : 'text-xl font-bold text-gray-900';
 
   return (
     <Card className={containerClasses}>

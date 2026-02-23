@@ -1,4 +1,4 @@
-import { FC, MouseEvent, useRef } from 'react';
+import { FC, MouseEvent, useMemo, useRef } from 'react';
 import {
   motion,
   useMotionTemplate,
@@ -9,16 +9,19 @@ import {
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Highlight } from '../ui/hero-highlight';
-import { CanvasText } from '../ui/canvas-text';
 
 const HERO_PREVIEW_IMAGE =
   'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
 
 interface HeroSectionProps {
   sectionBackground: string;
+  lowPerformanceMode?: boolean;
 }
 
-const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
+const HeroSection: FC<HeroSectionProps> = ({
+  sectionBackground,
+  lowPerformanceMode = false,
+}) => {
   const darkMode = useTheme().isDark;
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -71,16 +74,19 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
     hoverProgress.set(0);
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.2,
+  const containerVariants = useMemo(
+    () => ({
+      hidden: { opacity: 0 },
+      visible: {
+        opacity: 1,
+        transition: {
+          staggerChildren: 0.1,
+          delayChildren: 0.2,
+        },
       },
-    },
-  };
+    }),
+    []
+  );
 
   return (
     <section
@@ -88,14 +94,22 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
     >
       <motion.div
         className="absolute inset-0 opacity-30"
-        animate={{
-          backgroundPosition: ['0% 0%', '100% 100%'],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          repeatType: 'reverse',
-        }}
+        animate={
+          lowPerformanceMode
+            ? undefined
+            : {
+                backgroundPosition: ['0% 0%', '100% 100%'],
+              }
+        }
+        transition={
+          lowPerformanceMode
+            ? undefined
+            : {
+                duration: 20,
+                repeat: Infinity,
+                repeatType: 'reverse',
+              }
+        }
         style={{
           backgroundImage: `radial-gradient(circle at 20% 50%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
                            radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.1) 0%, transparent 50%)`,
@@ -110,32 +124,31 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
         >
           <div className="space-y-6 text-center lg:space-y-8 lg:text-left">
             <motion.div className="space-y-4">
-              <h1 className="text-8xl lg:text-9xl font-black leading-tight">
-                <CanvasText
-                  text="Nexus"
-                  backgroundClassName="bg-green-600 dark:bg-green-700"
-                  colors={[
-                    'rgba(0, 255, 153, 1)',
-                    'rgba(0, 255, 153, 0.9)',
-                    'rgba(0, 255, 153, 0.8)',
-                    'rgba(0, 255, 153, 0.7)',
-                    'rgba(0, 255, 153, 0.6)',
-                    'rgba(0, 255, 153, 0.5)',
-                    'rgba(0, 255, 153, 0.4)',
-                    'rgba(0, 255, 153, 0.3)',
-                    'rgba(0, 255, 153, 0.2)',
-                    'rgba(0, 255, 153, 0.1)',
-                  ]}
-                  lineGap={4}
-                  animationDuration={20}
-                />
-              </h1>
+              <div className="relative">
+                {/* Floating Elements */}
+                <div className="absolute top-10 left-10 w-20 h-20 bg-blue-400/20 rounded-full animate-float" />
+                <div className="absolute top-20 right-20 w-16 h-16 bg-emerald-400/20 rounded-full animate-float animation-delay-2000" />
 
-              <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 text-3xl sm:text-4xl md:text-5xl font-bold">
-                <motion.span className="inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
-                  Collaboration
-                </motion.span>
-                <span className="text-gray-900 dark:text-white">Redefined</span>
+                <div className="py-2">
+                  <span className="text-sm font-medium tracking-wider text-gray-500 dark:text-gray-400 uppercase">
+                    Student • Alumni • Connection
+                  </span>
+
+                  <h1 className="text-8xl lg:text-9xl font-black leading-none mt-4">
+                    <span className="bg-gradient-to-r from-emerald-600 via-green-500 to-lime-500 bg-clip-text text-transparent">
+                      Nexus
+                    </span>
+                  </h1>
+
+                  <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 text-3xl sm:text-4xl md:text-5xl font-bold">
+                    <motion.span className="inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                      Collaboration
+                    </motion.span>
+                    <span className="text-gray-900 dark:text-white">
+                      Redefined
+                    </span>
+                  </div>
+                </div>
               </div>
             </motion.div>
             <motion.p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
@@ -151,7 +164,9 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
                 <motion.span
                   key={chip}
                   className="px-4 py-1.5 rounded-full text-sm font-medium bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 shadow-sm"
-                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileHover={
+                    lowPerformanceMode ? undefined : { scale: 1.05, y: -2 }
+                  }
                 >
                   {chip}
                 </motion.span>
@@ -161,7 +176,9 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
             <motion.div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
               <motion.button
                 className="px-8 py-4 rounded-xl font-bold text-lg border-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
-                whileHover={{ scale: 1.05, y: -2 }}
+                whileHover={
+                  lowPerformanceMode ? undefined : { scale: 1.05, y: -2 }
+                }
                 whileTap={{ scale: 0.95 }}
               >
                 Sign In
@@ -171,15 +188,21 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
                 style={{
                   background: 'linear-gradient(135deg, #10b981, #059669)',
                 }}
-                whileHover={{ scale: 1.05, y: -2 }}
+                whileHover={
+                  lowPerformanceMode ? undefined : { scale: 1.05, y: -2 }
+                }
                 whileTap={{ scale: 0.95 }}
               >
                 <motion.div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   Get Started
                   <motion.span
-                    animate={{ x: [0, 4, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
+                    animate={lowPerformanceMode ? undefined : { x: [0, 4, 0] }}
+                    transition={
+                      lowPerformanceMode
+                        ? undefined
+                        : { duration: 1.5, repeat: Infinity }
+                    }
                   >
                     <ArrowRight className="w-5 h-5" />
                   </motion.span>

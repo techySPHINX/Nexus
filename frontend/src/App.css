@@ -158,6 +158,25 @@
   }
 }
 
+@keyframes float {
+0%,
+100% {
+  transform: translateY(0) rotate(0deg);
+                  }
+                  50% {
+                    transform: translateY(-20px) rotate(5deg);
+                  }
+                }
+                .animate-float {
+                  animation: float 6s ease-in-out infinite;
+                }
+                .animation-delay-1000 {
+                  animation-delay: 1s;
+                }
+                .animation-delay-2000 {
+                  animation-delay: 2s;
+                }
+
 /* Feature cards hover effects */
 .feature-card {
   transition: all 0.3s ease;

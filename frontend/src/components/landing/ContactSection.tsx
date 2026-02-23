@@ -32,13 +32,7 @@ const ContactSection: React.FC<ContactSectionProps> = ({
       className={`relative py-10 md:py-14 bg-transparent ${sectionBackground}`}
     >
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="grid lg:grid-cols-[1.1fr_1fr] gap-8"
-        >
+        <motion.div className="grid lg:grid-cols-[1.1fr_1fr] gap-8">
           <div>
             <p
               className={`text-sm uppercase tracking-[0.2em] mb-3 ${

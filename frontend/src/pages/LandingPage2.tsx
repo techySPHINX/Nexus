@@ -1,5 +1,5 @@
 import { FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-import * as THREE from 'three';
+// import * as THREE from 'three';
 import ThemeToggle from '@/components/ThemeToggle';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -14,169 +14,171 @@ import FAQSection from '@/components/landing/FAQSection';
 import CTASection from '@/components/landing/CTASection';
 import Footer from '@/components/landing/Footer';
 
-interface FloatingNetworkProps {
-  darkMode: boolean;
-}
+// interface FloatingNetworkProps {
+//   darkMode: boolean;
+// }
 
 interface DeferredSectionProps {
   children: ReactNode;
   minHeight?: number;
   eager?: boolean;
+  rootMargin?: string;
 }
 
 const isFirefoxBrowser = () =>
   typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
 
-const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mountRef = useRef(false);
+// const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
+//   const containerRef = useRef<HTMLDivElement>(null);
+//   const mountRef = useRef(false);
 
-  useEffect(() => {
-    if (!containerRef.current || mountRef.current) return;
-    mountRef.current = true;
+//   useEffect(() => {
+//     if (!containerRef.current || mountRef.current) return;
+//     mountRef.current = true;
 
-    const container = containerRef.current;
+//     const container = containerRef.current;
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(
-      75,
-      container.clientWidth / container.clientHeight,
-      0.1,
-      1000
-    );
+//     const scene = new THREE.Scene();
+//     const camera = new THREE.PerspectiveCamera(
+//       75,
+//       container.clientWidth / container.clientHeight,
+//       0.1,
+//       1000
+//     );
 
-    const reduceMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const firefox = isFirefoxBrowser();
+//     const reduceMotion =
+//       typeof window !== 'undefined' &&
+//       window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+//     const firefox = isFirefoxBrowser();
 
-    const renderer = new THREE.WebGLRenderer({
-      alpha: true,
-      antialias: !firefox,
-      powerPreference: 'high-performance',
-    });
+//     const renderer = new THREE.WebGLRenderer({
+//       alpha: true,
+//       antialias: !firefox,
+//       powerPreference: 'high-performance',
+//     });
 
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-    container.appendChild(renderer.domElement);
+//     renderer.setSize(container.clientWidth, container.clientHeight);
+//     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+//     container.appendChild(renderer.domElement);
 
-    const nodes: THREE.Mesh[] = [];
-    const nodeCount = firefox ? 8 : 12;
-    const connections: THREE.Line[] = [];
+//     const nodes: THREE.Mesh[] = [];
+//     const nodeCount = firefox ? 8 : 12;
+//     const connections: THREE.Line[] = [];
 
-    for (let i = 0; i < nodeCount; i++) {
-      const geometry = new THREE.SphereGeometry(0.1, 8, 6);
-      const material = new THREE.MeshBasicMaterial({
-        color: darkMode ? 0x10b981 : 0x059669,
-        transparent: true,
-        opacity: darkMode ? 0.7 : 0.6,
-      });
-      const node = new THREE.Mesh(geometry, material);
+//     for (let i = 0; i < nodeCount; i++) {
+//       const geometry = new THREE.SphereGeometry(0.1, 8, 6);
+//       const material = new THREE.MeshBasicMaterial({
+//         color: darkMode ? 0x10b981 : 0x059669,
+//         transparent: true,
+//         opacity: darkMode ? 0.7 : 0.6,
+//       });
+//       const node = new THREE.Mesh(geometry, material);
 
-      const radius = 4;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(Math.random() * 2 - 1);
+//       const radius = 4;
+//       const theta = Math.random() * Math.PI * 2;
+//       const phi = Math.acos(Math.random() * 2 - 1);
 
-      node.position.x = radius * Math.sin(phi) * Math.cos(theta);
-      node.position.y = radius * Math.sin(phi) * Math.sin(theta);
-      node.position.z = radius * Math.cos(phi);
+//       node.position.x = radius * Math.sin(phi) * Math.cos(theta);
+//       node.position.y = radius * Math.sin(phi) * Math.sin(theta);
+//       node.position.z = radius * Math.cos(phi);
 
-      nodes.push(node);
-      scene.add(node);
-    }
+//       nodes.push(node);
+//       scene.add(node);
+//     }
 
-    for (let i = 0; i < nodeCount; i++) {
-      for (let j = i + 1; j < nodeCount; j++) {
-        const distance = nodes[i].position.distanceTo(nodes[j].position);
-        if (distance < 5) {
-          const geometry = new THREE.BufferGeometry().setFromPoints([
-            nodes[i].position,
-            nodes[j].position,
-          ]);
-          const material = new THREE.LineBasicMaterial({
-            color: darkMode ? 0x047857 : 0x10b981,
-            transparent: true,
-            opacity: darkMode ? 0.2 : 0.15,
-            linewidth: 1,
-          });
-          const line = new THREE.Line(geometry, material);
-          connections.push(line);
-          scene.add(line);
-        }
-      }
-    }
+//     for (let i = 0; i < nodeCount; i++) {
+//       for (let j = i + 1; j < nodeCount; j++) {
+//         const distance = nodes[i].position.distanceTo(nodes[j].position);
+//         if (distance < 5) {
+//           const geometry = new THREE.BufferGeometry().setFromPoints([
+//             nodes[i].position,
+//             nodes[j].position,
+//           ]);
+//           const material = new THREE.LineBasicMaterial({
+//             color: darkMode ? 0x047857 : 0x10b981,
+//             transparent: true,
+//             opacity: darkMode ? 0.2 : 0.15,
+//             linewidth: 1,
+//           });
+//           const line = new THREE.Line(geometry, material);
+//           connections.push(line);
+//           scene.add(line);
+//         }
+//       }
+//     }
 
-    camera.position.z = 8;
+//     camera.position.z = 8;
 
-    let animationFrameId: number;
+//     let animationFrameId: number;
 
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
+//     const animate = () => {
+//       animationFrameId = requestAnimationFrame(animate);
 
-      if (!reduceMotion) {
-        scene.rotation.y += 0.0015;
-        scene.rotation.x += 0.0008;
-      }
-      const time = Date.now() * 0.001;
-      nodes.forEach((node, i) => {
-        node.scale.x =
-          node.scale.y =
-          node.scale.z =
-            1 + 0.2 * Math.sin(time * 2 + i);
-      });
+//       if (!reduceMotion) {
+//         scene.rotation.y += 0.0015;
+//         scene.rotation.x += 0.0008;
+//       }
+//       const time = Date.now() * 0.001;
+//       nodes.forEach((node, i) => {
+//         node.scale.x =
+//           node.scale.y =
+//           node.scale.z =
+//             1 + 0.2 * Math.sin(time * 2 + i);
+//       });
 
-      renderer.render(scene, camera);
-    };
-    const startTimeoutId = window.setTimeout(animate, 60);
+//       renderer.render(scene, camera);
+//     };
+//     const startTimeoutId = window.setTimeout(animate, 60);
 
-    const handleResize = () => {
-      if (!container) return;
-      camera.aspect = container.clientWidth / container.clientHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(container.clientWidth, container.clientHeight);
-    };
+//     const handleResize = () => {
+//       if (!container) return;
+//       camera.aspect = container.clientWidth / container.clientHeight;
+//       camera.updateProjectionMatrix();
+//       renderer.setSize(container.clientWidth, container.clientHeight);
+//     };
 
-    window.addEventListener('resize', handleResize);
+//     window.addEventListener('resize', handleResize);
 
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      window.clearTimeout(startTimeoutId);
-      cancelAnimationFrame(animationFrameId);
+//     return () => {
+//       window.removeEventListener('resize', handleResize);
+//       window.clearTimeout(startTimeoutId);
+//       cancelAnimationFrame(animationFrameId);
 
-      nodes.forEach((node) => {
-        node.geometry.dispose();
-        if (node.material instanceof THREE.Material) {
-          node.material.dispose();
-        }
-      });
+//       nodes.forEach((node) => {
+//         node.geometry.dispose();
+//         if (node.material instanceof THREE.Material) {
+//           node.material.dispose();
+//         }
+//       });
 
-      connections.forEach((connection) => {
-        connection.geometry.dispose();
-        if (connection.material instanceof THREE.Material) {
-          connection.material.dispose();
-        }
-      });
+//       connections.forEach((connection) => {
+//         connection.geometry.dispose();
+//         if (connection.material instanceof THREE.Material) {
+//           connection.material.dispose();
+//         }
+//       });
 
-      if (container && renderer.domElement) {
-        container.removeChild(renderer.domElement);
-      }
-      renderer.dispose();
-    };
-  }, [darkMode]);
+//       if (container && renderer.domElement) {
+//         container.removeChild(renderer.domElement);
+//       }
+//       renderer.dispose();
+//     };
+//   }, [darkMode]);
 
-  return (
-    <div
-      ref={containerRef}
-      className="absolute inset-0 pointer-events-none overflow-hidden"
-      style={{ opacity: darkMode ? 0.08 : 0.12 }}
-    />
-  );
-};
+//   return (
+//     <div
+//       ref={containerRef}
+//       className="absolute inset-0 pointer-events-none overflow-hidden"
+//       style={{ opacity: darkMode ? 0.08 : 0.12 }}
+//     />
+//   );
+// };
 
 const DeferredSection: FC<DeferredSectionProps> = ({
   children,
   minHeight = 480,
   eager = false,
+  rootMargin = '400px 0px',
 }) => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(eager);
@@ -196,11 +198,11 @@ const DeferredSection: FC<DeferredSectionProps> = ({
           observer.disconnect();
         }
       },
-      { rootMargin: '400px 0px' }
+      { rootMargin }
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, [eager, visible]);
+  }, [eager, rootMargin, visible]);
 
   return (
     <div ref={sectionRef} style={!visible ? { minHeight } : undefined}>
@@ -214,6 +216,19 @@ const Landing: FC = () => {
   const { user } = useAuth();
   const darkMode = isDark;
   const isFirefox = useMemo(() => isFirefoxBrowser(), []);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncValue = () => setPrefersReducedMotion(mediaQuery.matches);
+    syncValue();
+    mediaQuery.addEventListener('change', syncValue);
+    return () => mediaQuery.removeEventListener('change', syncValue);
+  }, []);
+
+  const lowPerformanceMode = isFirefox || prefersReducedMotion;
+  const deferredRootMargin = lowPerformanceMode ? '120px 0px' : '320px 0px';
 
   const sectionBackgrounds = useMemo(
     () =>
@@ -242,7 +257,11 @@ const Landing: FC = () => {
   );
 
   return (
-    <div className="relative w-full overflow-x-hidden">
+    <div
+      className={`relative w-full overflow-x-hidden ${
+        lowPerformanceMode ? 'landing-performance-mode' : ''
+      }`}
+    >
       <div
         className={`fixed inset-0 -z-20 transition-colors duration-500 ${
           darkMode
@@ -269,16 +288,17 @@ const Landing: FC = () => {
       /> */}
 
       <div
-        className={`fixed inset-0 pointer-events-none -z-10 ${
-          !isFirefox ? 'landing-animated-glow' : ''
-        }`}
+        className="fixed inset-0 pointer-events-none -z-10 "
+        // ${
+        // !lowPerformanceMode ? 'landing-animated-glow' : ''
+        // }
         style={{
           background: `radial-gradient(600px circle at 30% 50%, ${
             darkMode ? 'rgba(52, 211, 153, 0.22)' : 'rgba(16, 185, 129, 0.35)'
           } 0%, transparent 72%)`,
         }}
       />
-      {!isFirefox && (
+      {/* {!lowPerformanceMode && (
         <div
           className="landing-animated-glow landing-animated-glow-reverse fixed inset-0 pointer-events-none -z-10"
           style={{
@@ -287,48 +307,63 @@ const Landing: FC = () => {
             } 0%, transparent 70%)`,
           }}
         />
-      )}
+      )} */}
 
-      <div
-        className="fixed inset-0 -z-10 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.06), transparent 35%), radial-gradient(circle at 75% 55%, rgba(255,255,255,0.04), transparent 38%)',
-          mixBlendMode: darkMode ? 'screen' : 'multiply',
-          opacity: darkMode ? 0.6 : 0.35,
-        }}
-      />
+      {/* {!lowPerformanceMode && (
+        <div
+          className="fixed inset-0 -z-10 pointer-events-none"
+          style={{
+            background:
+              'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.06), transparent 35%), radial-gradient(circle at 75% 55%, rgba(255,255,255,0.04), transparent 38%)',
+            mixBlendMode: darkMode ? 'screen' : 'multiply',
+            opacity: darkMode ? 0.6 : 0.35,
+          }}
+        />
+      )} */}
 
-      {!isFirefox && <FloatingNetwork darkMode={darkMode} />}
+      {/* {!lowPerformanceMode && <FloatingNetwork darkMode={darkMode} />} */}
 
       <div className="fixed right-6 z-50 flex items-center gap-3">
         {user && <ThemeToggle />}
         {user && <NotificationIndicator />}
       </div>
 
-      <HeroSection sectionBackground={sectionBackgrounds[0]} />
-      <DeferredSection eager={!isFirefox} minHeight={700}>
+      <HeroSection
+        sectionBackground={sectionBackgrounds[0]}
+        lowPerformanceMode={lowPerformanceMode}
+      />
+      <DeferredSection
+        eager={!lowPerformanceMode}
+        minHeight={700}
+        rootMargin={deferredRootMargin}
+      >
         <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
       </DeferredSection>
-      <DeferredSection minHeight={620}>
-        <StatsSection sectionBackground={sectionBackgrounds[2]} />
+      <DeferredSection minHeight={620} rootMargin={deferredRootMargin}>
+        <StatsSection
+          sectionBackground={sectionBackgrounds[2]}
+          lowPerformanceMode={lowPerformanceMode}
+        />
       </DeferredSection>
-      <DeferredSection minHeight={760}>
+      <DeferredSection minHeight={760} rootMargin={deferredRootMargin}>
         <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
       </DeferredSection>
-      <DeferredSection minHeight={700}>
+      <DeferredSection minHeight={700} rootMargin={deferredRootMargin}>
         <NewsSection sectionBackground={sectionBackgrounds[4]} />
       </DeferredSection>
-      <DeferredSection minHeight={520}>
-        <CTASection sectionBackground={sectionBackgrounds[5]} />
+      <DeferredSection minHeight={520} rootMargin={deferredRootMargin}>
+        <CTASection
+          sectionBackground={sectionBackgrounds[5]}
+          lowPerformanceMode={lowPerformanceMode}
+        />
       </DeferredSection>
-      <DeferredSection minHeight={560}>
+      <DeferredSection minHeight={560} rootMargin={deferredRootMargin}>
         <FAQSection sectionBackground={sectionBackgrounds[6]} />
       </DeferredSection>
-      <DeferredSection minHeight={700}>
+      <DeferredSection minHeight={700} rootMargin={deferredRootMargin}>
         <ContactSection sectionBackground={sectionBackgrounds[7]} />
       </DeferredSection>
-      <DeferredSection minHeight={200}>
+      <DeferredSection minHeight={200} rootMargin={deferredRootMargin}>
         <Footer />
       </DeferredSection>
     </div>
