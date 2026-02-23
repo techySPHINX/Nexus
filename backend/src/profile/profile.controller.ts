@@ -56,6 +56,21 @@ export class ProfileController {
   }
 
   /**
+   * Retrieves a lightweight profile preview for hover cards.
+   * @param userId - The ID of the user whose preview is to be retrieved.
+   * @returns A promise that resolves to a compact preview payload.
+   */
+  @Get(':userId/preview')
+  async getPreview(
+    @Param('userId') userId: string,
+    @Query('avatarUrl') avatarUrl?: string,
+) {
+    const includeAvatar = avatarUrl === 'true';
+    console.log(`Received request for profile preview of userId: ${userId} with avatarUrl: ${avatarUrl}`);
+    return this.profileService.getProfilePreview(userId , includeAvatar);
+  }
+
+  /**
    * Retrieves a specific user profile by user ID.
    * @param userId - The ID of the user whose profile is to be retrieved.
    * @returns A promise that resolves to the user's profile.

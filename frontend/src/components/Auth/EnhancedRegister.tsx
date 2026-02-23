@@ -30,7 +30,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { useTheme } from '@mui/material/styles';
 import { getErrorMessage } from '@/utils/errorHandler';
-import { Role } from '@/types/profileType';
 
 enum DocumentTypes {
   STUDENT_ID = 'STUDENT_ID',
@@ -39,6 +38,13 @@ enum DocumentTypes {
   ALUMNI_CERTIFICATE = 'ALUMNI_CERTIFICATE',
   EMPLOYMENT_PROOF = 'EMPLOYMENT_PROOF',
 }
+
+type UserRole = 'STUDENT' | 'ALUM';
+
+const USER_ROLES = {
+  STUDENT: 'STUDENT',
+  ALUM: 'ALUM',
+} as const;
 
 type DocumentItem = {
   documentType: DocumentTypes;
@@ -53,13 +59,13 @@ type RegisterForm = {
   documents: DocumentItem[];
   email: string;
   name: string;
-  role: Role;
+  role: UserRole;
 };
 
 type RegisterWithDocsPayload = {
   email: string;
   name: string;
-  role: Role;
+  role: UserRole;
   documents: { documentType: DocumentTypes; documentUrl: string }[];
   department?: string | undefined;
   graduationYear?: number | undefined;
@@ -77,7 +83,7 @@ const initialForm: RegisterForm = {
   ],
   email: '',
   name: '',
-  role: Role.STUDENT,
+  role: USER_ROLES.STUDENT,
 };
 
 const EnhancedRegister: FC = () => {
@@ -164,7 +170,10 @@ const EnhancedRegister: FC = () => {
         }
         break;
       case 1:
-        if (formData.role !== Role.ADMIN && formData.documents.length === 0) {
+        if (
+          // formData.role !== USER_ROLES.ADMIN &&
+          formData.documents.length === 0
+        ) {
           setError('Please provide at least one verification document');
           return false;
         }
@@ -275,14 +284,12 @@ const EnhancedRegister: FC = () => {
                 label="Role"
                 onChange={handleChange('role')}
               >
-                <MenuItem value={Role.STUDENT}>Student</MenuItem>
-                <MenuItem value={Role.ALUM}>Alumni</MenuItem>
-                <MenuItem value={Role.MENTOR}>Mentor</MenuItem>
-                <MenuItem value={Role.ADMIN}>Admin</MenuItem>
+                <MenuItem value={USER_ROLES.STUDENT}>Student</MenuItem>
+                <MenuItem value={USER_ROLES.ALUM}>Alumni</MenuItem>
               </Select>
             </FormControl>
 
-            {formData.role === Role.STUDENT && (
+            {formData.role === USER_ROLES.STUDENT && (
               <>
                 <TextField
                   fullWidth
@@ -344,7 +351,7 @@ const EnhancedRegister: FC = () => {
               </>
             )}
 
-            {formData.role === Role.ALUM && (
+            {formData.role === USER_ROLES.ALUM && (
               <>
                 <FormControl fullWidth margin="normal" sx={{ mb: 2 }}>
                   <InputLabel>Graduation Year</InputLabel>
@@ -398,73 +405,73 @@ const EnhancedRegister: FC = () => {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.3 }}
           >
-            {formData.role === Role.ADMIN ? (
+            {/* {formData.role === USER_ROLES.ADMIN ? (
               <Alert severity="info">
                 Admin accounts do not require document verification.
               </Alert>
-            ) : (
-              <>
-                <Typography variant="subtitle1" sx={{ mb: 2 }}>
-                  Upload Verification Documents
-                </Typography>
-                {formData.documents.map((doc, idx) => (
-                  <Paper
-                    key={idx}
-                    variant="outlined"
-                    sx={{
-                      p: 2,
-                      mb: 2,
-                      display: 'flex',
-                      flexDirection: { xs: 'column', md: 'row' },
-                      gap: 2,
-                      alignItems: { xs: 'stretch', md: 'center' },
-                    }}
-                  >
-                    <FormControl sx={{ minWidth: 180, flex: '0 0 220px' }}>
-                      <InputLabel>Document Type</InputLabel>
-                      <Select
-                        value={doc.documentType}
-                        label="Document Type"
-                        onChange={(e) =>
-                          handleDocumentChange(
-                            idx,
-                            'documentType',
-                            e.target.value
-                          )
-                        }
-                      >
-                        {Object.values(DocumentTypes).map((dt) => (
-                          <MenuItem key={dt} value={dt}>
-                            {dt.replace('_', ' ')}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <TextField
-                      fullWidth
-                      label="Document URL"
-                      value={doc.documentUrl}
+            ) : ( */}
+            <>
+              <Typography variant="subtitle1" sx={{ mb: 2 }}>
+                Upload Verification Documents
+              </Typography>
+              {formData.documents.map((doc, idx) => (
+                <Paper
+                  key={idx}
+                  variant="outlined"
+                  sx={{
+                    p: 2,
+                    mb: 2,
+                    display: 'flex',
+                    flexDirection: { xs: 'column', md: 'row' },
+                    gap: 2,
+                    alignItems: { xs: 'stretch', md: 'center' },
+                  }}
+                >
+                  <FormControl sx={{ minWidth: 180, flex: '0 0 220px' }}>
+                    <InputLabel>Document Type</InputLabel>
+                    <Select
+                      value={doc.documentType}
+                      label="Document Type"
                       onChange={(e) =>
-                        handleDocumentChange(idx, 'documentUrl', e.target.value)
+                        handleDocumentChange(
+                          idx,
+                          'documentType',
+                          e.target.value
+                        )
                       }
-                      sx={{ flex: 1 }}
-                    />
-                    {formData.documents.length > 1 && (
-                      <Button
-                        color="error"
-                        onClick={() => removeDocument(idx)}
-                        sx={{ minWidth: 80 }}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </Paper>
-                ))}
-                <Button onClick={addDocument} sx={{ mt: 1 }}>
-                  Add another document
-                </Button>
-              </>
-            )}
+                    >
+                      {Object.values(DocumentTypes).map((dt) => (
+                        <MenuItem key={dt} value={dt}>
+                          {dt.replace('_', ' ')}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <TextField
+                    fullWidth
+                    label="Document URL"
+                    value={doc.documentUrl}
+                    onChange={(e) =>
+                      handleDocumentChange(idx, 'documentUrl', e.target.value)
+                    }
+                    sx={{ flex: 1 }}
+                  />
+                  {formData.documents.length > 1 && (
+                    <Button
+                      color="error"
+                      onClick={() => removeDocument(idx)}
+                      sx={{ minWidth: 80 }}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </Paper>
+              ))}
+              <Button onClick={addDocument} sx={{ mt: 1 }}>
+                Add another document
+              </Button>
+            </>
+            {/* )} */}
           </motion.div>
         );
 
@@ -555,9 +562,12 @@ const EnhancedRegister: FC = () => {
             </Paper>
 
             <Alert severity="warning">
-              {formData.role === Role.ADMIN
-                ? 'Your admin account will be created immediately upon submission.'
-                : 'Your registration will be submitted for review. You will receive login credentials via email once approved.'}
+              {/* {formData.role === USER_ROLES.ADMIN
+                ? 'Your admin account will be created immediately upon submission.' */}
+              {/* :  */}
+              'Your registration will be submitted for review. You will receive
+              login credentials via email once approved.'
+              {/* } */}
             </Alert>
           </motion.div>
         );

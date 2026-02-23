@@ -188,15 +188,15 @@ export function AppSidebarNexus() {
         >
           <motion.div
             whileHover={{ scale: 1.1, rotate: 5 }}
-            className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden bg-white shadow-sm"
+            className="m-auto flex aspect-square size-9 items-center justify-center rounded-lg overflow-hidden bg-white shadow-sm"
           >
             <img
               src="/nexus.png"
               alt="Nexus"
-              className="size-7 object-contain"
+              className="size-9 object-contain"
             />
           </motion.div>
-          <div className="grid flex-1 text-left text-lg leading-tight group-data-[collapsible=icon]:hidden">
+          <div className="grid flex-1 text-left text-[2rem] leading-tight group-data-[collapsible=icon]:hidden">
             <motion.span
               whileHover={{ letterSpacing: '0.05em' }}
               className="truncate font-semibold bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 bg-clip-text text-transparent"

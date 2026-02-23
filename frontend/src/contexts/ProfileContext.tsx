@@ -16,6 +16,8 @@ import {
   searchedProfileDataService,
   getAllSkillsService,
   getAllBadgesService,
+  getProfilePreviewService,
+  ProfilePreviewResponse,
 } from '../services/profileService';
 import {
   Profile,
@@ -48,6 +50,10 @@ interface ProfileContextType {
   fetchAllBadges: () => Promise<void>;
   updateProfile: (profileData: UpdateProfileInput) => Promise<void>;
   setError: (error: string) => void;
+  getProfilePreview: (
+    userId: string,
+    avatarUrl?: boolean
+  ) => Promise<ProfilePreviewResponse>;
   // Gamification helper
   getUserTransactions?: (
     userId: string,
@@ -76,6 +82,7 @@ const ProfileContext = createContext<ProfileContextType>({
   //   handleConnection: async () => {},
   updateProfile: async () => {},
   setError: () => {},
+  getProfilePreview: async () => ({}),
   getUserTransactions: async () => [],
 });
 
@@ -89,6 +96,10 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [error, setError] = useState('');
+  const previewCacheRef = useState<Map<string, ProfilePreviewResponse>>(
+    () => new Map()
+  )[0];
+  const previewCacheLimit = 6;
 
   const fetchProfileData = useCallback(async () => {
     if (!user?.id) return;
@@ -274,6 +285,32 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
     }
   }, []);
 
+  const getProfilePreview = useCallback(
+    async (userId: string, avatarUrl = false) => {
+      const cacheKey = `${userId}:${avatarUrl ? '1' : '0'}`;
+      const cached = previewCacheRef.get(cacheKey);
+
+      if (cached) {
+        previewCacheRef.delete(cacheKey);
+        previewCacheRef.set(cacheKey, cached);
+        return cached;
+      }
+
+      const preview = await getProfilePreviewService(userId, avatarUrl);
+      previewCacheRef.set(cacheKey, preview);
+
+      if (previewCacheRef.size > previewCacheLimit) {
+        const oldestKey = previewCacheRef.keys().next().value;
+        if (oldestKey) {
+          previewCacheRef.delete(oldestKey);
+        }
+      }
+
+      return preview;
+    },
+    [previewCacheRef]
+  );
+
   // Gamification: fetch user transactions
   const getUserTransactions = useCallback(async (userId: string, limit = 5) => {
     if (!userId) return [] as Array<Record<string, unknown>>;
@@ -313,6 +350,7 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       //   handleConnection,
       updateProfile,
       setError,
+      getProfilePreview,
       getUserTransactions,
     }),
     [
@@ -335,6 +373,7 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       //   handleConnection,
       awardBadge,
       updateProfile,
+      getProfilePreview,
       getUserTransactions,
     ]
   );

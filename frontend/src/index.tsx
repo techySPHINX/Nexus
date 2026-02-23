@@ -1,4 +1,3 @@
-import { StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import { StyledEngineProvider } from '@mui/material/styles';
 import './index.css';
@@ -8,9 +7,7 @@ const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
-  <StrictMode>
-    <StyledEngineProvider injectFirst>
-      <App />
-    </StyledEngineProvider>
-  </StrictMode>
+  <StyledEngineProvider injectFirst>
+    <App />
+  </StyledEngineProvider>
 );

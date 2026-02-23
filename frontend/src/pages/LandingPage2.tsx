@@ -1,4 +1,4 @@
-import { FC, useEffect, useRef } from 'react';
+import { FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import ThemeToggle from '@/components/ThemeToggle';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
@@ -18,6 +18,15 @@ interface FloatingNetworkProps {
   darkMode: boolean;
 }
 
+interface DeferredSectionProps {
+  children: ReactNode;
+  minHeight?: number;
+  eager?: boolean;
+}
+
+const isFirefoxBrowser = () =>
+  typeof navigator !== 'undefined' && /firefox/i.test(navigator.userAgent);
+
 const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mountRef = useRef(false);
@@ -35,9 +44,15 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
       0.1,
       1000
     );
+
+    const reduceMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const firefox = isFirefoxBrowser();
+
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
-      antialias: true,
+      antialias: !firefox,
       powerPreference: 'high-performance',
     });
 
@@ -46,7 +61,7 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
     container.appendChild(renderer.domElement);
 
     const nodes: THREE.Mesh[] = [];
-    const nodeCount = 15;
+    const nodeCount = firefox ? 8 : 12;
     const connections: THREE.Line[] = [];
 
     for (let i = 0; i < nodeCount; i++) {
@@ -98,9 +113,10 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      scene.rotation.y += 0.002;
-      scene.rotation.x += 0.001;
-
+      if (!reduceMotion) {
+        scene.rotation.y += 0.0015;
+        scene.rotation.x += 0.0008;
+      }
       const time = Date.now() * 0.001;
       nodes.forEach((node, i) => {
         node.scale.x =
@@ -111,7 +127,7 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
 
       renderer.render(scene, camera);
     };
-    animate();
+    const startTimeoutId = window.setTimeout(animate, 60);
 
     const handleResize = () => {
       if (!container) return;
@@ -124,6 +140,7 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
 
     return () => {
       window.removeEventListener('resize', handleResize);
+      window.clearTimeout(startTimeoutId);
       cancelAnimationFrame(animationFrameId);
 
       nodes.forEach((node) => {
@@ -156,86 +173,133 @@ const FloatingNetwork: FC<FloatingNetworkProps> = ({ darkMode }) => {
   );
 };
 
+const DeferredSection: FC<DeferredSectionProps> = ({
+  children,
+  minHeight = 480,
+  eager = false,
+}) => {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(eager);
+
+  useEffect(() => {
+    if (visible || eager) return;
+    const element = sectionRef.current;
+    if (!element) return;
+    if (typeof window === 'undefined' || !('IntersectionObserver' in window)) {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '400px 0px' }
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [eager, visible]);
+
+  return (
+    <div ref={sectionRef} style={!visible ? { minHeight } : undefined}>
+      {visible ? children : null}
+    </div>
+  );
+};
+
 const Landing: FC = () => {
   const { isDark } = useTheme();
   const { user } = useAuth();
   const darkMode = isDark;
+  const isFirefox = useMemo(() => isFirefoxBrowser(), []);
 
-  const sectionBackgrounds = [
-    darkMode
-      ? 'from-gray-900 via-emerald-900 to-green-900'
-      : 'from-emerald-100 via-green-100 to-cyan-200',
-    darkMode
-      ? 'from-emerald-900/50 via-green-900/30 to-gray-900'
-      : 'from-cyan-100 via-teal-100 to-emerald-200',
-    darkMode
-      ? 'from-gray-900 via-emerald-900/30 to-green-900/50'
-      : 'from-teal-100 via-cyan-100 to-blue-200',
-    darkMode
-      ? 'from-emerald-900/30 via-green-900/20 to-gray-900'
-      : 'from-green-100 via-emerald-100 to-cyan-100',
-    darkMode
-      ? 'from-gray-900 via-emerald-900/40 to-green-900/40'
-      : 'from-emerald-100 via-white to-cyan-100',
-    darkMode
-      ? 'from-emerald-900/40 via-gray-900 to-green-900/30'
-      : 'from-emerald-100 via-emerald-200 to-white',
-    darkMode
-      ? 'from-gray-900 via-emerald-900 to-gray-900'
-      : 'from-white via-cyan-100 to-emerald-100',
-    darkMode
-      ? 'from-emerald-900 via-green-900 to-gray-900'
-      : 'from-emerald-100 via-green-100 to-cyan-100',
-  ];
+  const sectionBackgrounds = useMemo(
+    () =>
+      darkMode
+        ? [
+            'bg-transparent',
+            'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
+            'bg-transparent',
+            'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
+            'bg-transparent',
+            'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
+            'bg-transparent',
+            'bg-[radial-gradient(circle_at_top,_rgba(16,185,129,0.15),_transparent_60%),radial-gradient(circle_at_bottom,_rgba(16,185,129,0.15),_transparent_60%)]',
+          ]
+        : [
+            'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
+            'bg-white/40',
+            'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
+            'bg-white/40',
+            'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
+            'bg-white/40',
+            'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_50%),linear-gradient(180deg,rgba(246,255,251,0.6)_0%,rgba(236,255,246,0.6)_45%,rgba(239,255,251,0.6)_100%)]',
+            'bg-white/40',
+          ],
+    [darkMode]
+  );
 
   return (
     <div className="relative w-full overflow-x-hidden">
-      <FloatingNetwork darkMode={darkMode} />
+      <div
+        className={`fixed inset-0 -z-20 transition-colors duration-500 ${
+          darkMode
+            ? 'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.28),transparent_55%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.2),transparent_52%),radial-gradient(900px_circle_at_50%_105%,rgba(20,184,166,0.18),transparent_50%),linear-gradient(180deg,#010b08_0%,#021313_45%,#041b14_100%)]'
+            : 'bg-white'
+        }`}
+      />
 
-      {!darkMode && (
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div
-            className="absolute top-[-200px] left-[15%] w-[600px] h-[600px] rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(5, 150, 105, 0.45) 0%, rgba(5, 150, 105, 0.25) 40%, transparent 70%)',
-              filter: 'blur(70px)',
-            }}
-          />
-          <div
-            className="absolute top-[500px] right-[20%] w-[700px] h-[700px] rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, rgba(6, 182, 212, 0.22) 40%, transparent 70%)',
-              filter: 'blur(90px)',
-            }}
-          />
-          <div
-            className="absolute top-[800px] left-[25%] w-[550px] h-[550px] rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(34, 197, 94, 0.38) 0%, rgba(34, 197, 94, 0.22) 40%, transparent 70%)',
-              filter: 'blur(80px)',
-            }}
-          />
-          <div
-            className="absolute top-[1200px] right-[30%] w-[500px] h-[500px] rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(20, 184, 166, 0.35) 0%, rgba(20, 184, 166, 0.18) 40%, transparent 70%)',
-              filter: 'blur(80px)',
-            }}
-          />
-          <div
-            className="absolute top-[1600px] left-[20%] w-[400px] h-[400px] rounded-full"
-            style={{
-              background:
-                'radial-gradient(circle, rgba(59, 130, 246, 0.3) 0%, rgba(59, 130, 246, 0.16) 40%, transparent 70%)',
-              filter: 'blur(75px)',
-            }}
-          />
-        </div>
+      {/* <div
+        className={`fixed inset-0 -z-10 pointer-events-none ${
+          darkMode
+            ? 'bg-[linear-gradient(rgba(16,185,129,0.06)_1px,transparent_100px),linear-gradient(90deg,rgba(16,185,129,0.06)_1px,transparent_100px)]'
+            : 'bg-[linear-gradient(rgba(236, 90, 28, 0.05)_1px,transparent_100px),linear-gradient(90deg,rgba(233, 97, 47, 0.05)_1px,transparent_100px)]'
+        } bg-[size:72px_72px] opacity-35`}
+      /> */}
+
+      {/* <div
+        className="fixed inset-0 pointer-events-none -z-10 transition-opacity duration-300"
+        style={{
+          background: `radial-gradient(420px circle at ${cursorGlow.x}% ${cursorGlow.y}%, ${
+            darkMode ? 'rgba(16, 185, 129, 0.18)' : 'rgba(34, 197, 94, 0.6)'
+          } 0%, transparent 62%)`,
+        }}
+      /> */}
+
+      <div
+        className={`fixed inset-0 pointer-events-none -z-10 ${
+          !isFirefox ? 'landing-animated-glow' : ''
+        }`}
+        style={{
+          background: `radial-gradient(600px circle at 30% 50%, ${
+            darkMode ? 'rgba(52, 211, 153, 0.22)' : 'rgba(16, 185, 129, 0.35)'
+          } 0%, transparent 72%)`,
+        }}
+      />
+      {!isFirefox && (
+        <div
+          className="landing-animated-glow landing-animated-glow-reverse fixed inset-0 pointer-events-none -z-10"
+          style={{
+            background: `radial-gradient(600px circle at 70% 30%, ${
+              darkMode ? 'rgba(52, 153, 211, 0.25)' : 'rgba(16, 129, 185, 0.4)'
+            } 0%, transparent 70%)`,
+          }}
+        />
       )}
+
+      <div
+        className="fixed inset-0 -z-10 pointer-events-none"
+        style={{
+          background:
+            'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.06), transparent 35%), radial-gradient(circle at 75% 55%, rgba(255,255,255,0.04), transparent 38%)',
+          mixBlendMode: darkMode ? 'screen' : 'multiply',
+          opacity: darkMode ? 0.6 : 0.35,
+        }}
+      />
+
+      {!isFirefox && <FloatingNetwork darkMode={darkMode} />}
 
       <div className="fixed right-6 z-50 flex items-center gap-3">
         {user && <ThemeToggle />}
@@ -243,14 +307,30 @@ const Landing: FC = () => {
       </div>
 
       <HeroSection sectionBackground={sectionBackgrounds[0]} />
-      <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
-      <StatsSection sectionBackground={sectionBackgrounds[2]} />
-      <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
-      <NewsSection sectionBackground={sectionBackgrounds[4]} />
-      <ContactSection sectionBackground={sectionBackgrounds[5]} />
-      <FAQSection sectionBackground={sectionBackgrounds[6]} />
-      <CTASection sectionBackground={sectionBackgrounds[7]} />
-      <Footer />
+      <DeferredSection eager={!isFirefox} minHeight={700}>
+        <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
+      </DeferredSection>
+      <DeferredSection minHeight={620}>
+        <StatsSection sectionBackground={sectionBackgrounds[2]} />
+      </DeferredSection>
+      <DeferredSection minHeight={760}>
+        <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
+      </DeferredSection>
+      <DeferredSection minHeight={700}>
+        <NewsSection sectionBackground={sectionBackgrounds[4]} />
+      </DeferredSection>
+      <DeferredSection minHeight={520}>
+        <CTASection sectionBackground={sectionBackgrounds[5]} />
+      </DeferredSection>
+      <DeferredSection minHeight={560}>
+        <FAQSection sectionBackground={sectionBackgrounds[6]} />
+      </DeferredSection>
+      <DeferredSection minHeight={700}>
+        <ContactSection sectionBackground={sectionBackgrounds[7]} />
+      </DeferredSection>
+      <DeferredSection minHeight={200}>
+        <Footer />
+      </DeferredSection>
     </div>
   );
 };

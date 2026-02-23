@@ -9,7 +9,7 @@ import {
 import axios from 'axios';
 import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
 import { jwtDecode } from 'jwt-decode';
-import { Role } from '@/types/profileType';
+type UserRole = 'STUDENT' | 'ALUM' | 'ADMIN' | 'MENTOR';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 axios.defaults.baseURL = BACKEND_URL;
@@ -73,7 +73,7 @@ interface AuthContextType {
     email: string,
     password: string,
     name: string,
-    role: Role,
+    role: UserRole,
     documents: { documentType: DocumentTypes; documentUrl: string }[],
     department?: string,
     graduationYear?: number,
@@ -82,7 +82,7 @@ interface AuthContextType {
   registerWithDocuments: (
     email: string,
     name: string,
-    role: Role,
+    role: UserRole,
     documents: { documentType: string; documentUrl: string }[],
     department?: string,
     graduationYear?: number,
@@ -213,7 +213,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const registerWithDocuments = async (
     email: string,
     name: string,
-    role: Role,
+    role: UserRole,
     documents: { documentType: string; documentUrl: string }[],
     department?: string,
     graduationYear?: number,

@@ -9,7 +9,12 @@
 
 /* Smooth transitions for navbar position changes */
 .App * {
-  transition: all 0.3s ease;
+  transition:
+    color 0.3s ease,
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 /* Custom scrollbar */
@@ -79,6 +84,35 @@
   animation: badgePulse 2s infinite;
 }
 
+@keyframes landingGlowDrift {
+  0% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(5%, 4%, 0) scale(1.06);
+  }
+  100% {
+    transform: translate3d(-4%, -2%, 0) scale(1);
+  }
+}
+
+.landing-animated-glow {
+  will-change: transform;
+  animation: landingGlowDrift 24s ease-in-out infinite;
+}
+
+.landing-animated-glow-reverse {
+  animation-delay: -12s;
+  animation-duration: 30s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-animated-glow,
+  .landing-animated-glow-reverse {
+    animation: none;
+  }
+}
+
 /* Landing page specific styles */
 .landing-hero {
   background: linear-gradient(135deg, #81c784 0%, #4caf50 100%);
@@ -97,16 +131,31 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-image: 
-    radial-gradient(circle at 25% 25%, rgba(255,255,255,0.1) 2px, transparent 2px),
-    radial-gradient(circle at 75% 75%, rgba(255,255,255,0.1) 2px, transparent 2px);
-  background-size: 50px 50px, 30px 30px;
+  background-image:
+    radial-gradient(
+      circle at 25% 25%,
+      rgba(255, 255, 255, 0.1) 2px,
+      transparent 2px
+    ),
+    radial-gradient(
+      circle at 75% 75%,
+      rgba(255, 255, 255, 0.1) 2px,
+      transparent 2px
+    );
+  background-size:
+    50px 50px,
+    30px 30px;
   animation: float 20s ease-in-out infinite;
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
 }
 
 /* Feature cards hover effects */
@@ -229,8 +278,12 @@
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Success and error states */
@@ -331,7 +384,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-[data-theme="dark"] .apple-notification .notification-panel {
+[data-theme='dark'] .apple-notification .notification-panel {
   background: rgba(28, 28, 30, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -385,7 +438,8 @@
 }
 
 .notification-exit-right {
-  animation: notificationSlideOutRight 0.2s cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  animation: notificationSlideOutRight 0.2s
+    cubic-bezier(0.55, 0.055, 0.675, 0.19);
 }
 
 /* Notification panel glassmorphism */
@@ -399,7 +453,7 @@
     0 2px 8px rgba(0, 0, 0, 0.05) !important;
 }
 
-[data-theme="dark"] .notification-panel-glass {
+[data-theme='dark'] .notification-panel-glass {
   background: rgba(28, 28, 30, 0.9) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
   box-shadow: 
@@ -431,16 +485,16 @@
 }
 
 /* Dark mode adjustments */
-[data-theme="dark"] .App {
+[data-theme='dark'] .App {
   background-color: #121212;
 }
 
-[data-theme="dark"] .form-container {
+[data-theme='dark'] .form-container {
   background: #1e1e1e;
   border-color: #333333;
 }
 
-[data-theme="dark"] .stats-card {
+[data-theme='dark'] .stats-card {
   background: linear-gradient(135deg, #1e3a1e 0%, #2e4a2e 100%);
   border-color: #4caf50;
 }

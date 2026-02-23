@@ -58,11 +58,13 @@ export function NavUser({
                   {user.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+              <div className="grid flex-1 text-left leading-tight">
+                <span className="truncate text-md font-semibold">
+                  {user.name}
+                </span>
+                <span className="truncate text-base">{user.email}</span>
               </div>
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="ml-auto h-6 w-6" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
