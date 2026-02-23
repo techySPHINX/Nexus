@@ -21,20 +21,10 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
   const { isDark } = useTheme();
   const darkMode = isDark;
   const navigate = useNavigate();
-
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [isHovering, setIsHovering] = useState(false);
   const [sparkles, setSparkles] = useState<Sparkle[]>([]);
   const [burstKey, setBurstKey] = useState(0);
   const sparkleIdRef = useRef(0);
   const hasTriggeredInLoopRef = useRef(false);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - rect.left - rect.width / 2) * 0.1;
-    const y = (e.clientY - rect.top - rect.height / 2) * 0.1;
-    setMousePosition({ x, y });
-  };
 
   const triggerSparkleBurst = useCallback(() => {
     const count = 26;
@@ -74,7 +64,7 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
   const handleVideoTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const videoTime = e.currentTarget.currentTime;
 
-    if (videoTime >= 4 && !hasTriggeredInLoopRef.current) {
+    if (videoTime >= 3.8 && !hasTriggeredInLoopRef.current) {
       hasTriggeredInLoopRef.current = true;
       triggerSparkleBurst();
     }
@@ -86,13 +76,13 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
 
   return (
     <section className={`relative ${sectionBackground}`}>
-      <div className="relative z-10 max-w-7xl">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className={`px-6 md:px-9 grid lg:grid-cols-[1.2fr_0.8fr] gap-8 items-center backdrop-blur-xl ${
+          className={`grid lg:grid-cols-[1.15fr_0.85fr] gap-8 lg:gap-12 items-center py-14 md:py-16 backdrop-blur-xl ${
             darkMode ? ' bg-transparent' : 'bg-transparent'
           }`}
         >
@@ -105,7 +95,7 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
               Ready when you are
             </p>
             <h2
-              className={`text-4xl md:text-6xl font-black leading-tight mb-16 ${
+              className={`text-4xl md:text-6xl font-black leading-tight mb-8 md:mb-12 ${
                 darkMode ? 'text-white' : 'text-slate-900'
               }`}
             >
@@ -154,22 +144,8 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
             </div>
           </div>
 
-          <div className="min-h-screen bg-transparent flex items-center justify-center p-8">
-            <motion.div
-              onMouseMove={handleMouseMove}
-              onMouseEnter={() => setIsHovering(true)}
-              onMouseLeave={() => {
-                setIsHovering(false);
-                setMousePosition({ x: 0, y: 0 });
-              }}
-              style={{
-                transform: isHovering
-                  ? `translate3d(${mousePosition.x}px, ${mousePosition.y}px, 0) scale3d(1, 1, 1)`
-                  : 'translate3d(0px, 0px, 0) scale3d(1, 1, 1)',
-                transition: 'transform 0.1s ease-out',
-              }}
-              className="w-full max-w-2xl mx-auto"
-            >
+          <div className="flex items-center justify-center lg:justify-end">
+            <motion.div className="mx-auto w-full max-w-2xl lg:mx-0">
               <div className="relative">
                 <div className="absolute inset-0 rounded-3xl blur-3xl bg-cyan-500/30" />
                 <video
@@ -178,7 +154,7 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
                   muted
                   playsInline
                   onTimeUpdate={handleVideoTimeUpdate}
-                  className="relative rounded-3xl border border-white/20 object-cover w-full h-64 md:h-72"
+                  className="relative rounded-3xl border border-white/20 w-full h-64 md:h-72 object-cover object-[10%_35%]"
                 >
                   <source src="/ctaVideo.mp4" type="video/mp4" />
                   Your browser does not support the video tag.

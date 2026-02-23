@@ -43,7 +43,7 @@ const FAQSection: React.FC<FAQSectionProps> = ({ sectionBackground }) => {
       <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
         <div className="grid lg:grid-cols-[0.95fr_1.2fr] gap-8 items-start">
           <div className="p-7">
-            <motion.div className="mb-6">
+            <motion.div className="mb-6 hidden md:block">
               <svg
                 viewBox="0 0 300 120"
                 className="w-full h-auto max-w-md"

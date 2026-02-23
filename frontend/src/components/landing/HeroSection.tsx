@@ -11,8 +11,6 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { Highlight } from '../ui/hero-highlight';
 import { CanvasText } from '../ui/canvas-text';
 
-// const ROTATING_TEXTS = ['Networking', 'Mentorship', 'Collaboration', 'Success'];
-
 const HERO_PREVIEW_IMAGE =
   'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
 
@@ -21,8 +19,6 @@ interface HeroSectionProps {
 }
 
 const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
-  // const [textIndex, setTextIndex] = useState(0);
-  // const [isLoaded, setIsLoaded] = useState(false);
   const darkMode = useTheme().isDark;
 
   const cardRef = useRef<HTMLDivElement>(null);
@@ -50,14 +46,6 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
     }
   );
   const previewTransform = useMotionTemplate`translateZ(${previewDepth}px) scale(${previewScale})`;
-
-  // useEffect(() => {
-  //   setIsLoaded(true);
-  //   const timer = setInterval(() => {
-  //     setTextIndex((prev) => (prev + 1) % ROTATING_TEXTS.length);
-  //   }, 2000);
-  //   return () => clearInterval(timer);
-  // }, []);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
@@ -94,18 +82,9 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
     },
   };
 
-  // const itemVariants = {
-  //   hidden: { opacity: 0, y: 20 },
-  //   visible: {
-  //     opacity: 1,
-  //     y: 0,
-  //     transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
-  //   },
-  // };
-
   return (
     <section
-      className={`relative min-h-screen flex overflow-hidden ${sectionBackground}`}
+      className={`relative h-auto flex items-center overflow-hidden ${sectionBackground}`}
     >
       <motion.div
         className="absolute inset-0 opacity-30"
@@ -124,19 +103,14 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
         }}
       />
 
-      <div className="container mx-10 px-1 sm:px-1 lg:px-1 relative z-10 py-1 lg:py-1">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 md:py-20 lg:px-8 lg:py-4">
         <motion.div
           className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8 lg:gap-16 items-center"
           variants={containerVariants}
-          // initial="hidden"
-          // animate={isLoaded ? 'visible' : 'hidden'}
         >
-          <div className="space-y-6 lg:space-y-8 text-top lg:text-left">
-            <motion.div
-              // variants={itemVariants}
-              className="space-y-4"
-            >
-              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black leading-tight">
+          <div className="space-y-6 text-center lg:space-y-8 lg:text-left">
+            <motion.div className="space-y-4">
+              <h1 className="text-8xl lg:text-9xl font-black leading-tight">
                 <CanvasText
                   text="Nexus"
                   backgroundClassName="bg-green-600 dark:bg-green-700"
@@ -158,30 +132,13 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
               </h1>
 
               <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 text-3xl sm:text-4xl md:text-5xl font-bold">
-                {/* <div className="relative h-[1.2em] w-[280px] sm:w-[320px] overflow-hidden"> */}
-                {/* {ROTATING_TEXTS.map((text, index) => ( */}
-                <motion.span
-                  // key={text}
-                  // initial={{ opacity: 0, y: 50, filter: 'blur(10px)' }}
-                  // animate={{
-                  //   opacity: textIndex === index ? 1 : 0,
-                  //   y: textIndex === index ? 0 : -50,
-                  //   filter: textIndex === index ? 'blur(0px)' : 'blur(10px)',
-                  // }}
-                  // transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className="inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent"
-                >
+                <motion.span className="inset-0 bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
                   Collaboration
                 </motion.span>
-                {/* ))} */}
-                {/* </div> */}
                 <span className="text-gray-900 dark:text-white">Redefined</span>
               </div>
             </motion.div>
-            <motion.p
-              // variants={itemVariants}
-              className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
-            >
+            <motion.p className="text-lg sm:text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
               Connect with KIIT alumni worldwide through{' '}
               <Highlight className="font-semibold text-emerald-600 dark:text-emerald-400">
                 AI-powered networking, expert mentorship, and exclusive career
@@ -189,10 +146,7 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
               </Highlight>
             </motion.p>
 
-            <motion.div
-              // variants={itemVariants}
-              className="flex flex-wrap gap-2 justify-center lg:justify-start"
-            >
+            <motion.div className="flex flex-wrap gap-2 justify-center lg:justify-start">
               {['AI Matching', 'Live Mentors', 'Career Boost'].map((chip) => (
                 <motion.span
                   key={chip}
@@ -204,10 +158,14 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
               ))}
             </motion.div>
 
-            <motion.div
-              // variants={itemVariants}
-              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4"
-            >
+            <motion.div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
+              <motion.button
+                className="px-8 py-4 rounded-xl font-bold text-lg border-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
+                whileHover={{ scale: 1.05, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Sign In
+              </motion.button>
               <motion.button
                 className="group relative px-8 py-4 rounded-xl font-bold text-lg text-white overflow-hidden shadow-lg shadow-emerald-500/30"
                 style={{
@@ -218,7 +176,7 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
               >
                 <motion.div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="relative z-10 flex items-center justify-center gap-2">
-                  Get Started Free
+                  Get Started
                   <motion.span
                     animate={{ x: [0, 4, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity }}
@@ -227,21 +185,12 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
                   </motion.span>
                 </span>
               </motion.button>
-
-              <motion.button
-                className="px-8 py-4 rounded-xl font-bold text-lg border-2 border-emerald-600 dark:border-emerald-400 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all"
-                whileHover={{ scale: 1.05, y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Sign In
-              </motion.button>
             </motion.div>
           </div>
 
           <motion.div
             ref={cardRef}
-            // variants={itemVariants}
-            className="relative h-[400px] sm:h-[450px] lg:h-[500px] perspective-1000 z-500"
+            className="relative z-10 h-[360px] sm:h-[420px] lg:h-[500px]"
             onMouseEnter={handleMouseEnter}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
@@ -363,27 +312,6 @@ const HeroSection: FC<HeroSectionProps> = ({ sectionBackground }) => {
               }}
             />
           </motion.div>
-        </motion.div>
-      </div>
-
-      <div className="absolute bg-red bottom-8 left-1/2 -translate-x-1/2 hidden lg:block">
-        <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          className="text-gray-400 dark:text-gray-600"
-        >
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <polyline points="6 9 12 15 18 9"></polyline>
-          </svg>
         </motion.div>
       </div>
     </section>

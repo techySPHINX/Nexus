@@ -64,28 +64,13 @@ const FEATURES: Feature[] = [
   },
 ];
 
-/**
- * FeaturesSection Component
- * Showcases the 6 core features of Nexus platform
- * Features:
- * - Responsive 2-3 column grid layout (auto-rows-fr ensures equal heights)
- * - Header with badge and title (side-by-side on desktop)
- * - Individual feature cards with:
- *   - Staggered fade-in animation on scroll
- *   - Icon container with scale/rotate hover effect
- *   - Smooth background gradient reveal on hover
- *   - Border glow effect on interaction
- *   - Bottom accent line that expands on hover
- * - Flex column layout ensures content fills card height
- * - Theme-aware colors (dark/light mode)
- */
 const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
   const { isDark } = useTheme();
   const darkMode = isDark;
 
   return (
     <section className={`relative py-20 md:py-28 ${sectionBackground}`}>
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section header with title and description */}
         <motion.div
           initial={{ opacity: 0, y: 18 }}
@@ -95,7 +80,6 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
           className="grid lg:grid-cols-[1.1fr_1fr] gap-10 items-end mb-14"
         >
           <div>
-            {/* Label badge */}
             <p
               className={`text-sm uppercase tracking-[0.25em] mb-3 ${
                 darkMode ? 'text-cyan-300/80' : 'text-cyan-700'
@@ -103,7 +87,6 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
             >
               Features built for growth
             </p>
-            {/* Main heading */}
             <h2
               className={`text-4xl md:text-5xl font-black leading-tight ${
                 darkMode ? 'text-white' : 'text-slate-900'
@@ -115,7 +98,7 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
         </motion.div>
 
         {/* Features grid: 2 cols on tablet, 3 on desktop, equal heights */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-fr">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5 lg:gap-6 auto-rows-fr">
           {FEATURES.map((feature, index) => (
             <motion.article
               key={feature.title}
@@ -127,7 +110,7 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
                 y: -6,
                 transition: { duration: 0.25, ease: 'easeOut' },
               }}
-              className={`group relative flex flex-col h-full overflow-hidden rounded-3xl border p-7 md:p-8 backdrop-blur-xl transition-all duration-300 cursor-pointer ${
+              className={`group relative flex flex-col h-full overflow-hidden rounded-2xl sm:rounded-3xl border p-4 sm:p-6 md:p-8 backdrop-blur-xl transition-all duration-300 cursor-pointer ${
                 darkMode
                   ? 'border-cyan-400/20 bg-slate-900/40 hover:bg-slate-900/70 hover:border-cyan-400/40 hover:shadow-[0_20px_40px_rgba(8,145,178,0.15)]'
                   : 'border-cyan-200 bg-white/70 hover:bg-white/95 hover:border-cyan-300 hover:shadow-[0_20px_40px_rgba(14,165,233,0.15)]'
@@ -155,7 +138,7 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
               <motion.div
                 whileHover={{ scale: 1.1, rotate: 5 }}
                 transition={{ duration: 0.3 }}
-                className={`relative z-10 inline-flex items-center justify-center rounded-2xl p-3 mb-5 transition-all duration-300 w-fit group-hover:rotate-12 ${
+                className={`relative z-10 inline-flex items-center justify-center rounded-xl sm:rounded-2xl p-2.5 sm:p-3 mb-3 sm:mb-5 transition-all duration-300 w-fit group-hover:rotate-12 ${
                   darkMode
                     ? 'bg-cyan-400/15 text-cyan-300 group-hover:bg-cyan-400/25'
                     : 'bg-cyan-100 text-cyan-700 group-hover:bg-cyan-200'
@@ -166,7 +149,7 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
 
               {/* Feature title */}
               <h3
-                className={`relative z-10 text-xl md:text-2xl font-bold mb-3 transition-colors duration-300 ${
+                className={`relative z-10 text-base sm:text-xl md:text-2xl font-bold mb-2 sm:mb-3 transition-colors duration-300 ${
                   darkMode
                     ? 'text-white group-hover:text-cyan-100'
                     : 'text-slate-900 group-hover:text-cyan-900'
@@ -176,7 +159,7 @@ const FeaturesSection: React.FC<FeaturesProps> = ({ sectionBackground }) => {
               </h3>
               {/* Feature description - uses flex-grow to push bottom accent line down */}
               <p
-                className={`relative z-10 flex-grow leading-relaxed text-sm md:text-base transition-colors duration-300 ${
+                className={`relative z-10 flex-grow leading-snug hidden md:block text-xs md:text-base transition-colors duration-300 ${
                   darkMode
                     ? 'text-slate-300 group-hover:text-slate-200'
                     : 'text-slate-600 group-hover:text-slate-700'

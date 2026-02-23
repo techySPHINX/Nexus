@@ -21,10 +21,10 @@ const STATS: Stat[] = [
   { number: '1K+', label: 'Active Members', icon: <People /> },
   { number: '2K+', label: 'Alumni', icon: <School /> },
   {
-    number: '500+',
-    label: 'Partner Companies',
+    number: '10+',
+    label: 'Mentors',
     icon: <Work />,
-    sub: 'Top Tier Companies',
+    // sub: 'Top Tier Companies',
   },
   {
     number: '98%',
@@ -76,7 +76,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
     <section
       className={`relative py-10 md:py-14 rounded-[8rem] ${sectionBackground}`}
     >
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid lg:grid-cols-[1fr_1fr] gap-8 items-stretch">
           <motion.aside
             initial={{ opacity: 0, y: 16 }}
@@ -199,7 +199,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
             </Box>
           </motion.aside>
 
-          <div className="grid sm:grid-cols-2 gap-7">
+          <div className="grid grid-cols-2 gap-3 sm:gap-7">
             {STATS.map((stat, index) => (
               <motion.div
                 key={stat.label}
@@ -211,7 +211,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
                   ease: [0.16, 1, 0.3, 1], // Custom cubic-bezier
                 }}
                 viewport={{ once: true }}
-                className={`group relative rounded-[32px] p-[2px] overflow-hidden
+                className={`group relative rounded-2xl sm:rounded-[32px] p-[1.5px] sm:p-[2px] overflow-hidden
         ${index % 2 === 1 ? 'sm:translate-y-10' : ''}
       `}
               >
@@ -227,7 +227,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
 
                 {/* Inner Content */}
                 <div
-                  className={`relative h-full rounded-[30px] p-7 backdrop-blur-xl border
+                  className={`relative h-full rounded-[20px] sm:rounded-[30px] p-4 sm:p-7 backdrop-blur-xl border
           ${
             darkMode
               ? 'bg-gray-900/90 border-gray-800/50'
@@ -235,7 +235,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
           }`}
                 >
                   {/* Icon with Ring */}
-                  <div className="mb-5 flex items-center gap-3">
+                  <div className="mb-3 sm:mb-5 flex items-center gap-2 sm:gap-3">
                     <div className="relative inline-block">
                       <div
                         className={`absolute inset-0 rounded-2xl animate-ping opacity-20 ${
@@ -243,7 +243,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
                         }`}
                       />
                       <div
-                        className={`relative p-4 rounded-2xl transform transition-all duration-500 group-hover:scale-140 group-hover:-rotate-6
+                        className={`relative p-2.5 sm:p-4 rounded-xl sm:rounded-2xl transform transition-all duration-500 group-hover:scale-140 group-hover:-rotate-6
               ${
                 darkMode
                   ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 text-blue-300'
@@ -256,7 +256,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
                       </div>
                     </div>
                     <div
-                      className={`text-2xl md:text-3xl font-black tracking-tight
+                      className={`text-lg sm:text-2xl md:text-3xl font-black tracking-tight
                                 ${darkMode ? 'text-white' : 'text-gray-900'}`}
                     >
                       {stat.number}
@@ -267,7 +267,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
                   <div className="space-y-2">
                     <div>
                       <h3
-                        className={`text-lg font-bold
+                        className={`text-sm sm:text-lg font-bold
                 ${darkMode ? 'text-gray-200' : 'text-gray-800'}
               `}
                       >
@@ -276,7 +276,7 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
 
                       {stat.sub && (
                         <p
-                          className={`text-sm mt-1 flex items-center gap-2
+                          className={`text-[11px] sm:text-sm leading-tight mt-1 flex items-center gap-1.5 sm:gap-2
                   ${darkMode ? 'text-gray-400' : 'text-gray-600'}
                 `}
                         >

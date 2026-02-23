@@ -52,10 +52,7 @@ const ContactSection: React.FC<ContactSectionProps> = ({
                 darkMode ? 'text-white' : 'text-slate-900'
               }`}
             >
-              <TextRevealCard
-                text="Need help? Reach us your way."
-                revealText="We are always here to help you."
-              />
+              <TextRevealCard text="Need help? Reach us your way." />
             </h2>
             <p
               className={`${darkMode ? 'text-slate-300' : 'text-slate-600'} mb-8`}

@@ -32,21 +32,21 @@ const Footer: React.FC = () => {
 
   return (
     <footer
-      className={`rounded-t-[5rem] border border-t relative backdrop-blur-xl ${
+      className={`rounded-t-[2.5rem] sm:rounded-t-[5rem] border border-t relative backdrop-blur-xl ${
         darkMode
           ? 'border-slate-700/70 bg-slate-950/55'
           : 'bg-[radial-gradient(1200px_circle_at_15%_-5%,rgba(16,185,129,0.22),transparent_100%),radial-gradient(1000px_circle_at_88%_8%,rgba(34,197,94,0.16),transparent_100%),radial-gradient(900px_circle_at_50%_105%,rgba(45,212,191,0.14),transparent_100%),linear-gradient(180deg,#f6fffb_0%,#ecfff6_45%,#effffb_100%)]'
       }`}
     >
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
-        <div className={'px-7 pt-7 md:px-10 md:pt-10'}>
-          <div className="grid lg:grid-cols-[1.1fr_2fr_1.7fr] gap-8">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className={'pt-6 sm:pt-7 md:px-10 md:pt-10'}>
+          <div className="grid lg:grid-cols-[1.1fr_2fr_1.7fr] gap-6 sm:gap-8">
             <div>
-              <h3 className="text-3xl font-black mb-3 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+              <h3 className="text-2xl sm:text-3xl font-black mb-3 bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                 Nexus
               </h3>
               <p
-                className={`${darkMode ? 'text-slate-300' : 'text-slate-600'} mb-5`}
+                className={`${darkMode ? 'text-slate-300' : 'text-slate-600'} text-sm sm:text-base mb-5`}
               >
                 Connecting KIIT students and alumni through purposeful
                 networking, mentorship, and collaborative growth.
@@ -58,7 +58,7 @@ const Footer: React.FC = () => {
                     key={social.label}
                     href={social.url}
                     aria-label={social.label}
-                    className={`p-2.5 rounded-xl transition-colors ${
+                    className={`p-2 sm:p-2.5 rounded-lg sm:rounded-xl transition-colors ${
                       darkMode
                         ? 'bg-slate-800 text-cyan-300 hover:bg-slate-700'
                         : 'bg-slate-100 text-cyan-700 hover:bg-slate-200'
@@ -70,22 +70,22 @@ const Footer: React.FC = () => {
               </div>
             </div>
 
-            <div className="lg:mx-10 grid sm:grid-cols-[1fr_1fr] gap-2">
+            <div className="lg:mx-10 grid grid-cols-2 gap-4 sm:gap-6">
               {/* Company Links */}
               <div>
                 <h4
-                  className={`font-bold mb-4 ${
+                  className={`font-bold text-sm sm:text-base mb-3 sm:mb-4 ${
                     darkMode ? 'text-white' : 'text-slate-900'
                   }`}
                 >
                   Product
                 </h4>
-                <ul className="space-y-2.5">
+                <ul className="space-y-2">
                   {footerLinks.product.map((link) => (
                     <li key={link.label}>
                       <button
                         onClick={() => navigate(link.path)}
-                        className={`text-sm ${
+                        className={`text-xs sm:text-sm ${
                           darkMode
                             ? 'text-slate-400 hover:text-emerald-300'
                             : 'text-slate-600 hover:text-emerald-700'
@@ -101,18 +101,18 @@ const Footer: React.FC = () => {
               {/* Resources Links */}
               <div>
                 <h4
-                  className={`font-bold mb-4 ${
+                  className={`font-bold text-sm sm:text-base mb-3 sm:mb-4 ${
                     darkMode ? 'text-white' : 'text-slate-900'
                   }`}
                 >
                   Company
                 </h4>
-                <ul className="space-y-2.5">
+                <ul className="space-y-2">
                   {footerLinks.company.map((link) => (
                     <li key={link.label}>
                       <button
                         onClick={() => navigate(link.path)}
-                        className={`text-sm ${
+                        className={`text-xs sm:text-sm ${
                           darkMode
                             ? 'text-slate-400 hover:text-emerald-300'
                             : 'text-slate-600 hover:text-emerald-700'
@@ -132,25 +132,25 @@ const Footer: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.45 }}
-              className={`rounded-2xl p-5 border ${
+              className={`rounded-xl sm:rounded-2xl p-4 sm:p-5 border ${
                 darkMode
                   ? 'border-cyan-300/20 bg-cyan-500/5'
                   : 'border-cyan-200 bg-cyan-50/70'
               }`}
             >
               <p
-                className={`${darkMode ? 'text-cyan-200' : 'text-cyan-700'} font-semibold mb-2`}
+                className={`${darkMode ? 'text-cyan-200' : 'text-cyan-700'} text-sm sm:text-base font-semibold mb-2`}
               >
                 Stay in the loop
               </p>
               <p
-                className={`${darkMode ? 'text-slate-300' : 'text-slate-600'} text-sm mb-4`}
+                className={`${darkMode ? 'text-slate-300' : 'text-slate-600'} text-xs sm:text-sm mb-3 sm:mb-4`}
               >
                 Get monthly updates on mentorship drives, community events, and
                 product improvements.
               </p>
               <div
-                className={`rounded-lg px-3 py-2.5 text-sm mb-3 ${
+                className={`rounded-lg px-3 py-2 text-xs sm:text-sm mb-3 ${
                   darkMode
                     ? 'bg-slate-800 text-slate-400'
                     : 'bg-white text-slate-500 border border-slate-200'
@@ -158,7 +158,7 @@ const Footer: React.FC = () => {
               >
                 Enter email address
               </div>
-              <button className="w-full rounded-lg py-2.5 text-sm font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 text-white">
+              <button className="w-full rounded-lg py-2 sm:py-2.5 text-xs sm:text-sm font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 text-white">
                 Subscribe
               </button>
             </motion.div>
@@ -166,13 +166,13 @@ const Footer: React.FC = () => {
         </div>
       </div>
       <footer
-        className={`mt-16 border-t ${
+        className={`mt-10 sm:mt-16 border-t ${
           darkMode
             ? 'border-slate-800 bg-slate-900'
             : 'border-slate-200 bg-slate-100'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-xs sm:text-sm">
           {/* Left Section */}
           <p className={`${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
             © {new Date().getFullYear()}{' '}
@@ -185,7 +185,7 @@ const Footer: React.FC = () => {
           </p>
 
           {/* Right Section */}
-          <nav className="flex items-center gap-6">
+          <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-6">
             {[
               { path: '/privacy', label: 'Privacy Policy' },
               { path: '/terms', label: 'Terms of Service' },

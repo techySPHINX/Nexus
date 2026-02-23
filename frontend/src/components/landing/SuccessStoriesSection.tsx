@@ -88,9 +88,9 @@ if (typeof document !== 'undefined') {
   }
 }
 
-const CARD_WIDTH = 420;
-const CARD_GAP = 24;
-const DURATION_S = 32; // seconds per full cycle
+const CARD_WIDTH = 'min(84vw, 420px)';
+const CARD_GAP = 16;
+const DURATION_S = 50; // seconds per full cycle
 
 const StoriesCarousel = () => {
   const { isDark: darkMode } = useTheme();
@@ -101,31 +101,13 @@ const StoriesCarousel = () => {
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[32px] border p-4 md:p-6 ${
-        darkMode
-          ? 'border-emerald-400/20 bg-slate-900/30'
-          : 'border-emerald-200 bg-white/70'
-      }`}
+      className={`relative overflow-hidden rounded-2xl sm:rounded-[32px] py-3 sm:py-4 md:py-6`}
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
       {/* Gradient fade edges */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
-        style={{
-          background: darkMode
-            ? 'linear-gradient(to right, rgba(15,23,42,0.95), transparent)'
-            : 'linear-gradient(to right, rgba(255,255,255,0.95), transparent)',
-        }}
-      />
-      <div
-        className="absolute right-0 top-0 bottom-0 w-24 z-10 pointer-events-none"
-        style={{
-          background: darkMode
-            ? 'linear-gradient(to left, rgba(15,23,42,0.95), transparent)'
-            : 'linear-gradient(to left, rgba(255,255,255,0.95), transparent)',
-        }}
-      />
+      {/* <div className="absolute left-0 top-0 bottom-0 w-10 sm:w-16 lg:w-24 z-10 pointer-events-none" />
+      <div className="absolute right-0 top-0 bottom-0 w-10 sm:w-16 lg:w-24 z-10 pointer-events-none" /> */}
 
       {/* Scrolling track */}
       <div
@@ -142,20 +124,20 @@ const StoriesCarousel = () => {
           <article
             key={`${story.name}-${index}`}
             style={{ minWidth: CARD_WIDTH, width: CARD_WIDTH }}
-            className={`relative flex flex-col gap-5 rounded-3xl border p-6 backdrop-blur-xl transition-shadow duration-300 hover:shadow-2xl ${
+            className={`relative flex flex-col gap-4 sm:gap-5 rounded-2xl sm:rounded-3xl border p-4 sm:p-6 backdrop-blur-xl transition-shadow duration-300 hover:shadow-2xl ${
               darkMode
                 ? 'border-emerald-400/20 bg-slate-900/55 hover:border-emerald-400/40'
                 : 'border-emerald-200 bg-white/90 hover:border-emerald-300 hover:shadow-emerald-200/50'
             }`}
           >
             {/* Profile */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <div className="relative flex-shrink-0">
                 <img
                   src={story.image}
                   alt={story.name}
                   loading="lazy"
-                  className="w-16 h-16 rounded-2xl object-cover"
+                  className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl object-cover"
                 />
                 <div
                   className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 bg-green-500 ${
@@ -165,14 +147,14 @@ const StoriesCarousel = () => {
               </div>
               <div>
                 <p
-                  className={`text-sm font-semibold ${
+                  className={`text-xs sm:text-sm font-semibold ${
                     darkMode ? 'text-slate-200' : 'text-slate-700'
                   }`}
                 >
                   {story.name}
                 </p>
                 <p
-                  className={`text-xs ${
+                  className={`text-[11px] sm:text-xs ${
                     darkMode ? 'text-slate-400' : 'text-slate-500'
                   }`}
                 >
@@ -183,7 +165,7 @@ const StoriesCarousel = () => {
 
             {/* Highlight badge */}
             <div
-              className={`inline-flex w-fit items-center gap-2 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] ${
+              className={`inline-flex w-fit items-center gap-1.5 sm:gap-2 rounded-full px-2.5 sm:px-3 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-[0.14em] sm:tracking-[0.2em] ${
                 darkMode
                   ? 'bg-cyan-400/15 text-cyan-200'
                   : 'bg-cyan-100 text-cyan-700'
@@ -195,7 +177,7 @@ const StoriesCarousel = () => {
             {/* Achievement + quote */}
             <div>
               <h3
-                className={`text-xl font-bold mb-2 ${
+                className={`text-base sm:text-xl font-bold mb-1.5 sm:mb-2 ${
                   darkMode
                     ? 'bg-gradient-to-r from-emerald-300 to-emerald-400 bg-clip-text text-transparent'
                     : 'bg-gradient-to-r from-emerald-700 to-emerald-600 bg-clip-text text-transparent'
@@ -204,7 +186,7 @@ const StoriesCarousel = () => {
                 {story.achievement}
               </h3>
               <p
-                className={`text-sm leading-relaxed ${
+                className={`text-xs sm:text-sm leading-relaxed ${
                   darkMode ? 'text-slate-300' : 'text-slate-600'
                 }`}
               >
@@ -250,7 +232,7 @@ const SuccessStoriesSection: React.FC<SuccessStoriesProps> = ({
 
   return (
     <section className={`relative py-10 md:py-14 ${sectionBackground}`}>
-      <div className="relative z-10 max-w-7xl mx-auto px-6 md:px-12">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -275,7 +257,8 @@ const SuccessStoriesSection: React.FC<SuccessStoriesProps> = ({
             />
           </div>
         </motion.div>
-
+      </div>
+      <div className="relative z-10 max-w-7xl mx-auto">
         <StoriesCarousel />
       </div>
     </section>
