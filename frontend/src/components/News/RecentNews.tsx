@@ -42,7 +42,7 @@ export default function RecentNews() {
                   <ListItemAvatar>
                     <Avatar
                       variant="rounded"
-                      src={n.imageUrl || '/nexus.png'}
+                      src={n.imageUrl || '/nexus.webp'}
                       alt={n.title}
                       sx={{ width: 56, height: 56, mr: 1 }}
                     />

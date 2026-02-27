@@ -2,20 +2,15 @@ import { FC, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Box } from '@mui/material';
 import Loader from '@/utils/loader';
-import TopNavbar from './components/top-navbar';
-import { AppSidebarNexus } from './components/app-sidebar-nexus';
-import MobileTopNavbar from './components/mobile-top-navbar';
-import { SidebarProvider } from './components/ui/sidebar';
 import { useAuth } from './contexts/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './route/ProtectedRoute';
 import AdminRoute from './route/AdminRoute';
 import './App.css';
 
 // Lazy load all pages for better code splitting
+const LandingOptimized = lazy(() => import('./pages/LandingPage2'));
 const Login = lazy(() => import('./pages/Login'));
-const EnhancedRegister = lazy(
-  () => import('./components/Auth/EnhancedRegister')
-);
+const EnhancedRegister = lazy(() => import('./pages/Register'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
 const AdminDocumentVerification = lazy(
   () => import('./pages/AdminDocumentVerification')
@@ -65,6 +60,21 @@ const Gamification = lazy(() => import('./pages/Gamification'));
 const NewsPage = lazy(() => import('./pages/NewsPage'));
 const NewsDetail = lazy(() => import('./components/News/NewsDetail'));
 const AdminNews = lazy(() => import('./pages/AdminNews'));
+const SidebarProvider = lazy(() =>
+  import('./components/ui/sidebar').then((module) => ({
+    default: module.SidebarProvider,
+  }))
+);
+
+const TopNavbar = lazy(() => import('./components/Navbar/top-navbar'));
+const MobileTopNavbar = lazy(
+  () => import('./components/Navbar/mobile-top-navbar')
+);
+const AppSidebarNexus = lazy(() =>
+  import('./components/Navbar/app-sidebar-nexus').then((module) => ({
+    default: module.AppSidebarNexus,
+  }))
+);
 
 // Import context providers (MUST be non-lazy for proper context setup)
 import ProfileProvider from './contexts/ProfileContext';
@@ -83,7 +93,6 @@ import TagProvider from './contexts/TagContext';
 import { EngagementProvider } from './contexts/engagementContext';
 import { NewsProvider } from './contexts/NewsContext';
 import { EngagementService } from './services/engagementService';
-import LandingOptimized from './pages/LandingPage2';
 
 // Loading component for Suspense fallback
 const LoadingSpinner: FC = () => (
@@ -105,10 +114,22 @@ const LayoutContent: FC = () => {
 
   return (
     <div className="flex flex-col min-h-screen w-full">
-      {!user && <TopNavbar />}
-      {user && <MobileTopNavbar />}
+      {!user && (
+        <Suspense fallback={null}>
+          <TopNavbar />
+        </Suspense>
+      )}
+      {user && (
+        <Suspense fallback={null}>
+          <MobileTopNavbar />
+        </Suspense>
+      )}
       <div className="flex flex-1 overflow-hidden w-full">
-        {user && <AppSidebarNexus />}
+        {user && (
+          <Suspense fallback={null}>
+            <AppSidebarNexus />
+          </Suspense>
+        )}
         <div
           className="w-full flex-1 overflow-y-auto overflow-x-hidden"
           style={{
@@ -481,40 +502,60 @@ const LayoutContent: FC = () => {
 
 // Layout component that wraps LayoutContent with SidebarProvider and Router
 const Layout: FC = () => {
+  const { user } = useAuth();
+
   return (
     <Router>
-      <SidebarProvider>
+      {user ? (
+        <Suspense fallback={null}>
+          <SidebarProvider>
+            <LayoutContent />
+          </SidebarProvider>
+        </Suspense>
+      ) : (
         <LayoutContent />
-      </SidebarProvider>
+      )}
     </Router>
   );
 };
 
 const engagementService = new EngagementService();
 
+const AuthenticatedProviders: FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <>{children}</>;
+  }
+
+  return (
+    <NotificationProvider>
+      <EngagementProvider engagementService={engagementService}>
+        <ReportProvider>
+          <EventProvider>
+            <SubCommunityProvider>
+              <GamificationProvider>
+                <NewsProvider>
+                  <ProfileProvider>{children}</ProfileProvider>
+                </NewsProvider>
+              </GamificationProvider>
+            </SubCommunityProvider>
+          </EventProvider>
+        </ReportProvider>
+      </EngagementProvider>
+    </NotificationProvider>
+  );
+};
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <NotificationProvider>
-          <EngagementProvider engagementService={engagementService}>
-            {/* Keep a single SubCommunityProvider mounted for the whole app so
-                sub-community state isn't re-created on every route change. */}
-            <ReportProvider>
-              <EventProvider>
-                <SubCommunityProvider>
-                  <GamificationProvider>
-                    <NewsProvider>
-                      <ProfileProvider>
-                        <Layout />
-                      </ProfileProvider>
-                    </NewsProvider>
-                  </GamificationProvider>
-                </SubCommunityProvider>
-              </EventProvider>
-            </ReportProvider>
-          </EngagementProvider>
-        </NotificationProvider>
+        <AuthenticatedProviders>
+          <Layout />
+        </AuthenticatedProviders>
       </AuthProvider>
     </ThemeProvider>
   );

@@ -1,4 +1,12 @@
-import { FC, useEffect, useState, useCallback } from 'react';
+import {
+  FC,
+  useEffect,
+  useState,
+  useCallback,
+  ComponentType,
+  lazy,
+  LazyExoticComponent,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { useProfile } from '../../contexts/ProfileContext';
@@ -18,8 +26,36 @@ import {
   Container,
 } from '@mui/material';
 import RecentNews from '@/components/News/RecentNews';
-import { CreatePostForm } from '../../components/Post/CreatePostForm';
 import { getErrorMessage } from '@/utils/errorHandler';
+
+export enum SubCommunityRole {
+  OWNER = 'OWNER',
+  MODERATOR = 'MODERATOR',
+  MEMBER = 'MEMBER',
+}
+
+// Lazy-load heavy components so the page renders a skeleton first
+type CreatePostFormProps = {
+  subCommunityId?: string;
+  subCommunityName?: string;
+  onSuccess?: () => void;
+  onError?: (error: unknown) => void;
+  onCancel?: () => void;
+  profile?: { id?: string; avatarUrl?: string | null };
+  userRole?: SubCommunityRole | null;
+};
+
+const CreatePostForm = lazy(() =>
+  import('../../components/Post/CreatePostForm').then((mod) => {
+    return {
+      default: (
+        mod as unknown as {
+          CreatePostForm: ComponentType<CreatePostFormProps>;
+        }
+      ).CreatePostForm,
+    };
+  })
+) as LazyExoticComponent<ComponentType<CreatePostFormProps>>;
 
 const FeedPage: FC = () => {
   const { feed, getFeed, pagination, loading, error, clearError } = usePosts();

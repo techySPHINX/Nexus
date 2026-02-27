@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 console.log('API BASE URL:', BACKEND_URL);
 
 // Create axios instance with default config

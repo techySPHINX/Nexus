@@ -132,7 +132,7 @@ const Login: FC = () => {
                   }}
                 >
                   <img
-                    src="/nexus.png"
+                    src="/nexus.webp"
                     alt="Nexus"
                     style={{
                       width: '70%',
