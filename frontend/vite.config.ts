@@ -90,7 +90,6 @@ export default defineConfig(({ mode }: ConfigEnv) => {
             }
 
             // --- 2. Feature chunks ---
-            if (lower.includes('context')) return 'context-features';
             if (lower.includes('dashboard')) return 'dashboard-features';
             if (lower.includes('gamification')) return 'gamification-features';
             if (lower.includes('admin')) return 'admin-features';

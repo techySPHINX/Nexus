@@ -1,7 +1,6 @@
 import {
   FC,
   ReactNode,
-  Suspense,
   lazy,
   useEffect,
   useMemo,
@@ -353,50 +352,34 @@ const Landing: FC = () => {
         minHeight={700}
         rootMargin={deferredRootMargin}
       >
-        <Suspense fallback={null}>
-          <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
-        </Suspense>
+        <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
       </DeferredSection>
       <DeferredSection minHeight={620} rootMargin={deferredRootMargin}>
-        <Suspense fallback={null}>
-          <StatsSection
-            sectionBackground={sectionBackgrounds[2]}
-            lowPerformanceMode={lowPerformanceMode}
-          />
-        </Suspense>
+        <StatsSection
+          sectionBackground={sectionBackgrounds[2]}
+          lowPerformanceMode={lowPerformanceMode}
+        />
       </DeferredSection>
       <DeferredSection minHeight={760} rootMargin={deferredRootMargin}>
-        <Suspense fallback={null}>
-          <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
-        </Suspense>
+        <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
       </DeferredSection>
       <DeferredSection minHeight={700} rootMargin={deferredRootMargin}>
-        <Suspense fallback={null}>
-          <NewsSection sectionBackground={sectionBackgrounds[4]} />
-        </Suspense>
+        <NewsSection sectionBackground={sectionBackgrounds[4]} />
       </DeferredSection>
       <DeferredSection minHeight={520} rootMargin={deferredRootMargin}>
-        <Suspense fallback={null}>
-          <CTASection
-            sectionBackground={sectionBackgrounds[5]}
-            // lowPerformanceMode={lowPerformanceMode}
-          />
-        </Suspense>
+        <CTASection
+          sectionBackground={sectionBackgrounds[5]}
+          // lowPerformanceMode={lowPerformanceMode}
+        />
       </DeferredSection>
       <DeferredSection minHeight={560} rootMargin={deferredRootMargin}>
-        <Suspense fallback={null}>
-          <FAQSection sectionBackground={sectionBackgrounds[6]} />
-        </Suspense>
+        <FAQSection sectionBackground={sectionBackgrounds[6]} />
       </DeferredSection>
       <DeferredSection minHeight={700} rootMargin={deferredRootMargin}>
-        <Suspense fallback={null}>
-          <ContactSection sectionBackground={sectionBackgrounds[7]} />
-        </Suspense>
+        <ContactSection sectionBackground={sectionBackgrounds[7]} />
       </DeferredSection>
       <DeferredSection minHeight={200} rootMargin={deferredRootMargin}>
-        <Suspense fallback={null}>
-          <Footer />
-        </Suspense>
+        <Footer />
       </DeferredSection>
     </div>
   );
