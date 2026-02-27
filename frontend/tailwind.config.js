@@ -5,6 +5,17 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx,html}'],
   theme: {
     extend: {
+      fontFamily: {
+        inter: ['Inter', 'sans-serif'],
+      },
+      animation: {
+        gradient: 'gradient 8s linear infinite',
+      },
+      keyframes: {
+        gradient: {
+          to: { 'background-position': '200% center' },
+        },
+      },
       colors: {
         nexus: {
           50: '#eaf4ff',
