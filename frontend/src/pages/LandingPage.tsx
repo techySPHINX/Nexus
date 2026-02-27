@@ -1,4 +1,13 @@
-import { FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  FC,
+  ReactNode,
+  Suspense,
+  lazy,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 // import * as THREE from 'three';
 import ThemeToggle from '@/components/ThemeToggle';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
@@ -6,14 +15,21 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 import HeroSection from '@/components/landing/HeroSection';
-import FeaturesSection from '@/components/landing/FeaturesSection';
-import StatsSection from '@/components/landing/StatsSection';
-import SuccessStoriesSection from '@/components/landing/SuccessStoriesSection';
-import NewsSection from '@/components/landing/NewsSection';
-import ContactSection from '@/components/landing/ContactSection';
-import FAQSection from '@/components/landing/FAQSection';
-import CTASection from '@/components/landing/CTASection';
-import Footer from '@/components/landing/Footer';
+
+const FeaturesSection = lazy(
+  () => import('@/components/landing/FeaturesSection')
+);
+const StatsSection = lazy(() => import('@/components/landing/StatsSection'));
+const SuccessStoriesSection = lazy(
+  () => import('@/components/landing/SuccessStoriesSection')
+);
+const NewsSection = lazy(() => import('@/components/landing/NewsSection'));
+const ContactSection = lazy(
+  () => import('@/components/landing/ContactSection')
+);
+const FAQSection = lazy(() => import('@/components/landing/FAQSection'));
+const CTASection = lazy(() => import('@/components/landing/CTASection'));
+const Footer = lazy(() => import('@/components/landing/Footer'));
 
 // interface FloatingNetworkProps {
 //   darkMode: boolean;
@@ -338,17 +354,24 @@ const Landing: FC = () => {
         minHeight={700}
         rootMargin={deferredRootMargin}
       >
-        <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
+        <Suspense fallback={null}>
+          <FeaturesSection sectionBackground={sectionBackgrounds[1]} />
+        </Suspense>
       </DeferredSection>
       <DeferredSection minHeight={620} rootMargin={deferredRootMargin}>
-        <StatsSection
-          sectionBackground={sectionBackgrounds[2]}
-          lowPerformanceMode={lowPerformanceMode}
-        />
+        <Suspense fallback={null}>
+          <StatsSection
+            sectionBackground={sectionBackgrounds[2]}
+            lowPerformanceMode={lowPerformanceMode}
+          />
+        </Suspense>
       </DeferredSection>
       <DeferredSection minHeight={760} rootMargin={deferredRootMargin}>
-        <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
+        <Suspense fallback={null}>
+          <SuccessStoriesSection sectionBackground={sectionBackgrounds[3]} />
+        </Suspense>
       </DeferredSection>
+<<<<<<< HEAD:frontend/src/pages/LandingPage.tsx
       <DeferredSection minHeight={1700} rootMargin={deferredRootMargin}>
         <NewsSection sectionBackground={sectionBackgrounds[4]} />
       </DeferredSection>
@@ -357,15 +380,35 @@ const Landing: FC = () => {
           sectionBackground={sectionBackgrounds[5]}
           // lowPerformanceMode={lowPerformanceMode}
         />
+=======
+      <DeferredSection minHeight={700} rootMargin={deferredRootMargin}>
+        <Suspense fallback={null}>
+          <NewsSection sectionBackground={sectionBackgrounds[4]} />
+        </Suspense>
+      </DeferredSection>
+      <DeferredSection minHeight={520} rootMargin={deferredRootMargin}>
+        <Suspense fallback={null}>
+          <CTASection
+            sectionBackground={sectionBackgrounds[5]}
+            // lowPerformanceMode={lowPerformanceMode}
+          />
+        </Suspense>
+>>>>>>> a93327a (removed console logs):frontend/src/pages/LandingPage2.tsx
       </DeferredSection>
       <DeferredSection minHeight={560} rootMargin={deferredRootMargin}>
-        <FAQSection sectionBackground={sectionBackgrounds[6]} />
+        <Suspense fallback={null}>
+          <FAQSection sectionBackground={sectionBackgrounds[6]} />
+        </Suspense>
       </DeferredSection>
       <DeferredSection minHeight={700} rootMargin={deferredRootMargin}>
-        <ContactSection sectionBackground={sectionBackgrounds[7]} />
+        <Suspense fallback={null}>
+          <ContactSection sectionBackground={sectionBackgrounds[7]} />
+        </Suspense>
       </DeferredSection>
       <DeferredSection minHeight={200} rootMargin={deferredRootMargin}>
-        <Footer />
+        <Suspense fallback={null}>
+          <Footer />
+        </Suspense>
       </DeferredSection>
     </div>
   );
