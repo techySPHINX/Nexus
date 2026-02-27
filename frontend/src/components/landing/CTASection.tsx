@@ -137,11 +137,14 @@ const CTASection: React.FC<CTASectionProps> = ({ sectionBackground }) => {
                   loop
                   muted
                   playsInline
+                  preload="none"
                   onTimeUpdate={handleVideoTimeUpdate}
-                  className="relative rounded-3xl border border-white/20 w-full h-64 md:h-72 object-cover object-[10%_35%]"
+                  className="relative rounded-3xl border border-white/20 w-full h-64 md:h-72 object-cover object-[0%_15%]"
                 >
-                  <source src="/ctaVideo.mp4" type="video/mp4" />
-                  Your browser does not support the video tag.
+                  <source
+                    // src="https://res.cloudinary.com/dtmw3sqm9/video/upload/c_crop,f_auto,fl_relative,g_north,q_auto,x_0,y_0/v1771938991/ctaVideo_sbhxku.webm"
+                    type="video/webm"
+                  />
                 </video>
 
                 <AnimatePresence>

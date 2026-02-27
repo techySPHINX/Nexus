@@ -8,7 +8,7 @@ import {
 } from 'framer-motion';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
-import { Highlight } from '../ui/hero-highlight';
+import { Highlight } from './ui/hero-highlight';
 
 const HERO_PREVIEW_IMAGE =
   'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
@@ -135,9 +135,9 @@ const HeroSection: FC<HeroSectionProps> = ({
                   </span>
 
                   <h1 className="text-8xl lg:text-9xl font-black leading-none mt-4">
-                    <span className="bg-gradient-to-r from-emerald-600 via-green-500 to-lime-500 bg-clip-text text-transparent">
+                    <p className="font-extrabold bg-clip-text text-transparent bg-[linear-gradient(to_right,theme(colors.green.300),theme(colors.green.100),theme(colors.yellow.200),theme(colors.green.100),theme(colors.green.300))] bg-[length:200%_auto] animate-gradient">
                       Nexus
-                    </span>
+                    </p>
                   </h1>
 
                   <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-3 text-3xl sm:text-4xl md:text-5xl font-bold">
@@ -248,6 +248,8 @@ const HeroSection: FC<HeroSectionProps> = ({
             >
               <img
                 src={HERO_PREVIEW_IMAGE}
+                loading="lazy"
+                decoding="async"
                 alt="Team collaboration"
                 className="absolute inset-0 w-full h-full object-cover"
               />

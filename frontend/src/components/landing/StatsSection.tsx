@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { alpha, useTheme as Theme, Typography } from '@mui/material';
 import { People, School, Work, EmojiEvents } from '@mui/icons-material';
-import { DottedGlowBackground } from '../ui/dotted-glow-background';
+import { DottedGlowBackground } from './ui/dotted-glow-background';
 import Box from '@mui/material/Box/Box';
 
 interface Stat {
@@ -309,22 +309,22 @@ const StatsSection: React.FC<StatsProps> = ({
           </div>
         </div>
       </div>
-      {/* {!lowPerformanceMode && ( */}
-      <DottedGlowBackground
-        className="pointer-events-none mask-radial-to-90% mask-radial-at-center"
-        opacity={1}
-        gap={20}
-        radius={0.9}
-        colorLightVar="black"
-        glowColorLightVar="--color-green-100"
-        colorDarkVar="--color-sky-900"
-        glowColorDarkVar="--color-sky-100"
-        backgroundOpacity={0}
-        speedMin={0.3}
-        speedMax={1.6}
-        speedScale={1}
-      />
-      {/* )} */}
+      {!lowPerformanceMode && (
+        <DottedGlowBackground
+          className="pointer-events-none mask-radial-to-90% mask-radial-at-center"
+          opacity={1}
+          gap={20}
+          radius={0.9}
+          colorLightVar="black"
+          glowColorLightVar="--color-green-100"
+          colorDarkVar="--color-sky-900"
+          glowColorDarkVar="--color-sky-100"
+          backgroundOpacity={0}
+          speedMin={0.3}
+          speedMax={1.6}
+          speedScale={1}
+        />
+      )}
     </section>
   );
 };

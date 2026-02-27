@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Star } from '@mui/icons-material';
-import { TextGenerateEffect } from '../ui/text-generate-effect';
+import { TextGenerateEffect } from './ui/text-generate-effect';
 
 interface Story {
   name: string;

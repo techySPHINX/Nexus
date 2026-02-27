@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Email, Chat } from '@mui/icons-material';
-import { TextRevealCard } from '../ui/text-reveal-card';
+import { TextRevealCard } from './ui/text-reveal-card';
 
 interface ContactSectionProps {
   sectionBackground: string;
