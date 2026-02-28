@@ -135,7 +135,12 @@ const HeroSection: FC<HeroSectionProps> = ({
                   </span>
 
                   <h1 className="text-8xl lg:text-9xl font-black leading-none mt-4">
-                    <p className="font-extrabold bg-clip-text text-transparent bg-[linear-gradient(to_right,theme(colors.green.300),theme(colors.green.100),theme(colors.yellow.200),theme(colors.green.100),theme(colors.green.300))] bg-[length:200%_auto] animate-gradient">
+                    <p
+                      className="font-extrabold bg-clip-text text-transparent 
+                      bg-[linear-gradient(to_right,theme(colors.green.700),theme(colors.green.500),theme(colors.yellow.300),theme(colors.green.500),theme(colors.green.700))] bg-[length:200%_auto]
+                      dark:bg-[linear-gradient(to_right,theme(colors.green.300),theme(colors.green.100),theme(colors.yellow.200),theme(colors.green.100),theme(colors.green.300))] bg-[length:200%_auto]
+                      animate-gradient"
+                    >
                       Nexus
                     </p>
                   </h1>
