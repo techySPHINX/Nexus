@@ -24,9 +24,17 @@ import {
   Alert,
   Grid,
   Container,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import RecentNews from '@/components/News/RecentNews';
 import { getErrorMessage } from '@/utils/errorHandler';
+
+const FEED_FETCH_DEDUP_TTL_MS = 1500;
+const recentFeedFetches = new Map<string, number>();
+const inFlightFeedFetches = new Set<string>();
+const recentProfileRefreshes = new Map<string, number>();
+const inFlightProfileRefreshes = new Set<string>();
 
 export enum SubCommunityRole {
   OWNER = 'OWNER',
@@ -58,10 +66,22 @@ const CreatePostForm = lazy(() =>
 ) as LazyExoticComponent<ComponentType<CreatePostFormProps>>;
 
 const FeedPage: FC = () => {
-  const { feed, getFeed, pagination, loading, error, clearError } = usePosts();
+  const {
+    feed,
+    communityFeed,
+    getFeed,
+    getCommunityFeed,
+    pagination,
+    loading,
+    error,
+    clearError,
+  } = usePosts();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
   const [openForm, setOpenForm] = useState(false);
+  const [activeTab, setActiveTab] = useState<
+    'all' | 'following' | 'communities'
+  >('all');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
@@ -79,9 +99,47 @@ const FeedPage: FC = () => {
   );
 
   useEffect(() => {
-    getFeed();
-    refreshProfile();
-  }, [getFeed, refreshProfile]);
+    if (!user?.id) return;
+
+    const key = `${user.id}:${activeTab}`;
+    const lastFetchedAt = recentFeedFetches.get(key) ?? 0;
+    if (Date.now() - lastFetchedAt < FEED_FETCH_DEDUP_TTL_MS) return;
+    if (inFlightFeedFetches.has(key)) return;
+
+    inFlightFeedFetches.add(key);
+
+    const loadTabFeed = async () => {
+      try {
+        if (activeTab === 'communities') {
+          await getCommunityFeed();
+        } else {
+          await getFeed();
+        }
+        const profileKey = user.id;
+        const lastProfileRefreshAt =
+          recentProfileRefreshes.get(profileKey) ?? 0;
+        const shouldRefreshProfile =
+          Date.now() - lastProfileRefreshAt >= FEED_FETCH_DEDUP_TTL_MS &&
+          !inFlightProfileRefreshes.has(profileKey);
+
+        if (shouldRefreshProfile) {
+          inFlightProfileRefreshes.add(profileKey);
+          try {
+            await refreshProfile();
+            recentProfileRefreshes.set(profileKey, Date.now());
+          } finally {
+            inFlightProfileRefreshes.delete(profileKey);
+          }
+        }
+
+        recentFeedFetches.set(key, Date.now());
+      } finally {
+        inFlightFeedFetches.delete(key);
+      }
+    };
+
+    void loadTabFeed();
+  }, [activeTab, getFeed, getCommunityFeed, refreshProfile, user?.id]);
 
   useEffect(() => {
     if (error) {
@@ -90,15 +148,25 @@ const FeedPage: FC = () => {
     }
   }, [error, showSnackbar, clearError]);
 
+  const currentFeed = activeTab === 'communities' ? communityFeed : feed;
+
   const handleLoadMore = () => {
+    if (activeTab === 'communities') {
+      getCommunityFeed(pagination.page + 1);
+      return;
+    }
     getFeed(pagination.page + 1);
   };
 
   const handleCreatePostSuccess = useCallback(() => {
     setOpenForm(false);
     showSnackbar('Post created successfully and sent for approval!', 'success');
-    getFeed(1);
-  }, [getFeed, showSnackbar]);
+    if (activeTab === 'communities') {
+      getCommunityFeed(1);
+    } else {
+      getFeed(1);
+    }
+  }, [activeTab, getCommunityFeed, getFeed, showSnackbar]);
 
   const handleCreatePostError = useCallback(
     (error: unknown) => {
@@ -108,9 +176,25 @@ const FeedPage: FC = () => {
     [showSnackbar]
   );
 
-  // In FeedPage.tsx, replace the renderPosts function with:
   const renderPosts = () => {
-    if (!feed || feed.length === 0) {
+    if (!currentFeed || currentFeed.length === 0) {
+      if (activeTab === 'communities') {
+        return (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="body1" sx={{ mb: 1 }}>
+              You haven&apos;t joined any communities yet, or there are no
+              approved posts in your communities.
+            </Typography>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/subcommunities')}
+            >
+              Browse communities
+            </Button>
+          </Box>
+        );
+      }
+
       return (
         <Typography variant="body1" sx={{ mt: 2 }}>
           No posts to show. Follow more people or communities to see posts in
@@ -119,7 +203,7 @@ const FeedPage: FC = () => {
       );
     }
 
-    return feed.map((post) => {
+    return currentFeed.map((post) => {
       if (!post || !post.id) {
         console.warn('Invalid post object:', post);
         return null;
@@ -148,6 +232,17 @@ const FeedPage: FC = () => {
               <Typography variant="h4" gutterBottom>
                 Your Feed
               </Typography>
+              <Tabs
+                value={activeTab}
+                onChange={(_, value) => setActiveTab(value)}
+                sx={{ mb: 2 }}
+                variant="scrollable"
+                scrollButtons="auto"
+              >
+                <Tab label="All" value="all" />
+                <Tab label="Following" value="following" />
+                <Tab label="My Communities" value="communities" />
+              </Tabs>
               {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
                 <>
                   <Button

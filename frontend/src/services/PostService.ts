@@ -125,6 +125,25 @@ export async function getFeedService(page?: number, limit?: number) {
   }
 }
 
+export async function getCommunityFeedService(page?: number, limit?: number) {
+  try {
+    const { data } = await api.get('/posts/community-feed', {
+      params: {
+        page,
+        limit,
+      },
+    });
+    return data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to fetch community feed'
+      );
+    }
+    throw new Error('Failed to fetch community feed');
+  }
+}
+
 export async function getSubCommunityFeedService(
   subCommunityId: string,
   page?: number,

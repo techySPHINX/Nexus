@@ -483,6 +483,105 @@ export class PostService {
     };
   }
 
+  async getMyCommunitiesFeed(userId: string, page = 1, limit = 10) {
+    if (page < 1 || limit < 1 || limit > 50) {
+      throw new BadRequestException('Invalid pagination parameters');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const memberships = await this.prisma.subCommunityMember.findMany({
+      where: { userId },
+      select: { subCommunityId: true },
+    });
+
+    const communityIds = memberships.map(
+      (membership) => membership.subCommunityId,
+    );
+
+    if (communityIds.length === 0) {
+      return {
+        posts: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [posts, total] = await Promise.all([
+      this.prisma.post.findMany({
+        where: {
+          status: PostStatus.APPROVED,
+          subCommunityId: { in: communityIds },
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              profile: {
+                select: { bio: true, avatarUrl: true },
+              },
+            },
+          },
+          subCommunity: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+          },
+          Vote: {
+            where: { userId, targetType: VoteTargetType.POST },
+            select: { id: true, type: true },
+          },
+          _count: {
+            select: {
+              Vote: true,
+              Comment: true,
+            },
+          },
+        },
+      }),
+      this.prisma.post.count({
+        where: {
+          status: PostStatus.APPROVED,
+          subCommunityId: { in: communityIds },
+        },
+      }),
+    ]);
+
+    return {
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
+
   /**
    * Retrieves a single post by its ID.
    * Optionally checks if the current user has liked the post.

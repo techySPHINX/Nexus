@@ -135,6 +135,19 @@ export class PostController {
     );
   }
 
+  @Get('community-feed')
+  @ApiOperation({ summary: "Get the user's joined communities feed" })
+  @ApiResponse({ status: 200, description: "The user's community feed." })
+  getCommunityFeed(
+    @GetCurrentUser('userId') userId: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    const pageNum = page ?? 1;
+    const limitNum = limit ?? 10;
+    return this.postService.getMyCommunitiesFeed(userId, pageNum, limitNum);
+  }
+
   /**
    * Retrieves all posts that are pending approval. Only accessible by ADMINs.
    * @param page - The page number for pagination (defaults to 1).
