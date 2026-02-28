@@ -1,5 +1,10 @@
-import { FC, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { FC, lazy, Suspense, useEffect, useRef } from 'react';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from 'react-router-dom';
 import { Box } from '@mui/material';
 import Loader from '@/utils/loader';
 import { useAuth } from './contexts/AuthContext';
@@ -113,6 +118,16 @@ const LoadingSpinner: FC = () => (
 // Layout content component that uses auth
 const LayoutContent: FC = () => {
   const { user } = useAuth();
+  const { pathname } = useLocation();
+  const contentScrollRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const container = contentScrollRef.current;
+    if (container) {
+      container.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+  }, [pathname]);
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -133,6 +148,9 @@ const LayoutContent: FC = () => {
           </Suspense>
         )}
         <div
+          id="app-scroll-container"
+          data-app-scroll-container="true"
+          ref={contentScrollRef}
           className="w-full flex-1 overflow-y-auto overflow-x-hidden"
           style={{
             minHeight: 'calc(100vh - 64px)',
