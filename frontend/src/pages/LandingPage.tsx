@@ -1,12 +1,4 @@
-import {
-  FC,
-  ReactNode,
-  lazy,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 // import * as THREE from 'three';
 import ThemeToggle from '@/components/ThemeToggle';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
@@ -14,21 +6,14 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
 
 import HeroSection from '@/components/landing/HeroSection';
-
-const FeaturesSection = lazy(
-  () => import('@/components/landing/FeaturesSection')
-);
-const StatsSection = lazy(() => import('@/components/landing/StatsSection'));
-const SuccessStoriesSection = lazy(
-  () => import('@/components/landing/SuccessStoriesSection')
-);
-const NewsSection = lazy(() => import('@/components/landing/NewsSection'));
-const ContactSection = lazy(
-  () => import('@/components/landing/ContactSection')
-);
-const FAQSection = lazy(() => import('@/components/landing/FAQSection'));
-const CTASection = lazy(() => import('@/components/landing/CTASection'));
-const Footer = lazy(() => import('@/components/landing/Footer'));
+import FeaturesSection from '@/components/landing/FeaturesSection';
+import StatsSection from '@/components/landing/StatsSection';
+import SuccessStoriesSection from '@/components/landing/SuccessStoriesSection';
+import NewsSection from '@/components/landing/NewsSection';
+import ContactSection from '@/components/landing/ContactSection';
+import FAQSection from '@/components/landing/FAQSection';
+import CTASection from '@/components/landing/CTASection';
+import Footer from '@/components/landing/Footer';
 
 // interface FloatingNetworkProps {
 //   darkMode: boolean;
