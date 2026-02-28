@@ -104,7 +104,7 @@ const StartupGrid: FC<Props> = ({
     <motion.div variants={containerVariants} initial="hidden" animate="visible">
       <Grid container spacing={3}>
         {startups.map((s) => (
-          <Grid item xs={12} md={6} key={s?.id || Math.random()}>
+          <Grid item xs={12} md={6} key={s?.id || s.name}>
             <motion.div variants={itemVariants}>
               <StartupCard
                 startup={s}

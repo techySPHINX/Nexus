@@ -1,4 +1,11 @@
-import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import {
+  Suspense,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from 'react';
 import {
   Box,
   Typography,
@@ -10,25 +17,22 @@ import {
   Card,
   CardContent,
   Skeleton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  SelectChangeEvent,
+  Chip,
+  Fade,
 } from '@mui/material';
-import { Add, FilterList } from '@mui/icons-material';
+import {
+  // Search,
+  // Add,
+  KeyboardArrowUp,
+} from '@mui/icons-material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { CreateSubCommunityDialog } from '../../components/SubCommunity/CreateSubCommunityDialog';
-import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubCommunityRequestDialog';
+// import { CreateSubCommunityDialog } from '../../components/SubCommunity/CreateSubCommunityDialog';
+// import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubCommunityRequestDialog';
 import { SubCommunitySection } from '../../components/SubCommunity/SubCommunitySection';
 import { ManageTypesDialog } from '../../components/SubCommunity/ManageTypesDialog';
-import {
-  SubCommunity,
-  SubCommunityType,
-  SubCommunityFilterParams,
-} from '../../types/subCommunity';
-import { Link } from 'react-router-dom';
+import { SubCommunity, SubCommunityType } from '../../types/subCommunity';
+// import { Link } from 'react-router-dom';
 
 // Sections are built dynamically from types provided by context (plus 'all')
 
@@ -44,8 +48,6 @@ const LazySection: React.FC<{
   initialCount?: number;
 }> = ({ typeId, title, initialCount = 6 }) => {
   const {
-    ensureTypeLoaded,
-    ensureAllSubCommunities,
     scheduleTypeLoad,
     isLoadingForType,
     hasMoreForType,
@@ -58,11 +60,8 @@ const LazySection: React.FC<{
   // We'll observe the section wrapper and call ensureTypeLoaded only when
   // it enters the viewport. This prevents eager loading of every section.
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const loadTimeoutRef = useRef<number | null>(null);
-  // prevent scheduling multiple timeouts for the same section instance
+  // prevent duplicate load scheduling for the same section instance
   const scheduledRef = useRef(false);
-  // track whether this section is currently intersecting
-  const isIntersectingRef = useRef(false);
   // refs holding latest arrays so async callbacks can read up-to-date data
   const subCommunitiesRef = useRef(subCommunities);
   const subCommunitiesByTypeRef = useRef(subCommunitiesByType);
@@ -97,28 +96,17 @@ const LazySection: React.FC<{
 
             const isCurrentlyLoading = isLoadingForType(typeId);
 
-            isIntersectingRef.current = !!entry.isIntersecting;
-
             if (
               !scheduledRef.current &&
               displayCommunities.length === 0 &&
               !isCurrentlyLoading
             ) {
               scheduledRef.current = true;
-              const delay = 100; // 100ms stagger
-              loadTimeoutRef.current = window.setTimeout(async () => {
-                try {
-                  if (typeId === 'all') {
-                    await scheduleTypeLoad('all', initialCount);
-                  } else {
-                    await scheduleTypeLoad(typeId, initialCount);
-                  }
-                } catch (err) {
+              scheduleTypeLoad(typeId, initialCount)
+                .catch((err) => {
                   console.warn('Failed to load type', typeId, err);
-                } finally {
-                  // If, after the fetch, there is still no data for this
-                  // section, allow rescheduling so it can retry later (for
-                  // example when transient network failures occur).
+                })
+                .finally(() => {
                   const currentDisplay =
                     typeId === 'all'
                       ? subCommunitiesRef.current
@@ -130,58 +118,28 @@ const LazySection: React.FC<{
                         );
 
                   if (!currentDisplay || currentDisplay.length === 0) {
-                    // no data arrived for this section; allow retry later
                     scheduledRef.current = false;
-                    // If the element is still intersecting, immediately re-enqueue
-                    // so the queue worker will retry. This avoids waiting for a
-                    // new intersection event which may not happen while the
-                    // element remains visible.
-                    if (isIntersectingRef.current) {
-                      scheduleTypeLoad(typeId, initialCount).catch(() => {});
-                    }
-                  } else {
-                    // we have data now; stop observing this element to avoid
-                    // any further redundant scheduling for this instance.
-                    if (rootRef.current) observer.unobserve(rootRef.current);
-                    scheduledRef.current = true;
+                  } else if (rootRef.current) {
+                    observer.unobserve(rootRef.current);
                   }
-                }
-              }, delay) as unknown as number;
+                });
             }
-          } else {
-            // Element left viewport. Clear any pending scheduled load so the
-            // section can be rescheduled on future intersections. This fixes
-            // cases where a quick scroll out/in would leave scheduledRef
-            // stuck and prevent subsequent loads.
-            isIntersectingRef.current = false;
-            if (loadTimeoutRef.current) {
-              clearTimeout(loadTimeoutRef.current);
-              loadTimeoutRef.current = null;
-            }
-            // allow re-scheduling when the element leaves (so future
-            // intersections can re-enqueue work)
-            scheduledRef.current = false;
           }
         }
       },
-      // Use a tight rootMargin so nearby off-screen sections aren't
-      // considered intersecting. A modest threshold means a meaningful
-      // portion of the section must be visible before loading.
-      { root: null, rootMargin: '0px', threshold: 0.25 }
+      {
+        root: null,
+        rootMargin: '300px 0px 500px 0px',
+        threshold: 0.01,
+      }
     );
 
     observer.observe(el);
     return () => {
       observer.disconnect();
-      if (loadTimeoutRef.current) {
-        clearTimeout(loadTimeoutRef.current);
-        loadTimeoutRef.current = null;
-      }
     };
   }, [
     typeId,
-    ensureTypeLoaded,
-    ensureAllSubCommunities,
     scheduleTypeLoad,
     initialCount,
     isLoadingForType,
@@ -226,43 +184,48 @@ const LazySection: React.FC<{
         isLoading && displayCommunities.length === 0 ? (
           <div className="mb-6">
             <Typography
-              variant="h5"
-              component="h2"
               sx={{
-                fontWeight: 600,
-                color: 'text.primary',
                 mb: 3,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 1,
-                paddingBottom: '8px',
-                borderBottom: '2px solid',
-                borderColor: 'primary.main',
-                width: 'fit-content',
-                transition: 'all 0.2s ease-in-out',
-                '&:hover': {
-                  color: 'primary.main',
-                  borderColor: 'primary.dark',
-                  '& .section-chevron': {
-                    transform: 'translateX(4px)',
-                    color: 'primary.dark',
-                  },
-                },
+                justifyContent: 'space-between',
+                gap: 2,
+                px: 2,
+                py: 1.5,
+                borderRadius: 2.5,
+                border: '1px solid',
+                borderColor: 'divider',
+                backgroundColor: 'background.paper',
               }}
+              component="div"
             >
-              {title}
               <Box
-                component="span"
-                className="section-chevron"
                 sx={{
-                  color: 'primary.main',
-                  fontSize: '1.3em',
-                  fontWeight: 'bold',
-                  transition: 'all 0.2s ease-in-out',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.2,
                 }}
               >
-                ›
+                <Box
+                  component="span"
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    backgroundColor: 'primary.main',
+                    boxShadow: (theme) =>
+                      `0 0 0 4px ${theme.palette.primary.light}22`,
+                  }}
+                />
+                <Typography
+                  variant="h5"
+                  component="h2"
+                  sx={{ fontWeight: 700 }}
+                >
+                  {title}
+                </Typography>
               </Box>
+              <Skeleton variant="rounded" width={44} height={26} />
             </Typography>
 
             <Grid container spacing={2}>
@@ -290,16 +253,20 @@ const LazySection: React.FC<{
             </Grid>
           </div>
         ) : (
-          <SubCommunitySection
-            title={title}
-            type={typeId}
-            communities={displayCommunities}
-            initialCount={initialCount}
-            onLoadMore={() => loadMoreForType(typeId, initialCount)}
-            hasMore={hasMore}
-            isLoading={isLoading}
-            remainingCount={remainingCount}
-          />
+          <Fade in={!isLoading} timeout={240} appear>
+            <Box>
+              <SubCommunitySection
+                title={title}
+                type={typeId}
+                communities={displayCommunities}
+                initialCount={initialCount}
+                onLoadMore={() => loadMoreForType(typeId, initialCount)}
+                hasMore={hasMore}
+                isLoading={isLoading}
+                remainingCount={remainingCount}
+              />
+            </Box>
+          </Fade>
         )
       ) : (
         // keep an empty placeholder so the observer has something to attach to
@@ -312,7 +279,7 @@ const LazySection: React.FC<{
   );
 };
 
-const SubCommunitiesPage: React.FC = () => {
+const SubCommunityPage: React.FC = () => {
   const {
     subCommunities,
     loading,
@@ -320,38 +287,36 @@ const SubCommunitiesPage: React.FC = () => {
     error,
     clearError,
     types,
-    sectionLoadInProgress,
-    activeFilters,
-    setActiveFilters,
-    resetTypeCache,
+    scheduleTypeLoad,
+    isLoadingForType,
+    subCommunitiesByType,
   } = useSubCommunity();
 
   const { user } = useAuth();
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  // const [searchTerm, setSearchTerm] = useState('');
+  // const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  // const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [manageTypesOpen, setManageTypesOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  // Note: we previously tracked loadedTypes here; async loading is handled
+  // inside LazySection to avoid triggering async work during render.
 
   const isAdmin = user?.role === 'ADMIN';
-  const isAlum = user?.role === 'ALUM';
+  // const isAlum = user?.role === 'ALUM';
 
-  // Derived stable key so LazySection remounts (resetting observer state) when
-  // filters change, ensuring new API calls are made with updated filters.
-  const filterKey = JSON.stringify(activeFilters);
+  // const handleFilterChange = useCallback(
+  //   (key: keyof SubCommunityFilterParams, value: string | number) => {
+  //     const newFilters = { ...activeFilters, [key]: value };
+  //     setActiveFilters(newFilters);
+  //   },
+  //   [activeFilters, setActiveFilters]
+  // );
 
-  const handleFilterChange = useCallback(
-    (key: keyof SubCommunityFilterParams, value: string | number) => {
-      const newFilters = { ...activeFilters, [key]: value };
-      setActiveFilters(newFilters);
-    },
-    [activeFilters, setActiveFilters]
-  );
-
-  useEffect(() => {
-    // When filters change, clear the type cache so sections fetch fresh data.
-    resetTypeCache();
-  }, [activeFilters, resetTypeCache]);
+  // useEffect(() => {
+  //   // When filters change, clear the type cache so sections fetch fresh data.
+  //   resetTypeCache();
+  // }, [activeFilters, resetTypeCache]);
 
   useEffect(() => {
     // Load all communities and types initially (idempotent)
@@ -376,32 +341,120 @@ const SubCommunitiesPage: React.FC = () => {
     }
   }, [error]);
 
-  // Prevent scrolling while any section is actively loading. This keeps the
-  // viewport stable so users don't scroll past a skeleton while it's loading
-  // and accidentally trigger many sections to queue up.
-  useEffect(() => {
-    // Rely on the global sectionLoadInProgress flag from context which is
-    // set whenever a section-level load is actively running (and cleared
-    // when it finishes). This is more reliable than scanning per-type
-    // flags and avoids races when many observers trigger.
-    const previousOverflow = document.body.style.overflow;
-    if (sectionLoadInProgress) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = previousOverflow || '';
-    }
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [sectionLoadInProgress]);
-
   // No async calls during render: we use a small wrapper component below to
   // kick off `ensureTypeLoaded` in a useEffect when a section mounts.
 
   const handleCloseSnackbar = () => {
     setSnackbarOpen(false);
     clearError();
+  };
+
+  // const filterCommunities = (communities: SubCommunity[]): SubCommunity[] => {
+  //   if (!searchTerm) return communities;
+
+  //   return communities.filter((subCom) => {
+  //     const typeStr =
+  //       typeof subCom.type === 'string' ? subCom.type : subCom.type?.name || '';
+
+  //     return (
+  //       subCom.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //       subCom.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  //       typeStr.toLowerCase().includes(searchTerm.toLowerCase())
+  //     );
+  //   });
+  // };
+
+  // (Per-type display logic moved into LazySection to avoid inline async work)
+
+  // const filteredCommunities = filterCommunities(subCommunities);
+
+  const sections = useMemo(
+    () => [
+      { id: 'all', title: 'Recommended Communities' },
+      ...((types || []) as SubCommunityType[]).map((t: SubCommunityType) => ({
+        id: t.name,
+        title: `${t.name} Communities`,
+      })),
+    ],
+    [types]
+  );
+
+  const getDisplayCountByType = useCallback(
+    (typeId: string) => {
+      if (typeId === 'all') return subCommunities.length;
+      return subCommunitiesByType.filter((subCom: SubCommunity) =>
+        typeof subCom.type === 'string'
+          ? subCom.type === typeId
+          : subCom.type?.name === typeId
+      ).length;
+    },
+    [subCommunities.length, subCommunitiesByType]
+  );
+
+  useEffect(() => {
+    let ticking = false;
+
+    const tryPreloadNearBottom = () => {
+      if (ticking) return;
+      ticking = true;
+
+      window.requestAnimationFrame(() => {
+        const bottomDistance =
+          document.documentElement.scrollHeight -
+          (window.innerHeight + window.scrollY);
+
+        if (bottomDistance < 800) {
+          sections.forEach(({ id }) => {
+            const alreadyLoaded = getDisplayCountByType(id) > 0;
+            const loadingType = isLoadingForType(id);
+            if (!alreadyLoaded && !loadingType) {
+              void scheduleTypeLoad(id, 6);
+            }
+          });
+        }
+
+        ticking = false;
+      });
+    };
+
+    window.addEventListener('scroll', tryPreloadNearBottom, { passive: true });
+    tryPreloadNearBottom();
+
+    return () => {
+      window.removeEventListener('scroll', tryPreloadNearBottom);
+    };
+  }, [getDisplayCountByType, isLoadingForType, scheduleTypeLoad, sections]);
+
+  useEffect(() => {
+    const container = document.getElementById('app-scroll-container');
+
+    const updateVisibility = () => {
+      const currentY = container ? container.scrollTop : window.scrollY;
+      setShowBackToTop(currentY > 480);
+    };
+
+    if (container) {
+      container.addEventListener('scroll', updateVisibility, { passive: true });
+      updateVisibility();
+      return () => {
+        container.removeEventListener('scroll', updateVisibility);
+      };
+    }
+
+    window.addEventListener('scroll', updateVisibility, { passive: true });
+    updateVisibility();
+    return () => {
+      window.removeEventListener('scroll', updateVisibility);
+    };
+  }, []);
+
+  const handleBackToTop = () => {
+    const container = document.getElementById('app-scroll-container');
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading && subCommunities.length === 0) {
@@ -412,14 +465,6 @@ const SubCommunitiesPage: React.FC = () => {
     );
   }
 
-  const sections = [
-    { id: 'all', title: 'Recommended Communities' },
-    ...((types || []) as SubCommunityType[]).map((t: SubCommunityType) => ({
-      id: t.name,
-      title: `${t.name} Communities`,
-    })),
-  ];
-
   return (
     <Box sx={{ maxWidth: 1200, margin: '0 auto', p: 3 }}>
       {/* Header Section */}
@@ -427,15 +472,40 @@ const SubCommunitiesPage: React.FC = () => {
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
-          mb: 4,
+          alignItems: 'flex-start',
+          mb: 3,
           flexWrap: 'wrap',
-          gap: 2,
+          gap: 2.5,
+          p: { xs: 2, md: 3 },
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
         }}
       >
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
-          Communities
-        </Typography>
+        <Box>
+          <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
+            Communities
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mt: 0.5 }}>
+            Discover communities by interest and join the conversations that
+            matter to you.
+          </Typography>
+
+          <Box sx={{ display: 'flex', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
+            <Chip
+              size="small"
+              label={`${sections.length} sections`}
+              color="primary"
+              variant="outlined"
+            />
+            <Chip
+              size="small"
+              label={`${subCommunities.length} loaded communities`}
+              variant="outlined"
+            />
+          </Box>
+        </Box>
 
         <Box
           sx={{
@@ -443,9 +513,10 @@ const SubCommunitiesPage: React.FC = () => {
             flexWrap: 'wrap',
             alignItems: 'center',
             gap: 1,
+            justifyContent: { xs: 'flex-start', md: 'flex-end' },
           }}
         >
-          <Button
+          {/* <Button
             component={Link}
             to="/subcommunities/my"
             variant="contained"
@@ -457,15 +528,14 @@ const SubCommunitiesPage: React.FC = () => {
               px: 3,
               py: 1.2,
               minWidth: 170,
-              ml: { xs: 0, sm: 2 },
               mb: { xs: 1, sm: 0 },
               textTransform: 'none',
             }}
           >
             My Communities
-          </Button>
+          </Button> */}
 
-          {(isAdmin || isAlum) && (
+          {/* {(isAdmin || isAlum) && (
             <Button
               variant="outlined"
               startIcon={<Add />}
@@ -474,7 +544,7 @@ const SubCommunitiesPage: React.FC = () => {
             >
               Request New Community
             </Button>
-          )}
+          )} */}
           {isAdmin && (
             <Button
               variant="outlined"
@@ -488,7 +558,7 @@ const SubCommunitiesPage: React.FC = () => {
       </Box>
 
       {/* Filter Bar */}
-      <Box sx={{ mb: 3 }}>
+      {/* <Box sx={{ mb: 3 }}>
         <Button
           variant="outlined"
           startIcon={<FilterList />}
@@ -512,64 +582,25 @@ const SubCommunitiesPage: React.FC = () => {
               borderColor: 'divider',
             }}
           >
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Privacy</InputLabel>
-              <Select
-                value={activeFilters.privacy || 'all'}
-                label="Privacy"
-                onChange={(e: SelectChangeEvent) =>
-                  handleFilterChange('privacy', e.target.value)
-                }
-              >
-                <MenuItem value="all">All</MenuItem>
-                <MenuItem value="public">Public</MenuItem>
-                <MenuItem value="private">Private</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl size="small" sx={{ minWidth: 160 }}>
-              <InputLabel>Membership</InputLabel>
-              <Select
-                value={activeFilters.membership || 'all'}
-                label="Membership"
-                onChange={(e: SelectChangeEvent) =>
-                  handleFilterChange('membership', e.target.value)
-                }
-              >
-                <MenuItem value="all">All Communities</MenuItem>
-                <MenuItem value="joined">Joined Only</MenuItem>
-              </Select>
-            </FormControl>
-
-            <FormControl size="small" sx={{ minWidth: 140 }}>
-              <InputLabel>Sort By</InputLabel>
-              <Select
-                value={activeFilters.sort || 'recent'}
-                label="Sort By"
-                onChange={(e: SelectChangeEvent) =>
-                  handleFilterChange('sort', e.target.value)
-                }
-              >
-                <MenuItem value="recent">Most Recent</MenuItem>
-                <MenuItem value="popular">Most Popular</MenuItem>
-                <MenuItem value="active">Most Active</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
-        )}
-      </Box>
+            Search Results for &quot;{searchTerm}&quot;
+          </Typography>
+        </Box>
+      )} */}
 
       {/* Community Sections */}
-      {sections.map((typeConfig) => {
-        const typeId = typeConfig.id;
-        return (
-          <LazySection
-            key={`${typeId}-${filterKey}`}
-            typeId={typeId}
-            title={typeConfig.title}
-          />
-        );
-      })}
+
+      {
+        // !searchTerm &&
+        sections.map((typeConfig) => {
+          const typeId = typeConfig.id;
+
+          return (
+            <Box key={typeId}>
+              <LazySection typeId={typeId} title={typeConfig.title} />
+            </Box>
+          );
+        })
+      }
 
       {/* Empty State */}
       {subCommunities.length === 0 && (
@@ -584,7 +615,7 @@ const SubCommunitiesPage: React.FC = () => {
       )}
 
       {/* Dialogs */}
-      <CreateSubCommunityDialog
+      {/* <CreateSubCommunityDialog
         open={createDialogOpen}
         onClose={() => setCreateDialogOpen(false)}
       />
@@ -592,7 +623,7 @@ const SubCommunitiesPage: React.FC = () => {
       <SubCommunityRequestDialog
         open={requestDialogOpen}
         onClose={() => setRequestDialogOpen(false)}
-      />
+      /> */}
 
       {/* Manage Types dialog for admins */}
       {isAdmin && (
@@ -620,8 +651,30 @@ const SubCommunitiesPage: React.FC = () => {
           {error}
         </Alert>
       </Snackbar>
+
+      {showBackToTop && (
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleBackToTop}
+          startIcon={<KeyboardArrowUp />}
+          sx={{
+            position: 'fixed',
+            right: { xs: 16, md: 24 },
+            bottom: { xs: 20, md: 28 },
+            borderRadius: 999,
+            px: 2,
+            py: 1,
+            zIndex: 1300,
+            textTransform: 'none',
+            boxShadow: 3,
+          }}
+        >
+          Back to top
+        </Button>
+      )}
     </Box>
   );
 };
 
-export default SubCommunitiesPage;
+export default SubCommunityPage;

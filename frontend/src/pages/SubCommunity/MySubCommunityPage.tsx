@@ -1,15 +1,18 @@
-// File: src/pages/SubCommunity/MySubCommunitiesPage.tsx
+// File: src/pages/SubCommunity/MySubCommunityPage.tsx
 import { FC, useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Typography,
   Grid,
-  CircularProgress,
   Tabs,
   Tab,
   Chip,
   Button,
   Pagination,
+  Card,
+  CardContent,
+  Skeleton,
+  Fade,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
@@ -42,7 +45,49 @@ function TabPanel(props: TabPanelProps) {
   );
 }
 
-const MySubCommunitiesPage: FC = () => {
+const CommunityTabSkeleton: FC<{ title: string }> = ({ title }) => {
+  return (
+    <Box sx={{ py: 1 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          mb: 2.5,
+        }}
+      >
+        <Box>
+          <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+            {title}
+          </Typography>
+          <Skeleton variant="text" width={180} height={18} />
+        </Box>
+        <Skeleton variant="rounded" width={88} height={28} />
+      </Box>
+
+      <Grid container spacing={3}>
+        {[0, 1, 2, 3].map((item) => (
+          <Grid item xs={12} sm={6} md={6} key={`my-subcommunity-skel-${item}`}>
+            <Card variant="outlined" sx={{ borderRadius: 3 }}>
+              <Skeleton variant="rectangular" height={140} />
+              <CardContent>
+                <Skeleton variant="text" width="62%" height={28} />
+                <Skeleton variant="text" width="90%" height={20} />
+                <Skeleton variant="text" width="72%" height={20} />
+                <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
+                  <Skeleton variant="rounded" width={72} height={24} />
+                  <Skeleton variant="rounded" width={88} height={24} />
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+    </Box>
+  );
+};
+
+const MySubCommunityPage: FC = () => {
   const { user } = useAuth();
   const { loading } = useSubCommunity();
   const navigate = useNavigate();
@@ -185,8 +230,8 @@ const MySubCommunitiesPage: FC = () => {
     (filteredCommunities?.member?.length ?? 0) === 0
   ) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
+      <Box sx={{ maxWidth: 1200, margin: '0 auto', p: 3 }}>
+        <CommunityTabSkeleton title="Loading your communities" />
       </Box>
     );
   }
@@ -318,30 +363,10 @@ const MySubCommunitiesPage: FC = () => {
       {/* Owned Communities Tab */}
       <TabPanel value={activeTab} index={0}>
         {loadingOwned ? (
-          <div className="flex justify-center py-6">
-            <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm w-full max-w-xl animate-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-6 bg-emerald-100 rounded w-2/5" />
-                <div className="w-20 h-4 bg-emerald-100 rounded" />
-              </div>
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex gap-4 p-3 rounded-lg border border-gray-200"
-                  >
-                    <div className="w-16 h-16 bg-emerald-100 rounded-lg flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-emerald-100 rounded w-3/4" />
-                      <div className="h-3 bg-emerald-100 rounded w-2/3" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <CommunityTabSkeleton title="Communities You Own" />
         ) : (filteredCommunities?.owned?.length ?? 0) > 0 ? (
-          <>
+          <Fade in={!loadingOwned} timeout={240} appear>
+            <Box>
             <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
               Communities You Own
             </Typography>
@@ -361,57 +386,44 @@ const MySubCommunitiesPage: FC = () => {
                 />
               </Box>
             )}
-          </>
+            </Box>
+          </Fade>
         ) : (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              You don't own any communities yet
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              {isAdmin || isAlum
-                ? 'Create a community to get started as an owner'
-                : 'Only Alumni and Admins can own communities'}
-            </Typography>
-            {(isAdmin || isAlum) && (
-              <Button
-                variant="contained"
-                startIcon={<Add />}
-                onClick={() => setRequestDialogOpen(true)}
+          <Fade in={!loadingOwned} timeout={240} appear>
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                You don't own any communities yet
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 3 }}
               >
-                Create Your First Community
-              </Button>
-            )}
-          </Box>
+                {isAdmin || isAlum
+                  ? 'Create a community to get started as an owner'
+                  : 'Only Alumni and Admins can own communities'}
+              </Typography>
+              {(isAdmin || isAlum) && (
+                <Button
+                  variant="contained"
+                  startIcon={<Add />}
+                  onClick={() => setRequestDialogOpen(true)}
+                >
+                  Create Your First Community
+                </Button>
+              )}
+            </Box>
+          </Fade>
         )}
       </TabPanel>
 
       {/* Moderated Communities Tab */}
       <TabPanel value={activeTab} index={1}>
         {loadingModerated ? (
-          <div className="flex justify-center py-6">
-            <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm w-full max-w-xl animate-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-6 bg-emerald-100 rounded w-2/5" />
-                <div className="w-20 h-4 bg-emerald-100 rounded" />
-              </div>
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex gap-4 p-3 rounded-lg border border-gray-200"
-                  >
-                    <div className="w-16 h-16 bg-emerald-100 rounded-lg flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-emerald-100 rounded w-3/4" />
-                      <div className="h-3 bg-emerald-100 rounded w-2/3" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <CommunityTabSkeleton title="Communities You Moderate" />
         ) : (filteredCommunities?.moderated?.length ?? 0) > 0 ? (
-          <>
+          <Fade in={!loadingModerated} timeout={240} appear>
+            <Box>
             <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
               Communities You Moderate
             </Typography>
@@ -431,46 +443,29 @@ const MySubCommunitiesPage: FC = () => {
                 />
               </Box>
             )}
-          </>
+            </Box>
+          </Fade>
         ) : (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              You're not moderating any communities
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Community owners can assign you as a moderator
-            </Typography>
-          </Box>
+          <Fade in={!loadingModerated} timeout={240} appear>
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                You're not moderating any communities
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Community owners can assign you as a moderator
+              </Typography>
+            </Box>
+          </Fade>
         )}
       </TabPanel>
 
       {/* Member Communities Tab */}
       <TabPanel value={activeTab} index={2}>
         {loadingMember ? (
-          <div className="flex justify-center py-6">
-            <div className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm w-full max-w-xl animate-pulse">
-              <div className="flex items-center justify-between mb-4">
-                <div className="h-6 bg-emerald-100 rounded w-2/5" />
-                <div className="w-20 h-4 bg-emerald-100 rounded" />
-              </div>
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex gap-4 p-3 rounded-lg border border-gray-200"
-                  >
-                    <div className="w-16 h-16 bg-emerald-100 rounded-lg flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <div className="h-4 bg-emerald-100 rounded w-3/4" />
-                      <div className="h-3 bg-emerald-100 rounded w-2/3" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+          <CommunityTabSkeleton title="Communities You're a Member Of" />
         ) : (filteredCommunities?.member?.length ?? 0) > 0 ? (
-          <>
+          <Fade in={!loadingMember} timeout={240} appear>
+            <Box>
             <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
               Communities You're a Member Of
             </Typography>
@@ -490,19 +485,27 @@ const MySubCommunitiesPage: FC = () => {
                 />
               </Box>
             )}
-          </>
+            </Box>
+          </Fade>
         ) : (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              You're not a member of any communities yet
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Join communities to connect with others who share your interests
-            </Typography>
-            <Button component={Link} to="/subcommunities" variant="contained">
-              Browse All Communities
-            </Button>
-          </Box>
+          <Fade in={!loadingMember} timeout={240} appear>
+            <Box sx={{ textAlign: 'center', py: 8 }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                You're not a member of any communities yet
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ mb: 3 }}
+              >
+                Join communities to connect with others who share your
+                interests
+              </Typography>
+              <Button component={Link} to="/subcommunities" variant="contained">
+                Browse All Communities
+              </Button>
+            </Box>
+          </Fade>
         )}
       </TabPanel>
 
@@ -515,4 +518,4 @@ const MySubCommunitiesPage: FC = () => {
   );
 };
 
-export default MySubCommunitiesPage;
+export default MySubCommunityPage;

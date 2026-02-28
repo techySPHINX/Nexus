@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Box, Typography, Button, CircularProgress, Grid } from '@mui/material';
+import {
+  Box,
+  Typography,
+  Button,
+  CircularProgress,
+  Grid,
+  Chip,
+} from '@mui/material';
 import { ExpandMore, ExpandLess } from '@mui/icons-material';
 import { SubCommunityCard } from './SubCommunityCard';
 import { SubCommunity } from '../../types/subCommunity';
@@ -86,45 +93,67 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
 
   return (
     <Box sx={{ mb: 4 }}>
-      <Typography
-        variant="h5"
-        component="h2"
+      <Box
         sx={{
-          fontWeight: 600,
-          color: 'text.primary',
-          mb: 3,
+          mb: 2.5,
+          px: 2,
+          py: 1.5,
+          borderRadius: 2.5,
+          border: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
           display: 'flex',
           alignItems: 'center',
-          gap: 1,
-          paddingBottom: '8px',
-          borderBottom: '2px solid',
-          borderColor: 'primary.main',
-          width: 'fit-content',
-          transition: 'all 0.2s ease-in-out',
-          '&:hover': {
-            color: 'primary.main',
-            borderColor: 'primary.dark',
-            '& .section-chevron': {
-              transform: 'translateX(4px)',
-              color: 'primary.dark',
-            },
-          },
+          justifyContent: 'space-between',
+          gap: 2,
         }}
       >
-        {title}
         <Box
-          component="span"
-          className="section-chevron"
           sx={{
-            color: 'primary.main',
-            fontSize: '1.3em',
-            fontWeight: 'bold',
-            transition: 'all 0.2s ease-in-out',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.2,
+            minWidth: 0,
           }}
         >
-          ›
+          <Box
+            component="span"
+            sx={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              backgroundColor: 'primary.main',
+              boxShadow: (theme) =>
+                `0 0 0 4px ${theme.palette.primary.light}22`,
+              flexShrink: 0,
+            }}
+          />
+          <Typography
+            variant="h5"
+            component="h2"
+            sx={{
+              fontWeight: 700,
+              color: 'text.primary',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {title}
+          </Typography>
         </Box>
-      </Typography>
+
+        <Chip
+          size="small"
+          label={`${communities.length}`}
+          sx={{
+            fontWeight: 600,
+            borderRadius: 999,
+          }}
+          color="primary"
+          variant="outlined"
+        />
+      </Box>
 
       <Grid container spacing={3}>
         {displayedCommunities.map((subCom) => (
