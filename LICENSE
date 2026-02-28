@@ -1,13 +1,152 @@
-Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)
+NEXUS PROPRIETARY SOFTWARE LICENSE
+Version 1.0 — Effective Date: 2024
 
-You are free to:
-- Share — copy and redistribute the material in any medium or format.
+Copyright (c) 2024–2026 techySPHINX and the Nexus Project Contributors.
+All rights reserved.
 
-Under the following terms:
-- Attribution — You must give appropriate credit, provide a link to the license, and indicate if changes were made.
-- NonCommercial — You may not use the material for commercial purposes.
-- NoDerivatives — If you remix, transform, or build upon the material, you may not distribute the modified material.
+This software, the Nexus Platform, including all source code, object code,
+compiled binaries, assets, documentation, database schemas, API designs,
+architectural patterns, user interface designs, and any associated materials
+(collectively, the "Software"), is the exclusive intellectual property of
+techySPHINX and the Nexus Project Contributors ("the Authors").
 
-No additional restrictions — You may not apply legal terms or technological measures that legally restrict others from doing anything the license permits.
+The Software was designed and built for KIIT University (Kalinga Institute of
+Industrial Technology), Bhubaneswar, India, and represents significant
+creative, academic, and technical effort by its authors.
 
-Full license text: https://creativecommons.org/licenses/by-nc-nd/4.0/
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 1 — GRANT OF RIGHTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NO rights, licenses, permissions, or grants are provided under this License
+to any person or entity other than the Authors, unless explicitly granted in
+a separate, signed written agreement issued by the Authors.
+
+By accessing, viewing, cloning, downloading, or otherwise interacting with
+this repository or its contents, you agree to be bound by the full terms of
+this License.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 2 — PROHIBITED ACTIVITIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Without prior, explicit, written permission from the Authors, you are
+STRICTLY PROHIBITED from doing any of the following:
+
+2.1  COPYING — Reproducing, duplicating, or storing any portion of the
+     Software in any medium, format, or storage system.
+
+2.2  DISTRIBUTION — Sharing, transmitting, publishing, uploading, or
+     displaying the Software or any portion thereof to any third party
+     through any channel, including but not limited to GitHub forks,
+     public repositories, file sharing services, or personal websites.
+
+2.3  MODIFICATION — Editing, altering, translating, adapting, or creating
+     derivative works based on the Software or any portion thereof.
+
+2.4  REVERSE ENGINEERING — Decompiling, disassembling, reverse engineering,
+     or otherwise attempting to derive source code from compiled or obfuscated
+     portions of the Software.
+
+2.5  DEPLOYMENT — Hosting, running, operating, or deploying the Software
+     or any derivative of the Software on any server, cloud service, or
+     device for any purpose, whether commercial or non-commercial.
+
+2.6  CLAIMING OWNERSHIP — Representing the Software, in whole or in part,
+     as your own work, including renaming, rebranding, or republishing
+     the Software under a different name or identity.
+
+2.7  PLATFORM REPLICATION — Building, developing, or deploying any platform,
+     product, or service that substantially replicates the design, features,
+     architecture, or user experience of the Software, whether using this
+     codebase directly or using it as a reference, template, or inspiration.
+
+2.8  SUBLICENSING — Granting any sublicense, permission, or right to any
+     third party to use, access, or benefit from the Software.
+
+2.9  COMMERCIAL USE — Using any portion of the Software for any commercial
+     purpose, revenue-generating activity, or business operation without
+     explicit written authorization from the Authors.
+
+2.10 ACADEMIC SUBMISSION — Submitting the Software or any derivative thereof
+     as original work in any academic, educational, or competition context
+     without attribution to the original Authors and explicit written approval.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 3 — CONTRIBUTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+3.1  PRIOR APPROVAL REQUIRED — Contributions to this project are accepted
+     on a strictly invitation-only and approval-only basis. Any person who
+     wishes to contribute to the Software MUST contact the project maintainer
+     BEFORE submitting any pull request, patch, issue, or code change:
+
+         Contact: jaganhotta357@outlook.com
+
+3.2  CONTRIBUTOR LICENSE — By submitting any contribution (code, documentation,
+     design, data, or otherwise), the contributor irrevocably assigns all
+     intellectual property rights in that contribution to the Authors. The
+     contributor warrants that their contribution is original, does not
+     infringe any third-party rights, and that they have full authority to
+     make such an assignment.
+
+3.3  NO IMPLIED LICENSE — Submitting a pull request or interaction with this
+     repository does not, in itself, constitute acceptance of a contribution
+     or grant of any right to the contributor.
+
+3.4  UNAUTHORIZED CONTRIBUTIONS — Any pull request, fork, or external
+     modification submitted without prior written approval from the Authors
+     will be rejected and will not create any obligation, assignment, or
+     intellectual property transfer in favor of the submitter.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 4 — ENFORCEMENT AND LEGAL CONSEQUENCES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+4.1  VIOLATION — Any breach of this License constitutes copyright
+     infringement and misappropriation of intellectual property, actionable
+     under applicable national and international law, including but not
+     limited to the Indian Copyright Act, 1957, the Berne Convention for
+     the Protection of Literary and Artistic Works, and the TRIPS Agreement.
+
+4.2  LEGAL ACTION — The Authors reserve the right, at their sole discretion,
+     to pursue all available legal remedies against any party found to have
+     violated this License, including injunctive relief, damages, and
+     recovery of legal fees and costs.
+
+4.3  DMCA — Unauthorized reproductions or distributions may be subject to
+     Digital Millennium Copyright Act (DMCA) takedown notices and proceedings.
+
+4.4  REPORTING — To report suspected violations of this License, contact:
+     jaganhotta357@outlook.com
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 5 — DISCLAIMER OF WARRANTIES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SECTION 6 — CONTACT & PERMISSIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+For all licensing inquiries, contribution requests, partnership discussions,
+or usage permissions, contact:
+
+    Maintainer:     jaganhotta357@outlook.com
+    Repository:     https://github.com/techySPHINX/Nexus
+    Organization:   KIIT University, Bhubaneswar, India
+
+All permission requests must be made in writing and await explicit written
+approval before any action is taken.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Copyright (c) 2024–2026 techySPHINX and the Nexus Project Contributors.
+All Rights Reserved. No part of this Software may be reproduced, distributed,
+or transmitted without the express written permission of the Authors.
