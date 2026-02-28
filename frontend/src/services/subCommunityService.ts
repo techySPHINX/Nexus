@@ -39,14 +39,26 @@ export const subCommunityService = {
     type: string,
     page: number = 1,
     limit: number = 20,
-    q?: string
+    q?: string,
+    filters?: {
+      privacy?: string;
+      membership?: string;
+      sort?: string;
+      minMembers?: number;
+    }
   ): Promise<{ data: SubCommunity[]; pagination: PaginationData }> => {
     const params: Record<string, unknown> = { page, limit };
     if (q) params.q = q;
+    if (filters?.privacy && filters.privacy !== 'all')
+      params.privacy = filters.privacy;
+    if (filters?.membership && filters.membership !== 'all')
+      params.membership = filters.membership;
+    if (filters?.sort) params.sort = filters.sort;
+    if (filters?.minMembers && filters.minMembers > 0)
+      params.minMembers = filters.minMembers;
     const response = await api.get(`/sub-community/type/${type}`, {
       params,
     });
-    console.log(`Fetched sub-communities of type ${type}:`, response.data);
     return response.data;
   },
 
