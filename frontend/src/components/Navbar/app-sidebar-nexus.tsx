@@ -196,7 +196,7 @@ export function AppSidebarNexus() {
               className="size-9 object-contain"
             />
           </motion.div>
-          <div className="grid flex-1 text-left text-[2rem] leading-tight group-data-[collapsible=icon]:hidden">
+          <div className="grid flex-1 text-left text-[1.35rem] leading-tight group-data-[collapsible=icon]:hidden">
             <motion.span
               whileHover={{ letterSpacing: '0.05em' }}
               className="truncate font-semibold bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 bg-clip-text text-transparent"
