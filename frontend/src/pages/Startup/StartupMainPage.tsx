@@ -323,16 +323,6 @@ const StartupMainPage: FC = () => {
               sx={{
                 fontWeight: 800,
                 mb: 1,
-                color: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? 'text.primary'
-                    : 'text.primary',
-                background: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? 'linear-gradient(90deg, #00C9FF, #92FE9D)'
-                    : 'linear-gradient(90deg, #12720bff 0%, #0cb009ff 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
               }}
             >
               Startup Ecosystem
