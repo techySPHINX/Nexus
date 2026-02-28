@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, lazy, Suspense } from 'react';
 import {
   Box,
   Button,
@@ -12,7 +12,9 @@ import {
   FormControlLabel,
 } from '@mui/material';
 import { type RichTextEditorRef } from 'mui-tiptap';
-import RichTextEditorWrapper from '@/utils/RichTextEditorWrapper';
+const RichTextEditorWrapper = lazy(
+  () => import('@/utils/RichTextEditorWrapper')
+);
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { useNews } from '@/contexts/NewsContext';
@@ -167,13 +169,15 @@ const AdminNews: React.FC = () => {
               />
             </Grid>
             <Grid item xs={12}>
-              <RichTextEditorWrapper
-                ref={rteRef}
-                value={contentHtml}
-                onChange={(html) => setContentHtml(html)}
-                onUploadFiles={handleUploadFiles}
-                minHeight={260}
-              />
+              <Suspense fallback={<div>Loading editor...</div>}>
+                <RichTextEditorWrapper
+                  ref={rteRef}
+                  value={contentHtml}
+                  onChange={(html) => setContentHtml(html)}
+                  onUploadFiles={handleUploadFiles}
+                  minHeight={260}
+                />
+              </Suspense>
             </Grid>
             <Grid item xs={12}>
               <FormControlLabel

@@ -47,12 +47,12 @@ export default function NewsDetail() {
       </Container>
     );
   }
-  const bannerSrc = item.imageUrl || '/nexus.png';
+  const bannerSrc = item.imageUrl || '/nexus.webp';
   const hasCustomImage = Boolean(item.imageUrl);
 
   return (
     <Box sx={{ py: 3, position: 'relative', bgcolor: 'background.default' }}>
-      {/* Top Banner Image (fallback to public/nexus.png) */}
+      {/* Top Banner Image (fallback to public/nexus.webp) */}
       <Box
         component="img"
         src={bannerSrc}

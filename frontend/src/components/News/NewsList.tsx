@@ -176,7 +176,7 @@ export default function NewsList() {
                           ) : (
                             <Box
                               component="img"
-                              src="/nexus.png"
+                              src="/nexus.webp"
                               alt={n.title}
                               sx={{
                                 width: '100%',

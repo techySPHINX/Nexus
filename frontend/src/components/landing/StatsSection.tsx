@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 import { alpha, useTheme as Theme, Typography } from '@mui/material';
 import { People, School, Work, EmojiEvents } from '@mui/icons-material';
-import { DottedGlowBackground } from '../ui/dotted-glow-background';
+import { DottedGlowBackground } from './ui/dotted-glow-background';
 import Box from '@mui/material/Box/Box';
 
 interface Stat {
@@ -15,6 +15,7 @@ interface Stat {
 
 interface StatsProps {
   sectionBackground: string;
+  lowPerformanceMode?: boolean;
 }
 
 const STATS: Stat[] = [
@@ -34,7 +35,10 @@ const STATS: Stat[] = [
   },
 ];
 
-const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
+const StatsSection: React.FC<StatsProps> = ({
+  sectionBackground,
+  lowPerformanceMode = false,
+}) => {
   const { isDark } = useTheme();
   const darkMode = isDark;
   const theme = Theme();
@@ -63,14 +67,17 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
       }
     };
 
-    const timer = setTimeout(handleTyping, isDeleting ? 50 : 100);
-    const cursorTimer = setInterval(() => setShowCursor((c) => !c), 500);
+    const timer = setTimeout(handleTyping, isDeleting ? 80 : 130);
+    const cursorTimer = window.setInterval(
+      () => setShowCursor((c) => !c),
+      lowPerformanceMode ? 800 : 500
+    );
 
     return () => {
       clearTimeout(timer);
       clearInterval(cursorTimer);
     };
-  }, [text, isDeleting, loopNum]);
+  }, [isDeleting, loopNum, lowPerformanceMode, text]);
 
   return (
     <section
@@ -152,7 +159,9 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
               ${theme.palette.warning.main} 0%,
               transparent 100%
             )`,
-                    animation: 'cheetahStripe 1.5s ease-in-out infinite',
+                    animation: lowPerformanceMode
+                      ? 'none'
+                      : 'cheetahStripe 1.5s ease-in-out infinite',
                     '@keyframes cheetahStripe': {
                       '0%': { left: '-100%' },
                       '100%': { left: '100%' },
@@ -187,7 +196,9 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
                       borderRadius: '50%',
                       background: theme.palette.warning.main,
                       opacity: 0.3,
-                      animation: `dotPulse 0.8s ease-in-out ${dot * 0.2}s infinite`,
+                      animation: lowPerformanceMode
+                        ? 'none'
+                        : `dotPulse 0.8s ease-in-out ${dot * 0.2}s infinite`,
                       '@keyframes dotPulse': {
                         '0%, 100%': { opacity: 0.3, transform: 'scale(1)' },
                         '50%': { opacity: 0.8, transform: 'scale(1.5)' },
@@ -200,20 +211,10 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
           </motion.aside>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-7">
-            {STATS.map((stat, index) => (
+            {STATS.map((stat) => (
               <motion.div
                 key={stat.label}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: 0.7,
-                  delay: index * 0.12,
-                  ease: [0.16, 1, 0.3, 1], // Custom cubic-bezier
-                }}
-                viewport={{ once: true }}
-                className={`group relative rounded-2xl sm:rounded-[32px] p-[1.5px] sm:p-[2px] overflow-hidden
-        ${index % 2 === 1 ? 'sm:translate-y-10' : ''}
-      `}
+                className="group relative rounded-2xl sm:rounded-[32px] p-[1.5px] sm:p-[2px] overflow-hidden"
               >
                 {/* Animated Gradient Border */}
                 <div
@@ -237,11 +238,13 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
                   {/* Icon with Ring */}
                   <div className="mb-3 sm:mb-5 flex items-center gap-2 sm:gap-3">
                     <div className="relative inline-block">
-                      <div
-                        className={`absolute inset-0 rounded-2xl animate-ping opacity-20 ${
-                          darkMode ? 'bg-blue-400' : 'bg-blue-500'
-                        }`}
-                      />
+                      {!lowPerformanceMode && (
+                        <div
+                          className={`absolute inset-0 rounded-2xl animate-ping opacity-20 ${
+                            darkMode ? 'bg-blue-400' : 'bg-blue-500'
+                          }`}
+                        />
+                      )}
                       <div
                         className={`relative p-2.5 sm:p-4 rounded-xl sm:rounded-2xl transform transition-all duration-500 group-hover:scale-140 group-hover:-rotate-6
               ${
@@ -306,20 +309,22 @@ const StatsSection: React.FC<StatsProps> = ({ sectionBackground }) => {
           </div>
         </div>
       </div>
-      <DottedGlowBackground
-        className="pointer-events-none mask-radial-to-90% mask-radial-at-center"
-        opacity={1}
-        gap={20}
-        radius={0.9}
-        colorLightVar="black"
-        glowColorLightVar="--color-green-100"
-        colorDarkVar="--color-sky-900"
-        glowColorDarkVar="--color-sky-100"
-        backgroundOpacity={0}
-        speedMin={0.3}
-        speedMax={1.6}
-        speedScale={1}
-      />
+      {!lowPerformanceMode && (
+        <DottedGlowBackground
+          className="pointer-events-none mask-radial-to-90% mask-radial-at-center"
+          opacity={1}
+          gap={20}
+          radius={0.9}
+          colorLightVar="black"
+          glowColorLightVar="--color-green-100"
+          colorDarkVar="--color-sky-900"
+          glowColorDarkVar="--color-sky-100"
+          backgroundOpacity={0}
+          speedMin={0.3}
+          speedMax={1.6}
+          speedScale={1}
+        />
+      )}
     </section>
   );
 };

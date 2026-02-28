@@ -1,4 +1,4 @@
-import { FC, useState, useCallback } from 'react';
+import { FC, useState, useCallback, lazy, Suspense } from 'react';
 import { usePosts } from '../../contexts/PostContext';
 import { useAuth } from '../../contexts/AuthContext';
 import {
@@ -13,7 +13,9 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Image, Close, Cancel } from '@mui/icons-material';
-import RichTextEditorWrapper from '@/utils/RichTextEditorWrapper';
+const RichTextEditorWrapper = lazy(
+  () => import('@/utils/RichTextEditorWrapper')
+);
 import { getErrorMessage } from '@/utils/errorHandler';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { SubCommunityRole } from '@/types/subCommunity';
@@ -244,12 +246,14 @@ export const CreatePostForm: FC<CreatePostFormProps> = ({
         />
 
         <Box sx={{ mb: 2, px: 3 }}>
-          <RichTextEditorWrapper
-            value={content}
-            onChange={(html) => setContent(html)}
-            onUploadFiles={handleEditorUploadFiles}
-            minHeight={180}
-          />
+          <Suspense fallback={<div>Loading editor...</div>}>
+            <RichTextEditorWrapper
+              value={content}
+              onChange={(html) => setContent(html)}
+              onUploadFiles={handleEditorUploadFiles}
+              minHeight={180}
+            />
+          </Suspense>
         </Box>
 
         <Box sx={{ mb: 2 }}>

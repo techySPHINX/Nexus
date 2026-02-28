@@ -8,14 +8,9 @@
       "type": "image/x-icon"
     },
     {
-      "src": "nexus.png",
-      "type": "image/png",
+      "src": "nexus.webp",
+      "type": "image/webp",
       "sizes": "192x192"
-    },
-    {
-      "src": "nexus1.png",
-      "type": "image/png",
-      "sizes": "512x512"
     }
   ],
   "start_url": ".",

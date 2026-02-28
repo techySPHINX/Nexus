@@ -226,7 +226,7 @@ const Referrals: FC = () => {
     }
 
     // Establish Socket.IO connection for real-time updates
-    const base = 'http://localhost:3000';
+    const base = import.meta.env.VITE_BACKEND_URL;
     const socket = io(base, {
       transports: ['websocket'],
       withCredentials: true,

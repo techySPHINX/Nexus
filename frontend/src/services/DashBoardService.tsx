@@ -25,7 +25,7 @@ export const DashBoardService = {
     }
   },
 
-  getSuggestedConnections: async (limit?: 10) => {
+  getSuggestedConnections: async (limit = 10) => {
     try {
       const response = await api.get(`/connection/suggestions`, {
         params: { limit },

@@ -152,31 +152,47 @@ export default function RecommendedProjects() {
           <h2
             className={
               isDark
-                ? 'text-xl font-bold text-emerald-100'
+                ? 'text-xl font-bold text-white'
                 : 'text-xl font-bold text-gray-900'
             }
           >
             Recommended Projects
           </h2>
-          <div className="w-20 h-4 bg-emerald-100 rounded animate-pulse" />
+          <div
+            className={`w-20 h-4 bg-emerald-100 rounded animate-pulse ${isDark ? 'dark:bg-neutral-700' : ''}`}
+          />
         </div>
         <div className="space-y-4">
           {[...Array(3)].map((_, index) => (
             <div
               key={index}
-              className="flex gap-4 p-4 rounded-lg border border-gray-200 animate-pulse"
+              className={`flex gap-4 p-4 rounded-lg border border-gray-200 animate-pulse ${isDark ? 'dark:border-neutral-700 dark:bg-neutral-800' : 'bg-white'}`}
             >
-              <div className="w-20 h-20 bg-emerald-100 rounded-lg flex-shrink-0" />
+              <div
+                className={`w-20 h-20 bg-emerald-100 rounded-lg flex-shrink-0 ${isDark ? 'dark:bg-neutral-700' : ''}`}
+              />
               <div className="flex-1 space-y-2">
                 <div className="flex items-start justify-between">
-                  <div className="h-4 bg-emerald-100 rounded w-3/4" />
-                  <div className="h-6 bg-emerald-100 rounded w-16" />
+                  <div
+                    className={`h-4 bg-emerald-100 rounded w-3/4 ${isDark ? 'dark:bg-neutral-700' : ''}`}
+                  />
+                  <div
+                    className={`h-6 bg-emerald-100 rounded w-16 ${isDark ? 'dark:bg-neutral-700' : ''}`}
+                  />
                 </div>
-                <div className="h-3 bg-emerald-100 rounded w-full" />
-                <div className="h-3 bg-emerald-100 rounded w-2/3" />
+                <div
+                  className={`h-3 bg-emerald-100 rounded w-full ${isDark ? 'dark:bg-neutral-700' : ''}`}
+                />
+                <div
+                  className={`h-3 bg-emerald-100 rounded w-2/3 ${isDark ? 'dark:bg-neutral-700' : ''}`}
+                />
                 <div className="flex gap-4">
-                  <div className="h-3 bg-emerald-100 rounded w-16" />
-                  <div className="h-3 bg-emerald-100 rounded w-16" />
+                  <div
+                    className={`h-3 bg-emerald-100 rounded w-16 ${isDark ? 'dark:bg-neutral-700' : ''}`}
+                  />
+                  <div
+                    className={`h-3 bg-emerald-100 rounded w-16 ${isDark ? 'dark:bg-neutral-700' : ''}`}
+                  />
                 </div>
               </div>
             </div>
@@ -202,27 +218,27 @@ export default function RecommendedProjects() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="text-rose-600 hover:text-rose-700 transition-colors disabled:opacity-50"
+            className="text-green-600 hover:text-green-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw
               className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}
             />
           </button>
         </div>
-        <div className="flex items-center gap-3 p-4 bg-rose-50 rounded-lg border border-rose-200">
-          <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0" />
+        <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg border border-green-200">
+          <AlertCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
           <div>
-            <p className="text-sm font-medium text-rose-800">
+            <p className="text-sm font-medium text-green-800">
               Failed to load projects
             </p>
-            <p className="text-sm text-rose-600">{projectError}</p>
+            <p className="text-sm text-green-600">{projectError}</p>
           </div>
         </div>
         <div className="mt-4 flex justify-center">
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium text-sm transition-colors flex items-center gap-2 disabled:opacity-50"
           >
             <RefreshCw
               className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`}

@@ -281,10 +281,16 @@ const ShowcaseService = {
     projectId: string,
     page: number = 1
   ): Promise<ProjectCommentsResponse> {
+    const safePage = page > 0 ? page : 1;
     try {
-      console.log('Fetching comments for project:', projectId, 'page:', page);
+      console.log(
+        'Fetching comments for project:',
+        projectId,
+        'page:',
+        safePage
+      );
       const response = await api.get(`/showcase/${projectId}/comments`, {
-        params: { page },
+        params: { page: safePage },
       });
       return response.data;
     } catch (error) {
