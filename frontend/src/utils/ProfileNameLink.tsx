@@ -88,7 +88,7 @@ export const ProfileNameLink: FC<ProfileNameLinkProps> = ({
   const [previewData, setPreviewData] = useState<ProfilePreviewResponse | null>(
     null
   );
-  const hoverTimeoutRef = useRef<NodeJS.Timeout>();
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const popperRef = useRef<HTMLDivElement>(null);
 
   const open = Boolean(anchorEl);
