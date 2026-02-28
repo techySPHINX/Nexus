@@ -24,7 +24,6 @@ import {
   useRef,
   useState,
 } from 'react';
-import { saveSmallList, restoreSmallList } from './showcasePersistence';
 import { useAuth } from './AuthContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 
@@ -47,13 +46,6 @@ const CACHE_CONFIG = {
   COMMENTS_TTL: 3 * 60 * 1000, // 3 minutes
   MAX_CACHE_SIZE: 50, // Maximum number of items to cache
 };
-
-// Persistence keys & config
-const SHOWCASE_ALLPROJECTS_KEY = 'showcase:allProjects:v1';
-const SHOWCASE_SUPPORTED_KEY = 'showcase:supportedProjects:v1';
-const SHOWCASE_FOLLOWED_KEY = 'showcase:followedProjects:v1';
-const SHOWCASE_MYPROJECTS_KEY = 'showcase:myProjects:v1';
-const PERSIST_DEBOUNCE_MS = 500; // debounce writes to IndexedDB
 
 export interface ShowcaseContextType {
   // States
@@ -389,12 +381,6 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
     },
     []
   );
-  const rehydrateResolveRef = useRef<(() => void) | null>(null);
-  const rehydratePromiseRef = useRef<Promise<void>>(
-    new Promise((res) => {
-      rehydrateResolveRef.current = res;
-    })
-  );
 
   useEffect(() => {
     paginationRef.current = allProjects.pagination;
@@ -402,62 +388,6 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
     projectsCacheRef.current = projectsCache;
     commentsCacheRef.current = commentsCache;
   }, [allProjects.pagination, loading, projectsCache, commentsCache]);
-
-  // Restore small persisted lists (index-only) on mount
-  useEffect(() => {
-    let mounted = true;
-
-    const restore = async () => {
-      try {
-        const p = await restoreSmallList(SHOWCASE_ALLPROJECTS_KEY);
-        if (mounted && p) setAllProjects(p);
-
-        const sup = await restoreSmallList(SHOWCASE_SUPPORTED_KEY);
-        if (mounted && sup) setSupportedProjects(sup);
-
-        const fol = await restoreSmallList(SHOWCASE_FOLLOWED_KEY);
-        if (mounted && fol) setFollowedProjects(fol);
-
-        const my = await restoreSmallList(SHOWCASE_MYPROJECTS_KEY);
-        if (mounted && my) setMyProjects(my);
-
-        // mark rehydration complete so callers can wait briefly for caches
-        if (rehydrateResolveRef.current) rehydrateResolveRef.current();
-      } catch (err) {
-        console.error('Failed to restore showcase small lists', err);
-      }
-    };
-
-    restore();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  // Persist small lists (index-only) to IndexedDB (debounced)
-  useEffect(() => {
-    let t: number | null = null;
-    if (t) window.clearTimeout(t);
-    t = window.setTimeout(() => {
-      try {
-        saveSmallList(SHOWCASE_ALLPROJECTS_KEY, allProjects);
-        saveSmallList(SHOWCASE_SUPPORTED_KEY, supportedProjects);
-        saveSmallList(SHOWCASE_FOLLOWED_KEY, followedProjects);
-        saveSmallList(SHOWCASE_MYPROJECTS_KEY, myProjects);
-      } catch (err) {
-        console.error('Failed to persist small lists', err);
-      }
-      if (t) {
-        window.clearTimeout(t);
-        t = null;
-      }
-    }, PERSIST_DEBOUNCE_MS);
-
-    return () => {
-      if (t) window.clearTimeout(t);
-    };
-  }, [allProjects, supportedProjects, followedProjects, myProjects]);
 
   // Cache management functions
   const getCachedProject = useCallback(
@@ -719,18 +649,8 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       // by default preserve loadMore behavior; if filters changed we should
       // not attempt to loadMore the previous list — treat as fresh load
       const doLoadMore = loadMore && currentFilterKey === lastFilterKey;
-      // Wait briefly for cache rehydration so we can use restored projects list
       if (!loadMore && !forceLoad) {
-        try {
-          await Promise.race([
-            rehydratePromiseRef.current,
-            new Promise((res) => setTimeout(res, 2000)),
-          ]);
-        } catch {
-          /* ignore */
-        }
-
-        // If we already have projects (rehydrated), avoid refetch on initial mount
+        // If we already have projects, avoid refetch on initial mount
         // unless the filters have changed since we last fetched.
         if (allProjects.data.length > 0 && currentFilterKey === lastFilterKey)
           return;
@@ -795,17 +715,8 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
         projectDetails: new Set(prev.projectDetails).add(projectId),
       }));
 
-      // Check cache first (unless force refresh). Wait briefly for rehydration so restored caches are used.
+      // Check cache first (unless force refresh)
       if (!forceRefresh) {
-        try {
-          await Promise.race([
-            rehydratePromiseRef.current,
-            new Promise((res) => setTimeout(res, 2000)),
-          ]);
-        } catch {
-          /* ignore */
-        }
-
         const cachedProject = getCachedProject(projectId);
         if (cachedProject) {
           setProjectById(cachedProject);
@@ -937,17 +848,7 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       const lastFilterKey = JSON.stringify(lastNorm || {});
       const doLoadMore = loadMore && currentFilterKey === lastFilterKey;
 
-      // Wait briefly for cache rehydration so we can use restored my-projects list
       if (!loadMore && !forceLoad) {
-        try {
-          await Promise.race([
-            rehydratePromiseRef.current,
-            new Promise((res) => setTimeout(res, 2000)),
-          ]);
-        } catch {
-          /* ignore */
-        }
-
         // If not loading more and we already have data for the same owner and
         // filters haven't changed, skip fetch
         if (
@@ -1030,17 +931,7 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       const lastFilterKey = JSON.stringify(lastNorm || {});
       const doLoadMore = loadMore && currentFilterKey === lastFilterKey;
 
-      // Wait briefly for cache rehydration so we can use restored supported list
       if (!loadMore && !forceLoad) {
-        try {
-          await Promise.race([
-            rehydratePromiseRef.current,
-            new Promise((res) => setTimeout(res, 2000)),
-          ]);
-        } catch {
-          /* ignore */
-        }
-
         // Skip fetch if not loading more and we already have data and filters unchanged
         if (
           supportedProjects.data.length > 0 &&
@@ -1119,17 +1010,7 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       const lastFilterKey = JSON.stringify(lastNorm || {});
       const doLoadMore = loadMore && currentFilterKey === lastFilterKey;
 
-      // Wait briefly for cache rehydration so we can use restored followed list
       if (!loadMore && !forceLoad) {
-        try {
-          await Promise.race([
-            rehydratePromiseRef.current,
-            new Promise((res) => setTimeout(res, 2000)),
-          ]);
-        } catch {
-          /* ignore */
-        }
-
         // Skip fetch if not loading more and we already have data and filters unchanged
         if (
           followedProjects.data.length > 0 &&
@@ -1803,15 +1684,6 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
 
       // Check cache first (unless force refresh or loading more pages)
       if (!forceRefresh && page === 1) {
-        try {
-          await Promise.race([
-            rehydratePromiseRef.current,
-            new Promise((res) => setTimeout(res, 2000)),
-          ]);
-        } catch {
-          /* ignore */
-        }
-
         const cachedComments = getCachedComments(projectId);
         if (cachedComments) {
           setComments((prev) => ({

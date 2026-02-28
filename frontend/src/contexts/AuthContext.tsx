@@ -7,7 +7,6 @@ import {
   ReactNode,
 } from 'react';
 import axios from 'axios';
-import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
 import { jwtDecode } from 'jwt-decode';
 type UserRole = 'STUDENT' | 'ALUM' | 'ADMIN' | 'MENTOR';
 
@@ -147,11 +146,6 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       } catch (error) {
         console.error('Error parsing stored user data:', error);
         localStorage.removeItem('token');
-        // Clear persisted showcase cache if stored token is invalid
-        // best-effort; don't block UI
-        clearAllShowcaseCache().catch(() => {
-          /* ignore */
-        });
       }
     }
 
@@ -310,21 +304,15 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     setUser(null);
     localStorage.removeItem('token');
     delete axios.defaults.headers.common['Authorization'];
-    // Clear persisted showcase/index cache on logout so no user data remains
-    clearAllShowcaseCache().catch(() => {
-      /* ignore errors */
-    });
   };
 
-  // Cross-tab logout/session expiry handling: if another tab clears the token,
-  // remove persisted caches in this tab as well.
+  // Cross-tab logout/session expiry handling
   useEffect(() => {
     function onStorage(e: StorageEvent) {
       if (e.key === 'token' && e.newValue === null) {
         setToken(null);
         setUser(null);
         delete axios.defaults.headers.common['Authorization'];
-        clearAllShowcaseCache().catch(() => {});
       }
     }
 

@@ -41,7 +41,6 @@
     "firebase": "^12.5.0",
     "framer-motion": "^8.5.4",
     "jwt-decode": "^4.0.0",
-    "localforage": "^1.10.0",
     "lucide-react": "^0.553.0",
     "mini-svg-data-uri": "^1.4.4",
     "motion": "^12.34.3",
@@ -102,7 +101,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",
-    "test:watch": "vitest --watch"
+    "test:behavioral": "vitest run __tests__/behavioral",
+    "test:unit:generated": "vitest run __tests__/unit",
+    "test:edge": "vitest run __tests__/edge"
   },
   "eslintConfig": {
     "extends": [
