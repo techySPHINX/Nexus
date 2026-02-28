@@ -20,6 +20,7 @@ import {
   SubCommunityTypeResponse,
   SubCommunityType,
   UpdateSubCommunityDto,
+  SubCommunityFilterParams,
 } from '../types/subCommunity';
 import { useAuth } from './AuthContext';
 import { getErrorMessage } from '@/utils/errorHandler';
@@ -47,11 +48,25 @@ interface SubCommunityContextType {
     page?: number,
     limit?: number,
     q?: string,
-    forceRefresh?: boolean
+    forceRefresh?: boolean,
+    filters?: SubCommunityFilterParams
   ) => Promise<SubCommunityTypeResponse>;
   // Per-type paging helpers
-  ensureTypeLoaded: (type: string, limit?: number, q?: string) => Promise<void>;
-  loadMoreForType: (type: string, limit?: number, q?: string) => Promise<void>;
+  ensureTypeLoaded: (
+    type: string,
+    limit?: number,
+    q?: string,
+    filters?: SubCommunityFilterParams
+  ) => Promise<void>;
+  loadMoreForType: (
+    type: string,
+    limit?: number,
+    q?: string,
+    filters?: SubCommunityFilterParams
+  ) => Promise<void>;
+  // Active filters
+  activeFilters: SubCommunityFilterParams;
+  setActiveFilters: (filters: SubCommunityFilterParams) => void;
   createSubCommunity: (data: {
     name: string;
     description: string;
@@ -191,6 +206,8 @@ const SubCommunityContext = createContext<SubCommunityContextType>({
   ensureTypeLoaded: async () => {},
   loadMoreForType: async () => {},
   scheduleTypeLoad: async () => {},
+  activeFilters: {},
+  setActiveFilters: () => {},
   createSubCommunity: async () => {},
   updateSubCommunity: async () => {},
   deleteSubCommunity: async () => {},
@@ -265,6 +282,9 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
     SubCommunityCreationRequest[]
   >([]);
   const [loading, setLoading] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<SubCommunityFilterParams>(
+    {}
+  );
   // Per-action loading flags to avoid global page reloads when mutating
   // specific entities (e.g. removing a member, requesting to join).
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
@@ -337,7 +357,13 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
   }
 
   const safeGetSubCommunityByType = useCallback(
-    async (type: string, page: number, limit: number, q?: string) => {
+    async (
+      type: string,
+      page: number,
+      limit: number,
+      q?: string,
+      filters?: SubCommunityFilterParams
+    ) => {
       const release = await loadSemaphoreRef.current!.acquire();
       // mark a section load in progress so UI can block scrolling
       setSectionLoadInProgress(true);
@@ -346,7 +372,8 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
           type,
           page,
           limit,
-          q
+          q,
+          filters
         );
       } finally {
         release();
@@ -479,9 +506,13 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       page: number = 1,
       limit: number = 20,
       q?: string,
-      forceRefresh = false
+      forceRefresh = false,
+      filters?: SubCommunityFilterParams
     ) => {
-      const cacheKey = `${type}-${page}-${limit}-${q || ''}`;
+      const filterKey = filters
+        ? `${filters.privacy || ''}-${filters.membership || ''}-${filters.sort || ''}-${filters.minMembers || ''}`
+        : '';
+      const cacheKey = `${type}-${page}-${limit}-${q || ''}-${filterKey}`;
 
       // Check cache first
       if (!forceRefresh && subCommunityCache[cacheKey]) {
@@ -503,7 +534,13 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
       setLoading(true);
       try {
-        const response = await safeGetSubCommunityByType(type, page, limit, q);
+        const response = await safeGetSubCommunityByType(
+          type,
+          page,
+          limit,
+          q,
+          filters
+        );
 
         // Update cache
         setSubCommunityCache((prev) => ({
@@ -561,8 +598,16 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
   // Ensure the first page for a given type is loaded (idempotent)
   const ensureTypeLoaded = useCallback(
-    async (type: string, limit: number = 6, q?: string): Promise<void> => {
-      const key = `${type}-1-${limit}-${q || ''}`;
+    async (
+      type: string,
+      limit: number = 6,
+      q?: string,
+      filters?: SubCommunityFilterParams
+    ): Promise<void> => {
+      const filterKey = filters
+        ? `${filters.privacy || ''}-${filters.membership || ''}-${filters.sort || ''}-${filters.minMembers || ''}`
+        : '';
+      const key = `${type}-1-${limit}-${q || ''}-${filterKey}`;
       if (subCommunityCache[key]) {
         setSubCommunityPages((prev) => ({ ...prev, [type]: 1 }));
         return;
@@ -577,7 +622,14 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
       const p: Promise<void> = (async () => {
         try {
-          const resp = await getSubCommunityByType(type, 1, limit, q);
+          const resp = await getSubCommunityByType(
+            type,
+            1,
+            limit,
+            q,
+            false,
+            filters
+          );
           if (resp?.data) {
             // mark page 1 loaded
             setSubCommunityPages((prev) => ({ ...prev, [type]: 1 }));
@@ -596,10 +648,18 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
   // Load next page for a type (idempotent per target page)
   const loadMoreForType = useCallback(
-    async (type: string, limit: number = 6, q?: string): Promise<void> => {
+    async (
+      type: string,
+      limit: number = 6,
+      q?: string,
+      filters?: SubCommunityFilterParams
+    ): Promise<void> => {
       const current = subCommunityPages[type] ?? 1;
       const next = current + 1;
-      const key = `${type}-${next}-${limit}-${q || ''}`;
+      const filterKey = filters
+        ? `${filters.privacy || ''}-${filters.membership || ''}-${filters.sort || ''}-${filters.minMembers || ''}`
+        : '';
+      const key = `${type}-${next}-${limit}-${q || ''}-${filterKey}`;
       if (subCommunityCache[key]) {
         // already loaded
         setSubCommunityPages((prev) => ({ ...prev, [type]: next }));
@@ -613,7 +673,14 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
       const p: Promise<void> = (async () => {
         try {
-          const resp = await getSubCommunityByType(type, next, limit, q);
+          const resp = await getSubCommunityByType(
+            type,
+            next,
+            limit,
+            q,
+            false,
+            filters
+          );
           if (resp?.data) {
             setSubCommunityPages((prev) => ({ ...prev, [type]: next }));
           }
@@ -1199,6 +1266,10 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       // scheduling
       scheduleTypeLoad,
 
+      // filters
+      activeFilters,
+      setActiveFilters,
+
       // Utilities
       setError,
       clearError,
@@ -1244,6 +1315,8 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       scheduleTypeLoad,
       actionLoading,
       isActionLoading,
+      activeFilters,
+      setActiveFilters,
       setError,
       clearError,
     ]

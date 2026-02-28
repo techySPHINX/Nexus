@@ -1,9 +1,7 @@
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import {
   Box,
   Typography,
-  // TextField,
-  // InputAdornment,
   Button,
   Snackbar,
   Alert,
@@ -12,20 +10,24 @@ import {
   Card,
   CardContent,
   Skeleton,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
 } from '@mui/material';
-import {
-  // Search,
-  Add,
-} from '@mui/icons-material';
+import { Add, FilterList } from '@mui/icons-material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { CreateSubCommunityDialog } from '../../components/SubCommunity/CreateSubCommunityDialog';
 import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubCommunityRequestDialog';
 import { SubCommunitySection } from '../../components/SubCommunity/SubCommunitySection';
-// import { SubCommunityCard } from '../../components/SubCommunity/SubCommunityCard';
-// using manual SubCommunitySection instead of viewport-driven infinite loader
 import { ManageTypesDialog } from '../../components/SubCommunity/ManageTypesDialog';
-import { SubCommunity, SubCommunityType } from '../../types/subCommunity';
+import {
+  SubCommunity,
+  SubCommunityType,
+  SubCommunityFilterParams,
+} from '../../types/subCommunity';
 import { Link } from 'react-router-dom';
 
 // Sections are built dynamically from types provided by context (plus 'all')
@@ -319,19 +321,27 @@ const SubCommunitiesPage: React.FC = () => {
     clearError,
     types,
     sectionLoadInProgress,
+    activeFilters,
+    setActiveFilters,
   } = useSubCommunity();
 
   const { user } = useAuth();
-  // const [searchTerm, setSearchTerm] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [manageTypesOpen, setManageTypesOpen] = useState(false);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
-  // Note: we previously tracked loadedTypes here; async loading is handled
-  // inside LazySection to avoid triggering async work during render.
+  const [showFilters, setShowFilters] = useState(false);
 
   const isAdmin = user?.role === 'ADMIN';
   const isAlum = user?.role === 'ALUM';
+
+  const handleFilterChange = useCallback(
+    (key: keyof SubCommunityFilterParams, value: string | number) => {
+      const newFilters = { ...activeFilters, [key]: value };
+      setActiveFilters(newFilters);
+    },
+    [activeFilters, setActiveFilters]
+  );
 
   useEffect(() => {
     // Load all communities and types initially (idempotent)
@@ -384,23 +394,6 @@ const SubCommunitiesPage: React.FC = () => {
     clearError();
   };
 
-  // const filterCommunities = (communities: SubCommunity[]): SubCommunity[] => {
-  //   if (!searchTerm) return communities;
-
-  //   return communities.filter((subCom) => {
-  //     const typeStr =
-  //       typeof subCom.type === 'string' ? subCom.type : subCom.type?.name || '';
-
-  //     return (
-  //       subCom.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //       subCom.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-  //       typeStr.toLowerCase().includes(searchTerm.toLowerCase())
-  //     );
-  //   });
-  // };
-
-  // (Per-type display logic moved into LazySection to avoid inline async work)
-
   if (loading && subCommunities.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -408,8 +401,6 @@ const SubCommunitiesPage: React.FC = () => {
       </Box>
     );
   }
-
-  // const filteredCommunities = filterCommunities(subCommunities);
 
   const sections = [
     { id: 'all', title: 'Recommended Communities' },
@@ -486,86 +477,97 @@ const SubCommunitiesPage: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Search Bar */}
-      {/* <TextField
-        fullWidth
-        placeholder="Search communities by name, description, or type..."
-        value={searchTerm}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-          setSearchTerm(e.target.value)
-        }
-        sx={{ mb: 4 }}
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <Search />
-            </InputAdornment>
-          ),
-          sx: { borderRadius: 2 },
-        }}
-      /> */}
+      {/* Filter Bar */}
+      <Box sx={{ mb: 3 }}>
+        <Button
+          variant="outlined"
+          startIcon={<FilterList />}
+          onClick={() => setShowFilters((prev) => !prev)}
+          sx={{ borderRadius: 2, mb: showFilters ? 2 : 0 }}
+        >
+          {showFilters ? 'Hide Filters' : 'Filters'}
+        </Button>
 
-      {/* Search Results */}
-      {/* {searchTerm && (
-        <Box sx={{ mb: 4 }}>
-          <Typography
-            variant="h5"
-            component="h2"
-            gutterBottom
-            sx={{ fontWeight: 600, color: 'text.primary', mb: 3 }}
+        {showFilters && (
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 2,
+              alignItems: 'center',
+              p: 2,
+              borderRadius: 2,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+            }}
           >
-            Search Results for &quot;{searchTerm}&quot;
-          </Typography>
-          {filteredCommunities.length === 0 ? (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ textAlign: 'center', py: 4 }}
-            >
-              No communities found matching your search
-            </Typography>
-          ) : (
-            <Grid container spacing={3}>
-              {filteredCommunities.map((subCom) => (
-                <Grid item xs={12} sm={6} md={6} key={subCom.id}>
-                  <SubCommunityCard subCommunity={subCom} />
-                </Grid>
-              ))}
-            </Grid>
-          )}
-        </Box>
-      )} */}
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Privacy</InputLabel>
+              <Select
+                value={activeFilters.privacy || 'all'}
+                label="Privacy"
+                onChange={(e: SelectChangeEvent) =>
+                  handleFilterChange('privacy', e.target.value)
+                }
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="public">Public</MenuItem>
+                <MenuItem value="private">Private</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel>Membership</InputLabel>
+              <Select
+                value={activeFilters.membership || 'all'}
+                label="Membership"
+                onChange={(e: SelectChangeEvent) =>
+                  handleFilterChange('membership', e.target.value)
+                }
+              >
+                <MenuItem value="all">All Communities</MenuItem>
+                <MenuItem value="joined">Joined Only</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl size="small" sx={{ minWidth: 140 }}>
+              <InputLabel>Sort By</InputLabel>
+              <Select
+                value={activeFilters.sort || 'recent'}
+                label="Sort By"
+                onChange={(e: SelectChangeEvent) =>
+                  handleFilterChange('sort', e.target.value)
+                }
+              >
+                <MenuItem value="recent">Most Recent</MenuItem>
+                <MenuItem value="popular">Most Popular</MenuItem>
+                <MenuItem value="active">Most Active</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        )}
+      </Box>
 
       {/* Community Sections */}
-      {
-        // !searchTerm &&
-        sections.map((typeConfig) => {
-          const typeId = typeConfig.id;
-
-          return (
-            <LazySection
-              key={typeId}
-              typeId={typeId}
-              title={typeConfig.title}
-            />
-          );
-        })
-      }
+      {sections.map((typeConfig) => {
+        const typeId = typeConfig.id;
+        return (
+          <LazySection key={typeId} typeId={typeId} title={typeConfig.title} />
+        );
+      })}
 
       {/* Empty State */}
-      {
-        // !searchTerm &&
-        subCommunities.length === 0 && (
-          <Box sx={{ textAlign: 'center', py: 8 }}>
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              No communities found
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Be the first to create a community!
-            </Typography>
-          </Box>
-        )
-      }
+      {subCommunities.length === 0 && (
+        <Box sx={{ textAlign: 'center', py: 8 }}>
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            No communities found
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Be the first to create a community!
+          </Typography>
+        </Box>
+      )}
 
       {/* Dialogs */}
       <CreateSubCommunityDialog

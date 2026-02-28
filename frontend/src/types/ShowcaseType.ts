@@ -129,8 +129,7 @@ export interface CreateCollaborationRequestInterface {
   message?: string;
 }
 
-export interface CollaborationRequestInterface
-  extends CreateCollaborationRequestInterface {
+export interface CollaborationRequestInterface extends CreateCollaborationRequestInterface {
   id: string;
   user: User;
   status: CollaborationStatus;

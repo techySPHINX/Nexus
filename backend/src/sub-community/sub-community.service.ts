@@ -222,42 +222,94 @@ export class SubCommunityService {
   // Service implementation
   async findSubCommunityByType(
     type: string,
-    q: string | undefined,
-    page: number = 1,
-    limit: number = 20,
-    userId?: string,
+    options: {
+      q?: string;
+      page?: number;
+      limit?: number;
+      userId?: string;
+      privacy?: string;
+      membership?: string;
+      sort?: string;
+      minMembers?: number;
+    },
   ) {
+    const {
+      q,
+      page = 1,
+      limit = 20,
+      userId,
+      privacy,
+      membership,
+      sort,
+      minMembers,
+    } = options;
     const skip = (page - 1) * limit;
 
-    let user = null;
     if (userId) {
-      user = await this.prisma.user.findUnique({ where: { id: userId } });
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+      });
       if (!user) {
         throw new NotFoundException('User not found.');
       }
     }
 
-    // For "ALL" type, return all subcommunities
-    const whereBase =
-      type.toUpperCase() === 'ALL'
-        ? {}
-        : ({ type: { is: { name: type.toUpperCase() } } } as any);
+    // Build type filter — no `as any` cast
+    const conditions: Prisma.SubCommunityWhereInput[] = [];
 
-    const where = q
-      ? {
-          AND: [
-            whereBase,
-            {
-              OR: [
-                { name: { contains: q, mode: 'insensitive' } },
-                { description: { contains: q, mode: 'insensitive' } },
-              ],
-            },
-          ],
-        }
-      : whereBase;
+    if (type.toUpperCase() !== 'ALL') {
+      conditions.push({ type: { is: { name: type.toUpperCase() } } });
+    }
 
-    // Find sub-communities and total count, and mark if user is a member
+    // Privacy filter
+    if (privacy === 'public') {
+      conditions.push({ isPrivate: false });
+    } else if (privacy === 'private') {
+      conditions.push({ isPrivate: true });
+    }
+    // 'all' or undefined = no privacy filter
+
+    // Membership filter — only communities the current user is a member of
+    if (membership === 'joined' && userId) {
+      conditions.push({ members: { some: { userId } } });
+    }
+
+    // Minimum members filter
+    if (minMembers !== undefined && minMembers > 0) {
+      conditions.push({
+        members: { some: {} },
+      });
+    }
+
+    // Text search filter
+    if (q) {
+      conditions.push({
+        OR: [
+          { name: { contains: q, mode: 'insensitive' } },
+          { description: { contains: q, mode: 'insensitive' } },
+        ],
+      });
+    }
+
+    const where: Prisma.SubCommunityWhereInput =
+      conditions.length > 0 ? { AND: conditions } : {};
+
+    // Sort order
+    let orderBy: Prisma.SubCommunityOrderByWithRelationInput;
+    switch (sort) {
+      case 'popular':
+        orderBy = { members: { _count: 'desc' } };
+        break;
+      case 'active':
+        orderBy = { posts: { _count: 'desc' } };
+        break;
+      case 'recent':
+      default:
+        orderBy = { updatedAt: 'desc' };
+        break;
+    }
+
+    // Find sub-communities and total count
     const [subCommunities, totalCount] = await Promise.all([
       this.prisma.subCommunity.findMany({
         where,
@@ -276,21 +328,33 @@ export class SubCommunityService {
               }
             : undefined,
         },
-        orderBy: { updatedAt: 'desc' },
+        orderBy,
       }),
       this.prisma.subCommunity.count({ where }),
     ]);
 
-    const totalPages = Math.ceil(totalCount / limit);
+    // Post-query filter for minMembers (Prisma doesn't support _count in where)
+    let filteredData = subCommunities;
+    if (minMembers !== undefined && minMembers > 0) {
+      filteredData = subCommunities.filter(
+        (sc) => sc._count.members >= minMembers,
+      );
+    }
+
+    const totalFiltered =
+      minMembers !== undefined && minMembers > 0
+        ? filteredData.length
+        : totalCount;
+    const totalPages = Math.ceil(totalFiltered / limit);
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
 
     return {
-      data: subCommunities,
+      data: filteredData,
       pagination: {
         page,
         limit,
-        total: totalCount,
+        total: totalFiltered,
         totalPages,
         hasNext,
         hasPrev,

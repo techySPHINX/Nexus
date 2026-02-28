@@ -166,3 +166,10 @@ export interface ApproveJoinRequestDto {
 export interface UpdateMemberRoleDto {
   role: SubCommunityRole;
 }
+
+export interface SubCommunityFilterParams {
+  privacy?: 'public' | 'private' | 'all';
+  membership?: 'joined' | 'all';
+  sort?: 'recent' | 'popular' | 'active';
+  minMembers?: number;
+}

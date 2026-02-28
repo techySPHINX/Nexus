@@ -14,6 +14,7 @@ import {
 import { SubCommunityService } from './sub-community.service';
 import { UpdateSubCommunityDto } from './dto/update-sub-community.dto';
 import { ApproveJoinRequestDto } from './dto/approve-join-request.dto';
+import { FilterSubCommunityDto } from './dto/filter-sub-community.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -103,18 +104,25 @@ export class SubCommunityController {
   @Get('type/:type')
   async findByType(
     @Param('type') type: string,
-    @Query('q') q: string,
-    @Query('page') page: number = 1,
-    @Query('limit') limit: number = 20,
+    @Query() filterDto: FilterSubCommunityDto,
     @GetCurrentUser('userId') userId: string,
   ) {
-    return this.subCommunityService.findSubCommunityByType(
-      type,
-      q,
+    const page = filterDto.page ? Number(filterDto.page) : 1;
+    const limit = filterDto.limit ? Number(filterDto.limit) : 20;
+    const minMembers = filterDto.minMembers
+      ? Number(filterDto.minMembers)
+      : undefined;
+
+    return this.subCommunityService.findSubCommunityByType(type, {
+      q: filterDto.q,
       page,
       limit,
       userId,
-    );
+      privacy: filterDto.privacy,
+      membership: filterDto.membership,
+      sort: filterDto.sort,
+      minMembers,
+    });
   }
 
   @Patch(':id')
