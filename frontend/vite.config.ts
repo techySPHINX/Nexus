@@ -59,12 +59,11 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            const lower = id.toLowerCase();
+            // const lower = id.toLowerCase();
 
             // --- 1. Split vendor chunks strategically ---
             if (id.includes('node_modules')) {
               // Heavy dependencies that load separately
-              if (id.includes('three')) return 'vendor-three';
               if (id.includes('tiptap') || id.includes('prosemirror'))
                 return 'vendor-editor';
               if (id.includes('firebase')) return 'vendor-firebase';
@@ -72,8 +71,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
               if (id.includes('lucide-react')) return 'vendor-lucide';
               if (id.includes('jwt-decode')) return 'vendor-auth-utils';
               if (id.includes('dayjs')) return 'vendor-dayjs';
-              if (id.includes('dexie') || id.includes('localforage'))
-                return 'vendor-storage';
+              if (id.includes('dexie')) return 'vendor-storage';
               if (id.includes('zustand')) return 'vendor-state';
 
               if (id.includes('@mui')) return 'vendor-mui';
@@ -90,24 +88,24 @@ export default defineConfig(({ mode }: ConfigEnv) => {
             }
 
             // --- 2. Feature chunks ---
-            if (lower.includes('dashboard')) return 'dashboard-features';
-            if (lower.includes('gamification')) return 'gamification-features';
-            if (lower.includes('admin')) return 'admin-features';
-            if (lower.includes('auth')) return 'auth-features';
-            if (lower.includes('profile')) return 'profile-features';
-            if (lower.includes('posts') || lower.includes('post'))
-              return 'post-features';
-            if (lower.includes('subcommunity') || lower.includes('community'))
-              return 'subcommunity-features';
-            if (lower.includes('messaging')) return 'messaging-features';
-            if (lower.includes('startup')) return 'startup-features';
-            if (lower.includes('showcase') || lower.includes('project'))
-              return 'showcase-features';
-            if (lower.includes('events')) return 'events-features';
-            if (lower.includes('landing')) return 'landing-features';
+            // if (lower.includes('dashboard')) return 'dashboard-features';
+            // if (lower.includes('gamification')) return 'gamification-features';
+            // if (lower.includes('admin')) return 'admin-features';
+            // if (lower.includes('auth')) return 'auth-features';
+            // if (lower.includes('profile')) return 'profile-features';
+            // if (lower.includes('posts') || lower.includes('post'))
+            //   return 'post-features';
+            // if (lower.includes('subcommunity') || lower.includes('community'))
+            //   return 'subcommunity-features';
+            // if (lower.includes('messaging')) return 'messaging-features';
+            // if (lower.includes('startup')) return 'startup-features';
+            // if (lower.includes('showcase') || lower.includes('project'))
+            //   return 'showcase-features';
+            // if (lower.includes('events')) return 'events-features';
+            // if (lower.includes('landing')) return 'landing-features';
 
             // --- 3. Shared ---
-            if (lower.includes('components')) return 'shared-components';
+            // if (lower.includes('components')) return 'shared-components';
 
             return undefined;
           },

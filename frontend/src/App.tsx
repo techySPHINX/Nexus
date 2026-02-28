@@ -8,7 +8,7 @@ import AdminRoute from './route/AdminRoute';
 import './App.css';
 
 // Lazy load all pages for better code splitting
-const LandingOptimized = lazy(() => import('./pages/LandingPage2'));
+const LandingOptimized = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
 const EnhancedRegister = lazy(() => import('./pages/Register'));
 const RegistrationSuccess = lazy(() => import('./pages/RegistrationSuccess'));
@@ -93,6 +93,7 @@ import TagProvider from './contexts/TagContext';
 import { EngagementProvider } from './contexts/engagementContext';
 import { NewsProvider } from './contexts/NewsContext';
 import { EngagementService } from './services/engagementService';
+import { LandingPageProvider } from './contexts/LandingPageContext';
 
 // Loading component for Suspense fallback
 const LoadingSpinner: FC = () => (
@@ -141,7 +142,14 @@ const LayoutContent: FC = () => {
         >
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
-              <Route path="/" element={<LandingOptimized />} />
+              <Route
+                path="/"
+                element={
+                  <LandingPageProvider>
+                    <LandingOptimized />
+                  </LandingPageProvider>
+                }
+              />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<EnhancedRegister />} />
               <Route
