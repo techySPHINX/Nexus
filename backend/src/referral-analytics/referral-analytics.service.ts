@@ -201,7 +201,7 @@ export class ReferralAnalyticsService {
       this.prisma.referral.groupBy({
         by: ['company'],
         where: dateFilter.referral,
-        _count: { _all: true },
+        _count: { company: true },
         orderBy: { _count: { company: 'desc' } },
         take: 10,
       }),
@@ -232,7 +232,7 @@ export class ReferralAnalyticsService {
       applicationsByStatus: appStatusBreakdown,
       topCompanies: topCompanies.map((c) => ({
         company: c.company,
-        count: c._count._all,
+        count: c._count.company,
       })),
     };
   }
@@ -294,22 +294,56 @@ export class ReferralAnalyticsService {
 
   /**
    * Computes monthly trend data for referrals and applications.
-   * Returns counts aggregated by month for the specified number of past months.
+   * Returns counts aggregated by month for the specified number of past months,
+   * or for the explicit date range when dateFrom/dateTo are provided.
    */
   async getMonthlyTrends(query: AnalyticsQueryDto) {
-    const months = query.months || 6;
-    const startDate = new Date();
-    startDate.setMonth(startDate.getMonth() - (months - 1));
-    startDate.setDate(1);
-    startDate.setHours(0, 0, 0, 0);
+    // Determine the effective end date (inclusive)
+    const endDate = query.dateTo ? new Date(query.dateTo) : new Date();
+    endDate.setHours(23, 59, 59, 999);
+
+    let months: number;
+    let startDate: Date;
+
+    if (query.dateFrom) {
+      // Use the provided date range and derive the number of months from it
+      startDate = new Date(query.dateFrom);
+      startDate.setHours(0, 0, 0, 0);
+
+      const yearDiff = endDate.getFullYear() - startDate.getFullYear();
+      const monthDiff = endDate.getMonth() - startDate.getMonth();
+      // +1 to make the range inclusive of both start and end months
+      months = yearDiff * 12 + monthDiff + 1;
+
+      if (months < 1) {
+        months = 1;
+      }
+    } else {
+      // Fallback to the original "last N months" behavior
+      months = query.months || 6;
+      startDate = new Date(endDate);
+      startDate.setMonth(startDate.getMonth() - (months - 1));
+      startDate.setDate(1);
+      startDate.setHours(0, 0, 0, 0);
+    }
 
     const [referrals, applications] = await Promise.all([
       this.prisma.referral.findMany({
-        where: { createdAt: { gte: startDate } },
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
         select: { createdAt: true },
       }),
       this.prisma.referralApplication.findMany({
-        where: { createdAt: { gte: startDate } },
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
         select: { createdAt: true, status: true },
       }),
     ]);

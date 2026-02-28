@@ -82,19 +82,21 @@ export class ReferralAnalyticsController {
   /**
    * Returns application funnel data for visualization.
    * Stages: Viewed > Applied > Shortlisted > Offered > Accepted
+   * Admin-only to avoid exposing platform-wide volumes to non-admin users.
    */
   @Get('funnel')
-  @Roles(Role.ADMIN, Role.ALUM)
+  @Roles(Role.ADMIN)
   async getApplicationFunnel(@Query() query: AnalyticsQueryDto) {
     return this.analyticsService.getApplicationFunnel(query);
   }
 
   /**
-   * Returns monthly trend data for referrals and applications.
+   * Returns monthly platform-wide trend data for referrals and applications.
    * Supports configurable lookback period via query.months (default: 6).
+   * Admin-only to avoid exposing global usage metrics to non-admin users.
    */
   @Get('trends')
-  @Roles(Role.ADMIN, Role.ALUM)
+  @Roles(Role.ADMIN)
   async getMonthlyTrends(@Query() query: AnalyticsQueryDto) {
     return this.analyticsService.getMonthlyTrends(query);
   }

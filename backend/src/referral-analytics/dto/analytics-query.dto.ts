@@ -1,5 +1,5 @@
 import { IsOptional, IsDateString, IsInt, Min, Max } from 'class-validator';
-import { Transform } from 'class-transformer';
+import { Type } from 'class-transformer';
 
 /**
  * DTO for analytics query parameters.
@@ -15,7 +15,7 @@ export class AnalyticsQueryDto {
   dateTo?: string;
 
   @IsOptional()
-  @Transform(({ value }) => parseInt(value, 10))
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(24)

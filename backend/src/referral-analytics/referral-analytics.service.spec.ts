@@ -260,8 +260,8 @@ describe('ReferralAnalyticsService', () => {
           { status: 'REJECTED', _count: { _all: 5 } },
         ])
         .mockResolvedValueOnce([
-          { company: 'Google', _count: { _all: 20 } },
-          { company: 'Meta', _count: { _all: 15 } },
+          { company: 'Google', _count: { company: 20 } },
+          { company: 'Meta', _count: { company: 15 } },
         ]);
       mockPrisma.referral.aggregate.mockResolvedValue({
         _sum: { viewCount: 1500 },
@@ -410,6 +410,33 @@ describe('ReferralAnalyticsService', () => {
       result.trends.forEach((bucket) => {
         expect(bucket.month).toMatch(/^\d{4}-\d{2}$/);
       });
+    });
+
+    it('should respect dateFrom and dateTo when provided', async () => {
+      const referralDate = new Date('2025-03-15');
+      const appDate = new Date('2025-04-10');
+
+      mockPrisma.referral.findMany.mockResolvedValue([
+        { createdAt: referralDate },
+      ]);
+      mockPrisma.referralApplication.findMany.mockResolvedValue([
+        { createdAt: appDate, status: ApplicationStatus.ACCEPTED },
+      ]);
+
+      const result = await service.getMonthlyTrends({
+        dateFrom: '2025-03-01',
+        dateTo: '2025-05-31',
+      });
+
+      // 3 months: March, April, May
+      expect(result.trends).toHaveLength(3);
+      expect(result.trends[0].month).toBe('2025-03');
+      expect(result.trends[0].referrals).toBe(1);
+      expect(result.trends[1].month).toBe('2025-04');
+      expect(result.trends[1].applications).toBe(1);
+      expect(result.trends[1].accepted).toBe(1);
+      expect(result.trends[2].month).toBe('2025-05');
+      expect(result.trends[2].referrals).toBe(0);
     });
   });
 

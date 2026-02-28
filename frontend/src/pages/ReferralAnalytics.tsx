@@ -146,14 +146,8 @@ const ReferralAnalytics: FC = () => {
         setFunnelData(funnel.data.funnel);
         setTrendsData(trends.data.trends);
       } else if (user.role === 'ALUM') {
-        const [alumni, funnel, trends] = await Promise.all([
-          referralAnalyticsService.getAlumniAnalytics(query),
-          referralAnalyticsService.getApplicationFunnel(query),
-          referralAnalyticsService.getMonthlyTrends({ ...query, months: 6 }),
-        ]);
+        const alumni = await referralAnalyticsService.getAlumniAnalytics(query);
         setAlumniData(alumni.data);
-        setFunnelData(funnel.data.funnel);
-        setTrendsData(trends.data.trends);
       } else if (user.role === 'STUDENT') {
         const res = await referralAnalyticsService.getStudentAnalytics(query);
         setStudentData(res.data);
