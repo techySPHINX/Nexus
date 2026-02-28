@@ -120,7 +120,7 @@ export async function allReadNotificationService() {
 export async function deleteNotificationService(id: string): Promise<void> {
   try {
     const response = await api.delete(`/notifications/${id}`);
-    if (response.status !== 200) {
+    if (response.status < 200 || response.status >= 300) {
       throw new Error('Failed to delete notification');
     }
     return response.data;
@@ -137,7 +137,7 @@ export async function deleteNotificationService(id: string): Promise<void> {
 export async function deleteReadNotificationService(): Promise<void> {
   try {
     const response = await api.delete(`/notifications/read/all`);
-    if (response.status !== 200) {
+    if (response.status < 200 || response.status >= 300) {
       throw new Error('Failed to delete all read notifications');
     }
     return response.data;
@@ -154,7 +154,7 @@ export async function deleteReadNotificationService(): Promise<void> {
 export async function deleteAllNotificationService(): Promise<void> {
   try {
     const response = await api.delete(`/notifications/all`);
-    if (response.status !== 200) {
+    if (response.status < 200 || response.status >= 300) {
       throw new Error('Failed to delete all notifications');
     }
     return response.data;

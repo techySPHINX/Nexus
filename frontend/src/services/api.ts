@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
-import { clearAllShowcaseCache } from '@/contexts/showcasePersistence';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 console.log('API BASE URL:', BACKEND_URL);
 
@@ -69,8 +68,6 @@ api.interceptors.response.use(
       // Token expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // clear cached persisted data associated with the session
-      clearAllShowcaseCache().catch(() => {});
       window.location.href = '/login';
     }
     return Promise.reject(error);

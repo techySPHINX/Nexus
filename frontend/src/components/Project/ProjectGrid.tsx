@@ -36,6 +36,10 @@ const ProjectGrid: FC<ProjectsGridProps> = ({
   isProjectOwner,
   emptyMessage,
 }) => {
+  const isOwnTitle = emptyMessage.title.toLowerCase().includes('own');
+  const isSupportTitle = emptyMessage.title.toLowerCase().includes('support');
+  const isFollowTitle = emptyMessage.title.toLowerCase().includes('follow');
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -114,7 +118,7 @@ const ProjectGrid: FC<ProjectsGridProps> = ({
           <Button
             variant="contained"
             startIcon={
-              emptyMessage.actionText.includes('Create') ? <Add /> : undefined
+              /create/i.test(emptyMessage.actionText) ? <Add /> : undefined
             }
             onClick={emptyMessage.action}
             size="large"
@@ -130,11 +134,11 @@ const ProjectGrid: FC<ProjectsGridProps> = ({
   return (
     <>
       <Typography variant="h5" gutterBottom sx={{ mb: 3, fontWeight: 600 }}>
-        {emptyMessage.title.includes('own')
+        {isOwnTitle
           ? 'Projects You Own'
-          : emptyMessage.title.includes('support')
+          : isSupportTitle
             ? 'Projects You Support'
-            : emptyMessage.title.includes('follow')
+            : isFollowTitle
               ? "Projects You're Following"
               : 'All Projects'}
       </Typography>
@@ -144,14 +148,14 @@ const ProjectGrid: FC<ProjectsGridProps> = ({
         animate="visible"
       >
         <Grid container spacing={3}>
-          {projects.map((project) => (
+          {projects.map((project, index) => (
             <Grid
               item
               xs={12}
               sm={6}
               md={6}
               lg={4}
-              key={project?.id || Math.random()}
+              key={project?.id || `project-${index}`}
             >
               <motion.div variants={itemVariants}>
                 <ProjectCard

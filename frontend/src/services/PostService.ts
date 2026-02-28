@@ -28,6 +28,13 @@ export async function createPostService(
   subCommunityId?: string,
   type?: string
 ) {
+  const normalizedSubject = subject.trim();
+  const normalizedContent = content.trim();
+
+  if (!normalizedSubject || !normalizedContent) {
+    throw new Error('Subject and content are required');
+  }
+
   const user = getUser();
   if (!subCommunityId) {
     if (user?.role !== 'ADMIN' && user?.role !== 'ALUM') {
@@ -46,8 +53,8 @@ export async function createPostService(
         subCommunityId?: string;
         imageUrl?: string;
       } = {
-        subject,
-        content,
+        subject: normalizedSubject,
+        content: normalizedContent,
       };
       if (type) payload.type = type;
       if (subCommunityId) payload.subCommunityId = subCommunityId;
@@ -66,8 +73,8 @@ export async function createPostService(
 
     // Otherwise, assume a File and send as multipart/form-data
     const formData = new FormData();
-    formData.append('content', content);
-    formData.append('subject', subject);
+    formData.append('content', normalizedContent);
+    formData.append('subject', normalizedSubject);
     if (type) formData.append('type', type);
     if (subCommunityId) formData.append('subCommunityId', subCommunityId);
     if (imageFile) formData.append('imageUrl', imageFile as File);
