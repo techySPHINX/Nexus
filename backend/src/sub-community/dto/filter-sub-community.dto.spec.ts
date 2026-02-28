@@ -12,15 +12,42 @@ describe('FilterSubCommunityDto', () => {
   it('should pass validation with all valid fields', async () => {
     const dto = plainToInstance(FilterSubCommunityDto, {
       q: 'test',
-      page: '1',
-      limit: '20',
+      page: 1,
+      limit: 20,
       privacy: 'public',
       membership: 'joined',
       sort: 'popular',
-      minMembers: '5',
+      minMembers: 5,
     });
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
+  });
+
+  it('should transform and pass with string page/limit/minMembers', async () => {
+    const dto = plainToInstance(FilterSubCommunityDto, {
+      page: '2',
+      limit: '10',
+      minMembers: '10',
+    });
+    const errors = await validate(dto);
+    expect(errors).toHaveLength(0);
+    expect(dto.page).toBe(2);
+    expect(dto.limit).toBe(10);
+    expect(dto.minMembers).toBe(10);
+  });
+
+  it('should fail when page < 1', async () => {
+    const dto = plainToInstance(FilterSubCommunityDto, { page: 0 });
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].property).toBe('page');
+  });
+
+  it('should fail when limit > 100', async () => {
+    const dto = plainToInstance(FilterSubCommunityDto, { limit: 101 });
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].property).toBe('limit');
   });
 
   it('should pass with privacy=all', async () => {
@@ -78,7 +105,7 @@ describe('FilterSubCommunityDto', () => {
     expect(errors).toHaveLength(0);
   });
 
-  it('should fail with non-numeric minMembers', async () => {
+  it('should fail with non-numeric minMembers string', async () => {
     const dto = plainToInstance(FilterSubCommunityDto, {
       minMembers: 'abc',
     });
@@ -87,9 +114,16 @@ describe('FilterSubCommunityDto', () => {
     expect(errors[0].property).toBe('minMembers');
   });
 
-  it('should pass with numeric string minMembers', async () => {
-    const dto = plainToInstance(FilterSubCommunityDto, { minMembers: '10' });
+  it('should pass with minMembers=0 (zero is allowed)', async () => {
+    const dto = plainToInstance(FilterSubCommunityDto, { minMembers: 0 });
     const errors = await validate(dto);
     expect(errors).toHaveLength(0);
+  });
+
+  it('should fail with minMembers < 0', async () => {
+    const dto = plainToInstance(FilterSubCommunityDto, { minMembers: -1 });
+    const errors = await validate(dto);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors[0].property).toBe('minMembers');
   });
 });

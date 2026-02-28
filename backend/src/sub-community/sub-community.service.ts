@@ -274,11 +274,15 @@ export class SubCommunityService {
       conditions.push({ members: { some: { userId } } });
     }
 
-    // Minimum members filter
+    // Minimum members filter — resolved at DB level via groupBy/having
     if (minMembers !== undefined && minMembers > 0) {
-      conditions.push({
-        members: { some: {} },
+      const eligible = await this.prisma.subCommunityMember.groupBy({
+        by: ['subCommunityId'],
+        _count: { subCommunityId: true },
+        having: { subCommunityId: { _count: { gte: minMembers } } },
       });
+      const eligibleIds = eligible.map((e) => e.subCommunityId);
+      conditions.push({ id: { in: eligibleIds } });
     }
 
     // Text search filter
@@ -333,28 +337,16 @@ export class SubCommunityService {
       this.prisma.subCommunity.count({ where }),
     ]);
 
-    // Post-query filter for minMembers (Prisma doesn't support _count in where)
-    let filteredData = subCommunities;
-    if (minMembers !== undefined && minMembers > 0) {
-      filteredData = subCommunities.filter(
-        (sc) => sc._count.members >= minMembers,
-      );
-    }
-
-    const totalFiltered =
-      minMembers !== undefined && minMembers > 0
-        ? filteredData.length
-        : totalCount;
-    const totalPages = Math.ceil(totalFiltered / limit);
+    const totalPages = Math.ceil(totalCount / limit);
     const hasNext = page < totalPages;
     const hasPrev = page > 1;
 
     return {
-      data: filteredData,
+      data: subCommunities,
       pagination: {
         page,
         limit,
-        total: totalFiltered,
+        total: totalCount,
         totalPages,
         hasNext,
         hasPrev,

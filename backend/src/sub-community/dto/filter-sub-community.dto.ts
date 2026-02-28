@@ -1,17 +1,11 @@
-import { IsOptional, IsIn, IsNumberString, IsString } from 'class-validator';
+import { IsOptional, IsIn, IsInt, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 
-export class FilterSubCommunityDto {
+export class FilterSubCommunityDto extends PaginationDto {
   @IsOptional()
   @IsString()
   q?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  page?: string;
-
-  @IsOptional()
-  @IsNumberString()
-  limit?: string;
 
   @IsOptional()
   @IsIn(['public', 'private', 'all'])
@@ -26,6 +20,8 @@ export class FilterSubCommunityDto {
   sort?: string;
 
   @IsOptional()
-  @IsNumberString()
-  minMembers?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  minMembers?: number;
 }

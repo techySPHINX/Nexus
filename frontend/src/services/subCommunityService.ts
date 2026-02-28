@@ -11,6 +11,7 @@ import {
   UpdateMemberRoleDto,
   PaginationData,
   UpdateSubCommunityDto,
+  SubCommunityFilterParams,
   //   SubCommunityRole,
 } from '../types/subCommunity';
 
@@ -40,12 +41,7 @@ export const subCommunityService = {
     page: number = 1,
     limit: number = 20,
     q?: string,
-    filters?: {
-      privacy?: string;
-      membership?: string;
-      sort?: string;
-      minMembers?: number;
-    }
+    filters?: SubCommunityFilterParams
   ): Promise<{ data: SubCommunity[]; pagination: PaginationData }> => {
     const params: Record<string, unknown> = { page, limit };
     if (q) params.q = q;

@@ -323,6 +323,7 @@ const SubCommunitiesPage: React.FC = () => {
     sectionLoadInProgress,
     activeFilters,
     setActiveFilters,
+    resetTypeCache,
   } = useSubCommunity();
 
   const { user } = useAuth();
@@ -335,6 +336,10 @@ const SubCommunitiesPage: React.FC = () => {
   const isAdmin = user?.role === 'ADMIN';
   const isAlum = user?.role === 'ALUM';
 
+  // Derived stable key so LazySection remounts (resetting observer state) when
+  // filters change, ensuring new API calls are made with updated filters.
+  const filterKey = JSON.stringify(activeFilters);
+
   const handleFilterChange = useCallback(
     (key: keyof SubCommunityFilterParams, value: string | number) => {
       const newFilters = { ...activeFilters, [key]: value };
@@ -342,6 +347,11 @@ const SubCommunitiesPage: React.FC = () => {
     },
     [activeFilters, setActiveFilters]
   );
+
+  useEffect(() => {
+    // When filters change, clear the type cache so sections fetch fresh data.
+    resetTypeCache();
+  }, [activeFilters, resetTypeCache]);
 
   useEffect(() => {
     // Load all communities and types initially (idempotent)
@@ -553,7 +563,11 @@ const SubCommunitiesPage: React.FC = () => {
       {sections.map((typeConfig) => {
         const typeId = typeConfig.id;
         return (
-          <LazySection key={typeId} typeId={typeId} title={typeConfig.title} />
+          <LazySection
+            key={`${typeId}-${filterKey}`}
+            typeId={typeId}
+            title={typeConfig.title}
+          />
         );
       })}
 

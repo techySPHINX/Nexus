@@ -107,21 +107,15 @@ export class SubCommunityController {
     @Query() filterDto: FilterSubCommunityDto,
     @GetCurrentUser('userId') userId: string,
   ) {
-    const page = filterDto.page ? Number(filterDto.page) : 1;
-    const limit = filterDto.limit ? Number(filterDto.limit) : 20;
-    const minMembers = filterDto.minMembers
-      ? Number(filterDto.minMembers)
-      : undefined;
-
     return this.subCommunityService.findSubCommunityByType(type, {
       q: filterDto.q,
-      page,
-      limit,
+      page: filterDto.page,
+      limit: filterDto.limit,
       userId,
       privacy: filterDto.privacy,
       membership: filterDto.membership,
       sort: filterDto.sort,
-      minMembers,
+      minMembers: filterDto.minMembers,
     });
   }
 

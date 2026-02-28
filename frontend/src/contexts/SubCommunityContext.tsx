@@ -137,6 +137,8 @@ interface SubCommunityContextType {
   // Enqueue a type (or 'all') for scheduled loading. LazySection calls this
   // to ensure its type will be fetched eventually.
   scheduleTypeLoad: (type: string, limit?: number) => Promise<void>;
+  // Reset all cached type data and clear in-flight tracking (call when filters change)
+  resetTypeCache: () => void;
 }
 
 const SubCommunityContext = createContext<SubCommunityContextType>({
@@ -206,6 +208,7 @@ const SubCommunityContext = createContext<SubCommunityContextType>({
   ensureTypeLoaded: async () => {},
   loadMoreForType: async () => {},
   scheduleTypeLoad: async () => {},
+  resetTypeCache: () => {},
   activeFilters: {},
   setActiveFilters: () => {},
   createSubCommunity: async () => {},
@@ -282,9 +285,14 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
     SubCommunityCreationRequest[]
   >([]);
   const [loading, setLoading] = useState(false);
-  const [activeFilters, setActiveFilters] = useState<SubCommunityFilterParams>(
-    {}
-  );
+  const [activeFilters, setActiveFiltersState] =
+    useState<SubCommunityFilterParams>({});
+  const activeFiltersRef = useRef<SubCommunityFilterParams>({});
+
+  const setActiveFilters = useCallback((filters: SubCommunityFilterParams) => {
+    activeFiltersRef.current = filters;
+    setActiveFiltersState(filters);
+  }, []);
   // Per-action loading flags to avoid global page reloads when mutating
   // specific entities (e.g. removing a member, requesting to join).
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
@@ -767,7 +775,12 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
               // Acquire semaphore inside ensureAllSubCommunities
               await ensureAllSubCommunities();
             } else {
-              await ensureTypeLoaded(next, limit);
+              await ensureTypeLoaded(
+                next,
+                limit,
+                undefined,
+                activeFiltersRef.current
+              );
             }
           } catch (err) {
             // swallow and continue; retry logic is handled by the enqueuing
@@ -784,6 +797,16 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
     },
     [ensureAllSubCommunities, ensureTypeLoaded]
   );
+
+  const resetTypeCache = useCallback(() => {
+    setSubCommunityCache({});
+    setSubCommunities([]);
+    setSubCommunitiesByType([]);
+    setSubCommunityPages({});
+    inFlightTypePage.current = {};
+    scheduledQueueRef.current = [];
+    queueProcessingRef.current = false;
+  }, []);
 
   // NOTE: removed auto-fetch on mount. Consumers should call `ensureTypes()`
   // or `ensureAllSubCommunities()` from their own lifecycle (pages/components)
@@ -1265,6 +1288,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       fetchMySubCommunities,
       // scheduling
       scheduleTypeLoad,
+      resetTypeCache,
 
       // filters
       activeFilters,
@@ -1313,6 +1337,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       mySubCommunities,
       fetchMySubCommunities,
       scheduleTypeLoad,
+      resetTypeCache,
       actionLoading,
       isActionLoading,
       activeFilters,
