@@ -20,6 +20,7 @@ const Connections = lazy(() => import('./pages/Connections'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Referrals = lazy(() => import('./pages/Referrals'));
+const ReferralAnalytics = lazy(() => import('./pages/ReferralAnalytics'));
 const Files = lazy(() => import('./pages/Files'));
 // const Landing = lazy(() => import('./pages/Landing'));
 const Notification = lazy(() => import('./pages/Notification'));
@@ -204,6 +205,14 @@ const LayoutContent: FC = () => {
                 element={
                   <ProtectedRoute>
                     <Referrals />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/referral-analytics"
+                element={
+                  <ProtectedRoute>
+                    <ReferralAnalytics />
                   </ProtectedRoute>
                 }
               />

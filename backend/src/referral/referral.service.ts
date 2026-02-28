@@ -172,6 +172,16 @@ export class ReferralService {
       }
     }
 
+    // Increment view counter (fire-and-forget for performance)
+    this.prisma.referral
+      .update({
+        where: { id: referralId },
+        data: { viewCount: { increment: 1 } },
+      })
+      .catch(() => {
+        // Non-blocking: silently handle view count failures
+      });
+
     return referral;
   }
 

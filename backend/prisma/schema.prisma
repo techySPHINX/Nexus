@@ -500,6 +500,7 @@ model Referral {
   updatedAt    DateTime              @updatedAt
   deadline     DateTime
   referralLink String?
+  viewCount    Int                   @default(0)
   applications ReferralApplication[]
   postedBy     User                  @relation("PostedReferrals", fields: [alumniId], references: [id])
 
@@ -1010,6 +1011,8 @@ enum ReferralStatus {
 enum ApplicationStatus {
   PENDING
   REVIEWED
+  SHORTLISTED
+  OFFERED
   ACCEPTED
   REJECTED
 }
