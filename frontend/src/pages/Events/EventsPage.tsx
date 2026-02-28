@@ -96,15 +96,10 @@ const EventsPage: FC = () => {
       {/* Header Section */}
       <Box sx={{ mb: 6, textAlign: 'left' }}>
         <Typography
-          variant="h2"
+          variant="h3"
           sx={{
             fontWeight: 800,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
             mb: 2,
-            fontSize: { xs: '2.5rem', md: '3.5rem' },
           }}
         >
           Discover Events
@@ -112,7 +107,7 @@ const EventsPage: FC = () => {
         <Typography
           variant="h6"
           color="text.secondary"
-          sx={{ maxWidth: 'auto', mb: 4 }}
+          sx={{ maxWidth: 'auto', mb: 4, fontWeight: 400 }}
         >
           Explore upcoming events, workshops, and gatherings. Find your next
           opportunity to learn and connect.
