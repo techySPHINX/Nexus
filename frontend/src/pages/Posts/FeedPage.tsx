@@ -11,7 +11,8 @@ import { useNavigate } from 'react-router-dom';
 import { usePosts } from '../../contexts/PostContext';
 import { useProfile } from '../../contexts/ProfileContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Post } from '../../components/Post/Post';
+import { Post as PostCard } from '../../components/Post/Post';
+import type { Post as PostType } from '../../types/post';
 import {
   Box,
   Typography,
@@ -26,15 +27,67 @@ import {
   Container,
   Tabs,
   Tab,
+  Paper,
+  Chip,
+  useMediaQuery,
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import RecentNews from '@/components/News/RecentNews';
 import { getErrorMessage } from '@/utils/errorHandler';
 
 const FEED_FETCH_DEDUP_TTL_MS = 1500;
-const recentFeedFetches = new Map<string, number>();
 const inFlightFeedFetches = new Set<string>();
 const recentProfileRefreshes = new Map<string, number>();
 const inFlightProfileRefreshes = new Set<string>();
+
+type FeedTab = 'all' | 'following' | 'subcommunity' | 'mySubcomm';
+
+type FeedPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
+type FeedTabState = {
+  posts: PostType[];
+  pagination: FeedPagination;
+  initialized: boolean;
+};
+
+const DEFAULT_TAB_PAGINATION: FeedPagination = {
+  page: 1,
+  limit: 10,
+  total: 0,
+  totalPages: 1,
+  hasNext: false,
+  hasPrev: false,
+};
+
+const createInitialTabCache = (): Record<FeedTab, FeedTabState> => ({
+  all: {
+    posts: [],
+    pagination: DEFAULT_TAB_PAGINATION,
+    initialized: false,
+  },
+  following: {
+    posts: [],
+    pagination: DEFAULT_TAB_PAGINATION,
+    initialized: false,
+  },
+  subcommunity: {
+    posts: [],
+    pagination: DEFAULT_TAB_PAGINATION,
+    initialized: false,
+  },
+  mySubcomm: {
+    posts: [],
+    pagination: DEFAULT_TAB_PAGINATION,
+    initialized: false,
+  },
+});
 
 export enum SubCommunityRole {
   OWNER = 'OWNER',
@@ -66,28 +119,123 @@ const CreatePostForm = lazy(() =>
 ) as LazyExoticComponent<ComponentType<CreatePostFormProps>>;
 
 const FeedPage: FC = () => {
-  const {
-    feed,
-    communityFeed,
-    getFeed,
-    getCommunityFeed,
-    pagination,
-    loading,
-    error,
-    clearError,
-  } = usePosts();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { getFeed, getCommunityFeed, loading, error, clearError } = usePosts();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
   const [openForm, setOpenForm] = useState(false);
   const [activeTab, setActiveTab] = useState<
-    'all' | 'following' | 'communities'
+    'all' | 'following' | 'subcommunity' | 'mySubcomm'
   >('all');
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
     'success'
   );
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isTabLoading, setIsTabLoading] = useState(false);
+  const [tabCache, setTabCache] = useState<Record<FeedTab, FeedTabState>>(
+    createInitialTabCache
+  );
   const navigate = useNavigate();
+
+  const getTabA11yProps = (value: FeedTab) => ({
+    id: `feed-tab-${value}`,
+    'aria-controls': `feed-tabpanel-${value}`,
+  });
+
+  const mergeUniquePosts = useCallback(
+    (previous: PostType[], incoming: PostType[]) => {
+      const existingIds = new Set(previous.map((post) => post.id));
+      const uniqueIncoming = incoming.filter(
+        (post) => !existingIds.has(post.id)
+      );
+      return [...previous, ...uniqueIncoming];
+    },
+    []
+  );
+
+  const loadTabPage = useCallback(
+    async (tab: FeedTab, page = 1, append = false, forceRefresh = false) => {
+      const shouldShowInitialLoader =
+        page === 1 && (!tabCache[tab].initialized || forceRefresh);
+
+      if (shouldShowInitialLoader) {
+        setIsTabLoading(true);
+      }
+
+      try {
+        let response:
+          | {
+              posts?: PostType[];
+              pagination?: Partial<FeedPagination>;
+            }
+          | undefined;
+
+        if (tab === 'subcommunity') {
+          response = (await getCommunityFeed(page, 10, 'member')) as
+            | {
+                posts?: PostType[];
+                pagination?: Partial<FeedPagination>;
+              }
+            | undefined;
+        } else if (tab === 'mySubcomm') {
+          response = (await getCommunityFeed(page, 10, 'managed')) as
+            | {
+                posts?: PostType[];
+                pagination?: Partial<FeedPagination>;
+              }
+            | undefined;
+        } else {
+          response = (await getFeed(
+            page,
+            10,
+            tab === 'following' ? 'following' : 'all'
+          )) as
+            | {
+                posts?: PostType[];
+                pagination?: Partial<FeedPagination>;
+              }
+            | undefined;
+        }
+
+        const nextPosts = response?.posts ?? [];
+        const nextPagination: FeedPagination = {
+          ...DEFAULT_TAB_PAGINATION,
+          ...(response?.pagination || {}),
+          page,
+          limit: Number(response?.pagination?.limit || 10),
+          total: Number(response?.pagination?.total || nextPosts.length),
+          totalPages: Number(
+            response?.pagination?.totalPages ||
+              Math.max(1, Math.ceil(nextPosts.length / 10))
+          ),
+          hasNext: Boolean(response?.pagination?.hasNext),
+          hasPrev: page > 1,
+        };
+
+        setTabCache((prev) => ({
+          ...prev,
+          [tab]: {
+            posts:
+              append && prev[tab].initialized
+                ? mergeUniquePosts(prev[tab].posts, nextPosts)
+                : nextPosts,
+            pagination: nextPagination,
+            initialized: true,
+          },
+        }));
+
+        return response;
+      } finally {
+        if (shouldShowInitialLoader) {
+          setIsTabLoading(false);
+        }
+      }
+    },
+    [getCommunityFeed, getFeed, mergeUniquePosts, tabCache]
+  );
 
   const showSnackbar = useCallback(
     (message: string, severity: 'success' | 'error') => {
@@ -101,20 +249,18 @@ const FeedPage: FC = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const key = `${user.id}:${activeTab}`;
-    const lastFetchedAt = recentFeedFetches.get(key) ?? 0;
-    if (Date.now() - lastFetchedAt < FEED_FETCH_DEDUP_TTL_MS) return;
-    if (inFlightFeedFetches.has(key)) return;
+    if (tabCache[activeTab].initialized) {
+      return;
+    }
 
+    const key = `${user.id}:${activeTab}`;
+    if (inFlightFeedFetches.has(key)) return;
     inFlightFeedFetches.add(key);
 
     const loadTabFeed = async () => {
       try {
-        if (activeTab === 'communities') {
-          await getCommunityFeed();
-        } else {
-          await getFeed();
-        }
+        await loadTabPage(activeTab, 1, false, false);
+
         const profileKey = user.id;
         const lastProfileRefreshAt =
           recentProfileRefreshes.get(profileKey) ?? 0;
@@ -131,15 +277,13 @@ const FeedPage: FC = () => {
             inFlightProfileRefreshes.delete(profileKey);
           }
         }
-
-        recentFeedFetches.set(key, Date.now());
       } finally {
         inFlightFeedFetches.delete(key);
       }
     };
 
     void loadTabFeed();
-  }, [activeTab, getFeed, getCommunityFeed, refreshProfile, user?.id]);
+  }, [activeTab, loadTabPage, refreshProfile, tabCache, user?.id]);
 
   useEffect(() => {
     if (error) {
@@ -148,25 +292,25 @@ const FeedPage: FC = () => {
     }
   }, [error, showSnackbar, clearError]);
 
-  const currentFeed = activeTab === 'communities' ? communityFeed : feed;
+  const currentTabState = tabCache[activeTab];
+  const currentFeed = currentTabState.posts;
+  const currentPagination = currentTabState.pagination;
 
-  const handleLoadMore = () => {
-    if (activeTab === 'communities') {
-      getCommunityFeed(pagination.page + 1);
-      return;
+  const handleLoadMore = async () => {
+    const nextPage = Number(currentPagination.page) + 1;
+    setIsLoadingMore(true);
+    try {
+      await loadTabPage(activeTab, nextPage, true, false);
+    } finally {
+      setIsLoadingMore(false);
     }
-    getFeed(pagination.page + 1);
   };
 
   const handleCreatePostSuccess = useCallback(() => {
     setOpenForm(false);
     showSnackbar('Post created successfully and sent for approval!', 'success');
-    if (activeTab === 'communities') {
-      getCommunityFeed(1);
-    } else {
-      getFeed(1);
-    }
-  }, [activeTab, getCommunityFeed, getFeed, showSnackbar]);
+    void loadTabPage(activeTab, 1, false, true);
+  }, [activeTab, loadTabPage, showSnackbar]);
 
   const handleCreatePostError = useCallback(
     (error: unknown) => {
@@ -178,7 +322,7 @@ const FeedPage: FC = () => {
 
   const renderPosts = () => {
     if (!currentFeed || currentFeed.length === 0) {
-      if (activeTab === 'communities') {
+      if (activeTab === 'subcommunity') {
         return (
           <Box sx={{ mt: 2 }}>
             <Typography variant="body1" sx={{ mb: 1 }}>
@@ -192,6 +336,23 @@ const FeedPage: FC = () => {
               Browse communities
             </Button>
           </Box>
+        );
+      }
+
+      if (activeTab === 'mySubcomm') {
+        return (
+          <Typography variant="body1" sx={{ mt: 2 }}>
+            No posts from your moderated or owned subcommunities yet.
+          </Typography>
+        );
+      }
+
+      if (activeTab === 'following') {
+        return (
+          <Typography variant="body1" sx={{ mt: 2 }}>
+            No posts from people you follow yet. Follow more users to
+            personalize this view.
+          </Typography>
         );
       }
 
@@ -210,48 +371,165 @@ const FeedPage: FC = () => {
       }
 
       return (
-        <Post
-          key={post.id}
-          post={post}
-          onClick={() =>
-            navigate(`/posts/${post.id}`, {
-              state: { from: '/feed' },
-            })
-          }
-        />
+        <Box key={post.id} component="li" sx={{ listStyle: 'none' }}>
+          <PostCard
+            post={post}
+            compactMode={isMobile}
+            onClick={() =>
+              navigate(`/posts/${post.id}`, {
+                state: { from: '/feed' },
+              })
+            }
+          />
+        </Box>
       );
     });
   };
 
   return (
     <>
-      <Container maxWidth="lg" sx={{ py: 3 }}>
-        <Grid container spacing={4}>
-          <Grid item xs={12} md={8}>
-            <Box sx={{ maxWidth: '800px', margin: '0 auto', p: 2 }}>
-              <Typography variant="h4" gutterBottom>
-                Your Feed
-              </Typography>
-              <Tabs
-                value={activeTab}
-                onChange={(_, value) => setActiveTab(value)}
-                sx={{ mb: 2 }}
-                variant="scrollable"
-                scrollButtons="auto"
+      <Container
+        maxWidth="lg"
+        sx={{ py: { xs: 0.75, sm: 3 }, px: { xs: 0.5, sm: 2 } }}
+      >
+        <Grid container spacing={{ xs: 0.75, sm: 1.5, md: 4 }}>
+          <Grid item xs={8} sm={8} md={8}>
+            <Box
+              sx={{
+                maxWidth: { xs: '100%', md: '800px' },
+                margin: { xs: 0, md: '0 auto' },
+                p: { xs: 0, sm: 1 },
+                ...(isMobile && {
+                  '& .MuiCardHeader-title': {
+                    fontSize: '0.74rem',
+                    lineHeight: 1.2,
+                  },
+                  '& .MuiCardHeader-subheader': {
+                    fontSize: '0.62rem',
+                    lineHeight: 1.2,
+                  },
+                  '& .MuiCardContent-root .MuiTypography-body2': {
+                    fontSize: '0.66rem',
+                    lineHeight: 1.25,
+                  },
+                  '& .MuiCardContent-root .MuiTypography-h6': {
+                    fontSize: '0.76rem',
+                  },
+                  '& .MuiChip-label': {
+                    fontSize: '0.58rem',
+                  },
+                  '& .MuiButton-root': {
+                    fontSize: '0.64rem',
+                    minHeight: 28,
+                  },
+                }),
+              }}
+            >
+              <Paper
+                variant="outlined"
+                sx={{
+                  p: { xs: 1, sm: 1.5, md: 2.5 },
+                  mb: { xs: 1, sm: 2.5 },
+                  borderRadius: { xs: 1.5, sm: 2.5 },
+                }}
               >
-                <Tab label="All" value="all" />
-                <Tab label="Following" value="following" />
-                <Tab label="My Communities" value="communities" />
-              </Tabs>
-              {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
-                <>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    gap: { xs: 0.75, sm: 1.5 },
+                    mb: { xs: 0.5, sm: 1 },
+                  }}
+                >
+                  <Box>
+                    <Typography
+                      variant={isMobile ? 'subtitle1' : 'h5'}
+                      sx={{
+                        fontWeight: 700,
+                        fontSize: { xs: '0.8rem', sm: '1.2rem' },
+                      }}
+                    >
+                      Feed
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ display: { xs: 'none', sm: 'block' } }}
+                    >
+                      Latest posts from your network and communities
+                    </Typography>
+                  </Box>
+                  {!isMobile && (
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`${currentFeed.length} post${currentFeed.length === 1 ? '' : 's'}`}
+                    />
+                  )}
+                </Box>
+
+                <Tabs
+                  value={activeTab}
+                  onChange={(_, value) => setActiveTab(value)}
+                  aria-label="Feed scope tabs"
+                  selectionFollowsFocus
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  allowScrollButtonsMobile
+                  sx={{
+                    mb:
+                      user?.role === 'ALUM' || user?.role === 'ADMIN' ? 1.5 : 0,
+                    '& .MuiTab-root': {
+                      minHeight: { xs: 30, sm: 44, md: 48 },
+                      px: { xs: 0.35, sm: 1.1, md: 1.5 },
+                      minWidth: { xs: 42, sm: 72 },
+                      fontSize: { xs: '0.61rem', sm: '0.82rem', md: '0.9rem' },
+                      textTransform: 'none',
+                      fontWeight: 600,
+                    },
+                  }}
+                >
+                  <Tab
+                    label={isMobile ? 'All' : 'All'}
+                    value="all"
+                    {...getTabA11yProps('all')}
+                    aria-label="All feed posts"
+                  />
+                  <Tab
+                    label={isMobile ? 'Follow' : 'Followed'}
+                    value="following"
+                    {...getTabA11yProps('following')}
+                    aria-label="Posts from followed users"
+                  />
+                  <Tab
+                    label={isMobile ? 'Sub' : 'Subcommunity'}
+                    value="subcommunity"
+                    {...getTabA11yProps('subcommunity')}
+                    aria-label="Posts from joined subcommunities"
+                  />
+                  <Tab
+                    label={isMobile ? 'My' : 'MySubcomm'}
+                    value="mySubcomm"
+                    {...getTabA11yProps('mySubcomm')}
+                    aria-label="Posts from managed subcommunities"
+                  />
+                </Tabs>
+
+                {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
                   <Button
                     variant="contained"
                     onClick={() => setOpenForm(true)}
-                    sx={{ mb: 2 }}
+                    fullWidth={isMobile}
+                    size={isMobile ? 'small' : 'medium'}
                   >
                     Create Post
                   </Button>
+                )}
+              </Paper>
+              {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
+                <>
                   <Dialog
                     open={openForm}
                     onClose={() => setOpenForm(false)}
@@ -276,35 +554,78 @@ const FeedPage: FC = () => {
                 </>
               )}
 
-              {loading && pagination.page === 1 ? (
+              {isTabLoading && currentFeed.length === 0 ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
                   <CircularProgress />
                 </Box>
               ) : (
-                <>
-                  {renderPosts()}
+                <Box
+                  id={`feed-tabpanel-${activeTab}`}
+                  role="tabpanel"
+                  aria-labelledby={`feed-tab-${activeTab}`}
+                  component="section"
+                >
+                  <Box
+                    component="ul"
+                    sx={{
+                      p: 0,
+                      m: 0,
+                      ...(isMobile && {
+                        '& > li .MuiCard-root': {
+                          mb: 1,
+                          borderRadius: 1.5,
+                        },
+                        '& > li .MuiCardHeader-root': {
+                          px: 1,
+                          py: 0.5,
+                        },
+                        '& > li .MuiCardContent-root': {
+                          px: 1,
+                          py: 0.75,
+                        },
+                        '& > li .MuiCardActions-root': {
+                          px: 0.5,
+                          py: 0.25,
+                        },
+                      }),
+                    }}
+                  >
+                    {renderPosts()}
+                  </Box>
 
-                  {pagination.hasNext && (
+                  {currentPagination.hasNext && (
                     <Box
                       sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}
                     >
                       <Button
                         variant="outlined"
                         onClick={handleLoadMore}
-                        disabled={loading}
+                        disabled={isLoadingMore || loading}
+                        fullWidth={isMobile}
+                        size={isMobile ? 'small' : 'medium'}
                       >
-                        {loading ? <CircularProgress size={24} /> : 'Load More'}
+                        {isLoadingMore ? (
+                          <CircularProgress size={24} />
+                        ) : (
+                          'Load More'
+                        )}
                       </Button>
                     </Box>
                   )}
-                </>
+                </Box>
               )}
             </Box>
           </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Box sx={{ position: 'sticky', top: { xs: 16, md: 96 } }}>
-              <RecentNews />
+          <Grid item xs={4} sm={4} md={4}>
+            <Box
+              sx={{
+                position: 'sticky',
+                alignSelf: 'flex-start',
+                top: { xs: 8, sm: 33 },
+              }}
+            >
+              <RecentNews compact={isMobile} />
             </Box>
           </Grid>
         </Grid>

@@ -260,8 +260,9 @@ const SubCommunityFeedPage: FC = () => {
   }, [subCommunityError, feedError, showSnackbar, clearError]);
 
   const handleLoadMore = () => {
+    const nextPage = Number(pagination.page) + 1;
     if (id && pagination.hasNext) {
-      getSubCommunityFeed(id, pagination.page + 1);
+      getSubCommunityFeed(id, nextPage);
     }
   };
 
@@ -418,7 +419,7 @@ const SubCommunityFeedPage: FC = () => {
 
   const renderPosts = () => {
     // Show skeleton loading UI for first page (tailwind/emerald style)
-    if (feedLoading && pagination.page === 1) {
+    if (feedLoading && Number(pagination.page) === 1) {
       return (
         <Box
           sx={{

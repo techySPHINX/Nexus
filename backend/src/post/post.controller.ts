@@ -85,8 +85,11 @@ export class PostController {
     @Query('limit') limit?: number,
     @GetCurrentUser('userId') userId?: string,
   ) {
-    const pageNum = page ?? 1;
-    const limitNum = limit ?? 10;
+    const parsedPage = Number(page);
+    const parsedLimit = Number(limit);
+    const pageNum = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limitNum =
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
     return this.postService.getRecentPosts(userId, pageNum, limitNum);
   }
 
@@ -105,10 +108,21 @@ export class PostController {
     @GetCurrentUser('userId') userId: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('scope') scope?: 'all' | 'following',
   ) {
-    const pageNum = page ?? 1;
-    const limitNum = limit ?? 10;
-    return this.postService.getFeed(userId, pageNum, limitNum);
+    const parsedPage = Number(page);
+    const parsedLimit = Number(limit);
+    const pageNum = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limitNum =
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
+    const normalizedScope = scope === 'following' ? 'following' : 'all';
+    return this.postService.getFeed(
+      userId,
+      pageNum,
+      limitNum,
+      undefined,
+      normalizedScope,
+    );
   }
 
   @Get('subcommunity/:subCommunityId/feed')
@@ -125,8 +139,11 @@ export class PostController {
     @Query('page') page?: number,
     @Query('limit') limit?: number,
   ) {
-    const pageNum = page ?? 1;
-    const limitNum = limit ?? 10;
+    const parsedPage = Number(page);
+    const parsedLimit = Number(limit);
+    const pageNum = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limitNum =
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
     return this.postService.getSubCommunityFeed(
       subCommunityId,
       userId,
@@ -142,10 +159,21 @@ export class PostController {
     @GetCurrentUser('userId') userId: string,
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('scope') scope?: 'all' | 'member' | 'managed',
   ) {
-    const pageNum = page ?? 1;
-    const limitNum = limit ?? 10;
-    return this.postService.getMyCommunitiesFeed(userId, pageNum, limitNum);
+    const parsedPage = Number(page);
+    const parsedLimit = Number(limit);
+    const pageNum = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+    const limitNum =
+      Number.isFinite(parsedLimit) && parsedLimit > 0 ? parsedLimit : 10;
+    const normalizedScope =
+      scope === 'member' || scope === 'managed' ? scope : 'all';
+    return this.postService.getMyCommunitiesFeed(
+      userId,
+      pageNum,
+      limitNum,
+      normalizedScope,
+    );
   }
 
   /**

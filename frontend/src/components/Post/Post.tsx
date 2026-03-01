@@ -55,6 +55,7 @@ interface PostProps {
   onApprove?: () => void;
   onReject?: () => void;
   onClick?: () => void;
+  compactMode?: boolean;
 }
 
 export const Post: FC<PostProps> = ({
@@ -66,6 +67,7 @@ export const Post: FC<PostProps> = ({
   onApprove,
   onReject,
   onClick,
+  compactMode = false,
 }) => {
   const { user, token } = useAuth();
   const { showNotification } = useNotification();
@@ -278,11 +280,19 @@ export const Post: FC<PostProps> = ({
     }
   };
 
+  const handleContentKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleContentClick();
+    }
+  };
+
   const isAuthor = user?.id === post.author.id;
   const isAdmin = user?.role === 'ADMIN';
+  const isCompactCard = compactMode && !isPostPage;
   const postContentClass = isDark
-    ? 'text-neutral-300 text-sm mb-2 leading-relaxed'
-    : 'text-gray-700 text-sm mb-2 leading-relaxed';
+    ? `text-neutral-300 ${isCompactCard ? 'text-[0.68rem]' : 'text-sm'} mb-2 leading-relaxed`
+    : `text-gray-700 ${isCompactCard ? 'text-[0.68rem]' : 'text-sm'} mb-2 leading-relaxed`;
 
   if (!post) {
     return (
@@ -293,8 +303,14 @@ export const Post: FC<PostProps> = ({
   }
 
   return (
-    <Card sx={{ mb: 3 }}>
+    <Card sx={{ mb: isCompactCard ? 1 : 3 }}>
       <CardHeader
+        sx={{
+          px: isCompactCard ? 1 : 2,
+          py: isCompactCard ? 0.5 : 1,
+          '& .MuiCardHeader-content': { minWidth: 0 },
+          '& .MuiCardHeader-action': { m: 0 },
+        }}
         avatar={
           <Link
             to={`/profile/${post.author.id}`}
@@ -303,7 +319,13 @@ export const Post: FC<PostProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Avatar
                 src={post.author.profile?.avatarUrl}
-                sx={{ bgcolor: 'primary.light', cursor: 'pointer' }}
+                sx={{
+                  bgcolor: 'primary.light',
+                  cursor: 'pointer',
+                  width: isCompactCard ? 28 : 40,
+                  height: isCompactCard ? 28 : 40,
+                  fontSize: isCompactCard ? '0.72rem' : '1rem',
+                }}
               >
                 {post.author.name?.charAt(0) || 'N'}
               </Avatar>
@@ -329,7 +351,12 @@ export const Post: FC<PostProps> = ({
           showActions &&
           (isAuthor || isAdmin) && (
             <>
-              <IconButton onClick={handleMenuOpen}>
+              <IconButton
+                onClick={handleMenuOpen}
+                aria-label="Open post actions"
+                size={isCompactCard ? 'small' : 'medium'}
+                sx={{ minWidth: isCompactCard ? 30 : 44, minHeight: isCompactCard ? 30 : 44 }}
+              >
                 <MoreVert />
               </IconButton>
               <Menu
@@ -381,18 +408,33 @@ export const Post: FC<PostProps> = ({
             }
             linkToProfile={window.location.pathname === `/posts/${post.id}`}
             variant="h6"
-            fontSize="1.35rem"
+            fontSize={isCompactCard ? '0.86rem' : '1.35rem'}
           />
         }
         subheader={
-          <>
+          <Box
+            component="span"
+            sx={{
+              display: 'inline-block',
+              fontSize: isCompactCard ? '0.62rem' : undefined,
+              lineHeight: 1.2,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              maxWidth: '100%',
+            }}
+          >
             {post.type && (
               <>
                 {' '}
                 <Typography
                   variant="body2"
                   color="primary"
-                  sx={{ display: 'inline', mr: 1 }}
+                  sx={{
+                    display: 'inline',
+                    mr: 1,
+                    fontSize: isCompactCard ? '0.6rem' : undefined,
+                  }}
                 >
                   #{post.type}
                 </Typography>
@@ -400,7 +442,7 @@ export const Post: FC<PostProps> = ({
             )}
             Posted{' '}
             {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-            {post.updatedAt !== post.createdAt && (
+            {!isCompactCard && post.updatedAt !== post.createdAt && (
               <>
                 {' '}
                 • Updated{' '}
@@ -409,17 +451,17 @@ export const Post: FC<PostProps> = ({
                 })}
               </>
             )}
-          </>
+          </Box>
         }
       />
 
       {post.subCommunity && (
-        <Box sx={{ px: 2 }}>
+        <Box sx={{ px: isCompactCard ? 1 : 2 }}>
           <SubCommunityBadge subCommunity={post.subCommunity} />
         </Box>
       )}
 
-      <CardContent>
+      <CardContent sx={{ px: isCompactCard ? 1 : 2, py: isCompactCard ? 0.75 : 2 }}>
         {isEditing ? (
           <>
             {/* Show preview above inputs when editing on the post page */}
@@ -480,6 +522,24 @@ export const Post: FC<PostProps> = ({
                   ? handleContentClick
                   : undefined
               }
+              onKeyDown={
+                window.location.pathname !== `/posts/${post.id}`
+                  ? handleContentKeyDown
+                  : undefined
+              }
+              role={
+                window.location.pathname !== `/posts/${post.id}`
+                  ? 'button'
+                  : undefined
+              }
+              tabIndex={
+                window.location.pathname !== `/posts/${post.id}` ? 0 : undefined
+              }
+              aria-label={
+                window.location.pathname !== `/posts/${post.id}`
+                  ? `Open post: ${post.subject || 'Post details'}`
+                  : undefined
+              }
               sx={{
                 ...(window.location.pathname !== `/posts/${post.id}`
                   ? { cursor: 'pointer' }
@@ -495,8 +555,9 @@ export const Post: FC<PostProps> = ({
                       : 'h6'
                   }
                   sx={{
-                    mb: 1,
+                    mb: isCompactCard ? 0.5 : 1,
                     fontWeight: 600,
+                    fontSize: isCompactCard ? '0.78rem' : undefined,
                     ...(window.location.pathname !== `/posts/${post.id}` && {
                       '&:hover': {
                         color: 'primary.main',
@@ -536,7 +597,11 @@ export const Post: FC<PostProps> = ({
                         style={
                           {
                             display: expandedContent ? 'block' : '-webkit-box',
-                            WebkitLineClamp: expandedContent ? 'unset' : 3,
+                            WebkitLineClamp: expandedContent
+                              ? 'unset'
+                              : isCompactCard
+                                ? 2
+                                : 3,
                             WebkitBoxOrient: 'vertical',
                             overflow: expandedContent ? 'visible' : 'hidden',
                             textOverflow: 'ellipsis',
@@ -555,7 +620,13 @@ export const Post: FC<PostProps> = ({
                             e.stopPropagation();
                             setExpandedContent((s) => !s);
                           }}
-                          sx={{ textTransform: 'none', mt: 0.5 }}
+                          sx={{
+                            textTransform: 'none',
+                            mt: 0.5,
+                            minWidth: 0,
+                            px: 0.5,
+                            fontSize: isCompactCard ? '0.62rem' : undefined,
+                          }}
                         >
                           {expandedContent ? 'Show less' : 'Show more'}
                         </Button>
@@ -589,19 +660,29 @@ export const Post: FC<PostProps> = ({
 
       {showActions && !isEditing && (
         <div className="flex justify-between">
-          <CardActions>
+          <CardActions sx={{ px: isCompactCard ? 0.5 : 1, py: isCompactCard ? 0.25 : 1, gap: isCompactCard ? 0.25 : 0.5 }}>
             <IconButton
               onClick={handleLike}
               disabled={engagementLoading || !token}
+              aria-label={isLiked ? 'Unlike post' : 'Like post'}
+              size={isCompactCard ? 'small' : 'medium'}
+              sx={{ minWidth: isCompactCard ? 28 : 44, minHeight: isCompactCard ? 28 : 44 }}
             >
               {isLiked ? <Favorite color="error" /> : <FavoriteBorder />}
             </IconButton>
-            <Typography variant="body2">{likeCount}</Typography>
+            <Typography variant="body2" sx={{ fontSize: isCompactCard ? '0.62rem' : undefined }}>
+              {likeCount}
+            </Typography>
 
-            <IconButton onClick={handleContentClick}>
+            <IconButton
+              onClick={handleContentClick}
+              aria-label="Open comments"
+              size={isCompactCard ? 'small' : 'medium'}
+              sx={{ minWidth: isCompactCard ? 28 : 44, minHeight: isCompactCard ? 28 : 44 }}
+            >
               <CommentIcon />
             </IconButton>
-            <Typography variant="body2">
+            <Typography variant="body2" sx={{ fontSize: isCompactCard ? '0.62rem' : undefined }}>
               {post?._count?.Comment || 0}
             </Typography>
 
@@ -619,6 +700,9 @@ export const Post: FC<PostProps> = ({
                     showNotification?.('Failed to copy post URL', 'error')
                   );
               }}
+              aria-label="Copy post link"
+              size={isCompactCard ? 'small' : 'medium'}
+              sx={{ minWidth: isCompactCard ? 28 : 44, minHeight: isCompactCard ? 28 : 44 }}
             >
               <Tooltip title="Share Post">
                 <Share />
@@ -635,7 +719,13 @@ export const Post: FC<PostProps> = ({
                   }
                   color="primary"
                   size="small"
-                  sx={{ fontWeight: 600 }}
+                  sx={{
+                    fontWeight: 600,
+                    height: isCompactCard ? 20 : undefined,
+                    '& .MuiChip-label': {
+                      fontSize: isCompactCard ? '0.58rem' : undefined,
+                    },
+                  }}
                 />
               </Tooltip>
             </Box>
