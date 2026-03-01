@@ -1,0 +1,78 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Prometheus Alerting Rules — Nexus Platform
+#
+# Referenced from prometheus.yml rule_files section.
+# Mounted alongside prometheus.yml into the Prometheus container.
+# ─────────────────────────────────────────────────────────────────────────────
+groups:
+  - name: nexus_backend_alerts
+    interval: 15s
+    rules:
+      # ── Service availability ────────────────────────────────────────────────
+
+      - alert: BackendServiceDown
+        expr: up{job="nexus_backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nexus backend is down"
+          description: >
+            The Prometheus scrape target for the Nexus backend ({{ $labels.instance }})
+            has been unreachable for more than 1 minute.
+
+      # ── Error rate ──────────────────────────────────────────────────────────
+      # Fires when more than 5% of HTTP responses in the last 5 minutes are 5xx.
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{status_code=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total[5m]))
+          ) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP 5xx error rate"
+          description: >
+            More than 5% of HTTP responses are server errors (current rate:
+            {{ $value | humanizePercentage }}).
+
+      # ── Latency ─────────────────────────────────────────────────────────────
+      # Fires when the 95th-percentile response time exceeds 2 seconds.
+
+      - alert: HighP95Latency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 request latency"
+          description: >
+            The 95th-percentile response time for route {{ $labels.route }} has
+            exceeded 2 seconds for more than 5 minutes
+            (current p95: {{ $value | humanizeDuration }}).
+
+      # ── Memory ──────────────────────────────────────────────────────────────
+      # Fires when Node.js heap usage exceeds 80% of the container limit.
+
+      - alert: HighHeapUsage
+        expr: |
+          nexus_nodejs_heap_used_bytes
+          /
+          nexus_nodejs_heap_size_total_bytes
+          > 0.80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High Node.js heap usage"
+          description: >
+            Node.js heap usage has exceeded 80% for more than 5 minutes
+            (current: {{ $value | humanizePercentage }}).
