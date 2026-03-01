@@ -20,7 +20,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { Request } from 'express';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags } from '@nestjs/swagger';
 
 /**
  * Enhanced authentication controller with document verification
