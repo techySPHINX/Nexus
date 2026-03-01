@@ -22,7 +22,10 @@ import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { CreateStartupDto } from './dto/create-startup.dto';
 import { UpdateStartupDto } from './dto/update-startup.dto';
 import { CreateProjectUpdateDto } from './dto/create-project-update.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('showcase')
+@ApiBearerAuth('JWT')
 @Controller('showcase')
 @UseGuards(JwtAuthGuard)
 export class ShowcaseController {

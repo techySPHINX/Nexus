@@ -15,7 +15,10 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('sub-community')
+@ApiBearerAuth('JWT')
 @Controller('sub-community-types')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SubCommunityTypeController {

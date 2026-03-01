@@ -28,7 +28,10 @@ import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { UpdateMeetingDto } from './dto/update-meeting.dto';
 import { CreateAgreementDto } from './dto/create-agreement.dto';
 import { UpdateAgreementDto } from './dto/update-agreement.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('mentorship')
+@ApiBearerAuth('JWT')
 @Controller('mentorship')
 @UseGuards(JwtAuthGuard)
 export class MentorshipController {

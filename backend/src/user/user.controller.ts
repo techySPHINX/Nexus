@@ -16,12 +16,15 @@ import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Controller for handling user-related requests.
  * Protected by JWT authentication and role-based access control.
  */
 @UseGuards(JwtAuthGuard, RolesGuard)
+@ApiTags('users')
+@ApiBearerAuth('JWT')
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}

@@ -28,7 +28,10 @@ import {
   BatchDismissReportsDto,
 } from './dto/batch-operations.dto';
 import { RevokeUserActionDto } from './dto/revoke-user-action.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('report')
+@ApiBearerAuth('JWT')
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportController {

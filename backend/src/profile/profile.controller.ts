@@ -20,11 +20,14 @@ import { Role } from '@prisma/client';
 import { EndorseSkillDto } from './dto/endorse-skill.dto';
 import { AwardBadgeDto } from './dto/award-badge.dto';
 import { RemoveEndorsementDto } from './dto/remove-endorsement.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Controller for handling profile-related requests.
  * Protected by JWT authentication and role-based access control.
  */
+@ApiTags('profile')
+@ApiBearerAuth('JWT')
 @Controller('profile')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProfileController {
@@ -64,10 +67,12 @@ export class ProfileController {
   async getPreview(
     @Param('userId') userId: string,
     @Query('avatarUrl') avatarUrl?: string,
-) {
+  ) {
     const includeAvatar = avatarUrl === 'true';
-    console.log(`Received request for profile preview of userId: ${userId} with avatarUrl: ${avatarUrl}`);
-    return this.profileService.getProfilePreview(userId , includeAvatar);
+    console.log(
+      `Received request for profile preview of userId: ${userId} with avatarUrl: ${avatarUrl}`,
+    );
+    return this.profileService.getProfilePreview(userId, includeAvatar);
   }
 
   /**

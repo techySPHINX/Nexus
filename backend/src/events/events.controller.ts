@@ -17,7 +17,10 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { EventCategory, EventStatus } from '@prisma/client';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('events')
+@ApiBearerAuth('JWT')
 @Controller('events')
 export class EventsController {
   constructor(private readonly eventsService: EventsService) {}

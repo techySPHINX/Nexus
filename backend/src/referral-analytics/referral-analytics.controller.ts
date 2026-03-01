@@ -7,12 +7,15 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { Role } from '@prisma/client';
 import { SkipThrottle } from '@nestjs/throttler';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Controller for referral analytics endpoints.
  * Provides role-based analytics views for alumni, students, and admins.
  * All endpoints are protected by JWT authentication and role-based guards.
  */
+@ApiTags('referrals')
+@ApiBearerAuth('JWT')
 @Controller('referral-analytics')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @SkipThrottle()

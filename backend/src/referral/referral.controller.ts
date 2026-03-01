@@ -23,11 +23,14 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { Role, ReferralStatus } from '@prisma/client';
 import { SkipThrottle } from '@nestjs/throttler';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Controller for managing job referrals and referral applications.
  * All endpoints are protected by JWT authentication and role-based access control.
  */
+@ApiTags('referrals')
+@ApiBearerAuth('JWT')
 @Controller('referral')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ReferralController {
