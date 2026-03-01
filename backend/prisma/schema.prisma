@@ -88,6 +88,9 @@ model User {
   Vote                                  Vote[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
 
+  @@index([role])
+  @@index([accountStatus])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -444,6 +447,9 @@ model Post {
   Vote           Vote[]
 
   @@index([isDeleted])
+  @@index([authorId, createdAt])
+  @@index([subCommunityId, status])
+  @@index([status, createdAt])
   @@map("post")
 }
 
@@ -459,6 +465,8 @@ model Vote {
   user       User           @relation(fields: [userId], references: [id])
 
   @@unique([userId, postId, commentId])
+  @@index([postId])
+  @@index([commentId])
   @@map("votes")
 }
 
@@ -484,6 +492,9 @@ model Comment {
   mentionedUsers User[]          @relation("mentionedUsers")
 
   @@index([isDeleted])
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+  @@index([parentId])
   @@map("comment")
 }
 
@@ -545,6 +556,8 @@ model File {
   updatedAt    DateTime @updatedAt
   user         User     @relation("UserFiles", fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([uploadedBy])
   @@map("files")
 }
 
@@ -604,6 +617,8 @@ model MentorshipRequest {
   mentor    User                    @relation("MentorshipRequestMentor", fields: [mentorId], references: [id])
 
   @@unique([mentorId, menteeId])
+  @@index([mentorId, status])
+  @@index([menteeId, status])
   @@map("mentorship_request")
 }
 
