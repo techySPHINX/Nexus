@@ -1,10 +1,11 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as path from 'path';
 import * as fs from 'fs';
 
 @Injectable()
 export class LegacyFilesService {
+  private readonly logger = new Logger(LegacyFilesService.name);
   private readonly uploadPath = path.join(__dirname, '..', '..', 'uploads');
 
   constructor(private readonly prisma: PrismaService) {
@@ -54,7 +55,10 @@ export class LegacyFilesService {
         await fs.promises.unlink(fullPath);
       }
     } catch (error) {
-      console.error('Error deleting file:', error);
+      this.logger.error(
+        `Error deleting file at path '${filePath}': ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
   }
 }

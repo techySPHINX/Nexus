@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import * as sendgrid from '@sendgrid/mail';
 import { SendOtpDto } from './dto/send-otp.dto';
 
@@ -8,6 +8,7 @@ import { SendOtpDto } from './dto/send-otp.dto';
  */
 @Injectable()
 export class EmailService {
+  private readonly logger = new Logger(EmailService.name);
   constructor() {
     sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
   }
@@ -274,7 +275,10 @@ export class EmailService {
     try {
       await sendgrid.send(msg);
     } catch (error) {
-      console.error('Error sending OTP email:', error);
+      this.logger.error(
+        `Error sending OTP email: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new Error('Failed to send OTP email');
     }
   }
@@ -319,7 +323,10 @@ export class EmailService {
     try {
       await sendgrid.send(msg);
     } catch (error) {
-      console.error('Error sending verification email:', error);
+      this.logger.error(
+        `Error sending verification email: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new Error('Failed to send verification email');
     }
   }
@@ -381,7 +388,10 @@ export class EmailService {
     try {
       await sendgrid.send(msg);
     } catch (error) {
-      console.error('Error sending approval email:', error);
+      this.logger.error(
+        `Error sending approval email: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new Error('Failed to send approval email');
     }
   }
@@ -431,7 +441,10 @@ export class EmailService {
     try {
       await sendgrid.send(msg);
     } catch (error) {
-      console.error('Error sending rejection email:', error);
+      this.logger.error(
+        `Error sending rejection email: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new Error('Failed to send rejection email');
     }
   }
@@ -487,7 +500,10 @@ export class EmailService {
     try {
       await sendgrid.send(msg);
     } catch (error) {
-      console.error('Error sending password reset email:', error);
+      this.logger.error(
+        `Error sending password reset email: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       throw new Error('Failed to send password reset email');
     }
   }

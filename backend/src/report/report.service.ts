@@ -4,6 +4,7 @@ import {
   NotFoundException,
   ForbiddenException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
@@ -26,6 +27,7 @@ import { RevokeUserActionDto } from './dto/revoke-user-action.dto';
 
 @Injectable()
 export class ReportService {
+  private readonly logger = new Logger(ReportService.name);
   constructor(private prisma: PrismaService) {}
 
   /**
@@ -850,8 +852,11 @@ export class ReportService {
     try {
       await this.prisma.moderationLog.create({ data });
     } catch (error) {
-      // Log to console but don't fail the operation
-      console.error('Failed to create moderation log:', error);
+      // Log but don't fail the operation
+      this.logger.error(
+        `Failed to create moderation log: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
   }
 

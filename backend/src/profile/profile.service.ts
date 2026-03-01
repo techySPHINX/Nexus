@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -12,6 +13,7 @@ import { FilterProfilesDto } from './dto/filter-profiles.dto';
  */
 @Injectable()
 export class ProfileService {
+  private readonly logger = new Logger(ProfileService.name);
   constructor(private prisma: PrismaService) {}
 
   async getProfileCompletionStats(userId: string) {
@@ -103,7 +105,9 @@ export class ProfileService {
   }
 
   async getProfilePreview(userId: string, avatarUrl: boolean) {
-    console.log(`Fetching profile preview for userId: ${userId} with avatarUrl: ${avatarUrl}`);
+    this.logger.log(
+      `Fetching profile preview for userId: ${userId} with avatarUrl: ${avatarUrl}`,
+    );
     const profile = await this.prisma.profile.findUnique({
       where: { userId },
       select: {
@@ -131,7 +135,7 @@ export class ProfileService {
     if (!profile) throw new NotFoundException('Profile not found');
     return profile;
   }
-  
+
   /**
    * Retrieves a user's profile by their user ID.
    * Includes associated skills, user details, and endorsements.

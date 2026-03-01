@@ -23,7 +23,10 @@ import { Role } from '@prisma/client';
 import { CreateSubCommunityDto } from './dto/create-sub-community.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import { UpdateReportDto } from '../report/dto/update-report.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('sub-community')
+@ApiBearerAuth('JWT')
 @Controller('sub-community')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SubCommunityController {

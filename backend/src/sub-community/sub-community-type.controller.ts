@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { SubCommunityTypeService } from './sub-community-type.service';
 import { CreateSubCommunityTypeDto } from './dto/create-sub-community-type.dto';
@@ -15,15 +16,19 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('sub-community')
+@ApiBearerAuth('JWT')
 @Controller('sub-community-types')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SubCommunityTypeController {
+  private readonly logger = new Logger(SubCommunityTypeController.name);
   constructor(private readonly svc: SubCommunityTypeService) {}
 
   @Get()
   async list() {
-    console.log('getting subcommunity types');
+    this.logger.log('getting subcommunity types');
     return this.svc.listTypes();
   }
 

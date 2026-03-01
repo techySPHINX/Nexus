@@ -31,7 +31,8 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-# Create non-root user
+# Install curl for the HEALTHCHECK and create non-root user
+RUN apk add --no-cache curl
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nestjs
 
@@ -51,8 +52,9 @@ EXPOSE 3000
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node dist/health-check.js || exit 1
+# Health check — liveness probe via /health endpoint (Issue #167).
+# start-period gives the app + DB migrations time to finish before checks begin.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:${PORT}/health || exit 1
 
 CMD ["node", "dist/main.js"]

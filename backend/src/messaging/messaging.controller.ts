@@ -12,12 +12,15 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { FilterMessagesDto } from './dto/filter-messages.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Controller for handling messaging-related HTTP requests.
  * All endpoints are protected by JWT authentication.
  */
 @UseGuards(JwtAuthGuard)
+@ApiTags('messaging')
+@ApiBearerAuth('JWT')
 @Controller('messages')
 export class MessagingController {
   constructor(private readonly messagingService: MessagingService) {}

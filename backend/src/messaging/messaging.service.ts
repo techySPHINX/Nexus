@@ -4,6 +4,7 @@ import {
   NotFoundException,
   Inject,
   forwardRef,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -17,6 +18,7 @@ import { PushNotificationService } from '../common/services/push-notification.se
  */
 @Injectable()
 export class MessagingService {
+  private readonly logger = new Logger(MessagingService.name);
   constructor(
     private prisma: PrismaService,
     @Inject(forwardRef(() => ImprovedMessagingGateway))
@@ -113,7 +115,10 @@ export class MessagingService {
       );
     } catch (error) {
       // Log error but don't fail the message sending
-      console.error('Failed to send message push notification:', error);
+      this.logger.error(
+        `Failed to send message push notification (senderId=${message.senderId}, receiverId=${message.receiverId}): ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
 
     return message;

@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -17,9 +18,13 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { EventCategory, EventStatus } from '@prisma/client';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('events')
+@ApiBearerAuth('JWT')
 @Controller('events')
 export class EventsController {
+  private readonly logger = new Logger(EventsController.name);
   constructor(private readonly eventsService: EventsService) {}
 
   @Post()
@@ -29,7 +34,9 @@ export class EventsController {
     @Body() createEventDto: CreateEventDto,
     @GetCurrentUser('userId') userId: string,
   ) {
-    console.log('Received create event request:', createEventDto);
+    this.logger.log(
+      `Received create event request: ${JSON.stringify({ userId, createEventDto })}`,
+    );
     return this.eventsService.create(createEventDto, userId);
   }
 

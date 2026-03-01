@@ -3,15 +3,18 @@
  */
 export const securityConfig = {
   /**
-   * CORS configuration
+   * CORS configuration.
+   * Development default uses http (not https) for local setups.
+   * Production reads FRONTEND_URL from environment.
    */
   cors: {
     development: {
-      origin: process.env.ALLOWED_ORIGIN || 'https://localhost:3001',
+      // http:// — standard for local development; no TLS cert needed
+      origin: process.env.FRONTEND_URL || 'http://localhost:3001',
       credentials: true,
     },
     production: {
-      origin: process.env.ALLOWED_ORIGIN || 'https://localhost:3001',
+      origin: process.env.FRONTEND_URL || 'http://localhost:3001',
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],

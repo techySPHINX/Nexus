@@ -18,11 +18,14 @@ import {
   ConnectionQueryDto,
 } from './dto/connection.dto';
 import { ImprovedMessagingGateway } from '../messaging/messaging.gateway.improved';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Controller for managing user connections (friend requests, accepted connections).
  * All endpoints are protected by JWT authentication.
  */
+@ApiTags('connections')
+@ApiBearerAuth('JWT')
 @Controller('connection')
 @UseGuards(JwtAuthGuard)
 export class ConnectionController {

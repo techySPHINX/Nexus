@@ -27,18 +27,31 @@ import { ShowcaseModule } from './showcase/showcase.module';
 import { NewsModule } from './news/news.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReferralAnalyticsModule } from './referral-analytics/referral-analytics.module';
+import { HealthModule } from './health/health.module';
 import { securityConfig } from './common/config/security.config';
+import { envValidationSchema } from './common/config/env.validation';
 import { WinstonLoggerService } from './common/logger/winston-logger.service';
 import { AuditLogService } from './common/services/audit-log.service';
 import { GdprService } from './common/services/gdpr.service';
 import { RedisService } from './common/services/redis.service';
-import { CachingService } from './common/services/caching.service';
 import { RateLimitService } from './common/guards/enhanced-rate-limit.guard';
 import { FileSecurityService } from './common/services/file-security.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    /**
+     * ConfigModule with Joi validation (Issue #165).
+     * The app will refuse to start — with a clear error — if any required
+     * environment variable (DATABASE_URL, JWT_SECRET, etc.) is missing.
+     */
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
+    }),
     ThrottlerModule.forRoot([
       {
         ttl: securityConfig.rateLimit.ttl, // seconds as configured in security.config
@@ -68,6 +81,7 @@ import { FileSecurityService } from './common/services/file-security.service';
     NewsModule,
     DashboardModule,
     ReferralAnalyticsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
@@ -78,8 +92,10 @@ import { FileSecurityService } from './common/services/file-security.service';
     // Global Services - Data & Privacy
     GdprService,
     // Global Services - Caching & Performance
+    // NOTE: CacheService is the canonical cache service, provided by CommonModule
+    // (which is @Global). CachingService and CacheEnhancedService are legacy;
+    // do not register them here to avoid duplicate instances (Issue #170).
     RedisService,
-    CachingService,
     // Global Services - Security
     RateLimitService,
     FileSecurityService,
@@ -94,7 +110,6 @@ import { FileSecurityService } from './common/services/file-security.service';
     AuditLogService,
     GdprService,
     RedisService,
-    CachingService,
     RateLimitService,
     FileSecurityService,
   ],

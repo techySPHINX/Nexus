@@ -11,7 +11,10 @@ import {
 import { NewsService } from './news.service';
 import { CreateNewsDto } from './dto/create-news.dto';
 import { UpdateNewsDto } from './dto/update-news.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('news')
+@ApiBearerAuth('JWT')
 @Controller('news')
 export class NewsController {
   constructor(private readonly newsService: NewsService) {}

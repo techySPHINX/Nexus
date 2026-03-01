@@ -1,3 +1,4 @@
+import { Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -41,6 +42,7 @@ interface AuthenticatedSocket extends Socket {
 export class ImprovedMessagingGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private readonly logger = new Logger(ImprovedMessagingGateway.name);
   @WebSocketServer()
   server: Server;
 
@@ -60,7 +62,7 @@ export class ImprovedMessagingGateway
    * Logs a message indicating the gateway is ready.
    */
   afterInit(server: Server) {
-    console.log('🚀 Improved Messaging Gateway initialized');
+    this.logger.log('🚀 Improved Messaging Gateway initialized');
     this.server = server;
   }
 
@@ -73,13 +75,15 @@ export class ImprovedMessagingGateway
    */
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      console.log('🔌 New WebSocket connection attempt:', client.id);
+      this.logger.log(
+        `🔌 New WebSocket connection attempt: socketId=${client.id}`,
+      );
 
       // Extract user info from query parameters
       const { userId, token } = client.handshake.query;
 
       if (!userId || !token) {
-        console.log('❌ Missing userId or token in connection query');
+        this.logger.log('❌ Missing userId or token in connection query');
         client.emit('CONNECTION_ERROR', {
           error: 'Missing authentication credentials',
           timestamp: new Date().toISOString(),
@@ -94,7 +98,7 @@ export class ImprovedMessagingGateway
         client.userId = payload.userId || userId;
         client.userEmail = payload.email;
       } catch (jwtError) {
-        console.log('❌ Invalid JWT token:', jwtError.message);
+        this.logger.log(`❌ Invalid JWT token: ${jwtError.message}`);
         client.emit('CONNECTION_ERROR', {
           error: 'Invalid authentication token',
           timestamp: new Date().toISOString(),
@@ -106,7 +110,7 @@ export class ImprovedMessagingGateway
       // Check if user is already connected and disconnect old connection
       const existingConnection = this.connectedUsers.get(client.userId);
       if (existingConnection && existingConnection.id !== client.id) {
-        console.log(
+        this.logger.log(
           `🔄 Disconnecting existing connection for user ${client.userId}`,
         );
         existingConnection.emit('FORCE_DISCONNECT', {
@@ -123,8 +127,8 @@ export class ImprovedMessagingGateway
       const userRoom = `user_${client.userId}`;
       await client.join(userRoom);
 
-      console.log(`✅ User ${client.userId} connected successfully`);
-      console.log(`📊 Total connected users: ${this.connectedUsers.size}`);
+      this.logger.log(`✅ User ${client.userId} connected successfully`);
+      this.logger.log(`📊 Total connected users: ${this.connectedUsers.size}`);
 
       // Send connection confirmation
       client.emit('CONNECTION_SUCCESS', {
@@ -136,7 +140,7 @@ export class ImprovedMessagingGateway
       // Notify other users that this user is online
       this.broadcastUserStatus(client.userId, 'ONLINE');
     } catch (error) {
-      console.error('❌ Error handling connection:', error);
+      this.logger.error('❌ Error handling connection:', error);
       client.emit('CONNECTION_ERROR', {
         error: 'Connection failed',
         timestamp: new Date().toISOString(),
@@ -153,7 +157,7 @@ export class ImprovedMessagingGateway
    */
   handleDisconnect(client: AuthenticatedSocket) {
     if (client.userId) {
-      console.log(`🔌 User ${client.userId} disconnected`);
+      this.logger.log(`🔌 User ${client.userId} disconnected`);
 
       // Remove from connected users
       this.connectedUsers.delete(client.userId);
@@ -161,7 +165,7 @@ export class ImprovedMessagingGateway
       // Notify other users that this user is offline
       this.broadcastUserStatus(client.userId, 'OFFLINE');
 
-      console.log(`📊 Total connected users: ${this.connectedUsers.size}`);
+      this.logger.log(`📊 Total connected users: ${this.connectedUsers.size}`);
     }
   }
 
@@ -193,14 +197,16 @@ export class ImprovedMessagingGateway
 
       // Check if this message was already processed
       if (this.processedMessages.has(messageId)) {
-        console.log(`⚠️ Duplicate message detected, ignoring: ${messageId}`);
+        this.logger.log(
+          `⚠️ Duplicate message detected, ignoring: ${messageId}`,
+        );
         return { error: 'Duplicate message' };
       }
 
       // Mark message as processed
       this.processedMessages.add(messageId);
 
-      console.log('📨 Handling new message:', {
+      this.logger.log('📨 Handling new message:', {
         messageId,
         from: client.userId,
         to: data.receiverId,
@@ -229,10 +235,10 @@ export class ImprovedMessagingGateway
         confirmation: true,
       });
 
-      console.log('✅ Message sent successfully via WebSocket');
+      this.logger.log('✅ Message sent successfully via WebSocket');
       return { success: true, message: messageWithId };
     } catch (error) {
-      console.error('❌ Error handling new message:', error);
+      this.logger.error('❌ Error handling new message:', error);
       client.emit('MESSAGE_ERROR', {
         type: 'MESSAGE_ERROR',
         data: { error: error.message },
@@ -388,14 +394,14 @@ export class ImprovedMessagingGateway
         confirmation: true,
       });
 
-      console.log('📨 Message broadcasted via API:', {
+      this.logger.log('📨 Message broadcasted via API:', {
         messageId,
         from: message.senderId,
         to: message.receiverId,
         content: message.content,
       });
     } catch (error) {
-      console.error('❌ Error broadcasting message:', error);
+      this.logger.error('❌ Error broadcasting message:', error);
     }
   }
 
@@ -416,7 +422,7 @@ export class ImprovedMessagingGateway
     }
 
     this.processedMessages = messagesToKeep;
-    console.log(
+    this.logger.log(
       `🧹 Cleaned up processed messages. Remaining: ${this.processedMessages.size}`,
     );
   }

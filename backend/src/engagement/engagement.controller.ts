@@ -15,11 +15,14 @@ import { RolesGuard } from 'src/common/guards/roles.guard';
 import { GetCurrentUser } from 'src/common/decorators/get-current-user.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Role, VoteType } from '@prisma/client';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Controller for handling user engagement with posts, including likes and comments.
  * All endpoints are protected by JWT authentication and role-based access control.
  */
+@ApiTags('engagement')
+@ApiBearerAuth('JWT')
 @Controller('engagement')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class EngagementController {

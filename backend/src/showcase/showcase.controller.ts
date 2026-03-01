@@ -8,6 +8,7 @@ import {
   Param,
   Delete,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { ShowcaseService } from './showcase.service';
 import { CreateProjectDto } from './dto/create-project.dto';
@@ -22,10 +23,14 @@ import { AddTeamMemberDto } from './dto/add-team-member.dto';
 import { CreateStartupDto } from './dto/create-startup.dto';
 import { UpdateStartupDto } from './dto/update-startup.dto';
 import { CreateProjectUpdateDto } from './dto/create-project-update.dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('showcase')
+@ApiBearerAuth('JWT')
 @Controller('showcase')
 @UseGuards(JwtAuthGuard)
 export class ShowcaseController {
+  private readonly logger = new Logger(ShowcaseController.name);
   constructor(private readonly showcaseService: ShowcaseService) {}
 
   @Post('project')
@@ -84,7 +89,7 @@ export class ShowcaseController {
     @GetCurrentUser('userId') userId: string,
     @Query() filterProjectDto: FilterProjectDto,
   ) {
-    console.log('UserId in getMyProjects controller:', userId);
+    this.logger.log(`UserId in getMyProjects controller: ${userId}`);
     return this.showcaseService.getMyProjects(userId, filterProjectDto);
   }
 

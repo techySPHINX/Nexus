@@ -21,10 +21,13 @@ import {
   ApproveDocumentsDto,
   RejectDocumentsDto,
 } from './dto';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Admin controller for managing document verification with advanced filtering
  */
+@ApiTags('admin')
+@ApiBearerAuth('JWT')
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN')

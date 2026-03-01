@@ -14,10 +14,13 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { FilesService } from './files.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
 /**
  * Controller for handling file upload operations.
  */
+@ApiTags('files')
+@ApiBearerAuth('JWT')
 @Controller('files')
 @UseGuards(JwtAuthGuard)
 export class FilesController {

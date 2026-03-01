@@ -14,7 +14,10 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiTags('sub-community')
+@ApiBearerAuth('JWT')
 @Controller('sub-community-requests')
 export class SubCommunityRequestController {
   constructor(
