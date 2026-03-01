@@ -251,7 +251,7 @@ export class ShowcaseService {
       throw new Error('Project not found');
     }
 
-    this.logger.log('ProjectId to delete:', projectId);
+    this.logger.log(`ProjectId to delete: ${projectId}`);
 
     if (project.ownerId !== userId) {
       throw new Error('You are not the owner of this project');
@@ -427,7 +427,10 @@ export class ShowcaseService {
         h: height,
       });
     } catch (error) {
-      this.logger.error('Error optimizing image URL:', error);
+      this.logger.error(
+        `Error optimizing image URL: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
       return imageUrl;
     }
   }
@@ -660,7 +663,7 @@ export class ShowcaseService {
       filterProjectDto;
 
     const where: any = { ownerId: userId };
-    this.logger.log('UserId in getMyProjects:', userId);
+    this.logger.log(`UserId in getMyProjects: ${userId}`);
 
     if (tags) where.tags = { hasSome: tags };
     if (status) where.status = status;
@@ -731,7 +734,7 @@ export class ShowcaseService {
       filterProjectDto;
 
     const where: any = { ownerId };
-    this.logger.log('OwnerId in getProjectsByOwner:', ownerId);
+    this.logger.log(`OwnerId in getProjectsByOwner: ${ownerId}`);
 
     if (tags) where.tags = { hasSome: tags };
     if (status) where.status = status;

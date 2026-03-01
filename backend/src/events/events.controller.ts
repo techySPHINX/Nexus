@@ -34,7 +34,9 @@ export class EventsController {
     @Body() createEventDto: CreateEventDto,
     @GetCurrentUser('userId') userId: string,
   ) {
-    this.logger.log('Received create event request:', createEventDto);
+    this.logger.log(
+      `Received create event request: ${JSON.stringify({ userId, createEventDto })}`,
+    );
     return this.eventsService.create(createEventDto, userId);
   }
 

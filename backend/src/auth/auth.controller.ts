@@ -20,13 +20,15 @@ import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { Request } from 'express';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 /**
  * Enhanced authentication controller with document verification
  * and comprehensive security features.
  */
 @ApiTags('auth')
+// Some endpoints in this controller require JWT (logout, logout-all, verify-document, etc.)
+@ApiBearerAuth('JWT')
 @Controller('auth')
 export class AuthController {
   constructor(

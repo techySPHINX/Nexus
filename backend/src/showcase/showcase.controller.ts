@@ -89,7 +89,7 @@ export class ShowcaseController {
     @GetCurrentUser('userId') userId: string,
     @Query() filterProjectDto: FilterProjectDto,
   ) {
-    this.logger.log('UserId in getMyProjects controller:', userId);
+    this.logger.log(`UserId in getMyProjects controller: ${userId}`);
     return this.showcaseService.getMyProjects(userId, filterProjectDto);
   }
 

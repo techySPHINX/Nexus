@@ -115,7 +115,10 @@ export class MessagingService {
       );
     } catch (error) {
       // Log error but don't fail the message sending
-      this.logger.error('Failed to send message push notification:', error);
+      this.logger.error(
+        `Failed to send message push notification (senderId=${message.senderId}, receiverId=${message.receiverId}): ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
 
     return message;

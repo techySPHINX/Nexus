@@ -852,8 +852,11 @@ export class ReportService {
     try {
       await this.prisma.moderationLog.create({ data });
     } catch (error) {
-      // Log to console but don't fail the operation
-      this.logger.error('Failed to create moderation log:', error);
+      // Log but don't fail the operation
+      this.logger.error(
+        `Failed to create moderation log: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
   }
 

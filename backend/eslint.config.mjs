@@ -27,8 +27,14 @@ export default tseslint.config(
     },
   },
   {
-    // Relax no-console for test / seed / script files where it is acceptable
-    files: ['**/*.spec.ts', '**/*.e2e-spec.ts', 'data/**', 'scripts/**'],
+    // Relax no-console for test, seed, and script files where it is acceptable
+    files: [
+      '**/*.spec.ts',
+      '**/*.e2e-spec.ts',
+      'test/**',
+      'data/**',
+      'scripts/**',
+    ],
     rules: {
       'no-console': 'off',
     },

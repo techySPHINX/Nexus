@@ -95,7 +95,10 @@ export class NotificationService {
       });
     } catch (error) {
       // Log error but don't fail the notification creation
-      this.logger.error('Failed to send push notification:', error);
+      this.logger.error(
+        `Failed to send push notification: ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
 
     return notification;

@@ -64,7 +64,7 @@ export class DashboardGateway
    */
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      this.logger.log('🔌 Dashboard connection attempt:', client.id);
+      this.logger.log(`🔌 Dashboard connection attempt: socketId=${client.id}`);
 
       const { userId, token } = client.handshake.query;
 
@@ -84,7 +84,7 @@ export class DashboardGateway
         client.userId = payload.userId || userId;
         client.userEmail = payload.email;
       } catch (jwtError) {
-        this.logger.log('❌ Invalid JWT token:', jwtError.message);
+        this.logger.log(`❌ Invalid JWT token: ${jwtError.message}`);
         client.emit('error', {
           message: 'Invalid authentication token',
           timestamp: new Date().toISOString(),

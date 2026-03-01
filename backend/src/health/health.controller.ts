@@ -47,7 +47,7 @@ export class HealthController {
     return this.health.check([
       // Ensure the process hasn't exceeded 512 MB heap
       () => this.memory.checkHeap('memory_heap', 512 * 1024 * 1024),
-      // Ensure at least 100 MB disk space remains on the root volume
+      // Alert when the root volume is more than 95% full (thresholdPercent is used ratio)
       () =>
         this.disk.checkStorage('disk_space', {
           path: '/',

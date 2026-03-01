@@ -75,7 +75,9 @@ export class ImprovedMessagingGateway
    */
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      this.logger.log('🔌 New WebSocket connection attempt:', client.id);
+      this.logger.log(
+        `🔌 New WebSocket connection attempt: socketId=${client.id}`,
+      );
 
       // Extract user info from query parameters
       const { userId, token } = client.handshake.query;
@@ -96,7 +98,7 @@ export class ImprovedMessagingGateway
         client.userId = payload.userId || userId;
         client.userEmail = payload.email;
       } catch (jwtError) {
-        this.logger.log('❌ Invalid JWT token:', jwtError.message);
+        this.logger.log(`❌ Invalid JWT token: ${jwtError.message}`);
         client.emit('CONNECTION_ERROR', {
           error: 'Invalid authentication token',
           timestamp: new Date().toISOString(),

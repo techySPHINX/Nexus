@@ -55,7 +55,10 @@ export class LegacyFilesService {
         await fs.promises.unlink(fullPath);
       }
     } catch (error) {
-      this.logger.error('Error deleting file:', error);
+      this.logger.error(
+        `Error deleting file at path '${filePath}': ${(error as Error).message}`,
+        (error as Error).stack,
+      );
     }
   }
 }
