@@ -68,7 +68,11 @@ export class PrismaService
 
       // Set up event listeners for production monitoring
       this.$on('query' as never, (e: any) => {
-        if (process.env.NODE_ENV === 'development') {
+        if (e.duration > 500) {
+          this.logger.warn(
+            `🐢 Slow query detected (${e.duration}ms): ${e.query}`,
+          );
+        } else if (process.env.NODE_ENV === 'development') {
           this.logger.debug(`Query: ${e.query} | Duration: ${e.duration}ms`);
         }
       });

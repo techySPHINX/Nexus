@@ -145,7 +145,6 @@ export class SubCommunityService {
             where: { userId },
             select: { userId: true, role: true },
           },
-          posts: true,
         },
         orderBy: { createdAt: 'desc' },
       });

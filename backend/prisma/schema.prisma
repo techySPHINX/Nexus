@@ -31,6 +31,9 @@ model User {
   graduationYear                        Int?
   fcmDeviceToken                        String?
   publicEncryptionKey                   String?
+  updatedAt                             DateTime                      @updatedAt
+  isDeleted                             Boolean                       @default(false)
+  deletedAt                             DateTime?
   ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
   ReportsMade                           ContentReport[]               @relation("ReportsMade")
   joinRequests                          JoinRequest[]
@@ -88,6 +91,10 @@ model User {
   Vote                                  Vote[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
 
+  @@index([role])
+  @@index([accountStatus])
+  @@index([createdAt])
+  @@index([isDeleted])
   @@map("users")
 }
 
@@ -165,6 +172,7 @@ model StartupComment {
   userId    String
   comment   String
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   startup   Startup  @relation(fields: [startupId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
 
@@ -310,8 +318,9 @@ model Skill {
 }
 
 model Tag {
-  id   String @id @default(uuid())
-  name String @unique @db.VarChar(50)
+  id        String   @id @default(uuid())
+  name      String   @unique @db.VarChar(50)
+  updatedAt DateTime @updatedAt
 
   @@map("tags")
 }
@@ -335,6 +344,7 @@ model Badge {
   name        String          @unique @db.VarChar(50)
   icon        String
   description String
+  updatedAt   DateTime        @updatedAt
   users       UsersOnBadges[]
 
   @@map("badge")
@@ -356,6 +366,9 @@ model Connection {
   recipientId String
   status      ConnectionStatus @default(PENDING)
   createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  isDeleted   Boolean          @default(false)
+  deletedAt   DateTime?
   recipient   User             @relation("ReceivedConnections", fields: [recipientId], references: [id])
   requester   User             @relation("RequestedConnections", fields: [requesterId], references: [id])
 
@@ -363,6 +376,7 @@ model Connection {
   @@index([requesterId, status])
   @@index([recipientId, status])
   @@index([status, createdAt])
+  @@index([isDeleted])
   @@map("connection")
 }
 
@@ -373,10 +387,12 @@ model Message {
   senderId        String
   receiverId      String
   deletedAt       DateTime?
-  editedAt        DateTime?
+  editedAt        DateTime?     @map("edited_at")
   encryptionKeyId String?
   isEdited        Boolean       @default(false)
   isEncrypted     Boolean       @default(false)
+  isDeleted       Boolean       @default(false)
+  updatedAt       DateTime      @updatedAt
   receiver        User          @relation("ReceivedMessages", fields: [receiverId], references: [id])
   sender          User          @relation("SentMessages", fields: [senderId], references: [id])
   readReceipts    ReadReceipt[]
@@ -385,6 +401,7 @@ model Message {
   @@index([receiverId, timestamp])
   @@index([senderId, timestamp])
   @@index([timestamp])
+  @@index([isDeleted])
   @@map("message")
 }
 
@@ -403,17 +420,21 @@ model ReadReceipt {
 }
 
 model Notification {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   message   String
   type      String?
-  read      Boolean  @default(false)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  read      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  isDeleted Boolean   @default(false)
+  deletedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
   @@index([userId, createdAt])
   @@index([createdAt])
+  @@index([isDeleted])
   @@map("notification")
 }
 
@@ -444,6 +465,9 @@ model Post {
   Vote           Vote[]
 
   @@index([isDeleted])
+  @@index([authorId, createdAt])
+  @@index([subCommunityId, status])
+  @@index([status, createdAt])
   @@map("post")
 }
 
@@ -454,11 +478,15 @@ model Vote {
   commentId  String?
   type       VoteType
   targetType VoteTargetType
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
   comment    Comment?       @relation(fields: [commentId], references: [id])
   post       Post?          @relation(fields: [postId], references: [id])
   user       User           @relation(fields: [userId], references: [id])
 
   @@unique([userId, postId, commentId])
+  @@index([postId])
+  @@index([commentId])
   @@map("votes")
 }
 
@@ -484,6 +512,9 @@ model Comment {
   mentionedUsers User[]          @relation("mentionedUsers")
 
   @@index([isDeleted])
+  @@index([postId, createdAt])
+  @@index([userId, createdAt])
+  @@index([parentId])
   @@map("comment")
 }
 
@@ -545,6 +576,8 @@ model File {
   updatedAt    DateTime @updatedAt
   user         User     @relation("UserFiles", fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([uploadedBy])
   @@map("files")
 }
 
@@ -604,6 +637,8 @@ model MentorshipRequest {
   mentor    User                    @relation("MentorshipRequestMentor", fields: [mentorId], references: [id])
 
   @@unique([mentorId, menteeId])
+  @@index([mentorId, status])
+  @@index([menteeId, status])
   @@map("mentorship_request")
 }
 
@@ -839,6 +874,7 @@ model LoginAttempt {
   userAgent String?
   success   Boolean
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("login_attempts")
 }
@@ -893,6 +929,7 @@ model EmailVerification {
   expiresAt DateTime
   isUsed    Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("email_verifications")
 }
