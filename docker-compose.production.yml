@@ -13,9 +13,12 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
+    # No host port binding — postgres is reachable only on the internal Docker
+    # bridge network by the backend service. Exposing 5432 to the host would
+    # allow any process on the server (or the public internet if firewall rules
+    # are misconfigured) to connect directly to the database.
     networks:
+      - nexus-internal
       - nexus-network
     restart: unless-stopped
     healthcheck:
@@ -36,9 +39,10 @@ services:
       --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set — refusing to start with no auth}
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # No host port binding — redis is reachable only on the internal Docker
+    # bridge network by the backend service.
     networks:
+      - nexus-internal
       - nexus-network
     restart: unless-stopped
     healthcheck:
@@ -71,6 +75,7 @@ services:
     ports:
       - "3000:3000"
     networks:
+      - nexus-internal  # needs to reach postgres and redis
       - nexus-network
     depends_on:
       postgres:
@@ -180,5 +185,10 @@ volumes:
   grafana_data:
 
 networks:
+  # Internal network — postgres and redis are NOT reachable from the host
+  nexus-internal:
+    driver: bridge
+    internal: true
+  # External-facing network — nginx, backend, frontend, monitoring services
   nexus-network:
     driver: bridge
