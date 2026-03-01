@@ -179,6 +179,37 @@ services:
       - prometheus
     restart: unless-stopped
 
+  # ── Automated database backups ──────────────────────────────────────────────
+  # Runs scripts/backup-db.sh every 24 hours via a built-in cron loop.
+  # Requires BACKUP_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY to be
+  # set in the environment (or .env file). See scripts/backup-db.sh for docs.
+  db-backup:
+    image: nexus-db-backup
+    build:
+      context: ./scripts
+      dockerfile: backup.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-nexus_chat}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:?BACKUP_S3_BUCKET must be set}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID must be set}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY must be set}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      # Run at 02:00 UTC daily — override with standard cron syntax
+      BACKUP_CRON: ${BACKUP_CRON:-0 2 * * *}
+    networks:
+      - nexus-internal  # needs to reach postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   postgres_data:
   redis_data:
