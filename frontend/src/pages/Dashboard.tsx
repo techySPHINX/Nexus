@@ -1,115 +1,225 @@
-import { FC, useEffect, useState, useRef } from 'react';
-import { Container, Grid, Typography, Box, Chip } from '@mui/material';
-import { Message } from '@mui/icons-material';
+import { FC, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Container,
+  Typography,
+  Box,
+  Chip,
+  Grid,
+  Paper,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  FormControlLabel,
+  Switch,
+  Stack,
+} from '@mui/material';
+import {
+  Message,
+  EditRounded,
+  DoneRounded,
+  Settings,
+} from '@mui/icons-material';
+import { alpha } from '@mui/material/styles';
 import { useAuth } from '../contexts/AuthContext';
 import { useDashboardContext } from '@/contexts/DashBoardContext';
 import { useNotification } from '@/contexts/NotificationContext';
-import { useEventContext } from '@/contexts/eventContext';
 import { apiService } from '../services/api';
 import { improvedWebSocketService } from '../services/websocket.improved';
 import type { WebSocketMessage } from '../services/websocket.improved';
+import type { DashboardLayoutItem } from '@/services/DashBoardService';
 
-import NetworkOverview from '../components/DashBoard/NetworkOverview';
-import ProfileStrength from '../components/DashBoard/ProfileStrength';
-import RecommendedProjects from '../components/DashBoard/RecommendedProjects';
-import RecentPosts from '../components/DashBoard/RecentPosts';
-import RecommendedConnection from '../components/DashBoard/RecommendedConnection';
-import UpcomingEvents from '../components/DashBoard/UpcomingEvents';
-import Leaderboard from '../components/DashBoard/LeaderBoard';
 import HeroWelcomeCard from '../components/DashBoard/HeroWelcomeCard';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
 import ThemeToggle from '@/components/ThemeToggle';
-import { getErrorMessage } from '@/utils/errorHandler';
 import { useNavigate } from 'react-router-dom';
+import StudentDashboardWidgets, {
+  studentWidgetTitles,
+} from '@/components/DashBoard/Components/StudentDashboardWidgets';
+import AlumniDashboardWidgets, {
+  alumniWidgetTitles,
+} from '@/components/DashBoard/Components/AlumniDashboardWidgets';
+import AdminDashboardWidgets, {
+  adminWidgetTitles,
+} from '@/components/DashBoard/Components/AdminDashboardWidgets';
 
-type ConnectionStats = {
-  total?: number;
-  recent30Days?: number;
-  pendingReceived?: number;
-  byRole?: { alumni?: number; students?: number };
-  gender?: string;
+type DashboardPreset = 'STUDENT' | 'ALUM' | 'ADMIN';
+type DashboardColumn = 'left' | 'right';
+type WidgetConfig = { visible: boolean; settings?: Record<string, unknown> };
+type DashboardColumns = Record<DashboardColumn, DashboardLayoutItem[]>;
+
+const widgetTitlesByPreset = {
+  STUDENT: studentWidgetTitles,
+  ALUM: alumniWidgetTitles,
+  ADMIN: adminWidgetTitles,
+} as const;
+
+const defaultWidgetIdsByPreset: Record<
+  DashboardPreset,
+  Record<DashboardColumn, string[]>
+> = {
+  STUDENT: {
+    left: [
+      'connection_stats',
+      'student_network_goal',
+      'message_activity',
+      'community',
+      'referrals',
+    ],
+    right: [
+      'profile',
+      'recommended_connection',
+      'events',
+      'student_activity_pulse',
+      'quick_actions',
+      'leaderboard',
+    ],
+  },
+  ALUM: {
+    left: [
+      'connection_stats',
+      'alumni_growth_goal',
+      'alumni_post_engagement',
+      'community',
+      'referrals',
+    ],
+    right: [
+      'message_activity',
+      'alumni_influence',
+      'recommended_connection',
+      'events',
+      'quick_actions',
+      'leaderboard',
+    ],
+  },
+  ADMIN: {
+    left: [
+      'admin_platform_health',
+      'admin_system_alerts',
+      'admin_moderation_queue',
+      'message_activity',
+      'events',
+    ],
+    right: [
+      'connection_stats',
+      'admin_platform_totals',
+      'quick_actions',
+      'leaderboard',
+    ],
+  },
 };
 
-interface RecentActivity {
-  id: string;
-  type: 'connection' | 'message' | 'event' | 'post';
-  title: string;
-  description: string;
-  timestamp: string;
-  user?: { name: string; avatar: string };
-}
+const starterWidgetIdsByPreset: Record<
+  Exclude<DashboardPreset, 'ADMIN'>,
+  Record<DashboardColumn, string[]>
+> = {
+  STUDENT: {
+    left: ['community', 'referrals'],
+    right: ['profile', 'recommended_connection', 'events', 'leaderboard'],
+  },
+  ALUM: {
+    left: ['community', 'referrals'],
+    right: ['profile', 'recommended_connection', 'events', 'leaderboard'],
+  },
+};
 
-const OnView: FC<{
-  children: React.ReactNode;
-  placeholderHeight?: number;
-  rootMargin?: string;
-  once?: boolean;
-  threshold?: number;
-}> = ({
-  children,
-  placeholderHeight = 180,
-  rootMargin = '200px',
-  once = true,
-  threshold = 0,
-}) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(false);
+const hiddenForNewUsers = new Set(['connection_stats', 'message_activity']);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (visible) return;
+const defaultWidgets: Record<string, WidgetConfig> = {
+  connection_stats: { visible: true },
+  message_activity: { visible: true },
+  profile: { visible: true },
+  recommended_connection: { visible: true },
+  community: { visible: true },
+  referrals: { visible: true },
+  events: { visible: true },
+  leaderboard: { visible: true },
+  quick_actions: { visible: true },
+  alumni_post_engagement: { visible: true },
+  alumni_growth_goal: { visible: true },
+  alumni_influence: { visible: true },
+  student_network_goal: { visible: true },
+  student_activity_pulse: { visible: true },
+  admin_platform_health: { visible: true },
+  admin_moderation_queue: { visible: true },
+  admin_platform_totals: { visible: true },
+  admin_system_alerts: { visible: true },
+};
 
-    if (typeof IntersectionObserver === 'undefined') {
-      setVisible(true);
-      return;
-    }
+const toLayoutItems = (ids: string[]): DashboardLayoutItem[] =>
+  ids.map((id, index) => ({
+    i: id,
+    x: 0,
+    y: index,
+    w: 12,
+    h: 3,
+  }));
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting) {
-          setVisible(true);
-          if (once && observer) observer.disconnect();
-        }
-      },
-      { root: null, rootMargin, threshold }
-    );
+const getDefaultColumnsForPreset = (
+  preset: DashboardPreset
+): DashboardColumns => ({
+  left: toLayoutItems(defaultWidgetIdsByPreset[preset].left),
+  right: toLayoutItems(defaultWidgetIdsByPreset[preset].right),
+});
 
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [visible, rootMargin, once, threshold]);
+const getStarterColumnsForPreset = (
+  preset: DashboardPreset
+): DashboardColumns => {
+  if (preset === 'ADMIN') return getDefaultColumnsForPreset('ADMIN');
 
-  return (
-    <div ref={ref}>
-      {visible ? (
-        children
-      ) : (
-        <Box sx={{ minHeight: placeholderHeight, width: '100%' }} />
-      )}
-    </div>
-  );
+  return {
+    left: toLayoutItems(starterWidgetIdsByPreset[preset].left),
+    right: toLayoutItems(starterWidgetIdsByPreset[preset].right),
+  };
 };
 
 const Dashboard: FC = () => {
   const { user, token } = useAuth();
-  const {
-    connectionStats,
-    profileCompletionStats,
-    getProfileCompletionStats,
-    getConnectionStats,
-    loading: { profileCompletion: loadingProfileCompletion },
-  } = useDashboardContext();
-  const { upcoming, fetchUpcoming, loading: eventsLoading } = useEventContext();
+  const { connectionStats, profileCompletionStats } = useDashboardContext();
   const { showNotification } = useNotification();
   const showNotificationRef = useRef(showNotification);
   const navigate = useNavigate();
 
-  const [stats, setStats] = useState<{
-    messages: number;
-    pendingRequests: number;
-  }>({ messages: 0, pendingRequests: 0 });
+  const [stats, setStats] = useState({ messages: 0, pendingRequests: 0 });
   const [progress, setProgress] = useState(0);
+  const [openSettings, setOpenSettings] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [columns, setColumns] = useState<DashboardColumns>(
+    getDefaultColumnsForPreset('STUDENT')
+  );
+  const [widgets, setWidgets] =
+    useState<Record<string, WidgetConfig>>(defaultWidgets);
+  const [isPrefsHydrated, setIsPrefsHydrated] = useState(false);
+  const dragWidgetRef = useRef<{ column: DashboardColumn; id: string } | null>(
+    null
+  );
+
+  const activePreset: DashboardPreset =
+    user?.role === 'ADMIN'
+      ? 'ADMIN'
+      : user?.role === 'ALUM'
+        ? 'ALUM'
+        : 'STUDENT';
+  const isNewUser =
+    activePreset !== 'ADMIN' && user?.profileCompleted === false;
+  const activeWidgetTitles = widgetTitlesByPreset[activePreset];
+  const activeWidgetIds = useMemo(() => {
+    const ids = Object.keys(activeWidgetTitles);
+    if (!isNewUser) return ids;
+
+    const starter = [
+      ...starterWidgetIdsByPreset[activePreset].left,
+      ...starterWidgetIdsByPreset[activePreset].right,
+    ];
+    const starterSet = new Set(starter);
+    return ids.filter((id) => starterSet.has(id));
+  }, [activePreset, activeWidgetTitles, isNewUser]);
+  const activeWidgetIdSet = useMemo(
+    () => new Set(activeWidgetIds),
+    [activeWidgetIds]
+  );
+
   const fallbackSkills = [
     'Leadership',
     'UI/UX',
@@ -127,7 +237,10 @@ const Dashboard: FC = () => {
     showNotificationRef.current = showNotification;
   }, [showNotification]);
 
-  // Sync progress with backend stats (profile completion preferred)
+  useEffect(() => {
+    if (!isEditMode) setOpenSettings(false);
+  }, [isEditMode]);
+
   useEffect(() => {
     const target = Math.max(
       0,
@@ -145,6 +258,139 @@ const Dashboard: FC = () => {
   }, [
     profileCompletionStats?.completionPercentage,
     connectionStats?.recent30Days,
+  ]);
+
+  useEffect(() => {
+    setIsPrefsHydrated(false);
+    const baseWidgets = { ...defaultWidgets };
+    const defaultColumns = isNewUser
+      ? getStarterColumnsForPreset(activePreset)
+      : getDefaultColumnsForPreset(activePreset);
+    const allowedWidgetIds = new Set(activeWidgetIds);
+
+    Object.keys(activeWidgetTitles).forEach((id) => {
+      baseWidgets[id] = {
+        ...(baseWidgets[id] ?? { visible: true }),
+        visible: allowedWidgetIds.has(id),
+      };
+    });
+
+    if (!user?.id) {
+      setWidgets(baseWidgets);
+      setColumns(defaultColumns);
+      setIsPrefsHydrated(true);
+      return;
+    }
+
+    if (isNewUser) {
+      setWidgets(baseWidgets);
+      setColumns(defaultColumns);
+      setIsPrefsHydrated(true);
+      return;
+    }
+
+    const widgetsStorageKey = `nexus:dashboard:widgets:${user.id}:${activePreset}`;
+    const columnsStorageKey = `nexus:dashboard:columns:${user.id}:${activePreset}`;
+
+    try {
+      const storedWidgets = localStorage.getItem(widgetsStorageKey);
+      if (storedWidgets) {
+        const parsed = JSON.parse(storedWidgets) as Record<string, unknown>;
+        activeWidgetIds.forEach((id) => {
+          const value = parsed?.[id];
+          if (typeof value === 'boolean') {
+            baseWidgets[id] = { ...baseWidgets[id], visible: value };
+          }
+        });
+      }
+    } catch {
+      // noop
+    }
+
+    const normalizeColumn = (
+      candidate: unknown,
+      fallbackIds: string[],
+      usedIds: Set<string>
+    ): string[] => {
+      const ids: string[] = [];
+      if (Array.isArray(candidate)) {
+        candidate.forEach((entry) => {
+          if (typeof entry !== 'string') return;
+          if (!activeWidgetIds.includes(entry)) return;
+          if (usedIds.has(entry)) return;
+          usedIds.add(entry);
+          ids.push(entry);
+        });
+      }
+      fallbackIds.forEach((id) => {
+        if (usedIds.has(id)) return;
+        usedIds.add(id);
+        ids.push(id);
+      });
+      return ids;
+    };
+
+    try {
+      const storedColumns = localStorage.getItem(columnsStorageKey);
+      if (storedColumns) {
+        const parsed = JSON.parse(storedColumns) as {
+          left?: unknown;
+          right?: unknown;
+        };
+        const usedIds = new Set<string>();
+        const leftIds = normalizeColumn(
+          parsed?.left,
+          defaultWidgetIdsByPreset[activePreset].left,
+          usedIds
+        );
+        const rightIds = normalizeColumn(
+          parsed?.right,
+          defaultWidgetIdsByPreset[activePreset].right,
+          usedIds
+        );
+        const nextColumns = {
+          left: toLayoutItems(leftIds),
+          right: toLayoutItems(rightIds),
+        };
+        setColumns(nextColumns);
+      } else {
+        setColumns(defaultColumns);
+      }
+    } catch {
+      setColumns(defaultColumns);
+    }
+
+    setWidgets(baseWidgets);
+    setIsPrefsHydrated(true);
+  }, [activePreset, activeWidgetIds, activeWidgetTitles, isNewUser, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !isPrefsHydrated) return;
+    const widgetsStorageKey = `nexus:dashboard:widgets:${user.id}:${activePreset}`;
+    const columnsStorageKey = `nexus:dashboard:columns:${user.id}:${activePreset}`;
+
+    const visibilityPayload = activeWidgetIds.reduce<Record<string, boolean>>(
+      (acc, id) => {
+        acc[id] = widgets[id]?.visible !== false;
+        return acc;
+      },
+      {}
+    );
+
+    const columnsPayload = {
+      left: columns.left.map((item) => item.i),
+      right: columns.right.map((item) => item.i),
+    };
+
+    localStorage.setItem(widgetsStorageKey, JSON.stringify(visibilityPayload));
+    localStorage.setItem(columnsStorageKey, JSON.stringify(columnsPayload));
+  }, [
+    activePreset,
+    activeWidgetIds,
+    columns,
+    isPrefsHydrated,
+    user?.id,
+    widgets,
   ]);
 
   const fetchMessageCount = async () => {
@@ -170,10 +416,8 @@ const Dashboard: FC = () => {
       return;
     }
 
-    // Handler functions
     const handleNewMessage = (message: WebSocketMessage) => {
       const newMessage = message.data as {
-        id: string;
         sender?: { name?: string };
         receiverId: string;
       };
@@ -188,7 +432,6 @@ const Dashboard: FC = () => {
 
     const handleConnectionRequest = (message: WebSocketMessage) => {
       const data = message.data as {
-        id: string;
         sender?: { name?: string };
       };
       showNotificationRef.current?.(
@@ -201,11 +444,15 @@ const Dashboard: FC = () => {
       }));
     };
 
-    const initializeWebSocket = async () => {
+    const init = async () => {
+      try {
+        await fetchMessageCount();
+      } catch {
+        // noop
+      }
+
       try {
         await improvedWebSocketService.connect(user.id, token);
-
-        // Register event listeners
         improvedWebSocketService.on('NEW_MESSAGE', handleNewMessage);
         improvedWebSocketService.on(
           'CONNECTION_REQUEST',
@@ -216,103 +463,13 @@ const Dashboard: FC = () => {
       }
     };
 
-    void initializeWebSocket();
+    void init();
 
-    // Cleanup: Remove event listeners and disconnect
     return () => {
       improvedWebSocketService.off('NEW_MESSAGE');
       improvedWebSocketService.off('CONNECTION_REQUEST');
     };
   }, [user?.id, token, navigate]);
-
-  const hasInitRef = useRef(false);
-  const connectionStatsRef = useRef<ConnectionStats | undefined>(
-    connectionStats as ConnectionStats | undefined
-  );
-  useEffect(() => {
-    connectionStatsRef.current = connectionStats as ConnectionStats | undefined;
-  }, [connectionStats]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    if (hasInitRef.current) return;
-    hasInitRef.current = true;
-
-    const init = async () => {
-      try {
-        await fetchMessageCount();
-        void getConnectionStats();
-        try {
-          const activitiesResponse =
-            await apiService.messages.getAllConversations();
-          const activities: RecentActivity[] = [];
-
-          type Conversation = {
-            id: string;
-            participant?: { name?: string };
-            updatedAt: string;
-          };
-
-          if (activitiesResponse.data?.conversations) {
-            (activitiesResponse.data.conversations as Conversation[])
-              .slice(0, 3)
-              .forEach((conv) =>
-                activities.push({
-                  id: conv.id,
-                  type: 'message',
-                  title: 'New Message',
-                  description: `You have a conversation with ${conv.participant?.name || 'Unknown'}`,
-                  timestamp: new Date(conv.updatedAt).toLocaleDateString(),
-                  user: {
-                    name: conv.participant?.name || 'Unknown',
-                    avatar: '',
-                  },
-                })
-              );
-          }
-
-          const statsSnapshot = connectionStatsRef.current;
-          if (
-            statsSnapshot &&
-            typeof statsSnapshot.total === 'number' &&
-            statsSnapshot.total > 0
-          ) {
-            activities.push({
-              id: `connections-${Date.now()}`,
-              type: 'connection',
-              title: 'Network Update',
-              description: `You have ${statsSnapshot.total} total connections`,
-              timestamp: new Date().toLocaleDateString(),
-            });
-          }
-        } catch (err) {
-          showNotificationRef.current?.(getErrorMessage(err), 'error');
-        }
-
-        // fetch profile stats (for ProfileStrength component) and upcoming events
-        try {
-          void getProfileCompletionStats();
-        } catch (err) {
-          console.debug(
-            'Profile stats fetch failed during dashboard init',
-            err
-          );
-        }
-        try {
-          void fetchUpcoming(3);
-        } catch (err) {
-          console.debug(
-            'Upcoming events fetch failed during dashboard init',
-            err
-          );
-        }
-      } catch (err) {
-        showNotificationRef.current?.(getErrorMessage(err), 'error');
-      }
-    };
-
-    void init();
-  }, [user?.id, getProfileCompletionStats, getConnectionStats, fetchUpcoming]);
 
   const displayedSkills = (
     user?.profile?.skills && user.profile.skills.length > 0
@@ -320,9 +477,86 @@ const Dashboard: FC = () => {
       : fallbackSkills
   ).slice(0, 10);
 
+  const moveWithinColumn = (
+    column: DashboardColumn,
+    fromId: string,
+    toId: string
+  ) => {
+    if (fromId === toId) return;
+    setColumns((prev) => {
+      const current = [...prev[column]];
+      const fromIndex = current.findIndex((item) => item.i === fromId);
+      const toIndex = current.findIndex((item) => item.i === toId);
+      if (fromIndex === -1 || toIndex === -1) return prev;
+
+      const [moved] = current.splice(fromIndex, 1);
+      current.splice(toIndex, 0, moved);
+
+      return {
+        ...prev,
+        [column]: current.map((item, index) => ({ ...item, y: index })),
+      };
+    });
+  };
+
+  const handleDrop = (column: DashboardColumn, targetId: string) => {
+    if (!isEditMode) return;
+    const drag = dragWidgetRef.current;
+    if (!drag) return;
+    if (drag.column !== column) {
+      dragWidgetRef.current = null;
+      return;
+    }
+    moveWithinColumn(column, drag.id, targetId);
+    dragWidgetRef.current = null;
+  };
+
+  const renderColumnWidgets = (column: DashboardColumn) => {
+    const pendingRequestCount = Math.max(
+      stats.pendingRequests,
+      connectionStats?.pendingReceived ?? 0
+    );
+    const totalConnections = connectionStats?.total ?? 0;
+    const recentConnections = connectionStats?.recent30Days ?? 0;
+    const commonProps = {
+      column,
+      isEditMode,
+      layout: columns[column],
+      widgets,
+      userId: user?.id,
+      statsMessages: stats.messages,
+      statsPendingRequests: pendingRequestCount,
+      onDragStart: (dragColumn: DashboardColumn, id: string) => {
+        if (!isEditMode) return;
+        dragWidgetRef.current = { column: dragColumn, id };
+      },
+      onDrop: handleDrop,
+      onNavigate: navigate,
+    };
+
+    if (activePreset === 'ADMIN') {
+      return <AdminDashboardWidgets {...commonProps} />;
+    }
+    if (activePreset === 'ALUM') {
+      return (
+        <AlumniDashboardWidgets
+          {...commonProps}
+          statsConnectionsTotal={totalConnections}
+          statsRecentConnections={recentConnections}
+        />
+      );
+    }
+    return (
+      <StudentDashboardWidgets
+        {...commonProps}
+        statsConnectionsTotal={totalConnections}
+        statsRecentConnections={recentConnections}
+      />
+    );
+  };
+
   return (
     <Container maxWidth="xl" sx={{ py: 3, px: { xs: 2, md: 3 } }}>
-      {/* Top Controls */}
       <Box
         sx={{
           mb: 4,
@@ -332,21 +566,34 @@ const Dashboard: FC = () => {
           flexDirection: { xs: 'column', sm: 'row' },
           flexWrap: 'wrap',
           gap: 2,
+          p: { xs: 2, md: 2.5 },
+          borderRadius: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          boxShadow: (theme) =>
+            `0 10px 26px ${alpha(theme.palette.common.black, 0.08)}`,
+          position: 'relative',
+          overflow: 'hidden',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            width: 220,
+            height: 220,
+            borderRadius: '50%',
+            top: -120,
+            right: -90,
+          },
         }}
       >
         <Box sx={{ width: '100%', maxWidth: 640 }}>
           <Typography
-            variant="h5"
+            variant="h4"
             sx={{
-              fontWeight: 600,
+              fontWeight: 700,
               color: 'text.primary',
-              background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
             }}
           >
-            Your Network Dashboard
+            Your Nexus Dashboard
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             Track your progress and stay connected
@@ -368,8 +615,66 @@ const Dashboard: FC = () => {
             color="primary"
             variant="outlined"
             size="small"
-            sx={{ fontWeight: 500 }}
+            sx={{
+              py: 1.8,
+              px: 0.5,
+              fontWeight: 400,
+            }}
           />
+          {isNewUser ? (
+            <Chip
+              label="Starter Layout"
+              color="success"
+              size="small"
+              sx={{ fontWeight: 400 }}
+            />
+          ) : null}
+          <Button
+            size="small"
+            startIcon={
+              <Box
+                sx={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: '50%',
+                  backgroundColor: isEditMode
+                    ? 'success.main'
+                    : 'action.disabled',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'background-color 0.2s ease',
+                }}
+              >
+                {isEditMode ? (
+                  <DoneRounded sx={{ fontSize: 12, color: 'white' }} />
+                ) : (
+                  <EditRounded sx={{ fontSize: 12, color: 'white' }} />
+                )}
+              </Box>
+            }
+            variant="contained"
+            disableElevation
+            onClick={() => setIsEditMode((prev) => !prev)}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 400,
+              borderRadius: '20px',
+              px: 1.6,
+              py: 0.5,
+              backgroundColor: isEditMode
+                ? 'success.light'
+                : 'action.disabledBackground',
+              color: isEditMode ? 'white' : 'text.disabled',
+              '&:hover': {
+                backgroundColor: isEditMode
+                  ? 'success.main'
+                  : 'action.disabled',
+              },
+            }}
+          >
+            {isEditMode ? 'Edit Mode' : 'View Mode'}
+          </Button>
           <ThemeToggle />
           <NotificationIndicator />
         </Box>
@@ -381,92 +686,95 @@ const Dashboard: FC = () => {
         displayedSkills={displayedSkills}
       />
 
-      {/* Main Content Grid - Reordered for mobile */}
-      <Grid container spacing={3}>
-        {/* Mobile Order: Network, Profile, Connection, Events, Projects, Posts, Leaderboard */}
+      {isEditMode ? (
+        <Paper
+          elevation={0}
+          sx={{
+            mt: 2,
+            p: 2,
+            borderRadius: 2.5,
+            border: '1px dashed',
+            borderColor: 'divider',
+            background: (theme) =>
+              `linear-gradient(135deg, ${alpha(
+                theme.palette.primary.main,
+                0.08
+              )} 0%, ${alpha(theme.palette.background.paper, 0.95)} 100%)`,
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+            spacing={1.5}
+          >
+            <Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                Add or remove blocks
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Drag widgets within each column and control visibility here.
+              </Typography>
+            </Box>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<Settings fontSize="small" />}
+              onClick={() => setOpenSettings(true)}
+            >
+              Manage Blocks
+            </Button>
+          </Stack>
+        </Paper>
+      ) : null}
 
-        {/* Network Overview - Always first */}
-        <Grid item xs={12}>
-          <OnView placeholderHeight={280}>
-            <NetworkOverview />
-          </OnView>
-        </Grid>
-
-        {/* For Desktop: Left Column (66%) */}
+      <Grid container spacing={3} sx={{ mt: 0.5 }}>
         <Grid item xs={12} lg={8}>
-          {/* Mobile Order: Profile Strength */}
-          <Box sx={{ mb: 3, display: { xs: 'block', lg: 'none' } }}>
-            {!loadingProfileCompletion && profileCompletionStats ? (
-              <OnView placeholderHeight={280}>
-                <ProfileStrength />
-              </OnView>
-            ) : null}
-          </Box>
-
-          {/* Mobile Order: Recommended Connection */}
-          <Box sx={{ mb: 3, display: { xs: 'block', lg: 'none' } }}>
-            <OnView placeholderHeight={280} threshold={0.5}>
-              <RecommendedConnection />
-            </OnView>
-          </Box>
-
-          {/* Mobile Order: Upcoming Events */}
-          <Box sx={{ mb: 3, display: { xs: 'block', lg: 'none' } }}>
-            {!eventsLoading && upcoming && upcoming.length > 0 ? (
-              <OnView placeholderHeight={280} threshold={0.3}>
-                <UpcomingEvents />
-              </OnView>
-            ) : null}
-          </Box>
-
-          {/* Desktop Order: Projects */}
-          <Box sx={{ mb: 3 }}>
-            <OnView placeholderHeight={280} threshold={0.5}>
-              <RecommendedProjects />
-            </OnView>
-          </Box>
-
-          {/* Desktop Order: Recent Posts */}
-          <Box sx={{ mb: 3 }}>
-            <OnView placeholderHeight={280} threshold={0.3}>
-              <RecentPosts />
-            </OnView>
-          </Box>
+          {renderColumnWidgets('left')}
         </Grid>
-
-        {/* For Desktop: Right Column (33%) */}
         <Grid item xs={12} lg={4}>
-          {/* Desktop Order: Profile Strength */}
-          <Box sx={{ mb: 3, display: { xs: 'none', lg: 'block' } }}>
-            {!loadingProfileCompletion && profileCompletionStats ? (
-              <OnView placeholderHeight={280}>
-                <ProfileStrength />
-              </OnView>
-            ) : null}
-          </Box>
-
-          {/* Desktop Order: Recommended Connection */}
-          <Box sx={{ mb: 3, display: { xs: 'none', lg: 'block' } }}>
-            <OnView placeholderHeight={280} threshold={0.5}>
-              <RecommendedConnection />
-            </OnView>
-          </Box>
-
-          {/* Desktop Order: Upcoming Events */}
-          <Box sx={{ mb: 3, display: { xs: 'none', lg: 'block' } }}>
-            {!eventsLoading && upcoming && upcoming.length > 0 ? (
-              <OnView placeholderHeight={280} threshold={0.3}>
-                <UpcomingEvents />
-              </OnView>
-            ) : null}
-          </Box>
-
-          {/* Leaderboard - Always last in sidebar */}
-          <OnView placeholderHeight={280} threshold={0.3}>
-            <Leaderboard currentUserId={user?.id} maxItems={6} compact={true} />
-          </OnView>
+          {renderColumnWidgets('right')}
         </Grid>
       </Grid>
+
+      <Dialog
+        open={openSettings}
+        onClose={() => setOpenSettings(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Dashboard Widgets</DialogTitle>
+        <DialogContent>
+          <Stack>
+            {Object.entries(activeWidgetTitles)
+              .filter(([id]) => activeWidgetIdSet.has(id))
+              .filter(([id]) => (isNewUser ? !hiddenForNewUsers.has(id) : true))
+              .map(([id, label]) => (
+                <FormControlLabel
+                  key={id}
+                  control={
+                    <Switch
+                      checked={widgets[id]?.visible !== false}
+                      onChange={(event) =>
+                        setWidgets((prev) => ({
+                          ...prev,
+                          [id]: {
+                            ...prev[id],
+                            visible: event.target.checked,
+                          },
+                        }))
+                      }
+                    />
+                  }
+                  label={label}
+                />
+              ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenSettings(false)}>Done</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

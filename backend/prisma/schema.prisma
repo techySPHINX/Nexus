@@ -87,8 +87,96 @@ model User {
   verificationDocuments                 VerificationDocument[]
   Vote                                  Vote[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
+  dashboardConfig                       DashboardConfig?
+  memberProfile                         MemberProfile?
+  communityFollowing                    CommunityFollow[]             @relation("CommunityFollowFollower")
+  communityFollowers                    CommunityFollow[]             @relation("CommunityFollowFollowed")
+  memberFlairs                          MemberFlair[]
+  notificationPreference                NotificationPreference?
 
   @@map("users")
+}
+
+model MemberProfile {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  headline           String?
+  pronouns           String?
+  websiteUrl         String?
+  customStatus       String?
+  showBadges         Boolean  @default(true)
+  showRecentActivity Boolean  @default(true)
+  allowFollowers     Boolean  @default(true)
+  allowDirectMessage Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("member_profiles")
+}
+
+model CommunityFollow {
+  id         String   @id @default(uuid())
+  followerId String
+  followedId String
+  createdAt  DateTime @default(now())
+  follower   User     @relation("CommunityFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed   User     @relation("CommunityFollowFollowed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@index([followerId])
+  @@index([followedId])
+  @@index([createdAt])
+  @@map("community_follows")
+}
+
+model MemberFlair {
+  id              String   @id @default(uuid())
+  userId          String
+  label           String
+  color           String   @default("#7C3AED")
+  backgroundColor String   @default("#EDE9FE")
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isActive])
+  @@map("member_flairs")
+}
+
+model NotificationPreference {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  emailEnabled        Boolean  @default(true)
+  pushEnabled         Boolean  @default(true)
+  inAppEnabled        Boolean  @default(true)
+  digestModeEnabled   Boolean  @default(false)
+  digestFrequency     String   @default("DAILY")
+  notifyOnFollow      Boolean  @default(true)
+  notifyOnFlairAssign Boolean  @default(true)
+  notifyOnBadgeAward  Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+model DashboardConfig {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  layout        Json
+  widgets       Json
+  preset        String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("dashboard_configs")
 }
 
 model News {
