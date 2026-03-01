@@ -24,14 +24,27 @@ export class UserService {
 
   /**
    * Retrieves all users with their profiles and skills.
+   * Uses select instead of deep include to avoid loading all skill/badge
+   * data unnecessarily (Issue #201 - N+1 optimisation).
    * @returns A promise that resolves to an array of all users.
    */
   async findAll() {
     return this.prisma.user.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        accountStatus: true,
+        createdAt: true,
+        iconUrl: true,
         profile: {
-          include: {
-            skills: true,
+          select: {
+            bio: true,
+            avatarUrl: true,
+            location: true,
+            interests: true,
+            skills: { select: { id: true, name: true } },
           },
         },
       },
@@ -86,6 +99,8 @@ export class UserService {
 
   /**
    * Retrieves a specific user by their ID, including their profile and skills.
+   * Uses select on the profile to avoid loading all related badge/endorsement
+   * rows on every user lookup (Issue #201 - N+1 optimisation).
    * Uses caching to improve performance for frequently accessed users.
    * @param id - The ID of the user to retrieve.
    * @returns A promise that resolves to the user object.
@@ -103,10 +118,33 @@ export class UserService {
 
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        accountStatus: true,
+        createdAt: true,
+        iconUrl: true,
+        bannerUrl: true,
+        description: true,
+        graduationYear: true,
+        isEmailVerified: true,
+        isAccountActive: true,
         profile: {
-          include: {
-            skills: true,
+          select: {
+            id: true,
+            bio: true,
+            location: true,
+            interests: true,
+            avatarUrl: true,
+            branch: true,
+            course: true,
+            dept: true,
+            year: true,
+            studentId: true,
+            gender: true,
+            skills: { select: { id: true, name: true } },
           },
         },
       },

@@ -226,10 +226,12 @@ export class PostService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        id: true,
         profile: {
-          include: {
-            skills: true,
+          select: {
+            interests: true,
+            skills: { select: { name: true } },
           },
         },
         requestedConnections: {
@@ -283,6 +285,8 @@ export class PostService {
 
     const posts = await this.prisma.post.findMany({
       where: whereClause,
+      take: 200, // cap in-memory scoring to prevent full table scans
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         subject: true,
