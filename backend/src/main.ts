@@ -10,6 +10,7 @@ import { GlobalExceptionFilter } from './common/filters/global-exception.filter'
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
 import helmet from 'helmet';
 import * as compression from 'compression';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -21,7 +22,6 @@ async function bootstrap() {
   const loggerService = app.get(WinstonLoggerService);
   app.useLogger(loggerService);
 
-  // Log application startup
   loggerService.log(
     '🚀 Initializing Nexus Backend Application...',
     'Bootstrap',
@@ -51,19 +51,19 @@ async function bootstrap() {
   );
   loggerService.log('✅ Helmet security headers enabled', 'Bootstrap');
 
-  app.enableCors({
-    origin: process.env.ALLOWED_ORIGIN || 'https://localhost:3001',
-    credentials: true,
-  });
+  // ============================================
+  // SECURITY: CORS - Cross-Origin Resource Sharing
+  // Single authoritative CORS configuration derived from environment.
+  // Dev default: http://localhost:3001 (HTTP, not HTTPS).
+  // Production: set FRONTEND_URL env var to the deployed frontend origin.
+  // ============================================
+  const corsConfig = getCorsConfig();
+  app.enableCors(corsConfig);
+  loggerService.log(
+    `✅ CORS configured for origins: ${JSON.stringify(corsConfig.origin)}`,
+    'Bootstrap',
+  );
 
-  loggerService.log('✅ CORS configured', 'Bootstrap');
-
-  // CORS - Configure Cross-Origin Resource Sharing
-  app.enableCors(getCorsConfig());
-  loggerService.log('✅ CORS configured', 'Bootstrap');
-
-  // Global Validation Pipe with sanitization
-  app.useGlobalPipes(new ValidationPipe(securityConfig.validation));
   // ============================================
   // PERFORMANCE: Compression (gzip/brotli)
   // ============================================
@@ -74,7 +74,6 @@ async function bootstrap() {
         if (req.headers['upgrade']) {
           return false;
         }
-        // Use compression for everything else
         return compression.filter(req, res);
       },
       level: 6, // Balanced compression level (0-9)
@@ -94,7 +93,6 @@ async function bootstrap() {
   // Connect to Redis for Socket.IO adapter but don't block application startup.
   // If Redis is slow or unavailable, connecting can hang; run connect in background.
   redisIoAdapter.connectToRedis().catch((err) => {
-    // Use the Nest logger to surface the error but continue startup
     const fallbackLogger = new WinstonLoggerService();
     fallbackLogger.error(
       'Redis adapter background connection failed',
@@ -109,24 +107,14 @@ async function bootstrap() {
   );
 
   // ============================================
-  // SECURITY: CORS - Cross-Origin Resource Sharing
-  // ============================================
-  const corsConfig = getCorsConfig();
-  app.enableCors(corsConfig);
-  loggerService.log(
-    `✅ CORS configured for origins: ${corsConfig.origin}`,
-    'Bootstrap',
-  );
-
-  // ============================================
   // VALIDATION: Global Validation Pipe with Auto-Transformation
   // ============================================
   app.useGlobalPipes(
     new ValidationPipe({
       ...securityConfig.validation,
-      transform: true, // Enable auto-transformation of payloads
+      transform: true,
       transformOptions: {
-        enableImplicitConversion: true, // Auto-convert string to number, etc.
+        enableImplicitConversion: true,
       },
     }),
   );
@@ -153,6 +141,50 @@ async function bootstrap() {
   app.set('trust proxy', 1);
   loggerService.log('✅ Proxy trust configured', 'Bootstrap');
 
+  // ============================================
+  // SWAGGER / OPENAPI — disabled in production
+  // Accessible at: GET /api/docs
+  // ============================================
+  if (process.env.NODE_ENV !== 'production') {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle('Nexus API')
+      .setDescription(
+        'Nexus — Student & Alumni Networking Platform REST API. ' +
+          'All protected endpoints require a Bearer JWT token.',
+      )
+      .setVersion('1.0')
+      .addBearerAuth(
+        { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+        'JWT',
+      )
+      .addTag('auth', 'Authentication & authorisation')
+      .addTag('users', 'User management')
+      .addTag('profile', 'User profiles')
+      .addTag('connections', 'Peer connections')
+      .addTag('messaging', 'Real-time chat & messaging')
+      .addTag('posts', 'Posts & engagement')
+      .addTag('referrals', 'Job referrals')
+      .addTag('mentorship', 'Mentorship programme')
+      .addTag('events', 'Events & calendar')
+      .addTag('showcase', 'Project showcase')
+      .addTag('news', 'News feed')
+      .addTag('notifications', 'Push notifications')
+      .addTag('gamification', 'Badges & achievements')
+      .addTag('admin', 'Admin panel')
+      .addTag('health', 'Health & readiness probes')
+      .build();
+
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup('api/docs', app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+        tagsSorter: 'alpha',
+        operationsSorter: 'alpha',
+      },
+    });
+    loggerService.log('✅ Swagger UI available at /api/docs', 'Bootstrap');
+  }
+
   const port = process.env.PORT || 3000;
   await app.listen(port);
 
@@ -163,7 +195,7 @@ async function bootstrap() {
   );
   loggerService.log(`📦 Environment: ${env}`, 'Bootstrap');
   loggerService.log(
-    `🔒 Security features enabled: Helmet, CORS, Rate Limiting, Input Validation, Global Exception Handling, Audit Logging`,
+    `🔒 Security: Helmet, CORS, Rate Limiting, Validation, Exception Handling, Audit Logging`,
     'Bootstrap',
   );
 }
