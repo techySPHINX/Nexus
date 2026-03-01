@@ -76,7 +76,9 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
     setPreviewError(null);
     try {
       const response = await fetchNotificationsService(1, 20, undefined, true);
-      setUnreadNotifications(response.notification.filter((n) => !n.read));
+      setUnreadNotifications(
+        response.notification.filter((n: Notification) => !n.read)
+      );
     } catch {
       setPreviewError('Failed to load unread notifications');
     } finally {

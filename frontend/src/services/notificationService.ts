@@ -1,6 +1,27 @@
 import axios from 'axios';
 import { Notification } from '@/types/notification';
 import { NotificationPreference } from '@/types/profileType';
+
+type NotificationPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
+
+type FetchNotificationsResponse = {
+  notification: Notification[];
+  pagination: NotificationPagination;
+  unreadCount: number;
+};
+
+type FetchNotificationsApiPayload = {
+  notifications: Notification[];
+  pagination: NotificationPagination;
+};
+
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 // withCredentials ensures the httpOnly access_token cookie is sent
@@ -12,7 +33,7 @@ export async function fetchNotificationsService(
   limit = 10,
   typeOrCategory?: string,
   unreadOnly = false
-) {
+): Promise<FetchNotificationsResponse> {
   try {
     const params: Record<string, unknown> = { page, limit };
     if (unreadOnly) {
@@ -22,8 +43,8 @@ export async function fetchNotificationsService(
       params.type = typeOrCategory;
     }
     const [notificationRes, unreadCountRes] = await Promise.all([
-      api.get('/notifications', { params }),
-      api.get('/notifications/count/unread'),
+      api.get<FetchNotificationsApiPayload>('/notifications', { params }),
+      api.get<{ unreadCount: number }>('/notifications/count/unread'),
     ]);
     return {
       notification: notificationRes.data.notifications,
