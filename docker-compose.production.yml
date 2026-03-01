@@ -9,7 +9,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-nexus_chat}
       POSTGRES_USER: ${POSTGRES_USER:-nexus}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set — refusing to start with a default}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
@@ -28,7 +28,12 @@ services:
   redis:
     image: redis:7-alpine
     container_name: nexus-redis
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set — refusing to start with no auth}
     volumes:
       - redis_data:/data
     ports:
@@ -50,11 +55,11 @@ services:
     container_name: nexus-backend
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:-nexus_password}@postgres:5432/${POSTGRES_DB:-nexus_chat}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-nexus_chat}
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set — refusing to start with a default weak secret}
       FRONTEND_URLS: ${FRONTEND_URLS:-http://localhost:3001,http://localhost:3000}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-nexus-chat-files}
       AWS_REGION: ${AWS_REGION:-us-east-1}
@@ -157,7 +162,7 @@ services:
     image: grafana/grafana:latest
     container_name: nexus-grafana
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set — refusing to start with default 'admin'}
     volumes:
       - grafana_data:/var/lib/grafana
     ports:
