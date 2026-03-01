@@ -1,0 +1,75 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# backend/.dockerignore
+#
+# Excludes files that must NOT be sent to the Docker build daemon.
+# This reduces build context size (speeds up builds), prevents accidental
+# inclusion of .env files in image layers, and avoids baking local state
+# into images.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Dependencies ─────────────────────────────────────────────────────────────
+# node_modules can be 200–500 MB; the Dockerfile re-installs inside the image.
+node_modules/
+.pnpm-store/
+
+# ── Build output ─────────────────────────────────────────────────────────────
+dist/
+build/
+
+# ── Version control ──────────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ── Secrets & environment files ──────────────────────────────────────────────
+# CRITICAL: never bake production secrets into an image layer
+.env
+.env.*
+*.pem
+*.key
+*.cert
+*.p12
+ssl/
+
+# ── Test & coverage artefacts ────────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+__tests__/
+test/
+*.spec.ts
+*.test.ts
+jest.config.*
+tsconfig.spec.json
+
+# ── Development tooling ───────────────────────────────────────────────────────
+.eslintrc*
+eslint.config.*
+.prettierrc*
+.husky/
+.lint-staged*
+
+# ── Documentation ─────────────────────────────────────────────────────────────
+*.md
+docs/
+
+# ── OS artefacts ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Local dev config ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.local
+
+# ── Load-test / benchmark files ──────────────────────────────────────────────
+load-tests/
+*.js.map

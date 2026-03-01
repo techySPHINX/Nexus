@@ -1,0 +1,72 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# frontend/.dockerignore
+#
+# Excludes files that must NOT be sent to the Docker build daemon.
+# Reduces build context from ~500 MB to a few MB; prevents .env files
+# that contain API keys or feature flags from being included in image layers.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+
+# ── Build output (Vite places it in dist/) ────────────────────────────────────
+dist/
+build/
+
+# ── Version control ──────────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# ── Secrets & environment files ──────────────────────────────────────────────
+# VITE_* env vars are baked in at build time via --build-arg, not .env files
+.env
+.env.*
+*.pem
+*.key
+*.cert
+
+# ── Test & coverage artefacts ────────────────────────────────────────────────
+coverage/
+.nyc_output/
+*.lcov
+__tests__/
+*.spec.ts
+*.spec.tsx
+*.test.ts
+*.test.tsx
+vitest.config.*
+jest.config.*
+
+# ── Development tooling ───────────────────────────────────────────────────────
+.eslintrc*
+eslint.config.*
+.prettierrc*
+.husky/
+.lint-staged*
+postcss.config.*
+tailwind.config.*
+
+# ── Documentation ─────────────────────────────────────────────────────────────
+*.md
+TESTING.md
+Optimization.md
+
+# ── OS artefacts ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── Local dev config ─────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.local
+
+# ── CI config (not needed inside the image) ──────────────────────────────────
+render.yaml
+vercel.json
