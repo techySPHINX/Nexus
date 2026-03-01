@@ -8,48 +8,85 @@ import {
   Delete,
   Param,
   Body,
-  Query,
+  Headers,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { FilesService } from './files.service';
+import { FileUploadValidatorService } from './file-upload-validator.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
-import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 
 /**
  * Controller for handling file upload operations.
+ *
+ * Google Drive OAuth tokens are accepted via custom HTTP headers
+ * (X-Google-Access-Token / X-Google-Refresh-Token) rather than
+ * URL query parameters to avoid token exposure in server logs,
+ * browser history, and Referer headers (Issue #157).
+ *
+ * Every upload passes through FileSecurityService (size limit 10 MB,
+ * MIME-type allowlist, dangerous-extension check) (Issue #158).
  */
 @ApiTags('files')
 @ApiBearerAuth('JWT')
+@ApiHeader({
+  name: 'X-Google-Access-Token',
+  description: 'Google Drive OAuth2 access token',
+  required: false,
+})
+@ApiHeader({
+  name: 'X-Google-Refresh-Token',
+  description: 'Google Drive OAuth2 refresh token',
+  required: false,
+})
 @Controller('files')
 @UseGuards(JwtAuthGuard)
 export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+  constructor(
+    private readonly filesService: FilesService,
+    private readonly fileSecurityService: FileUploadValidatorService,
+  ) {}
 
   /**
    * Uploads a single file.
-   * @param file - The file to be uploaded.
-   * @returns A promise that resolves to an object containing the URL of the uploaded file.
-   * @throws {BadRequestException} If no file is uploaded.
+   * - Multer enforces MAX_FILE_SIZE_BYTES and the MIME allowlist.
+   * - FileSecurityService performs additional checks (extension, deep MIME).
    */
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: FileUploadValidatorService.MAX_FILE_SIZE_BYTES },
+      fileFilter: (_req, file, cb) => {
+        if (FileUploadValidatorService.ALLOWED_MIME_TYPES.has(file.mimetype)) {
+          cb(null, true);
+        } else {
+          // Use BadRequestException so Nest maps it to a 400 response (not 500).
+          cb(
+            new BadRequestException(
+              `File type '${file.mimetype}' is not allowed.`,
+            ),
+            false,
+          );
+        }
+      },
+    }),
+  )
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @GetCurrentUser('sub') userId: string,
-    @Body()
-    body: {
-      description?: string;
-      tags?: string;
-      access_token: string;
-      refresh_token?: string;
-    },
+    @Headers('x-google-access-token') accessToken: string,
+    @Headers('x-google-refresh-token') refreshToken: string | undefined,
+    @Body() body: { description?: string; tags?: string },
   ) {
+    this.fileSecurityService.validateFile(file);
     const userTokens = {
-      access_token: body.access_token,
-      refresh_token: body.refresh_token,
+      access_token: accessToken,
+      refresh_token: refreshToken,
     };
-
     return this.filesService.saveFile(
       file,
       userId,
@@ -62,29 +99,27 @@ export class FilesController {
   @Get()
   async getUserFiles(
     @GetCurrentUser('sub') userId: string,
-    @Query('access_token') accessToken: string,
-    @Query('refresh_token') refreshToken?: string,
+    @Headers('x-google-access-token') accessToken: string,
+    @Headers('x-google-refresh-token') refreshToken: string | undefined,
   ) {
     const userTokens = {
       access_token: accessToken,
       refresh_token: refreshToken,
     };
-
     return this.filesService.getUserFiles(userId, userTokens);
   }
 
   @Get(':id')
   async getFileInfo(
     @Param('id') id: string,
-    @GetCurrentUser('sub') userId: string,
-    @Query('access_token') accessToken: string,
-    @Query('refresh_token') refreshToken?: string,
+    @GetCurrentUser('sub') _userId: string,
+    @Headers('x-google-access-token') accessToken: string,
+    @Headers('x-google-refresh-token') refreshToken: string | undefined,
   ) {
     const userTokens = {
       access_token: accessToken,
       refresh_token: refreshToken,
     };
-
     return this.filesService.getFileInfo(id, userTokens);
   }
 
@@ -92,13 +127,13 @@ export class FilesController {
   async deleteFile(
     @Param('id') id: string,
     @GetCurrentUser('sub') userId: string,
-    @Body() body: { access_token: string; refresh_token?: string },
+    @Headers('x-google-access-token') accessToken: string,
+    @Headers('x-google-refresh-token') refreshToken: string | undefined,
   ) {
     const userTokens = {
-      access_token: body.access_token,
-      refresh_token: body.refresh_token,
+      access_token: accessToken,
+      refresh_token: refreshToken,
     };
-
     await this.filesService.deleteFile(id, userId, userTokens);
     return { message: 'File deleted successfully' };
   }
@@ -106,15 +141,15 @@ export class FilesController {
   @Post(':id/share')
   async shareFile(
     @Param('id') id: string,
-    @Body()
-    body: { userEmail: string; access_token: string; refresh_token?: string },
+    @Body() body: { userEmail: string },
     @GetCurrentUser('sub') userId: string,
+    @Headers('x-google-access-token') accessToken: string,
+    @Headers('x-google-refresh-token') refreshToken: string | undefined,
   ) {
     const userTokens = {
-      access_token: body.access_token,
-      refresh_token: body.refresh_token,
+      access_token: accessToken,
+      refresh_token: refreshToken,
     };
-
     await this.filesService.shareFile(id, body.userEmail, userId, userTokens);
     return { message: 'File shared successfully' };
   }
@@ -122,15 +157,14 @@ export class FilesController {
   @Get(':id/download')
   async getDownloadUrl(
     @Param('id') id: string,
-    @GetCurrentUser('sub') userId: string,
-    @Query('access_token') accessToken: string,
-    @Query('refresh_token') refreshToken?: string,
+    @GetCurrentUser('sub') _userId: string,
+    @Headers('x-google-access-token') accessToken: string,
+    @Headers('x-google-refresh-token') refreshToken: string | undefined,
   ) {
     const userTokens = {
       access_token: accessToken,
       refresh_token: refreshToken,
     };
-
     const downloadUrl = await this.filesService.getDownloadUrl(id, userTokens);
     return { downloadUrl };
   }
@@ -158,9 +192,13 @@ export class FilesController {
 
   @Post('auth/google/validate')
   async validateGoogleTokens(
-    @Body() body: { access_token: string; refresh_token?: string },
+    @Headers('x-google-access-token') accessToken: string,
+    @Headers('x-google-refresh-token') refreshToken: string | undefined,
   ) {
-    const isValid = await this.filesService.validateTokens(body);
+    const isValid = await this.filesService.validateTokens({
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
     return { isValid };
   }
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { useNews } from '@/contexts/NewsContext';
 import { Container, Typography, Box, Skeleton } from '@mui/material';
 import { NewsItem } from '@/services/newsService';
@@ -170,7 +171,9 @@ export default function NewsDetail() {
                 mb: 2,
               },
             }}
-            dangerouslySetInnerHTML={{ __html: item.content }}
+            dangerouslySetInnerHTML={{
+              __html: DOMPurify.sanitize(item.content),
+            }}
           />
         </Box>
       </Container>

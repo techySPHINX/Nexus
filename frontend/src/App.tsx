@@ -183,7 +183,14 @@ const LayoutContent: FC = () => {
                   </ProtectedRoute>
                 }
               />
-              <Route path="/messages" element={<ChatPage />} />
+              <Route
+                path="/messages"
+                element={
+                  <ProtectedRoute>
+                    <ChatPage />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/profile"
                 element={
@@ -491,9 +498,11 @@ const LayoutContent: FC = () => {
               <Route
                 path="/moderation/subcommunities/:id/join-requests"
                 element={
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <SubCommunityJoinRequestModeration />
-                  </Suspense>
+                  <AdminRoute>
+                    <Suspense fallback={<LoadingSpinner />}>
+                      <SubCommunityJoinRequestModeration />
+                    </Suspense>
+                  </AdminRoute>
                 }
               />
 

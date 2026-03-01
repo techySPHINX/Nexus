@@ -60,7 +60,10 @@ export const securityConfig = {
     forbidNonWhitelisted: true,
     transform: true,
     transformOptions: {
-      enableImplicitConversion: true,
+      // enableImplicitConversion is disabled to prevent type-coercion bypass
+      // attacks (e.g. "true" coerced to boolean, "1" to number) that can
+      // circumvent strict DTO validation guards (Issue #163).
+      enableImplicitConversion: false,
     },
     disableErrorMessages: process.env.NODE_ENV === 'production', // Hide detailed errors in production
   },

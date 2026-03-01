@@ -55,55 +55,59 @@ export class FilesService {
       throw new BadRequestException('No file provided.');
     }
 
-    if (!userTokens?.access_token) {
-      throw new UnauthorizedException('Google Drive access not authorized.');
-    }
-
     // Create a unique filename using a timestamp and the original filename.
     const filename = `${Date.now()}-${file.originalname}`;
-    // Construct the full path where the file will be saved.
     const filePath = path.join(this.uploadPath, filename);
 
-    try {
-      // Write the file buffer to the specified path.
-      await fs.promises.writeFile(filePath, file.buffer);
-      // Return the URL that can be used to access the file.
-      return `/uploads/${filename}`;
+    // If Google Drive tokens are provided, upload there and record metadata.
+    // Otherwise, save to local disk as a fallback.
+    if (userTokens?.access_token) {
+      try {
+        const driveResult = await this.googleDriveService.uploadFile(
+          userTokens,
+          file.originalname,
+          file.mimetype,
+          file.buffer,
+          description,
+          tags,
+        );
 
-      // Upload to user's Google Drive
-      const driveResult = await this.googleDriveService.uploadFile(
-        userTokens,
-        file.originalname,
-        file.mimetype,
-        file.buffer,
-        description,
-        tags,
-      );
+        const savedFile = await this.prisma.file.create({
+          data: {
+            filename: driveResult.fileId,
+            originalName: file.originalname,
+            mimeType: file.mimetype,
+            size: driveResult.size,
+            path: driveResult.webViewLink,
+            uploadedBy: userId,
+            userId: userId,
+          },
+        });
 
-      // Save file metadata to database
-      const savedFile = await this.prisma.file.create({
-        data: {
-          filename: driveResult.fileId,
-          originalName: file.originalname,
-          mimeType: file.mimetype,
+        return {
+          id: savedFile.id,
+          filename: savedFile.originalName,
+          googleDriveId: driveResult.fileId,
+          webViewLink: driveResult.webViewLink,
+          downloadLink: driveResult.downloadLink,
           size: driveResult.size,
-          path: driveResult.webViewLink,
-          uploadedBy: userId,
-          userId: userId,
-        },
-      });
+          mimeType: file.mimetype,
+        };
+      } catch (error) {
+        throw new BadRequestException(
+          `Failed to upload to Google Drive: ${error.message}`,
+        );
+      }
+    }
 
-      return {
-        id: savedFile.id,
-        filename: savedFile.originalName,
-        googleDriveId: driveResult.fileId,
-        webViewLink: driveResult.webViewLink,
-        downloadLink: driveResult.downloadLink,
-        size: driveResult.size,
-        mimeType: file.mimetype,
-      };
+    // Local fallback: write file buffer to disk and return its relative URL.
+    try {
+      await fs.promises.writeFile(filePath, file.buffer);
+      return { path: `/uploads/${filename}`, filename: file.originalname };
     } catch (error) {
-      throw new BadRequestException(`Failed to save file: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to save file locally: ${error.message}`,
+      );
     }
   }
 

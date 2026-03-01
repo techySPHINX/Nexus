@@ -2,14 +2,9 @@ import axios from 'axios';
 import { Notification } from '@/types/notification';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-const api = axios.create({ baseURL: BACKEND_URL });
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// withCredentials ensures the httpOnly access_token cookie is sent
+// automatically — no manual Authorization header needed (Issue #164).
+const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
 
 export async function fetchNotificationsService(
   page = 1,

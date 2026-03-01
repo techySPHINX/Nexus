@@ -1,21 +1,16 @@
+// Use the shared api instance (from api.ts) which already configures:
+//   - withCredentials: true  (httpOnly cookie auth, Issue #164)
+//   - X-CSRF-Token request interceptor (CSRF protection, Issue #162)
+// This ensures all POST/PATCH requests include the CSRF token and prevents
+// 403 errors from the backend CSRF middleware (Copilot recommendation PR #210).
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
-const api = axios.create({ baseURL: BACKEND_URL });
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+import api from './api';
 
 function getUser() {
-  const token = localStorage.getItem('token');
-  if (!token) return null;
   try {
-    return jwtDecode<{ role: string }>(token);
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    return JSON.parse(raw) as { role: string };
   } catch {
     return null;
   }

@@ -1,11 +1,13 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-console.log('API BASE URL:', BACKEND_URL);
 
 // Create axios instance with default config
 const api: AxiosInstance = axios.create({
   baseURL: BACKEND_URL,
   timeout: 10000,
+  // withCredentials sends httpOnly cookies automatically with every request.
+  // This is required for the cookie-based JWT auth migration (Issue #164).
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -44,29 +46,32 @@ function cacheGetOrFetch<T>(
   });
 }
 
-// Request interceptor to add auth token
+// Request interceptor: attach CSRF token for mutating requests (Issue #162).
+// JWT is no longer read from localStorage; the httpOnly access_token cookie
+// is sent automatically by the browser via withCredentials (Issue #164).
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Read the CSRF token from the non-httpOnly cookie set by the backend.
+    const csrfToken = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('csrf-token='))
+      ?.split('=')[1];
+
+    if (csrfToken) {
+      config.headers['X-CSRF-Token'] = csrfToken;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Response interceptor for error handling
 api.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
+  (response: AxiosResponse) => response,
   (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem('token');
+      // Cookie-based auth: clear stale local state and redirect to login.
+      // The httpOnly cookie will be cleared server-side on /auth/logout.
       localStorage.removeItem('user');
       window.location.href = '/login';
     }

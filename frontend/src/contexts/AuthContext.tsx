@@ -110,46 +110,44 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Configure axios defaults
+  // Configure axios defaults — withCredentials ensures httpOnly cookies are
+  // sent automatically with every request (Issue #164).
   axios.defaults.baseURL = BACKEND_URL;
+  axios.defaults.withCredentials = true;
 
-  // Check for stored token on app load || app refresh
+  // On mount: attempt silent token refresh using the refresh_token httpOnly
+  // cookie. This restores session state after a page reload without storing
+  // the access token in localStorage (Issue #164).
   useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-
-    if (storedToken) {
+    const restoreSession = async () => {
       try {
-        const decoded: DecodedToken = jwtDecode(storedToken);
-
-        const user: User = {
-          id: decoded.sub, // ✅ direct mapping
+        const response = await axios.post<AuthResponse>('/auth/refresh', {});
+        const { accessToken } = response.data;
+        const decoded: DecodedToken = jwtDecode(accessToken);
+        const restoredUser: User = {
+          id: decoded.sub,
           name: decoded.name,
           email: decoded.email,
           role: decoded.role,
           isEmailVerified: decoded.isEmailVerified || false,
           accountStatus:
-            (decoded.accountStatus as
-              | 'PENDING_VERIFICATION'
-              | 'PENDING_DOCUMENT_REVIEW'
-              | 'ACTIVE'
-              | 'SUSPENDED'
-              | 'BANNED'
-              | undefined) || 'PENDING_VERIFICATION',
+            (decoded.accountStatus as User['accountStatus']) ||
+            'PENDING_VERIFICATION',
           profileCompleted: decoded.profileCompleted,
           profile: decoded.profile,
         };
-
-        setToken(storedToken);
-        setUser(user);
-        axios.defaults.headers.common['Authorization'] =
-          `Bearer ${storedToken}`;
-      } catch (error) {
-        console.error('Error parsing stored user data:', error);
-        localStorage.removeItem('token');
+        setToken(accessToken);
+        setUser(restoredUser);
+      } catch {
+        // No valid refresh cookie — user must log in again.
+        setToken(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
 
-    setLoading(false);
+    restoreSession();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -162,33 +160,25 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       const { accessToken } = response.data;
       const decoded: DecodedToken = jwtDecode(accessToken);
 
-      const user: User = {
-        id: decoded.sub, // ✅ direct mapping
+      const loggedInUser: User = {
+        id: decoded.sub,
         name: decoded.name,
         email: decoded.email,
         role: decoded.role,
         isEmailVerified: decoded.isEmailVerified || false,
         accountStatus:
-          (decoded.accountStatus as
-            | 'PENDING_VERIFICATION'
-            | 'PENDING_DOCUMENT_REVIEW'
-            | 'ACTIVE'
-            | 'SUSPENDED'
-            | 'BANNED'
-            | undefined) || 'PENDING_VERIFICATION',
+          (decoded.accountStatus as User['accountStatus']) ||
+          'PENDING_VERIFICATION',
         profileCompleted: decoded.profileCompleted,
         profile: decoded.profile,
       };
 
+      // Store token in memory state only — httpOnly cookie is set by the
+      // backend and sent automatically; no localStorage needed (Issue #164).
       setToken(accessToken);
-      setUser(user);
-
-      localStorage.setItem('token', accessToken);
-      console.log('Setting auth header with token:', accessToken);
-      console.log('backend url', BACKEND_URL);
-      console.log('VITE_BACKEND_URL', import.meta.env.VITE_BACKEND_URL);
-
-      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      setUser(loggedInUser);
+      // Store non-sensitive user metadata for service-layer role checks.
+      localStorage.setItem('user', JSON.stringify(loggedInUser));
     } catch (error: unknown) {
       console.error('Login error:', error);
       let message = 'Login failed. Please try again.';
@@ -261,29 +251,22 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       const { accessToken } = response.data;
       const decoded: DecodedToken = jwtDecode(accessToken);
 
-      const user: User = {
-        id: decoded.sub, // ✅ direct mapping
+      const registeredUser: User = {
+        id: decoded.sub,
         name: decoded.name,
         email: decoded.email,
         role: decoded.role,
         isEmailVerified: decoded.isEmailVerified || false,
         accountStatus:
-          (decoded.accountStatus as
-            | 'PENDING_VERIFICATION'
-            | 'PENDING_DOCUMENT_REVIEW'
-            | 'ACTIVE'
-            | 'SUSPENDED'
-            | 'BANNED'
-            | undefined) || 'PENDING_VERIFICATION',
+          (decoded.accountStatus as User['accountStatus']) ||
+          'PENDING_VERIFICATION',
         profileCompleted: decoded.profileCompleted,
         profile: decoded.profile,
       };
 
       setToken(accessToken);
-      setUser(user);
-
-      localStorage.setItem('token', accessToken);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      setUser(registeredUser);
+      localStorage.setItem('user', JSON.stringify(registeredUser));
     } catch (error: unknown) {
       console.error('Register error:', error);
       let message = 'Registration failed. Please try again.';
@@ -299,26 +282,35 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem('token');
-    delete axios.defaults.headers.common['Authorization'];
+  // Helper to read the CSRF token from the non-httpOnly cookie set by the backend.
+  // /auth/logout is not in the CSRF exempt list, so the header must be attached
+  // (Copilot recommendation from PR #210).
+  const getCsrfToken = (): string | null => {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('csrf-token='));
+    return match ? decodeURIComponent(match.split('=')[1]) : null;
   };
 
-  // Cross-tab logout/session expiry handling
-  useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key === 'token' && e.newValue === null) {
-        setToken(null);
-        setUser(null);
-        delete axios.defaults.headers.common['Authorization'];
-      }
+  const logout = async () => {
+    try {
+      // Ask the backend to clear the httpOnly auth cookies server-side.
+      const csrfToken = getCsrfToken();
+      await axios.post(
+        '/auth/logout',
+        {},
+        csrfToken
+          ? { headers: { 'X-CSRF-Token': csrfToken }, withCredentials: true }
+          : { withCredentials: true }
+      );
+    } catch {
+      // Ignore errors — proceed with local state cleanup regardless.
     }
-
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('user');
+  };
 
   const value = {
     user,

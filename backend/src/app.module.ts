@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -36,6 +36,7 @@ import { GdprService } from './common/services/gdpr.service';
 import { RedisService } from './common/services/redis.service';
 import { RateLimitService } from './common/guards/enhanced-rate-limit.guard';
 import { FileSecurityService } from './common/services/file-security.service';
+import { CsrfMiddleware } from './common/middleware/csrf.middleware';
 
 @Module({
   imports: [
@@ -114,4 +115,11 @@ import { FileSecurityService } from './common/services/file-security.service';
     FileSecurityService,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    // Apply CSRF protection to all routes.
+    // CsrfMiddleware whitelists safe HTTP methods (GET/HEAD/OPTIONS) and
+    // a few exempt paths (/health, /ready, /auth/google) internally.
+    consumer.apply(CsrfMiddleware).forRoutes('*');
+  }
+}
