@@ -34,7 +34,6 @@ import { WinstonLoggerService } from './common/logger/winston-logger.service';
 import { AuditLogService } from './common/services/audit-log.service';
 import { GdprService } from './common/services/gdpr.service';
 import { RedisService } from './common/services/redis.service';
-import { CachingService } from './common/services/caching.service';
 import { RateLimitService } from './common/guards/enhanced-rate-limit.guard';
 import { FileSecurityService } from './common/services/file-security.service';
 
@@ -93,8 +92,10 @@ import { FileSecurityService } from './common/services/file-security.service';
     // Global Services - Data & Privacy
     GdprService,
     // Global Services - Caching & Performance
+    // NOTE: CacheService is the canonical cache service, provided by CommonModule
+    // (which is @Global). CachingService and CacheEnhancedService are legacy;
+    // do not register them here to avoid duplicate instances (Issue #170).
     RedisService,
-    CachingService,
     // Global Services - Security
     RateLimitService,
     FileSecurityService,
@@ -109,7 +110,6 @@ import { FileSecurityService } from './common/services/file-security.service';
     AuditLogService,
     GdprService,
     RedisService,
-    CachingService,
     RateLimitService,
     FileSecurityService,
   ],

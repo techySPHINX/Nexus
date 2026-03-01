@@ -3,7 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { MessagingService } from './messaging.service';
 import { MessagingController } from './messaging.controller';
 import { ImprovedMessagingGateway } from './messaging.gateway.improved';
-import { FastChatGateway } from './fast-chat.gateway';
+// FastChatGateway is superseded by ImprovedMessagingGateway (Issue #170).
 import { PrismaModule } from 'src/prisma/prisma.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { CommonModule } from '../common/common.module';
@@ -21,9 +21,10 @@ import { CommonModule } from '../common/common.module';
   controllers: [MessagingController],
   providers: [
     MessagingService,
+    // ImprovedMessagingGateway is the canonical chat gateway (Issue #170).
+    // FastChatGateway has been removed — its functionality is covered here.
     ImprovedMessagingGateway,
-    FastChatGateway, // Add the fast chat gateway
   ],
-  exports: [ImprovedMessagingGateway, FastChatGateway, MessagingService],
+  exports: [ImprovedMessagingGateway, MessagingService],
 })
 export class MessagingModule {}
