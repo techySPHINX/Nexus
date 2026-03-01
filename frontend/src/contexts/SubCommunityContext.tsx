@@ -106,11 +106,17 @@ interface SubCommunityContextType {
   ensureTypes: () => Promise<SubCommunityType[]>;
   // helpers
   isLoadingForType: (type: string) => boolean;
-  hasMoreForType: (type: string, limit?: number, q?: string) => boolean;
+  hasMoreForType: (
+    type: string,
+    limit?: number,
+    q?: string,
+    filters?: SubCommunityFilterParams
+  ) => boolean;
   getRemainingForType: (
     type: string,
     limit?: number,
-    q?: string
+    q?: string,
+    filters?: SubCommunityFilterParams
   ) => number | undefined;
   // Whether any per-section load is currently in progress
   isAnySectionLoading: () => boolean;
@@ -136,9 +142,12 @@ interface SubCommunityContextType {
   }>;
   // Enqueue a type (or 'all') for scheduled loading. LazySection calls this
   // to ensure its type will be fetched eventually.
-  scheduleTypeLoad: (type: string, limit?: number) => Promise<void>;
-  // Reset all cached type data and clear in-flight tracking (call when filters change)
-  resetTypeCache: () => void;
+  scheduleTypeLoad: (
+    type: string,
+    limit?: number,
+    q?: string,
+    filters?: SubCommunityFilterParams
+  ) => Promise<void>;
 }
 
 const SubCommunityContext = createContext<SubCommunityContextType>({
@@ -208,7 +217,6 @@ const SubCommunityContext = createContext<SubCommunityContextType>({
   ensureTypeLoaded: async () => {},
   loadMoreForType: async () => {},
   scheduleTypeLoad: async () => {},
-  resetTypeCache: () => {},
   activeFilters: {},
   setActiveFilters: () => {},
   createSubCommunity: async () => {},
@@ -287,12 +295,6 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
   const [loading, setLoading] = useState(false);
   const [activeFilters, setActiveFiltersState] =
     useState<SubCommunityFilterParams>({});
-  const activeFiltersRef = useRef<SubCommunityFilterParams>({});
-
-  const setActiveFilters = useCallback((filters: SubCommunityFilterParams) => {
-    activeFiltersRef.current = filters;
-    setActiveFiltersState(filters);
-  }, []);
   // Per-action loading flags to avoid global page reloads when mutating
   // specific entities (e.g. removing a member, requesting to join).
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>(
@@ -333,6 +335,9 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
     Record<string, number>
   >({});
   const inFlightTypePage = useRef<Record<string, Promise<unknown> | null>>({});
+  const activeFilterKeyRef = useRef<string>('');
+  const scheduledQueueRef = useRef<string[]>([]);
+  const queueProcessingRef = useRef(false);
   // per-type loading state to trigger re-renders for UI
   const [subCommunityLoadingByType, setSubCommunityLoadingByType] = useState<
     Record<string, boolean>
@@ -347,6 +352,52 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
   const clearError = useCallback(() => {
     setErrorState('');
   }, []);
+
+  const normalizeFilters = useCallback((filters?: SubCommunityFilterParams) => {
+    return {
+      privacy:
+        filters?.privacy && filters.privacy !== 'all'
+          ? filters.privacy
+          : undefined,
+      membership:
+        filters?.membership && filters.membership !== 'all'
+          ? filters.membership
+          : undefined,
+      sort: filters?.sort || undefined,
+      minMembers:
+        typeof filters?.minMembers === 'number' && filters.minMembers > 0
+          ? Math.floor(filters.minMembers)
+          : undefined,
+    } as SubCommunityFilterParams;
+  }, []);
+
+  const buildFilterKey = useCallback(
+    (filters?: SubCommunityFilterParams) => {
+      const normalized = normalizeFilters(filters);
+      return `${normalized.privacy || ''}-${normalized.membership || ''}-${normalized.sort || ''}-${normalized.minMembers || ''}`;
+    },
+    [normalizeFilters]
+  );
+  activeFilterKeyRef.current = buildFilterKey(activeFilters);
+
+  const resetTypeListingState = useCallback(() => {
+    setSubCommunitiesByType([]);
+    setSubCommunityPages({});
+    setSubCommunityLoadingByType({});
+    setSubCommunityCache({});
+    inFlightTypePage.current = {};
+    scheduledQueueRef.current = [];
+  }, []);
+
+  const setActiveFilters = useCallback(
+    (filters: SubCommunityFilterParams) => {
+      const normalized = normalizeFilters(filters);
+      if (buildFilterKey(activeFilters) === buildFilterKey(normalized)) return;
+      setActiveFiltersState(normalized);
+      resetTypeListingState();
+    },
+    [activeFilters, buildFilterKey, normalizeFilters, resetTypeListingState]
+  );
 
   const isAnySectionLoading = useCallback(() => {
     return (
@@ -517,16 +568,16 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       forceRefresh = false,
       filters?: SubCommunityFilterParams
     ) => {
-      const filterKey = filters
-        ? `${filters.privacy || ''}-${filters.membership || ''}-${filters.sort || ''}-${filters.minMembers || ''}`
-        : '';
+      const filterKey = buildFilterKey(filters);
       const cacheKey = `${type}-${page}-${limit}-${q || ''}-${filterKey}`;
+      const isCurrentFilter = () =>
+        type === 'all' || filterKey === activeFilterKeyRef.current;
 
       // Check cache first
       if (!forceRefresh && subCommunityCache[cacheKey]) {
         const cachedData = subCommunityCache[cacheKey];
         // For specific types, update the byType state
-        if (type !== 'all') {
+        if (type !== 'all' && isCurrentFilter()) {
           setSubCommunitiesByType((prev) => {
             // Merge with existing data, avoiding duplicates
             const newData = [...cachedData.data];
@@ -555,6 +606,11 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
           ...prev,
           [cacheKey]: response,
         }));
+
+        // Ignore stale responses from previous filter states.
+        if (!isCurrentFilter()) {
+          return response;
+        }
 
         // Update state based on type
         if (type === 'all') {
@@ -601,7 +657,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
         setLoading(false);
       }
     },
-    [setError, subCommunityCache, safeGetSubCommunityByType]
+    [buildFilterKey, setError, subCommunityCache, safeGetSubCommunityByType]
   );
 
   // Ensure the first page for a given type is loaded (idempotent)
@@ -612,9 +668,8 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       q?: string,
       filters?: SubCommunityFilterParams
     ): Promise<void> => {
-      const filterKey = filters
-        ? `${filters.privacy || ''}-${filters.membership || ''}-${filters.sort || ''}-${filters.minMembers || ''}`
-        : '';
+      const resolvedFilters = filters ?? activeFilters;
+      const filterKey = buildFilterKey(resolvedFilters);
       const key = `${type}-1-${limit}-${q || ''}-${filterKey}`;
       if (subCommunityCache[key]) {
         setSubCommunityPages((prev) => ({ ...prev, [type]: 1 }));
@@ -636,7 +691,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
             limit,
             q,
             false,
-            filters
+            resolvedFilters
           );
           if (resp?.data) {
             // mark page 1 loaded
@@ -651,7 +706,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       inFlightTypePage.current[key] = p;
       return p;
     },
-    [getSubCommunityByType, subCommunityCache]
+    [activeFilters, buildFilterKey, getSubCommunityByType, subCommunityCache]
   );
 
   // Load next page for a type (idempotent per target page)
@@ -662,11 +717,10 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       q?: string,
       filters?: SubCommunityFilterParams
     ): Promise<void> => {
+      const resolvedFilters = filters ?? activeFilters;
       const current = subCommunityPages[type] ?? 1;
       const next = current + 1;
-      const filterKey = filters
-        ? `${filters.privacy || ''}-${filters.membership || ''}-${filters.sort || ''}-${filters.minMembers || ''}`
-        : '';
+      const filterKey = buildFilterKey(resolvedFilters);
       const key = `${type}-${next}-${limit}-${q || ''}-${filterKey}`;
       if (subCommunityCache[key]) {
         // already loaded
@@ -687,7 +741,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
             limit,
             q,
             false,
-            filters
+            resolvedFilters
           );
           if (resp?.data) {
             setSubCommunityPages((prev) => ({ ...prev, [type]: next }));
@@ -701,7 +755,13 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       inFlightTypePage.current[key] = p;
       return p;
     },
-    [getSubCommunityByType, subCommunityPages, subCommunityCache]
+    [
+      activeFilters,
+      buildFilterKey,
+      getSubCommunityByType,
+      subCommunityPages,
+      subCommunityCache,
+    ]
   );
 
   const isLoadingForType = useCallback(
@@ -712,20 +772,35 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
   );
 
   const hasMoreForType = useCallback(
-    (type: string, limit: number = 6, q: string = '') => {
+    (
+      type: string,
+      limit: number = 6,
+      q: string = '',
+      filters?: SubCommunityFilterParams
+    ) => {
+      const resolvedFilters = filters ?? activeFilters;
+      const filterKey = buildFilterKey(resolvedFilters);
       const page = subCommunityPages[type] ?? 1;
-      const key = `${type}-${page}-${limit}-${q}`;
+      const key = `${type}-${page}-${limit}-${q || ''}-${filterKey}`;
       const resp = subCommunityCache[key];
       return !!resp?.pagination?.hasNext;
     },
-    [subCommunityPages, subCommunityCache]
+    [activeFilters, buildFilterKey, subCommunityPages, subCommunityCache]
   );
 
   const getRemainingForType = useCallback(
-    (type: string, limit: number = 6, q: string = ''): number | undefined => {
+    (
+      type: string,
+      limit: number = 6,
+      q: string = '',
+      filters?: SubCommunityFilterParams
+    ): number | undefined => {
+      const resolvedFilters = filters ?? activeFilters;
+      const filterKey = buildFilterKey(resolvedFilters);
       // Sum loaded items for this type across cached pages
-      const loadedKeys = Object.keys(subCommunityCache).filter((k) =>
-        k.startsWith(`${type}-`)
+      const loadedKeys = Object.keys(subCommunityCache).filter(
+        (k) =>
+          k.startsWith(`${type}-`) && k.endsWith(`-${q || ''}-${filterKey}`)
       );
       const loadedCount = loadedKeys.reduce((acc, k) => {
         const resp = subCommunityCache[k];
@@ -734,7 +809,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
 
       // try to read total from the latest page we have (prefer current page)
       const currentPage = subCommunityPages[type] ?? 1;
-      const currentKey = `${type}-${currentPage}-${limit}-${q}`;
+      const currentKey = `${type}-${currentPage}-${limit}-${q || ''}-${filterKey}`;
       // fallback to any page for this type
       const fallbackKey = loadedKeys[loadedKeys.length - 1];
       const currentResp =
@@ -746,18 +821,17 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
       }
       return undefined;
     },
-    [subCommunityCache, subCommunityPages]
+    [activeFilters, buildFilterKey, subCommunityCache, subCommunityPages]
   );
 
-  // A small queue to ensure scheduled section loads are eventually processed.
-  // LazySection components enqueue their type id here; the queue processor
-  // will call `ensureTypeLoaded` (or `ensureAllSubCommunities`) sequentially
-  // so no scheduled load is dropped due to transient flags.
-  const scheduledQueueRef = useRef<string[]>([]);
-  const queueProcessingRef = useRef(false);
-
   const scheduleTypeLoad = useCallback(
-    async (type: string, limit = 6) => {
+    async (
+      type: string,
+      limit = 6,
+      q?: string,
+      filters?: SubCommunityFilterParams
+    ) => {
+      const resolvedFilters = filters ?? activeFilters;
       if (scheduledQueueRef.current.includes(type)) return;
 
       scheduledQueueRef.current.push(type);
@@ -775,12 +849,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
               // Acquire semaphore inside ensureAllSubCommunities
               await ensureAllSubCommunities();
             } else {
-              await ensureTypeLoaded(
-                next,
-                limit,
-                undefined,
-                activeFiltersRef.current
-              );
+              await ensureTypeLoaded(next, limit, q, resolvedFilters);
             }
           } catch (err) {
             // swallow and continue; retry logic is handled by the enqueuing
@@ -795,7 +864,7 @@ export const SubCommunityProvider: FC<{ children: ReactNode }> = ({
         queueProcessingRef.current = false;
       }
     },
-    [ensureAllSubCommunities, ensureTypeLoaded]
+    [activeFilters, ensureAllSubCommunities, ensureTypeLoaded]
   );
 
   const resetTypeCache = useCallback(() => {

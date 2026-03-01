@@ -225,7 +225,9 @@ export const SubCommunitySection: React.FC<SubCommunitySectionProps> = ({
               {isLoading || isLoadingMore ? (
                 <CircularProgress size={16} />
               ) : (
-                `Show more`
+                hasMore && communities.length <= initialCount
+                  ? `Load more`
+                  : `Show more`
               )}
             </Button>
           )}

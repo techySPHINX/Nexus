@@ -19,10 +19,16 @@ import {
   Skeleton,
   Chip,
   Fade,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+  TextField,
 } from '@mui/material';
 import {
   // Search,
   // Add,
+  FilterList,
   KeyboardArrowUp,
 } from '@mui/icons-material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
@@ -31,7 +37,11 @@ import { useAuth } from '../../contexts/AuthContext';
 // import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubCommunityRequestDialog';
 import { SubCommunitySection } from '../../components/SubCommunity/SubCommunitySection';
 import { ManageTypesDialog } from '../../components/SubCommunity/ManageTypesDialog';
-import { SubCommunity, SubCommunityType } from '../../types/subCommunity';
+import {
+  SubCommunity,
+  SubCommunityFilterParams,
+  SubCommunityType,
+} from '../../types/subCommunity';
 // import { Link } from 'react-router-dom';
 
 // Sections are built dynamically from types provided by context (plus 'all')
@@ -46,7 +56,15 @@ const LazySection: React.FC<{
   typeId: string;
   title: string;
   initialCount?: number;
-}> = ({ typeId, title, initialCount = 6 }) => {
+  filters?: SubCommunityFilterParams;
+  hidePlaceholderWhenEmpty?: boolean;
+}> = ({
+  typeId,
+  title,
+  initialCount = 6,
+  filters,
+  hidePlaceholderWhenEmpty = false,
+}) => {
   const {
     scheduleTypeLoad,
     isLoadingForType,
@@ -55,6 +73,7 @@ const LazySection: React.FC<{
     loadMoreForType,
     subCommunities,
     subCommunitiesByType,
+    error,
   } = useSubCommunity();
 
   // We'll observe the section wrapper and call ensureTypeLoaded only when
@@ -73,6 +92,10 @@ const LazySection: React.FC<{
   useEffect(() => {
     subCommunitiesByTypeRef.current = subCommunitiesByType;
   }, [subCommunitiesByType]);
+
+  useEffect(() => {
+    scheduledRef.current = false;
+  }, [filters]);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -97,12 +120,13 @@ const LazySection: React.FC<{
             const isCurrentlyLoading = isLoadingForType(typeId);
 
             if (
+              !error &&
               !scheduledRef.current &&
               displayCommunities.length === 0 &&
               !isCurrentlyLoading
             ) {
               scheduledRef.current = true;
-              scheduleTypeLoad(typeId, initialCount)
+              scheduleTypeLoad(typeId, initialCount, undefined, filters)
                 .catch((err) => {
                   console.warn('Failed to load type', typeId, err);
                 })
@@ -117,9 +141,11 @@ const LazySection: React.FC<{
                               : subCom.type?.name === typeId
                         );
 
-                  if (!currentDisplay || currentDisplay.length === 0) {
-                    scheduledRef.current = false;
-                  } else if (rootRef.current) {
+                  if (
+                    currentDisplay &&
+                    currentDisplay.length > 0 &&
+                    rootRef.current
+                  ) {
                     observer.unobserve(rootRef.current);
                   }
                 });
@@ -143,6 +169,8 @@ const LazySection: React.FC<{
     scheduleTypeLoad,
     initialCount,
     isLoadingForType,
+    error,
+    filters,
     subCommunities,
     subCommunitiesByType,
   ]);
@@ -157,8 +185,8 @@ const LazySection: React.FC<{
         );
 
   const isLoading = isLoadingForType(typeId);
-  const hasMore = hasMoreForType(typeId, initialCount);
-  const remainingCount = getRemainingForType(typeId, initialCount);
+  const hasMore = hasMoreForType(typeId, initialCount, '', filters);
+  const remainingCount = getRemainingForType(typeId, initialCount, '', filters);
 
   // We rely on the context semaphore to serialize actual network requests
   // (so multiple observers can schedule work but only the semaphore will
@@ -260,7 +288,9 @@ const LazySection: React.FC<{
                 type={typeId}
                 communities={displayCommunities}
                 initialCount={initialCount}
-                onLoadMore={() => loadMoreForType(typeId, initialCount)}
+                onLoadMore={() =>
+                  loadMoreForType(typeId, initialCount, undefined, filters)
+                }
                 hasMore={hasMore}
                 isLoading={isLoading}
                 remainingCount={remainingCount}
@@ -269,11 +299,9 @@ const LazySection: React.FC<{
           </Fade>
         )
       ) : (
-        // keep an empty placeholder so the observer has something to attach to
-        // Use a larger placeholder so sections below the fold don't all
-        // register as intersecting at once (small placeholders could all
-        // fall inside rootMargin and trigger eager loads).
-        <Box sx={{ minHeight: 160 }} />
+        // keep a placeholder for observer only when needed; hide it when
+        // filter mode is active to avoid empty vertical gaps.
+        <>{hidePlaceholderWhenEmpty ? null : <Box sx={{ minHeight: 160 }} />}</>
       )}
     </div>
   );
@@ -289,7 +317,10 @@ const SubCommunityPage: React.FC = () => {
     types,
     scheduleTypeLoad,
     isLoadingForType,
+    isAnySectionLoading,
     subCommunitiesByType,
+    activeFilters,
+    setActiveFilters,
   } = useSubCommunity();
 
   const { user } = useAuth();
@@ -305,13 +336,27 @@ const SubCommunityPage: React.FC = () => {
   const isAdmin = user?.role === 'ADMIN';
   // const isAlum = user?.role === 'ALUM';
 
-  // const handleFilterChange = useCallback(
-  //   (key: keyof SubCommunityFilterParams, value: string | number) => {
-  //     const newFilters = { ...activeFilters, [key]: value };
-  //     setActiveFilters(newFilters);
-  //   },
-  //   [activeFilters, setActiveFilters]
-  // );
+  const handleFilterChange = useCallback(
+    (updates: Partial<SubCommunityFilterParams>) => {
+      setActiveFilters({ ...activeFilters, ...updates });
+    },
+    [activeFilters, setActiveFilters]
+  );
+
+  const clearFilters = useCallback(() => {
+    setActiveFilters({});
+  }, [setActiveFilters]);
+
+  const hasActiveFilters = useMemo(
+    () =>
+      !!(
+        activeFilters.privacy ||
+        activeFilters.membership ||
+        activeFilters.sort ||
+        activeFilters.minMembers
+      ),
+    [activeFilters]
+  );
 
   // useEffect(() => {
   //   // When filters change, clear the type cache so sections fetch fresh data.
@@ -368,16 +413,23 @@ const SubCommunityPage: React.FC = () => {
 
   // const filteredCommunities = filterCommunities(subCommunities);
 
-  const sections = useMemo(
-    () => [
-      { id: 'all', title: 'Recommended Communities' },
-      ...((types || []) as SubCommunityType[]).map((t: SubCommunityType) => ({
+  const sections = useMemo(() => {
+    const typedSections = ((types || []) as SubCommunityType[]).map(
+      (t: SubCommunityType) => ({
         id: t.name,
         title: `${t.name} Communities`,
-      })),
-    ],
-    [types]
-  );
+      })
+    );
+    if (hasActiveFilters) return typedSections;
+    return [{ id: 'all', title: 'Recommended Communities' }, ...typedSections];
+  }, [hasActiveFilters, types]);
+
+  const totalLoadedCommunities = hasActiveFilters
+    ? subCommunitiesByType.length
+    : subCommunities.length;
+
+  const isFilteringJoinedOnly = activeFilters.membership === 'joined';
+  const isFilterLoading = hasActiveFilters && isAnySectionLoading();
 
   const getDisplayCountByType = useCallback(
     (typeId: string) => {
@@ -392,6 +444,7 @@ const SubCommunityPage: React.FC = () => {
   );
 
   useEffect(() => {
+    if (error || hasActiveFilters) return;
     let ticking = false;
 
     const tryPreloadNearBottom = () => {
@@ -408,7 +461,7 @@ const SubCommunityPage: React.FC = () => {
             const alreadyLoaded = getDisplayCountByType(id) > 0;
             const loadingType = isLoadingForType(id);
             if (!alreadyLoaded && !loadingType) {
-              void scheduleTypeLoad(id, 6);
+              void scheduleTypeLoad(id, 6, undefined, activeFilters);
             }
           });
         }
@@ -423,7 +476,15 @@ const SubCommunityPage: React.FC = () => {
     return () => {
       window.removeEventListener('scroll', tryPreloadNearBottom);
     };
-  }, [getDisplayCountByType, isLoadingForType, scheduleTypeLoad, sections]);
+  }, [
+    activeFilters,
+    error,
+    hasActiveFilters,
+    getDisplayCountByType,
+    isLoadingForType,
+    scheduleTypeLoad,
+    sections,
+  ]);
 
   useEffect(() => {
     const container = document.getElementById('app-scroll-container');
@@ -501,7 +562,7 @@ const SubCommunityPage: React.FC = () => {
             />
             <Chip
               size="small"
-              label={`${subCommunities.length} loaded communities`}
+              label={`${totalLoadedCommunities} loaded communities`}
               variant="outlined"
             />
           </Box>
@@ -558,34 +619,137 @@ const SubCommunityPage: React.FC = () => {
       </Box>
 
       {/* Filter Bar */}
-      {/* <Box sx={{ mb: 3 }}>
-        <Button
-          variant="outlined"
-          startIcon={<FilterList />}
-          onClick={() => setShowFilters((prev) => !prev)}
-          sx={{ borderRadius: 2, mb: showFilters ? 2 : 0 }}
+      <Box
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 2,
+          backgroundColor: 'background.paper',
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
+        <Box
+          sx={{
+            mb: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1,
+            flexWrap: 'wrap',
+          }}
         >
-          {showFilters ? 'Hide Filters' : 'Filters'}
-        </Button>
-
-        {showFilters && (
-          <Box
-            sx={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 2,
-              alignItems: 'center',
-              p: 2,
-              borderRadius: 2,
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
+          <Typography
+            variant="subtitle1"
+            sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
           >
-            Search Results for &quot;{searchTerm}&quot;
+            <FilterList fontSize="small" />
+            Filters
           </Typography>
+          <Button
+            variant="text"
+            size="small"
+            onClick={clearFilters}
+            disabled={!hasActiveFilters}
+            sx={{ textTransform: 'none' }}
+          >
+            Clear filters
+          </Button>
         </Box>
-      )} */}
+
+        <Grid container spacing={2}>
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="subcommunity-privacy-label">Privacy</InputLabel>
+              <Select
+                labelId="subcommunity-privacy-label"
+                label="Privacy"
+                value={activeFilters.privacy || 'all'}
+                onChange={(e) =>
+                  handleFilterChange({
+                    privacy:
+                      e.target.value === 'all'
+                        ? undefined
+                        : (e.target
+                            .value as SubCommunityFilterParams['privacy']),
+                  })
+                }
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="public">Public</MenuItem>
+                <MenuItem value="private">Private</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="subcommunity-membership-label">
+                Membership
+              </InputLabel>
+              <Select
+                labelId="subcommunity-membership-label"
+                label="Membership"
+                value={activeFilters.membership || 'all'}
+                onChange={(e) =>
+                  handleFilterChange({
+                    membership:
+                      e.target.value === 'all'
+                        ? undefined
+                        : (e.target
+                            .value as SubCommunityFilterParams['membership']),
+                  })
+                }
+              >
+                <MenuItem value="all">All</MenuItem>
+                <MenuItem value="joined">Joined only</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <FormControl fullWidth size="small">
+              <InputLabel id="subcommunity-sort-label">Sort</InputLabel>
+              <Select
+                labelId="subcommunity-sort-label"
+                label="Sort"
+                value={activeFilters.sort || 'all'}
+                onChange={(e) =>
+                  handleFilterChange({
+                    sort:
+                      e.target.value === 'all'
+                        ? undefined
+                        : (e.target.value as SubCommunityFilterParams['sort']),
+                  })
+                }
+              >
+                <MenuItem value="all">Default</MenuItem>
+                <MenuItem value="recent">Most recent</MenuItem>
+                <MenuItem value="popular">Most popular</MenuItem>
+                <MenuItem value="active">Most active</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={3}>
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label="Min members"
+              value={activeFilters.minMembers ?? ''}
+              inputProps={{ min: 0 }}
+              onChange={(e) => {
+                const parsed = Number(e.target.value);
+                handleFilterChange({
+                  minMembers:
+                    Number.isFinite(parsed) && parsed > 0 ? parsed : undefined,
+                });
+              }}
+            />
+          </Grid>
+        </Grid>
+      </Box>
 
       {/* Community Sections */}
 
@@ -596,20 +760,29 @@ const SubCommunityPage: React.FC = () => {
 
           return (
             <Box key={typeId}>
-              <LazySection typeId={typeId} title={typeConfig.title} />
+              <LazySection
+                typeId={typeId}
+                title={typeConfig.title}
+                filters={activeFilters}
+                hidePlaceholderWhenEmpty={hasActiveFilters}
+              />
             </Box>
           );
         })
       }
 
       {/* Empty State */}
-      {subCommunities.length === 0 && (
+      {!isFilterLoading && totalLoadedCommunities === 0 && (
         <Box sx={{ textAlign: 'center', py: 8 }}>
           <Typography variant="h6" color="text.secondary" gutterBottom>
-            No communities found
+            {isFilteringJoinedOnly
+              ? "You're not a member of any communities yet"
+              : 'No communities found'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Be the first to create a community!
+            {isFilteringJoinedOnly
+              ? 'Join a community to see results in Joined only filter.'
+              : 'Be the first to create a community!'}
           </Typography>
         </Box>
       )}

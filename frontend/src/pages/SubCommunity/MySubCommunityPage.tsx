@@ -248,10 +248,15 @@ const MySubCommunityPage: FC = () => {
         sx={{
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: { xs: 'flex-start', sm: 'center' },
           mb: 4,
           flexWrap: 'wrap',
           gap: 2,
+          p: { xs: 2, md: 2.5 },
+          borderRadius: 2.5,
+          border: '1px solid',
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
         }}
       >
         <Box>
@@ -280,12 +285,12 @@ const MySubCommunityPage: FC = () => {
       </Box>
 
       {/* Back to All Communities */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 2.5 }}>
         <Button
           component={Link}
           to="/subcommunities"
           variant="outlined"
-          sx={{ mb: 2 }}
+          size="small"
         >
           ← Back to All Communities
         </Button>
@@ -367,25 +372,25 @@ const MySubCommunityPage: FC = () => {
         ) : (filteredCommunities?.owned?.length ?? 0) > 0 ? (
           <Fade in={!loadingOwned} timeout={240} appear>
             <Box>
-            <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-              Communities You Own
-            </Typography>
-            <Grid container spacing={3}>
-              {filteredCommunities.owned.map((subCom) => (
-                <Grid item xs={12} sm={6} md={6} key={subCom.id}>
-                  <SubCommunityCard subCommunity={subCom} />
-                </Grid>
-              ))}
-            </Grid>
-            {ownedPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                <Pagination
-                  count={ownedPages}
-                  page={getPageFromUrl(0)}
-                  onChange={(_e, p) => handlePageChange(0, p)}
-                />
-              </Box>
-            )}
+              <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                Communities You Own
+              </Typography>
+              <Grid container spacing={3}>
+                {filteredCommunities.owned.map((subCom) => (
+                  <Grid item xs={12} sm={6} md={6} key={subCom.id}>
+                    <SubCommunityCard subCommunity={subCom} />
+                  </Grid>
+                ))}
+              </Grid>
+              {ownedPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Pagination
+                    count={ownedPages}
+                    page={getPageFromUrl(0)}
+                    onChange={(_e, p) => handlePageChange(0, p)}
+                  />
+                </Box>
+              )}
             </Box>
           </Fade>
         ) : (
@@ -394,11 +399,7 @@ const MySubCommunityPage: FC = () => {
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 You don't own any communities yet
               </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 3 }}
-              >
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                 {isAdmin || isAlum
                   ? 'Create a community to get started as an owner'
                   : 'Only Alumni and Admins can own communities'}
@@ -424,25 +425,25 @@ const MySubCommunityPage: FC = () => {
         ) : (filteredCommunities?.moderated?.length ?? 0) > 0 ? (
           <Fade in={!loadingModerated} timeout={240} appear>
             <Box>
-            <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-              Communities You Moderate
-            </Typography>
-            <Grid container spacing={3}>
-              {filteredCommunities.moderated.map((subCom) => (
-                <Grid item xs={12} sm={6} md={6} key={subCom.id}>
-                  <SubCommunityCard subCommunity={subCom} />
-                </Grid>
-              ))}
-            </Grid>
-            {moderatedPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                <Pagination
-                  count={moderatedPages}
-                  page={getPageFromUrl(1)}
-                  onChange={(_e, p) => handlePageChange(1, p)}
-                />
-              </Box>
-            )}
+              <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                Communities You Moderate
+              </Typography>
+              <Grid container spacing={3}>
+                {filteredCommunities.moderated.map((subCom) => (
+                  <Grid item xs={12} sm={6} md={6} key={subCom.id}>
+                    <SubCommunityCard subCommunity={subCom} />
+                  </Grid>
+                ))}
+              </Grid>
+              {moderatedPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Pagination
+                    count={moderatedPages}
+                    page={getPageFromUrl(1)}
+                    onChange={(_e, p) => handlePageChange(1, p)}
+                  />
+                </Box>
+              )}
             </Box>
           </Fade>
         ) : (
@@ -466,25 +467,25 @@ const MySubCommunityPage: FC = () => {
         ) : (filteredCommunities?.member?.length ?? 0) > 0 ? (
           <Fade in={!loadingMember} timeout={240} appear>
             <Box>
-            <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
-              Communities You're a Member Of
-            </Typography>
-            <Grid container spacing={3}>
-              {filteredCommunities.member.map((subCom) => (
-                <Grid item xs={12} sm={6} md={6} key={subCom.id}>
-                  <SubCommunityCard subCommunity={subCom} />
-                </Grid>
-              ))}
-            </Grid>
-            {memberPages > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-                <Pagination
-                  count={memberPages}
-                  page={getPageFromUrl(2)}
-                  onChange={(_e, p) => handlePageChange(2, p)}
-                />
-              </Box>
-            )}
+              <Typography variant="h6" gutterBottom sx={{ mb: 3 }}>
+                Communities You're a Member Of
+              </Typography>
+              <Grid container spacing={3}>
+                {filteredCommunities.member.map((subCom) => (
+                  <Grid item xs={12} sm={6} md={6} key={subCom.id}>
+                    <SubCommunityCard subCommunity={subCom} />
+                  </Grid>
+                ))}
+              </Grid>
+              {memberPages > 1 && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
+                  <Pagination
+                    count={memberPages}
+                    page={getPageFromUrl(2)}
+                    onChange={(_e, p) => handlePageChange(2, p)}
+                  />
+                </Box>
+              )}
             </Box>
           </Fade>
         ) : (
@@ -493,13 +494,8 @@ const MySubCommunityPage: FC = () => {
               <Typography variant="h6" color="text.secondary" gutterBottom>
                 You're not a member of any communities yet
               </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 3 }}
-              >
-                Join communities to connect with others who share your
-                interests
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Join communities to connect with others who share your interests
               </Typography>
               <Button component={Link} to="/subcommunities" variant="contained">
                 Browse All Communities
