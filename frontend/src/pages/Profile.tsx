@@ -25,7 +25,8 @@ import {
   Badge as MuiBadge,
   Autocomplete,
   Card,
-  IconButton,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
@@ -74,6 +75,21 @@ const Profile: FC = () => {
     updateProfile,
     fetchAllSkills,
     fetchAllBadges,
+    memberExperience,
+    memberSettings,
+    flairs,
+    notificationPreference,
+    fetchMemberExperience,
+    followMember,
+    unfollowMember,
+    fetchMemberSettings,
+    updateMemberSettings,
+    fetchFlairs,
+    createFlair,
+    activateFlair,
+    deleteFlair,
+    fetchNotificationPreference,
+    updateNotificationPreference,
   } = useProfile();
 
   const { userId } = useParams<{ userId?: string }>();
@@ -99,6 +115,7 @@ const Profile: FC = () => {
   const [apiError, setApiError] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [newFlairLabel, setNewFlairLabel] = useState('');
 
   // Check if viewing own profile or another user's profile
   const isOwnProfile = !userId || userId === currentUser?.id;
@@ -134,8 +151,20 @@ const Profile: FC = () => {
           await searchedProfile(userId);
         }
 
-        await fetchAllSkills();
-        await fetchAllBadges();
+        const targetId = userId || currentUser?.id;
+        if (targetId) {
+          await Promise.all([
+            fetchMemberExperience(targetId),
+            fetchFlairs(targetId),
+          ]);
+        }
+
+        if (isOwnProfile) {
+          await Promise.all([
+            fetchMemberSettings(),
+            fetchNotificationPreference(),
+          ]);
+        }
       } catch (err) {
         if (isMounted) {
           setApiError('Failed to load profile');
@@ -156,9 +185,130 @@ const Profile: FC = () => {
     isOwnProfile,
     refreshProfile,
     searchedProfile,
-    fetchAllSkills,
-    fetchAllBadges,
+    currentUser?.id,
+    fetchMemberExperience,
+    fetchFlairs,
+    fetchMemberSettings,
+    fetchNotificationPreference,
   ]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    if (allSkills.length > 0) return;
+    void fetchAllSkills();
+  }, [isEditing, allSkills.length, fetchAllSkills]);
+
+  useEffect(() => {
+    if (!badgeDialogOpen) return;
+    if (allBadges.length > 0) return;
+    void fetchAllBadges();
+  }, [badgeDialogOpen, allBadges.length, fetchAllBadges]);
+
+  const handleFollowToggle = async () => {
+    const targetId = userId || profile?.user.id;
+    if (!targetId || isOwnProfile) return;
+
+    try {
+      if (memberExperience?.follow?.isFollowing) {
+        await unfollowMember(targetId);
+        setSuccess('Unfollowed successfully');
+      } else {
+        await followMember(targetId);
+        setSuccess('Now following member');
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const handleCreateFlair = async () => {
+    const targetId = currentUser?.id;
+    if (!targetId || !newFlairLabel.trim()) return;
+    try {
+      await createFlair(targetId, {
+        label: newFlairLabel.trim(),
+        color: '#7C3AED',
+        backgroundColor: '#EDE9FE',
+        isActive: true,
+      });
+      setNewFlairLabel('');
+      setSuccess('Flair created');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const handleActivateFlair = async (flairId: string) => {
+    try {
+      await activateFlair(flairId);
+      setSuccess('Flair activated');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const handleDeleteFlair = async (flairId: string) => {
+    try {
+      await deleteFlair(flairId);
+      setSuccess('Flair deleted');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const handlePreferenceToggle = async (
+    key:
+      | 'showBadges'
+      | 'showRecentActivity'
+      | 'allowFollowers'
+      | 'allowDirectMessage'
+      | 'digestModeEnabled'
+      | 'notifyOnFollow'
+      | 'notifyOnBadgeAward',
+    value: boolean
+  ) => {
+    try {
+      const targetId = userId || currentUser?.id;
+      if (
+        key === 'showBadges' ||
+        key === 'showRecentActivity' ||
+        key === 'allowFollowers' ||
+        key === 'allowDirectMessage'
+      ) {
+        await updateMemberSettings({ [key]: value });
+      } else {
+        await updateNotificationPreference({ [key]: value });
+      }
+
+      if (targetId) {
+        await fetchMemberExperience(targetId);
+      }
+      setSuccess('Preferences updated');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const handleDigestFrequencyChange = async (
+    digestFrequency: 'DAILY' | 'WEEKLY' | 'MONTHLY'
+  ) => {
+    try {
+      await updateNotificationPreference({ digestFrequency });
+      setSuccess('Digest frequency updated');
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  const showBadgesOnProfile = isOwnProfile
+    ? (memberSettings?.showBadges ?? true)
+    : (memberExperience?.privacy?.showBadges ?? true);
+
+  const showRecentActivityOnProfile = isOwnProfile
+    ? (memberSettings?.showRecentActivity ?? true)
+    : (memberExperience?.privacy?.showRecentActivity ?? true);
+
+  const recentActivityItems = memberExperience?.recentActivity ?? [];
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -352,7 +502,14 @@ const Profile: FC = () => {
           {/* Header Section */}
           <Paper
             elevation={1}
-            sx={{ p: 3, mb: 3, bgcolor: 'background.default' }}
+            sx={{
+              p: 3,
+              mb: 3,
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'divider',
+              borderRadius: 2.5,
+            }}
           >
             <Box
               sx={{
@@ -367,6 +524,19 @@ const Profile: FC = () => {
                 <Typography variant="h4" gutterBottom>
                   {isOwnProfile ? 'My' : `${profile.user.name}'s`} Profile
                 </Typography>
+                {memberExperience?.activeFlair?.label && (
+                  <Chip
+                    size="small"
+                    label={memberExperience.activeFlair.label}
+                    sx={{
+                      mb: 1,
+                      color: memberExperience.activeFlair.color,
+                      backgroundColor:
+                        memberExperience.activeFlair.backgroundColor,
+                      fontWeight: 600,
+                    }}
+                  />
+                )}
                 <Typography variant="subtitle1" color="text.secondary">
                   <Chip
                     label={profile.user.role}
@@ -394,33 +564,51 @@ const Profile: FC = () => {
               </Box>
 
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Tooltip title="Refresh profile data">
-                  <IconButton
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    size="large"
-                  >
-                    <Refresh />
-                    {isRefreshing && <CircularProgress size={20} />}
-                  </IconButton>
-                </Tooltip>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={
+                    isRefreshing ? <CircularProgress size={16} /> : <Refresh />
+                  }
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                >
+                  Refresh
+                </Button>
                 {isOwnProfile && (
-                  <Tooltip title="Edit your profile">
-                    <Button
-                      variant="contained"
-                      onClick={() => setIsEditing(true)}
-                      startIcon={<Edit />}
-                    ></Button>
-                  </Tooltip>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => setIsEditing(true)}
+                    startIcon={<Edit />}
+                  >
+                    Edit Profile
+                  </Button>
                 )}
                 {!isOwnProfile && currentUser?.role === Role.ADMIN && (
-                  <Tooltip title="Award a badge to this user">
-                    <Button
-                      variant="outlined"
-                      onClick={() => setBadgeDialogOpen(true)}
-                      startIcon={<MilitaryTech />}
-                    ></Button>
-                  </Tooltip>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setBadgeDialogOpen(true)}
+                    startIcon={<MilitaryTech />}
+                  >
+                    Award Badge
+                  </Button>
+                )}
+                {!isOwnProfile && memberExperience?.follow?.canFollow && (
+                  <Button
+                    variant={
+                      memberExperience.follow.isFollowing
+                        ? 'outlined'
+                        : 'contained'
+                    }
+                    size="small"
+                    onClick={handleFollowToggle}
+                  >
+                    {memberExperience.follow.isFollowing
+                      ? 'Unfollow'
+                      : 'Follow'}
+                  </Button>
                 )}
               </Box>
             </Box>
@@ -440,7 +628,7 @@ const Profile: FC = () => {
                       transition: 'all 0.2s ease-in-out',
                       '&:hover': {
                         backgroundColor: 'primary.main',
-                        color: 'green',
+                        color: 'primary.contrastText',
                         borderColor: 'primary.main',
                         transform: 'scale(1.05)',
                       },
@@ -467,7 +655,7 @@ const Profile: FC = () => {
                       transition: 'all 0.2s ease-in-out',
                       '&:hover': {
                         backgroundColor: 'primary.main',
-                        color: 'green',
+                        color: 'primary.contrastText',
                         borderColor: 'primary.main',
                         transform: 'scale(1.05)',
                       },
@@ -475,7 +663,7 @@ const Profile: FC = () => {
                   />
                 </Tooltip>
               )}
-              {badges && badges.length > 0 && (
+              {showBadgesOnProfile && badges && badges.length > 0 && (
                 <Chip label={`${badges.length} Badges`} variant="outlined" />
               )}
               {profile.user._count?.ownedSubCommunities > 0 && (
@@ -503,6 +691,191 @@ const Profile: FC = () => {
                 />
               )}
             </Box>
+
+            {isOwnProfile && (
+              <Box sx={{ mt: 2 }}>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ p: 2 }}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ mb: 1, fontWeight: 700 }}
+                      >
+                        Privacy Settings
+                      </Typography>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={memberSettings?.showBadges ?? true}
+                            onChange={(e) =>
+                              handlePreferenceToggle(
+                                'showBadges',
+                                e.target.checked
+                              )
+                            }
+                          />
+                        }
+                        label="Show badges on profile"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={memberSettings?.showRecentActivity ?? true}
+                            onChange={(e) =>
+                              handlePreferenceToggle(
+                                'showRecentActivity',
+                                e.target.checked
+                              )
+                            }
+                          />
+                        }
+                        label="Show recent activity"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={memberSettings?.allowFollowers ?? true}
+                            onChange={(e) =>
+                              handlePreferenceToggle(
+                                'allowFollowers',
+                                e.target.checked
+                              )
+                            }
+                          />
+                        }
+                        label="Allow followers"
+                      />
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Card variant="outlined" sx={{ p: 2 }}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ mb: 1, fontWeight: 700 }}
+                      >
+                        Notification Preferences
+                      </Typography>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={
+                              notificationPreference?.digestModeEnabled ?? false
+                            }
+                            onChange={(e) =>
+                              handlePreferenceToggle(
+                                'digestModeEnabled',
+                                e.target.checked
+                              )
+                            }
+                          />
+                        }
+                        label="Digest mode"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={
+                              notificationPreference?.notifyOnFollow ?? true
+                            }
+                            onChange={(e) =>
+                              handlePreferenceToggle(
+                                'notifyOnFollow',
+                                e.target.checked
+                              )
+                            }
+                          />
+                        }
+                        label="Notify on new followers"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={
+                              notificationPreference?.notifyOnBadgeAward ?? true
+                            }
+                            onChange={(e) =>
+                              handlePreferenceToggle(
+                                'notifyOnBadgeAward',
+                                e.target.checked
+                              )
+                            }
+                          />
+                        }
+                        label="Notify on badge awards"
+                      />
+                      {notificationPreference?.digestModeEnabled && (
+                        <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                          <InputLabel id="digest-frequency-label">
+                            Digest frequency
+                          </InputLabel>
+                          <Select
+                            labelId="digest-frequency-label"
+                            label="Digest frequency"
+                            value={
+                              notificationPreference?.digestFrequency || 'DAILY'
+                            }
+                            onChange={(e) =>
+                              handleDigestFrequencyChange(
+                                e.target.value as 'DAILY' | 'WEEKLY' | 'MONTHLY'
+                              )
+                            }
+                          >
+                            <MenuItem value="DAILY">Daily</MenuItem>
+                            <MenuItem value="WEEKLY">Weekly</MenuItem>
+                            <MenuItem value="MONTHLY">Monthly</MenuItem>
+                          </Select>
+                        </FormControl>
+                      )}
+                    </Card>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Card variant="outlined" sx={{ p: 2 }}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ mb: 1, fontWeight: 700 }}
+                      >
+                        Member Flair
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          gap: 1,
+                          flexWrap: 'wrap',
+                          mb: 1.5,
+                        }}
+                      >
+                        {flairs.map((flair) => (
+                          <Chip
+                            key={flair.id}
+                            label={flair.label}
+                            color={flair.isActive ? 'primary' : 'default'}
+                            variant={flair.isActive ? 'filled' : 'outlined'}
+                            onClick={() => handleActivateFlair(flair.id)}
+                            onDelete={() => handleDeleteFlair(flair.id)}
+                          />
+                        ))}
+                      </Box>
+                      <Stack
+                        direction={{ xs: 'column', sm: 'row' }}
+                        spacing={1}
+                      >
+                        <TextField
+                          size="small"
+                          label="New flair"
+                          value={newFlairLabel}
+                          onChange={(e) => setNewFlairLabel(e.target.value)}
+                        />
+                        <Button variant="outlined" onClick={handleCreateFlair}>
+                          Add Flair
+                        </Button>
+                      </Stack>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Box>
+            )}
           </Paper>
 
           {/* Main Content Grid */}
@@ -515,7 +888,7 @@ const Profile: FC = () => {
                     overlap="circular"
                     anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                     badgeContent={
-                      badges.length > 0 ? (
+                      showBadgesOnProfile && badges.length > 0 ? (
                         <Tooltip title={`${badges.length} badges`}>
                           <MilitaryTech color="primary" />
                         </Tooltip>
@@ -881,62 +1254,110 @@ const Profile: FC = () => {
                   )}
                 </Box>
 
-                {/* Badges Section */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography
-                    variant="h6"
-                    sx={{ mb: 2, display: 'flex', alignItems: 'center' }}
-                  >
-                    <EmojiEvents
-                      sx={{ mr: 1 }}
-                      color={getRoleColor(profile.user.role)}
-                    />{' '}
-                    Badges
-                  </Typography>
-                  {badges.length > 0 ? (
-                    <Grid container spacing={1}>
-                      {badges.map((badge: UserBadge) => (
-                        <Grid item key={badge.badge.id}>
-                          <Tooltip
-                            title={
-                              <Box sx={{ textAlign: 'center' }}>
-                                <Typography variant="subtitle2">
-                                  {badge.badge.name}
-                                </Typography>
-                                <Typography variant="caption">
-                                  {badge.badge.description}
-                                </Typography>
-                                <br />
-                                <Typography variant="caption">
-                                  Awarded:{' '}
-                                  {new Date(
-                                    badge.assignedAt
-                                  ).toLocaleDateString()}
-                                </Typography>
-                              </Box>
-                            }
-                            arrow
-                          >
-                            <Avatar
-                              src={badge.badge.icon}
-                              sx={{
-                                width: 50,
-                                height: 50,
-                                cursor: 'pointer',
-                                border: '2px solid',
-                                borderColor: 'primary.main',
-                              }}
-                            />
-                          </Tooltip>
-                        </Grid>
-                      ))}
-                    </Grid>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary">
-                      No badges yet
+                {showBadgesOnProfile && (
+                  <Box sx={{ mb: 3 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{ mb: 2, display: 'flex', alignItems: 'center' }}
+                    >
+                      <EmojiEvents
+                        sx={{ mr: 1 }}
+                        color={getRoleColor(profile.user.role)}
+                      />{' '}
+                      Badges
                     </Typography>
-                  )}
-                </Box>
+                    {badges.length > 0 ? (
+                      <Grid container spacing={1}>
+                        {badges.map((badge: UserBadge) => (
+                          <Grid item key={badge.badge.id}>
+                            <Tooltip
+                              title={
+                                <Box sx={{ textAlign: 'center' }}>
+                                  <Typography variant="subtitle2">
+                                    {badge.badge.name}
+                                  </Typography>
+                                  <Typography variant="caption">
+                                    {badge.badge.description}
+                                  </Typography>
+                                  <br />
+                                  <Typography variant="caption">
+                                    Awarded:{' '}
+                                    {new Date(
+                                      badge.assignedAt
+                                    ).toLocaleDateString()}
+                                  </Typography>
+                                </Box>
+                              }
+                              arrow
+                            >
+                              <Avatar
+                                src={badge.badge.icon}
+                                sx={{
+                                  width: 50,
+                                  height: 50,
+                                  cursor: 'pointer',
+                                  border: '2px solid',
+                                  borderColor: 'primary.main',
+                                }}
+                              />
+                            </Tooltip>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No badges yet
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+
+                {showRecentActivityOnProfile && (
+                  <Box sx={{ mb: 1 }}>
+                    <Typography
+                      variant="h6"
+                      sx={{ mb: 1.5, display: 'flex', alignItems: 'center' }}
+                    >
+                      <Refresh
+                        sx={{ mr: 1 }}
+                        color={getRoleColor(profile.user.role)}
+                      />
+                      Recent Activity
+                    </Typography>
+                    {recentActivityItems.length > 0 ? (
+                      <Stack spacing={1}>
+                        {recentActivityItems.slice(0, 5).map((item) => (
+                          <Paper
+                            key={`${item.type}-${item.id}`}
+                            variant="outlined"
+                            sx={{ p: 1.25 }}
+                          >
+                            <Typography variant="body2" fontWeight={600}>
+                              {item.type}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              color="text.secondary"
+                              sx={{ mb: 0.5 }}
+                            >
+                              {item.label}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {new Date(item.createdAt).toLocaleString()}
+                            </Typography>
+                          </Paper>
+                        ))}
+                      </Stack>
+                    ) : (
+                      <Typography variant="body2" color="text.secondary">
+                        No recent activity yet
+                      </Typography>
+                    )}
+                  </Box>
+                )}
               </Paper>
             </Grid>
           </Grid>

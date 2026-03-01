@@ -26,6 +26,8 @@ import {
   DialogActions,
   DialogContent,
   DialogContentText,
+  FormControlLabel,
+  Switch,
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
@@ -53,12 +55,20 @@ import {
   Handshake as HandshakeIcon,
 } from '@mui/icons-material';
 import { useNotification } from '@/contexts/NotificationContext';
-import { NotificationType, NotificationCategory } from '@/types/notification';
+import {
+  NotificationType,
+  NotificationCategory,
+  getNotificationEmoji,
+} from '@/types/notification';
 import { formatDistanceToNow } from 'date-fns';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const Notification: FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isUnreadRoute = location.pathname === '/notifications/unread';
   const {
     notifications,
     pagination,
@@ -70,6 +80,9 @@ const Notification: FC = () => {
     deleteReadNotifications,
     unreadCount,
     fetchNotifications,
+    notificationPreference,
+    fetchNotificationPreference,
+    updateNotificationPreference,
     loading,
     error,
   } = useNotification();
@@ -85,6 +98,9 @@ const Notification: FC = () => {
   }>({ open: false, mode: null });
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
+    'success'
+  );
   const [currentTab, setCurrentTab] = useState<NotificationCategory | 'ALL'>(
     'ALL'
   );
@@ -116,15 +132,34 @@ const Notification: FC = () => {
   };
 
   const handleRefresh = async () => {
-    await fetchNotifications(currentPage, pagination.limit, currentTab);
-    setSnackbarMessage('Notifications refreshed');
-    setSnackbarOpen(true);
+    try {
+      await fetchNotifications(
+        currentPage,
+        pagination.limit,
+        currentTab,
+        isUnreadRoute
+      );
+      setSnackbarMessage('Notifications refreshed');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    } catch {
+      setSnackbarMessage('Failed to refresh notifications');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
   };
 
   const handleMarkAllAsRead = async () => {
-    await markAllAsRead();
-    setSnackbarMessage('All notifications marked as read');
-    setSnackbarOpen(true);
+    try {
+      await markAllAsRead();
+      setSnackbarMessage('All notifications marked as read');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    } catch {
+      setSnackbarMessage('Failed to mark all notifications as read');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
   };
 
   const handleMarkTabAsRead = async () => {
@@ -143,6 +178,7 @@ const Notification: FC = () => {
 
     if (notificationsToMark.length === 0) {
       setSnackbarMessage('No unread notifications to mark as read');
+      setSnackbarSeverity('success');
       setSnackbarOpen(true);
       return;
     }
@@ -154,21 +190,36 @@ const Notification: FC = () => {
     setSnackbarMessage(
       `All ${currentTab === 'ALL' ? '' : currentTab.toLowerCase()} notifications marked as read`
     );
+    setSnackbarSeverity('success');
     setSnackbarOpen(true);
   };
 
   const handleMarkAsRead = async (id: string) => {
-    await markAsRead(id);
-    closeMenu();
-    setSnackbarMessage('Notification marked as read');
-    setSnackbarOpen(true);
+    try {
+      await markAsRead(id);
+      closeMenu();
+      setSnackbarMessage('Notification marked as read');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    } catch {
+      setSnackbarMessage('Failed to mark notification as read');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
   };
 
   const handleMarkAsUnread = async (id: string) => {
-    await markAsUnread(id);
-    closeMenu();
-    setSnackbarMessage('Notification marked as unread');
-    setSnackbarOpen(true);
+    try {
+      await markAsUnread(id);
+      closeMenu();
+      setSnackbarMessage('Notification marked as unread');
+      setSnackbarSeverity('success');
+      setSnackbarOpen(true);
+    } catch {
+      setSnackbarMessage('Failed to mark notification as unread');
+      setSnackbarSeverity('error');
+      setSnackbarOpen(true);
+    }
   };
 
   const handleDeleteNotification = async (id: string): Promise<void> => {
@@ -186,13 +237,16 @@ const Notification: FC = () => {
       if (confirmDialog.mode === 'single' && confirmDialog.notificationId) {
         await deleteNotification(confirmDialog.notificationId);
         setSnackbarMessage('Notification deleted');
+        setSnackbarSeverity('success');
       } else if (confirmDialog.mode === 'all') {
         await deleteReadNotifications();
         setSnackbarMessage('All read notifications deleted');
+        setSnackbarSeverity('success');
       }
       setSnackbarOpen(true);
     } catch {
       setSnackbarMessage('Failed to delete notifications');
+      setSnackbarSeverity('error');
       setSnackbarOpen(true);
     } finally {
       setConfirmDialog({ open: false, mode: null });
@@ -209,7 +263,7 @@ const Notification: FC = () => {
   ) => {
     setCurrentTab(newValue);
     setCurrentPage(1);
-    fetchNotifications(1, pagination.limit, newValue);
+    fetchNotifications(1, pagination.limit, newValue, isUnreadRoute);
   };
 
   const handlePageChange = (
@@ -217,7 +271,7 @@ const Notification: FC = () => {
     value: number
   ) => {
     setCurrentPage(value);
-    fetchNotifications(value, pagination.limit, currentTab);
+    fetchNotifications(value, pagination.limit, currentTab, isUnreadRoute);
   };
 
   const getNotificationIcon = (type: NotificationType) => {
@@ -248,16 +302,44 @@ const Notification: FC = () => {
   };
 
   // Filter notifications for the current tab display
-  const filteredNotifications =
-    currentTab === 'ALL'
+  const filteredNotifications = isUnreadRoute
+    ? notifications.filter((n) => !n.read)
+    : currentTab === 'ALL'
       ? notifications
       : notifications.filter((n) =>
           categoryToTypes[currentTab]?.includes(n.type)
         );
 
+  const pageTitle = isUnreadRoute ? 'Unread Notifications' : 'Notifications';
+  const pageSubtitle = isUnreadRoute
+    ? 'Review all unread notifications across pages.'
+    : 'Stay updated with messages, referrals, events, and system activity.';
+
   useEffect(() => {
-    fetchNotifications(currentPage, pagination.limit, currentTab);
-  }, [currentTab, currentPage, fetchNotifications, pagination.limit]);
+    fetchNotifications(
+      currentPage,
+      pagination.limit,
+      currentTab,
+      isUnreadRoute
+    );
+  }, [
+    currentTab,
+    currentPage,
+    fetchNotifications,
+    pagination.limit,
+    isUnreadRoute,
+  ]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    if (isUnreadRoute) {
+      setCurrentTab('ALL');
+    }
+  }, [isUnreadRoute]);
+
+  useEffect(() => {
+    fetchNotificationPreference();
+  }, [fetchNotificationPreference]);
 
   const tabConfig: {
     category: NotificationCategory | 'ALL';
@@ -310,7 +392,15 @@ const Notification: FC = () => {
         py: { xs: 2, md: 3 },
       }}
     >
-      <Paper elevation={3} sx={{ p: { xs: 2, md: 3 } }}>
+      <Paper
+        elevation={1}
+        sx={{
+          p: { xs: 2, md: 3 },
+          borderRadius: 2.5,
+          border: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -321,22 +411,27 @@ const Notification: FC = () => {
             mb: 3,
           }}
         >
-          <Typography
-            variant={isMobile ? 'h5' : 'h4'}
-            component="h1"
-            sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}
-          >
-            <NotificationsIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
-            Notifications
-            {unreadCount > 0 && (
-              <Chip
-                label={`${unreadCount} unread`}
-                color="primary"
-                size="small"
-                sx={{ ml: 2 }}
-              />
-            )}
-          </Typography>
+          <Box>
+            <Typography
+              variant={isMobile ? 'h5' : 'h4'}
+              component="h1"
+              sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}
+            >
+              <NotificationsIcon sx={{ verticalAlign: 'middle', mr: 1 }} />
+              {pageTitle}
+              {unreadCount > 0 && (
+                <Chip
+                  label={`${unreadCount} unread`}
+                  color="primary"
+                  size="small"
+                  sx={{ ml: 1.5 }}
+                />
+              )}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              {pageSubtitle}
+            </Typography>
+          </Box>
 
           <Box
             sx={{
@@ -348,6 +443,34 @@ const Notification: FC = () => {
               justifyContent: { xs: 'flex-start', sm: 'flex-end' },
             }}
           >
+            {!isUnreadRoute && unreadCount > 0 && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => navigate('/notifications/unread')}
+                sx={{
+                  minWidth: 'auto',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                View unread
+              </Button>
+            )}
+
+            {isUnreadRoute && (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => navigate('/notifications')}
+                sx={{
+                  minWidth: 'auto',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                View all notifications
+              </Button>
+            )}
+
             {unreadCount > 0 && (
               <Button
                 variant="outlined"
@@ -399,36 +522,100 @@ const Notification: FC = () => {
           </Box>
         </Box>
 
-        <Tabs
-          value={currentTab}
-          onChange={handleTabChange}
-          variant="scrollable"
-          scrollButtons="auto"
-          sx={{
-            '& .MuiTab-root': { minHeight: 44 },
-          }}
-        >
-          {tabConfig.map(({ category, label, icon }) => (
-            <Tab
-              key={category}
-              value={category}
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                  {icon}
-                  <span style={{ marginLeft: 8 }}>{label}</span>
-                  {unreadCountsByCategory[category] > 0 && (
-                    <Chip
-                      label={unreadCountsByCategory[category]}
-                      size="small"
-                      color="primary"
-                      sx={{ ml: 1 }}
-                    />
-                  )}
-                </Box>
-              }
-            />
-          ))}
-        </Tabs>
+        {notificationPreference && (
+          <Paper variant="outlined" sx={{ p: 2, mb: 2, borderRadius: 2 }}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
+              Notification Preferences
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={notificationPreference.emailEnabled}
+                    onChange={(e) =>
+                      updateNotificationPreference({
+                        emailEnabled: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Email"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={notificationPreference.pushEnabled}
+                    onChange={(e) =>
+                      updateNotificationPreference({
+                        pushEnabled: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Push"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={notificationPreference.inAppEnabled}
+                    onChange={(e) =>
+                      updateNotificationPreference({
+                        inAppEnabled: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="In-App"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={notificationPreference.digestModeEnabled}
+                    onChange={(e) =>
+                      updateNotificationPreference({
+                        digestModeEnabled: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Digest Mode"
+              />
+            </Box>
+          </Paper>
+        )}
+
+        {!isUnreadRoute && (
+          <Tabs
+            value={currentTab}
+            onChange={handleTabChange}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTab-root': { minHeight: 44 },
+            }}
+          >
+            {tabConfig.map(({ category, label, icon }) => (
+              <Tab
+                key={category}
+                value={category}
+                label={
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    {icon}
+                    <span style={{ marginLeft: 8 }}>{label}</span>
+                    {unreadCountsByCategory[category] > 0 && (
+                      <Chip
+                        label={unreadCountsByCategory[category]}
+                        size="small"
+                        color="primary"
+                        sx={{ ml: 1 }}
+                      />
+                    )}
+                  </Box>
+                }
+              />
+            ))}
+          </Tabs>
+        )}
 
         <Box
           sx={{
@@ -439,15 +626,17 @@ const Notification: FC = () => {
             my: 2,
           }}
         >
-          <Button
-            variant="outlined"
-            startIcon={<CheckIcon />}
-            onClick={handleMarkTabAsRead}
-            size="small"
-            disabled={unreadCountsByCategory[currentTab] === 0 || loading}
-          >
-            Mark this tab as read
-          </Button>
+          {!isUnreadRoute && (
+            <Button
+              variant="outlined"
+              startIcon={<CheckIcon />}
+              onClick={handleMarkTabAsRead}
+              size="small"
+              disabled={unreadCountsByCategory[currentTab] === 0 || loading}
+            >
+              Mark this tab as read
+            </Button>
+          )}
         </Box>
 
         <Divider sx={{ mb: 3 }} />
@@ -531,6 +720,7 @@ const Notification: FC = () => {
                               maxWidth: { xs: '100%', sm: '60ch' },
                             }}
                           >
+                            {getNotificationEmoji(notification.type)}{' '}
                             {notification.message.length > 120
                               ? `${notification.message.substring(0, 120)}...`
                               : notification.message}
@@ -640,7 +830,7 @@ const Notification: FC = () => {
       >
         <Alert
           onClose={() => setSnackbarOpen(false)}
-          severity="success"
+          severity={snackbarSeverity}
           sx={{ width: '100%' }}
         >
           {snackbarMessage}

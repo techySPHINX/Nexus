@@ -9,6 +9,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { VoteType } from '@prisma/client';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { PushNotificationService } from '../common/services/push-notification.service';
+import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
 
 /**
  * Enum for different types of notifications.
@@ -77,31 +78,111 @@ export class NotificationService {
       throw new BadRequestException('Invalid notification type');
     }
 
-    const notification = await this.prisma.notification.create({
-      data: {
-        userId: dto.userId,
-        message: dto.message.trim(),
-        type: dto.type || NotificationType.SYSTEM,
-      },
+    const preference = await this.prisma.notificationPreference.upsert({
+      where: { userId: dto.userId },
+      create: { userId: dto.userId },
+      update: {},
     });
 
-    // Send push notification via PushNotificationService
-    try {
-      await this.pushNotificationService.sendToUser(dto.userId, {
-        title: 'New Notification',
-        body: dto.message.trim(),
-        type: dto.type || NotificationType.SYSTEM,
-        data: { notificationId: notification.id },
+    const shouldCreateInApp = preference.inAppEnabled !== false;
+    const shouldSendPush = preference.pushEnabled === true;
+
+    let notification = null;
+    if (shouldCreateInApp) {
+      notification = await this.prisma.notification.create({
+        data: {
+          userId: dto.userId,
+          message: dto.message.trim(),
+          type: dto.type || NotificationType.SYSTEM,
+        },
       });
-    } catch (error) {
-      // Log error but don't fail the notification creation
-      this.logger.error(
+    }
+
+    // Send push notification via PushNotificationService
+    if (shouldSendPush) {
+      try {
+        await this.pushNotificationService.sendToUser(
+          dto.userId,
+          {
+            title: 'New Notification',
+            body: dto.message.trim(),
+            type: dto.type || NotificationType.SYSTEM,
+            data: { notificationId: notification?.id },
+          },
+          { persist: false },
+        );
+      } catch (error) {
+        // Log error but don't fail the notification creation
+        this.logger.error(
         `Failed to send push notification: ${(error as Error).message}`,
         (error as Error).stack,
       );
+      }
+    }
+
+    if (!notification) {
+      return {
+        message: 'Notification delivery skipped due to preferences',
+        userId: dto.userId,
+      };
     }
 
     return notification;
+  }
+
+  async getNotificationPreference(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return this.prisma.notificationPreference.upsert({
+      where: { userId },
+      create: { userId },
+      update: {},
+    });
+  }
+
+  async updateNotificationPreference(
+    userId: string,
+    dto: UpdateNotificationPreferenceDto,
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const digestFrequency = dto.digestFrequency
+      ? dto.digestFrequency.toUpperCase()
+      : undefined;
+
+    if (
+      digestFrequency &&
+      !['DAILY', 'WEEKLY', 'MONTHLY'].includes(digestFrequency)
+    ) {
+      throw new BadRequestException('Invalid digest frequency');
+    }
+
+    return this.prisma.notificationPreference.upsert({
+      where: { userId },
+      create: {
+        userId,
+        ...dto,
+        digestFrequency,
+      },
+      update: {
+        ...dto,
+        digestFrequency,
+      },
+    });
   }
 
   /**

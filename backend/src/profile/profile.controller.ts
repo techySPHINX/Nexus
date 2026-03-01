@@ -22,6 +22,8 @@ import { EndorseSkillDto } from './dto/endorse-skill.dto';
 import { AwardBadgeDto } from './dto/award-badge.dto';
 import { RemoveEndorsementDto } from './dto/remove-endorsement.dto';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { UpdateMemberProfileDto } from './dto/update-member-profile.dto';
+import { CreateMemberFlairDto } from './dto/create-member-flair.dto';
 
 /**
  * Controller for handling profile-related requests.
@@ -34,6 +36,19 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 export class ProfileController {
   private readonly logger = new Logger(ProfileController.name);
   constructor(private readonly profileService: ProfileService) {}
+
+  @Get('member-settings/me')
+  async getMyMemberSettings(@GetCurrentUser('userId') userId: string) {
+    return this.profileService.getMyMemberSettings(userId);
+  }
+
+  @Put('member-settings/me')
+  async updateMyMemberSettings(
+    @GetCurrentUser('userId') userId: string,
+    @Body() dto: UpdateMemberProfileDto,
+  ) {
+    return this.profileService.updateMyMemberSettings(userId, dto);
+  }
 
   @Get('me-completion-stats')
   async getMyProfileCompletionStats(@GetCurrentUser('userId') userId: string) {
@@ -75,6 +90,83 @@ export class ProfileController {
       `Received request for profile preview of userId: ${userId} with avatarUrl: ${avatarUrl}`,
     );
     return this.profileService.getProfilePreview(userId, includeAvatar);
+  }
+
+  @Get(':userId/experience')
+  async getMemberExperience(
+    @Param('userId') userId: string,
+    @GetCurrentUser('userId') viewerId?: string,
+  ) {
+    return this.profileService.getMemberExperience(userId, viewerId);
+  }
+
+  @Post(':userId/follow')
+  async followMember(
+    @Param('userId') userId: string,
+    @GetCurrentUser('userId') followerId: string,
+  ) {
+    return this.profileService.followMember(followerId, userId);
+  }
+
+  @Delete(':userId/follow')
+  async unfollowMember(
+    @Param('userId') userId: string,
+    @GetCurrentUser('userId') followerId: string,
+  ) {
+    return this.profileService.unfollowMember(followerId, userId);
+  }
+
+  @Get(':userId/followers')
+  async getFollowers(
+    @Param('userId') userId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.profileService.getFollowers(userId, Number(page), Number(limit));
+  }
+
+  @Get(':userId/following')
+  async getFollowing(
+    @Param('userId') userId: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.profileService.getFollowing(userId, Number(page), Number(limit));
+  }
+
+  @Get(':userId/flairs')
+  async listMemberFlairs(@Param('userId') userId: string) {
+    return this.profileService.listMemberFlairs(userId);
+  }
+
+  @Post(':userId/flairs')
+  async createMemberFlair(
+    @Param('userId') userId: string,
+    @Body() dto: CreateMemberFlairDto,
+    @GetCurrentUser() user: { userId: string; role: Role },
+  ) {
+    if (user.userId !== userId && user.role !== Role.ADMIN) {
+      throw new ForbiddenException(
+        'You are not authorized to manage this flair.',
+      );
+    }
+    return this.profileService.createMemberFlair(userId, dto);
+  }
+
+  @Put('flairs/:flairId/activate')
+  async activateMemberFlair(
+    @Param('flairId') flairId: string,
+    @GetCurrentUser('userId') userId: string,
+  ) {
+    return this.profileService.activateMemberFlair(userId, flairId);
+  }
+
+  @Delete('flairs/:flairId')
+  async deleteMemberFlair(
+    @Param('flairId') flairId: string,
+    @GetCurrentUser('userId') userId: string,
+  ) {
+    return this.profileService.deleteMemberFlair(userId, flairId);
   }
 
   /**

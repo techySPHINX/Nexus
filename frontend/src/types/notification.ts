@@ -20,6 +20,23 @@ export enum NotificationType {
   REFERRAL_APPLICATION_STATUS_UPDATE = 'REFERRAL_APPLICATION_STATUS_UPDATE',
 }
 
+export const notificationTypeEmoji: Record<NotificationType, string> = {
+  [NotificationType.CONNECTION_REQUEST]: '🤝',
+  [NotificationType.CONNECTION_ACCEPTED]: '✅',
+  [NotificationType.POST_VOTE]: '❤️',
+  [NotificationType.POST_COMMENT]: '💬',
+  [NotificationType.MESSAGE]: '✉️',
+  [NotificationType.SYSTEM]: '⚙️',
+  [NotificationType.EVENT]: '📅',
+  [NotificationType.REFERRAL_APPLICATION]: '📨',
+  [NotificationType.REFERRAL_STATUS_UPDATE]: '🔄',
+  [NotificationType.REFERRAL_APPLICATION_STATUS_UPDATE]: '🧾',
+};
+
+export const getNotificationEmoji = (type: NotificationType): string => {
+  return notificationTypeEmoji[type] ?? '🔔';
+};
+
 export const categoryToTypes: Record<string, string[]> = {
   CONNECTION: ['CONNECTION_REQUEST', 'CONNECTION_ACCEPTED'],
   POST: ['POST_VOTE', 'POST_COMMENT'],

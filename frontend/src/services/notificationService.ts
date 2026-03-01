@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Notification } from '@/types/notification';
+import { NotificationPreference } from '@/types/profileType';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 // withCredentials ensures the httpOnly access_token cookie is sent
@@ -9,10 +10,14 @@ const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
 export async function fetchNotificationsService(
   page = 1,
   limit = 10,
-  typeOrCategory?: string
+  typeOrCategory?: string,
+  unreadOnly = false
 ) {
   try {
     const params: Record<string, unknown> = { page, limit };
+    if (unreadOnly) {
+      params.unreadOnly = 'true';
+    }
     if (typeOrCategory && typeOrCategory !== 'ALL') {
       params.type = typeOrCategory;
     }
@@ -160,5 +165,36 @@ export async function deleteAllNotificationService(): Promise<void> {
       );
     }
     throw new Error('Failed to delete all notification');
+  }
+}
+
+export async function getNotificationPreferenceService(): Promise<NotificationPreference> {
+  try {
+    const response = await api.get('/notifications/preferences/me');
+    return response.data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to fetch notification preference'
+      );
+    }
+    throw new Error('Failed to fetch notification preference');
+  }
+}
+
+export async function updateNotificationPreferenceService(
+  payload: Partial<NotificationPreference>
+): Promise<NotificationPreference> {
+  try {
+    const response = await api.patch('/notifications/preferences/me', payload);
+    return response.data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message ||
+          'Failed to update notification preference'
+      );
+    }
+    throw new Error('Failed to update notification preference');
   }
 }
