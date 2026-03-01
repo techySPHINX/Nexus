@@ -1,20 +1,16 @@
-import axios, { AxiosError } from 'axios';
+// Use the shared api instance (from api.ts) which already configures:
+//   - withCredentials: true (httpOnly cookie auth, Issue #164)
+//   - X-CSRF-Token header interceptor (CSRF protection, Issue #162)
+// This avoids the need for manual header attachment and ensures CSRF tokens
+// are included on all mutating requests (Copilot recommendation from PR #210).
+import { AxiosError } from 'axios';
+import api from './api';
 import { Comment, VoteType, Post } from '../types/engagement';
 import { getErrorMessage } from '@/utils/errorHandler';
 
+const BASE = '/engagement';
+
 export class EngagementService {
-  private baseURL: string;
-
-  constructor(baseURL: string = '/engagement') {
-    this.baseURL = baseURL;
-  }
-
-  // httpOnly cookie sent automatically via withCredentials \u2014 no manually
-  // attached Authorization header needed (Issue #164).
-  private getAuthHeaders() {
-    return { withCredentials: true };
-  }
-
   // engagementService.ts - Update the error handling
   private handleServiceError(error: AxiosError): never {
     console.error('Service error:', error.response?.data || error.message);
@@ -45,11 +41,7 @@ export class EngagementService {
 
   async voteOnPost(postId: string, voteType: VoteType): Promise<void> {
     try {
-      const response = await axios.post(
-        `${this.baseURL}/${postId}/vote`,
-        { voteType },
-        this.getAuthHeaders()
-      );
+      const response = await api.post(`${BASE}/${postId}/vote`, { voteType });
       return response.data;
     } catch (error) {
       this.handleServiceError(error as AxiosError);
@@ -58,11 +50,9 @@ export class EngagementService {
 
   async voteOnComment(commentId: string, voteType: VoteType): Promise<void> {
     try {
-      const response = await axios.post(
-        `${this.baseURL}/${commentId}/vote-comment`,
-        { voteType },
-        this.getAuthHeaders()
-      );
+      const response = await api.post(`${BASE}/${commentId}/vote-comment`, {
+        voteType,
+      });
       return response.data;
     } catch (error) {
       this.handleServiceError(error as AxiosError);
@@ -71,10 +61,7 @@ export class EngagementService {
 
   async removeVote(voteId: string): Promise<void> {
     try {
-      const response = await axios.delete(
-        `${this.baseURL}/${voteId}/remove-vote`,
-        this.getAuthHeaders()
-      );
+      const response = await api.delete(`${BASE}/${voteId}/remove-vote`);
       return response.data;
     } catch (error) {
       this.handleServiceError(error as AxiosError);
@@ -87,11 +74,10 @@ export class EngagementService {
     parentId?: string
   ): Promise<Comment> {
     try {
-      const response = await axios.post(
-        `${this.baseURL}/${postId}/comment`,
-        { content, parentId },
-        this.getAuthHeaders()
-      );
+      const response = await api.post(`${BASE}/${postId}/comment`, {
+        content,
+        parentId,
+      });
       return response.data;
     } catch (error) {
       this.handleServiceError(error as AxiosError);
@@ -114,9 +100,8 @@ export class EngagementService {
     };
   }> {
     try {
-      const response = await axios.get(
-        `${this.baseURL}/${postId}/comments?page=${page}&limit=${limit}`,
-        this.getAuthHeaders()
+      const response = await api.get(
+        `${BASE}/${postId}/comments?page=${page}&limit=${limit}`
       );
       return response.data;
     } catch (error) {
@@ -126,11 +111,9 @@ export class EngagementService {
 
   async updateComment(commentId: string, content: string): Promise<Comment> {
     try {
-      const response = await axios.patch(
-        `${this.baseURL}/comments/${commentId}`,
-        { content },
-        this.getAuthHeaders()
-      );
+      const response = await api.patch(`${BASE}/comments/${commentId}`, {
+        content,
+      });
       return response.data;
     } catch (error) {
       this.handleServiceError(error as AxiosError);
@@ -139,10 +122,7 @@ export class EngagementService {
 
   async deleteComment(commentId: string): Promise<void> {
     try {
-      const response = await axios.delete(
-        `${this.baseURL}/comments/${commentId}`,
-        this.getAuthHeaders()
-      );
+      const response = await api.delete(`${BASE}/comments/${commentId}`);
       return response.data;
     } catch (error) {
       this.handleServiceError(error as AxiosError);
@@ -151,10 +131,7 @@ export class EngagementService {
 
   async getRecommendedFeed(): Promise<Post[]> {
     try {
-      const response = await axios.get(
-        `${this.baseURL}/feed`,
-        this.getAuthHeaders()
-      );
+      const response = await api.get(`${BASE}/feed`);
       return response.data;
     } catch (error) {
       this.handleServiceError(error as AxiosError);

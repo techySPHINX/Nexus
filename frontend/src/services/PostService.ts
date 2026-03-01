@@ -1,9 +1,10 @@
+// Use the shared api instance (from api.ts) which already configures:
+//   - withCredentials: true  (httpOnly cookie auth, Issue #164)
+//   - X-CSRF-Token request interceptor (CSRF protection, Issue #162)
+// This ensures all POST/PATCH requests include the CSRF token and prevents
+// 403 errors from the backend CSRF middleware (Copilot recommendation PR #210).
 import axios from 'axios';
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
-// withCredentials ensures the httpOnly access_token cookie is sent
-// automatically — no manual Authorization header needed (Issue #164).
-const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
+import api from './api';
 
 function getUser() {
   try {

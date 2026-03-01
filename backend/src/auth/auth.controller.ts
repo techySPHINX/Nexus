@@ -50,7 +50,7 @@ export class AuthController {
 
     res.cookie('access_token', authResponse.accessToken, {
       ...cookieOptions,
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 60 * 60 * 1000, // 1 hour — aligned with JWT expiresIn (Copilot recommendation)
     });
     res.cookie('refresh_token', authResponse.refreshToken, {
       ...cookieOptions,
@@ -125,9 +125,12 @@ export class AuthController {
 
   /**
    * Logout from current device — clears auth cookies and invalidates refresh token.
+   *
+   * This endpoint is intentionally NOT protected by JwtAuthGuard so that users
+   * can always log out and clear cookies, even if their access token has expired
+   * (Copilot recommendation from PR #210).
    */
   @Post('logout')
-  @UseGuards(JwtAuthGuard)
   async logout(
     @Body() body: { refreshToken?: string },
     @Req() req: Request,

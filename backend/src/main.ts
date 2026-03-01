@@ -117,14 +117,15 @@ async function bootstrap() {
   // ============================================
   // VALIDATION: Global Validation Pipe with Auto-Transformation
   // ============================================
+  // Sanitize first so ValidationPipe runs on clean data (Copilot recommendation).
+  // SanitizePipe strips HTML tags and XSS vectors before DTO validation,
+  // preventing values from passing validation only to become invalid post-sanitization.
   app.useGlobalPipes(
-    new ValidationPipe(securityConfig.validation),
-    // SanitizePipe strips HTML tags and XSS vectors from all string inputs
-    // as a defence-in-depth measure (Issue #163).
     new SanitizePipe(),
+    new ValidationPipe(securityConfig.validation),
   );
   loggerService.log(
-    '✅ Global validation + sanitization pipes registered',
+    '✅ Global sanitization + validation pipes registered (sanitize → validate order)',
     'Bootstrap',
   );
 

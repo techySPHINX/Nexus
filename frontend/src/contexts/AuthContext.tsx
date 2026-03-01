@@ -282,10 +282,28 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Helper to read the CSRF token from the non-httpOnly cookie set by the backend.
+  // /auth/logout is not in the CSRF exempt list, so the header must be attached
+  // (Copilot recommendation from PR #210).
+  const getCsrfToken = (): string | null => {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('csrf-token='));
+    return match ? decodeURIComponent(match.split('=')[1]) : null;
+  };
+
   const logout = async () => {
     try {
       // Ask the backend to clear the httpOnly auth cookies server-side.
-      await axios.post('/auth/logout', {});
+      const csrfToken = getCsrfToken();
+      await axios.post(
+        '/auth/logout',
+        {},
+        csrfToken
+          ? { headers: { 'X-CSRF-Token': csrfToken }, withCredentials: true }
+          : { withCredentials: true }
+      );
     } catch {
       // Ignore errors — proceed with local state cleanup regardless.
     }

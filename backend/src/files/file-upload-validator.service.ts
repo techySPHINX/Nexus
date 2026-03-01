@@ -10,8 +10,8 @@ import { Injectable, BadRequestException, Logger } from '@nestjs/common';
  * being written to disk or forwarded to Google Drive (Issue #158).
  */
 @Injectable()
-export class FileSecurityService {
-  private readonly logger = new Logger(FileSecurityService.name);
+export class FileUploadValidatorService {
+  private readonly logger = new Logger(FileUploadValidatorService.name);
 
   /** Maximum allowed upload size in bytes (10 MB). */
   static readonly MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -62,8 +62,9 @@ export class FileSecurityService {
   // ---------------------------------------------------------------------------
 
   private checkFileSize(file: Express.Multer.File): void {
-    if (file.size > FileSecurityService.MAX_FILE_SIZE_BYTES) {
-      const maxMb = FileSecurityService.MAX_FILE_SIZE_BYTES / (1024 * 1024);
+    if (file.size > FileUploadValidatorService.MAX_FILE_SIZE_BYTES) {
+      const maxMb =
+        FileUploadValidatorService.MAX_FILE_SIZE_BYTES / (1024 * 1024);
       throw new BadRequestException(
         `File size ${(file.size / (1024 * 1024)).toFixed(1)} MB exceeds the maximum allowed size of ${maxMb} MB.`,
       );
@@ -71,13 +72,13 @@ export class FileSecurityService {
   }
 
   private checkMimeType(file: Express.Multer.File): void {
-    if (!FileSecurityService.ALLOWED_MIME_TYPES.has(file.mimetype)) {
+    if (!FileUploadValidatorService.ALLOWED_MIME_TYPES.has(file.mimetype)) {
       this.logger.warn(
         `Rejected upload with disallowed MIME type: ${file.mimetype}`,
       );
       throw new BadRequestException(
         `File type '${file.mimetype}' is not allowed. ` +
-          `Allowed types: ${[...FileSecurityService.ALLOWED_MIME_TYPES].join(', ')}`,
+          `Allowed types: ${[...FileUploadValidatorService.ALLOWED_MIME_TYPES].join(', ')}`,
       );
     }
   }

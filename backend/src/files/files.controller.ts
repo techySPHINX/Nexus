@@ -9,11 +9,12 @@ import {
   Param,
   Body,
   Headers,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { FilesService } from './files.service';
-import { FileSecurityService } from './file-security.service';
+import { FileUploadValidatorService } from './file-upload-validator.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
@@ -46,7 +47,7 @@ import { ApiTags, ApiBearerAuth, ApiHeader } from '@nestjs/swagger';
 export class FilesController {
   constructor(
     private readonly filesService: FilesService,
-    private readonly fileSecurityService: FileSecurityService,
+    private readonly fileSecurityService: FileUploadValidatorService,
   ) {}
 
   /**
@@ -58,12 +59,18 @@ export class FilesController {
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
-      limits: { fileSize: FileSecurityService.MAX_FILE_SIZE_BYTES },
+      limits: { fileSize: FileUploadValidatorService.MAX_FILE_SIZE_BYTES },
       fileFilter: (_req, file, cb) => {
-        if (FileSecurityService.ALLOWED_MIME_TYPES.has(file.mimetype)) {
+        if (FileUploadValidatorService.ALLOWED_MIME_TYPES.has(file.mimetype)) {
           cb(null, true);
         } else {
-          cb(new Error(`File type '${file.mimetype}' is not allowed.`), false);
+          // Use BadRequestException so Nest maps it to a 400 response (not 500).
+          cb(
+            new BadRequestException(
+              `File type '${file.mimetype}' is not allowed.`,
+            ),
+            false,
+          );
         }
       },
     }),
