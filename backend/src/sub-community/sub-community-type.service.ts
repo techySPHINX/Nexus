@@ -1,12 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class SubCommunityTypeService {
+  private readonly logger = new Logger(SubCommunityTypeService.name);
   constructor(private prisma: PrismaService) {}
 
   async listTypes() {
-    console.log('Listing sub-community types');
+    this.logger.log('Listing sub-community types');
     // Fetch ascending by name, but ensure the special placeholder type
     // 'OTHER' appears at the end of the list for UI clarity.
     // Optimization: fetch regular types (excluding the special 'OTHER')

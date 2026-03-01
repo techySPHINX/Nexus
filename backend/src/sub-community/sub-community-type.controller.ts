@@ -7,6 +7,7 @@ import {
   Patch,
   Delete,
   UseGuards,
+  Logger,
 } from '@nestjs/common';
 import { SubCommunityTypeService } from './sub-community-type.service';
 import { CreateSubCommunityTypeDto } from './dto/create-sub-community-type.dto';
@@ -22,11 +23,12 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @Controller('sub-community-types')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class SubCommunityTypeController {
+  private readonly logger = new Logger(SubCommunityTypeController.name);
   constructor(private readonly svc: SubCommunityTypeService) {}
 
   @Get()
   async list() {
-    console.log('getting subcommunity types');
+    this.logger.log('getting subcommunity types');
     return this.svc.listTypes();
   }
 

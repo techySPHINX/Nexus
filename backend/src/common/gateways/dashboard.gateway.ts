@@ -10,7 +10,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { JwtService } from '@nestjs/jwt';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 /**
  * Interface for an authenticated WebSocket client socket.
@@ -41,6 +41,7 @@ interface AuthenticatedSocket extends Socket {
 export class DashboardGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private readonly logger = new Logger(DashboardGateway.name);
   @WebSocketServer()
   server: Server;
 
@@ -54,7 +55,7 @@ export class DashboardGateway
    * Called after the gateway has been initialized.
    */
   afterInit(server: Server) {
-    console.log('🎯 Dashboard Gateway initialized');
+    this.logger.log('🎯 Dashboard Gateway initialized');
     this.server = server;
   }
 
@@ -63,12 +64,12 @@ export class DashboardGateway
    */
   async handleConnection(client: AuthenticatedSocket) {
     try {
-      console.log('🔌 Dashboard connection attempt:', client.id);
+      this.logger.log('🔌 Dashboard connection attempt:', client.id);
 
       const { userId, token } = client.handshake.query;
 
       if (!userId || !token) {
-        console.log('❌ Missing userId or token');
+        this.logger.log('❌ Missing userId or token');
         client.emit('error', {
           message: 'Missing authentication credentials',
           timestamp: new Date().toISOString(),
@@ -83,7 +84,7 @@ export class DashboardGateway
         client.userId = payload.userId || userId;
         client.userEmail = payload.email;
       } catch (jwtError) {
-        console.log('❌ Invalid JWT token:', jwtError.message);
+        this.logger.log('❌ Invalid JWT token:', jwtError.message);
         client.emit('error', {
           message: 'Invalid authentication token',
           timestamp: new Date().toISOString(),
@@ -104,7 +105,9 @@ export class DashboardGateway
       // Join user-specific room
       await client.join(`user:${userIdStr}`);
 
-      console.log(`✅ Dashboard connection established for user ${userIdStr}`);
+      this.logger.log(
+        `✅ Dashboard connection established for user ${userIdStr}`,
+      );
 
       // Send connection confirmation
       client.emit('connected', {
@@ -116,7 +119,7 @@ export class DashboardGateway
       // Notify about online status
       this.broadcastUserStatus(userIdStr, 'online');
     } catch (error) {
-      console.error('❌ Dashboard connection error:', error);
+      this.logger.error('❌ Dashboard connection error:', error);
       client.disconnect();
     }
   }
@@ -140,7 +143,9 @@ export class DashboardGateway
       }
 
       this.socketToUser.delete(client.id);
-      console.log(`🔌 Dashboard disconnected: ${client.id} (User: ${userId})`);
+      this.logger.log(
+        `🔌 Dashboard disconnected: ${client.id} (User: ${userId})`,
+      );
     }
   }
 

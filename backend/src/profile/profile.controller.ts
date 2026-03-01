@@ -9,6 +9,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
@@ -31,6 +32,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @Controller('profile')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ProfileController {
+  private readonly logger = new Logger(ProfileController.name);
   constructor(private readonly profileService: ProfileService) {}
 
   @Get('me-completion-stats')
@@ -69,7 +71,7 @@ export class ProfileController {
     @Query('avatarUrl') avatarUrl?: string,
   ) {
     const includeAvatar = avatarUrl === 'true';
-    console.log(
+    this.logger.log(
       `Received request for profile preview of userId: ${userId} with avatarUrl: ${avatarUrl}`,
     );
     return this.profileService.getProfilePreview(userId, includeAvatar);

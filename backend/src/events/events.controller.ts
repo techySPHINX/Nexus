@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Logger,
 } from '@nestjs/common';
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -23,6 +24,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 @ApiBearerAuth('JWT')
 @Controller('events')
 export class EventsController {
+  private readonly logger = new Logger(EventsController.name);
   constructor(private readonly eventsService: EventsService) {}
 
   @Post()
@@ -32,7 +34,7 @@ export class EventsController {
     @Body() createEventDto: CreateEventDto,
     @GetCurrentUser('userId') userId: string,
   ) {
-    console.log('Received create event request:', createEventDto);
+    this.logger.log('Received create event request:', createEventDto);
     return this.eventsService.create(createEventDto, userId);
   }
 

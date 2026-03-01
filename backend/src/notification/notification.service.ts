@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { VoteType } from '@prisma/client';
@@ -39,6 +40,7 @@ export enum NotificationType {
  */
 @Injectable()
 export class NotificationService {
+  private readonly logger = new Logger(NotificationService.name);
   constructor(
     private prisma: PrismaService,
     private pushNotificationService: PushNotificationService,
@@ -93,7 +95,7 @@ export class NotificationService {
       });
     } catch (error) {
       // Log error but don't fail the notification creation
-      console.error('Failed to send push notification:', error);
+      this.logger.error('Failed to send push notification:', error);
     }
 
     return notification;

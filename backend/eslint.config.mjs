@@ -21,6 +21,16 @@ export default tseslint.config(
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       'no-undef': 'off', // TypeScript handles this
+      // Issue #171: Enforce structured NestJS Logger; ban raw console calls in
+      // production source files so log entries carry context, levels, and IDs.
+      'no-console': 'error',
+    },
+  },
+  {
+    // Relax no-console for test / seed / script files where it is acceptable
+    files: ['**/*.spec.ts', '**/*.e2e-spec.ts', 'data/**', 'scripts/**'],
+    rules: {
+      'no-console': 'off',
     },
   },
 );
