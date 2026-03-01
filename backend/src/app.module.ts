@@ -27,7 +27,9 @@ import { ShowcaseModule } from './showcase/showcase.module';
 import { NewsModule } from './news/news.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReferralAnalyticsModule } from './referral-analytics/referral-analytics.module';
+import { HealthModule } from './health/health.module';
 import { securityConfig } from './common/config/security.config';
+import { envValidationSchema } from './common/config/env.validation';
 import { WinstonLoggerService } from './common/logger/winston-logger.service';
 import { AuditLogService } from './common/services/audit-log.service';
 import { GdprService } from './common/services/gdpr.service';
@@ -38,7 +40,19 @@ import { FileSecurityService } from './common/services/file-security.service';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }),
+    /**
+     * ConfigModule with Joi validation (Issue #165).
+     * The app will refuse to start — with a clear error — if any required
+     * environment variable (DATABASE_URL, JWT_SECRET, etc.) is missing.
+     */
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validationSchema: envValidationSchema,
+      validationOptions: {
+        allowUnknown: true,
+        abortEarly: false,
+      },
+    }),
     ThrottlerModule.forRoot([
       {
         ttl: securityConfig.rateLimit.ttl, // seconds as configured in security.config
@@ -68,6 +82,7 @@ import { FileSecurityService } from './common/services/file-security.service';
     NewsModule,
     DashboardModule,
     ReferralAnalyticsModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
