@@ -8,8 +8,10 @@ import { getCorsConfig, securityConfig } from './common/config/security.config';
 import { WinstonLoggerService } from './common/logger/winston-logger.service';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { HttpLoggingInterceptor } from './common/interceptors/http-logging.interceptor';
+import { SanitizePipe } from './common/pipes/sanitize.pipe';
 import helmet from 'helmet';
 import * as compression from 'compression';
+import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
@@ -26,6 +28,12 @@ async function bootstrap() {
     '🚀 Initializing Nexus Backend Application...',
     'Bootstrap',
   );
+
+  // ============================================
+  // Cookie Parser — must be registered before CSRF middleware so
+  // req.cookies is populated when CsrfMiddleware runs (Issue #162).
+  // ============================================
+  app.use(cookieParser());
 
   // ============================================
   // SECURITY: Helmet - Security Headers
@@ -110,16 +118,13 @@ async function bootstrap() {
   // VALIDATION: Global Validation Pipe with Auto-Transformation
   // ============================================
   app.useGlobalPipes(
-    new ValidationPipe({
-      ...securityConfig.validation,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    }),
+    new ValidationPipe(securityConfig.validation),
+    // SanitizePipe strips HTML tags and XSS vectors from all string inputs
+    // as a defence-in-depth measure (Issue #163).
+    new SanitizePipe(),
   );
   loggerService.log(
-    '✅ Global validation pipe with auto-transformation enabled',
+    '✅ Global validation + sanitization pipes registered',
     'Bootstrap',
   );
 
