@@ -39,7 +39,9 @@ export default function RecentNews({ compact = false }: RecentNewsProps) {
       role="region"
       aria-label="Recent news"
     >
-      <CardContent sx={{ p: compact ? { xs: 0.75, sm: 1.25 } : { xs: 2, sm: 2.5 } }}>
+      <CardContent
+        sx={{ p: compact ? { xs: 0.75, sm: 1.25 } : { xs: 2, sm: 2.5 } }}
+      >
         <Box
           sx={{
             display: 'flex',
@@ -164,14 +166,24 @@ export default function RecentNews({ compact = false }: RecentNewsProps) {
           </List>
         )}
 
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: compact ? 1 : 1.5 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            mt: compact ? 1 : 1.5,
+          }}
+        >
           <Button
             component={Link}
             to="/news"
             size={compact ? 'small' : 'small'}
             variant="text"
             aria-label="View all news updates"
-            sx={compact ? { minWidth: 0, px: 0.25, fontSize: '0.6rem' } : undefined}
+            sx={
+              compact
+                ? { minWidth: 0, px: 0.25, fontSize: '0.6rem' }
+                : undefined
+            }
           >
             {compact ? 'All' : 'View all'}
           </Button>

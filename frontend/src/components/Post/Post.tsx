@@ -355,7 +355,10 @@ export const Post: FC<PostProps> = ({
                 onClick={handleMenuOpen}
                 aria-label="Open post actions"
                 size={isCompactCard ? 'small' : 'medium'}
-                sx={{ minWidth: isCompactCard ? 30 : 44, minHeight: isCompactCard ? 30 : 44 }}
+                sx={{
+                  minWidth: isCompactCard ? 30 : 44,
+                  minHeight: isCompactCard ? 30 : 44,
+                }}
               >
                 <MoreVert />
               </IconButton>
@@ -461,7 +464,9 @@ export const Post: FC<PostProps> = ({
         </Box>
       )}
 
-      <CardContent sx={{ px: isCompactCard ? 1 : 2, py: isCompactCard ? 0.75 : 2 }}>
+      <CardContent
+        sx={{ px: isCompactCard ? 1 : 2, py: isCompactCard ? 0.75 : 2 }}
+      >
         {isEditing ? (
           <>
             {/* Show preview above inputs when editing on the post page */}
@@ -660,17 +665,29 @@ export const Post: FC<PostProps> = ({
 
       {showActions && !isEditing && (
         <div className="flex justify-between">
-          <CardActions sx={{ px: isCompactCard ? 0.5 : 1, py: isCompactCard ? 0.25 : 1, gap: isCompactCard ? 0.25 : 0.5 }}>
+          <CardActions
+            sx={{
+              px: isCompactCard ? 0.5 : 1,
+              py: isCompactCard ? 0.25 : 1,
+              gap: isCompactCard ? 0.25 : 0.5,
+            }}
+          >
             <IconButton
               onClick={handleLike}
               disabled={engagementLoading || !token}
               aria-label={isLiked ? 'Unlike post' : 'Like post'}
               size={isCompactCard ? 'small' : 'medium'}
-              sx={{ minWidth: isCompactCard ? 28 : 44, minHeight: isCompactCard ? 28 : 44 }}
+              sx={{
+                minWidth: isCompactCard ? 28 : 44,
+                minHeight: isCompactCard ? 28 : 44,
+              }}
             >
               {isLiked ? <Favorite color="error" /> : <FavoriteBorder />}
             </IconButton>
-            <Typography variant="body2" sx={{ fontSize: isCompactCard ? '0.62rem' : undefined }}>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: isCompactCard ? '0.62rem' : undefined }}
+            >
               {likeCount}
             </Typography>
 
@@ -678,11 +695,17 @@ export const Post: FC<PostProps> = ({
               onClick={handleContentClick}
               aria-label="Open comments"
               size={isCompactCard ? 'small' : 'medium'}
-              sx={{ minWidth: isCompactCard ? 28 : 44, minHeight: isCompactCard ? 28 : 44 }}
+              sx={{
+                minWidth: isCompactCard ? 28 : 44,
+                minHeight: isCompactCard ? 28 : 44,
+              }}
             >
               <CommentIcon />
             </IconButton>
-            <Typography variant="body2" sx={{ fontSize: isCompactCard ? '0.62rem' : undefined }}>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: isCompactCard ? '0.62rem' : undefined }}
+            >
               {post?._count?.Comment || 0}
             </Typography>
 
@@ -702,7 +725,10 @@ export const Post: FC<PostProps> = ({
               }}
               aria-label="Copy post link"
               size={isCompactCard ? 'small' : 'medium'}
-              sx={{ minWidth: isCompactCard ? 28 : 44, minHeight: isCompactCard ? 28 : 44 }}
+              sx={{
+                minWidth: isCompactCard ? 28 : 44,
+                minHeight: isCompactCard ? 28 : 44,
+              }}
             >
               <Tooltip title="Share Post">
                 <Share />
