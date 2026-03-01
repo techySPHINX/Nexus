@@ -88,7 +88,7 @@ export function AppSidebarNexus() {
             },
             {
               title: 'Member SubCommunities',
-              url: '/subcommunities/my/members?memberPage=1',
+              url: '/subcommunities/my/member?memberPage=1',
             },
           ],
         },

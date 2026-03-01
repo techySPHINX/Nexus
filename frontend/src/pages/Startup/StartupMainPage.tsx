@@ -10,6 +10,8 @@ import {
   Tab,
   Snackbar,
   Alert,
+  Container,
+  Paper,
 } from '@mui/material';
 import { Add, TrendingUp, People, Rocket } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -302,40 +304,41 @@ const StartupMainPage: FC = () => {
   // }, [activeTab]);
 
   return (
-    <div className="w-full" style={{ padding: '1rem', position: 'relative' }}>
+    <Container maxWidth="xl" sx={{ py: 2.5, position: 'relative' }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
         {/* Header Section */}
-        <Box
+        <Paper
+          variant="outlined"
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: { xs: 'flex-start', sm: 'center' },
             mb: 4,
+            gap: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+            p: { xs: 2, md: 2.5 },
+            borderRadius: 2.5,
           }}
         >
           <Box>
             <Typography
-              variant="h3"
+              variant="h4"
               sx={{
-                fontWeight: 800,
-                mb: 1,
+                fontWeight: 700,
+                mb: 0.5,
               }}
             >
               Startup Ecosystem
             </Typography>
-            <Typography
-              variant="h6"
-              color="text.secondary"
-              sx={{ fontWeight: 400 }}
-            >
+            <Typography variant="body1" color="text.secondary">
               Discover and support the next generation of innovative startups
             </Typography>
           </Box>
-          <div>
+          <Box>
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -346,15 +349,13 @@ const StartupMainPage: FC = () => {
                 startIcon={<Add />}
                 onClick={() => setCreateModalOpen(true)}
                 sx={{
-                  borderRadius: 3,
-                  px: 3,
-                  py: 1.5,
+                  borderRadius: 2,
+                  px: 2.5,
                   fontWeight: 600,
-                  background: 'primary.main',
                 }}
-                size="large"
+                size="medium"
               >
-                Startup
+                Create Startup
               </Button>
             </motion.div>
             <motion.div
@@ -381,14 +382,14 @@ const StartupMainPage: FC = () => {
                   }
                 }}
                 disabled={currentList.loading}
-                sx={{ borderRadius: 3, px: 2, py: 1.2, fontWeight: 600 }}
-                size="large"
+                sx={{ borderRadius: 2, px: 2.5, fontWeight: 600 }}
+                size="medium"
               >
                 Refresh
               </Button>
             </motion.div>
-          </div>
-        </Box>
+          </Box>
+        </Paper>
 
         {/* Stats Summary */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
@@ -539,11 +540,9 @@ const StartupMainPage: FC = () => {
           maxWidth="md"
           PaperProps={{
             sx: {
-              borderRadius: 4,
-              background:
-                'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(245,247,250,0.9))',
-              backdropFilter: 'blur(12px)',
-              boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
+              borderRadius: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
               overflow: 'hidden',
             },
           }}
@@ -613,7 +612,7 @@ const StartupMainPage: FC = () => {
           </Snackbar>
         )}
       </motion.div>
-    </div>
+    </Container>
   );
 };
 

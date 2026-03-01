@@ -21,6 +21,7 @@ import {
   DialogActions,
   IconButton,
   InputAdornment,
+  Paper,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -85,6 +86,14 @@ const ChatPage: FC = () => {
         ? storeMessages.get(selectedConversationId) || []
         : [],
     [selectedConversationId, storeMessages]
+  );
+  const totalUnreadCount = useMemo(
+    () =>
+      conversations.reduce(
+        (sum, conversation) => sum + conversation.unreadCount,
+        0
+      ),
+    [conversations]
   );
 
   useEffect(() => {
@@ -360,15 +369,28 @@ const ChatPage: FC = () => {
       className="w-full mx-auto"
       sx={{ py: 4, maxWidth: '1280px', px: { xs: 2, md: 3 } }}
     >
-      <Box
+      <Paper
+        variant="outlined"
         sx={{
           mb: 3,
+          p: { xs: 2, md: 2.5 },
+          borderRadius: 2.5,
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 1.5,
         }}
       >
-        <Typography variant="h4">Messages</Typography>
+        <Box>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            Messages
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {conversations.length} conversation
+            {conversations.length === 1 ? '' : 's'} • {totalUnreadCount} unread
+          </Typography>
+        </Box>
         <Button
           variant="contained"
           size="small"
@@ -377,7 +399,7 @@ const ChatPage: FC = () => {
         >
           New Chat
         </Button>
-      </Box>
+      </Paper>
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
@@ -497,6 +519,13 @@ const ChatPage: FC = () => {
         onClose={() => setNewConversationOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
       >
         <DialogTitle
           sx={{

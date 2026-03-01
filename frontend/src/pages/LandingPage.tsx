@@ -357,10 +357,6 @@ const Landing: FC = () => {
           sectionBackground={sectionBackgrounds[5]}
           // lowPerformanceMode={lowPerformanceMode}
         />
-        <CTASection
-          sectionBackground={sectionBackgrounds[5]}
-          // lowPerformanceMode={lowPerformanceMode}
-        />
       </DeferredSection>
       <DeferredSection minHeight={560} rootMargin={deferredRootMargin}>
         <FAQSection sectionBackground={sectionBackgrounds[6]} />

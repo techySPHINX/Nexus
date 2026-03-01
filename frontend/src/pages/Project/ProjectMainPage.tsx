@@ -22,6 +22,7 @@ import {
   Snackbar,
   Alert,
   Fade,
+  Container,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -460,7 +461,7 @@ const ProjectsMainPage: FC = () => {
   const counts = getTabCounts();
 
   return (
-    <div className="w-full" style={{ padding: '1rem' }}>
+    <Container maxWidth="xl" sx={{ py: 2.5 }}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -480,24 +481,25 @@ const ProjectsMainPage: FC = () => {
               mb: 4,
               flexWrap: 'wrap',
               gap: 2,
+              p: { xs: 2, md: 2.5 },
+              borderRadius: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
             }}
           >
             <Box>
               <Typography
-                variant="h3"
+                variant="h4"
                 component="h1"
                 sx={{
-                  fontWeight: 800,
-                  mb: 1,
+                  fontWeight: 700,
+                  mb: 0.5,
                 }}
               >
                 Project Showcase
               </Typography>
-              <Typography
-                variant="h6"
-                color="text.secondary"
-                sx={{ fontWeight: 400 }}
-              >
+              <Typography variant="body1" color="text.secondary">
                 Discover, collaborate and support amazing projects
               </Typography>
             </Box>
@@ -512,15 +514,13 @@ const ProjectsMainPage: FC = () => {
                   startIcon={<Add />}
                   onClick={() => setShowCreateModal(true)}
                   sx={{
-                    borderRadius: 3,
-                    px: 3,
-                    py: 1.2,
+                    borderRadius: 2,
+                    px: 2.5,
                     fontWeight: 600,
-                    fontSize: '1rem',
                   }}
-                  size="large"
+                  size="medium"
                 >
-                  Create New Project
+                  Create Project
                 </Button>
               </motion.div>
               <motion.div
@@ -536,13 +536,11 @@ const ProjectsMainPage: FC = () => {
                     ) : undefined
                   }
                   sx={{
-                    borderRadius: 3,
-                    px: 3,
-                    py: 1.2,
+                    borderRadius: 2,
+                    px: 2.5,
                     fontWeight: 600,
-                    fontSize: '1rem',
                   }}
-                  size="large"
+                  size="medium"
                   disabled={actionLoading.refresh}
                 >
                   Refresh
@@ -552,51 +550,20 @@ const ProjectsMainPage: FC = () => {
           </Box>
         </motion.div>
 
-        {/* Summary Stats (show skeletons while loading to improve FCP) */}
-        {/* {user && (
+        {user && (
           <motion.div
             initial={{ y: 8, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.2, delay: 0.05 }}
           >
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              {actionLoading.count ? (
-                <>
-                  <Skeleton variant="text" width={140} height={40} />
-                  <Skeleton variant="text" width={100} height={40} />
-                  <Skeleton variant="text" width={120} height={40} />
-                  <Skeleton variant="text" width={120} height={40} />
-                </>
-              ) : (
-                <>
-                  <Chip
-                    label={`${counts.all ?? 0} Total Projects`}
-                    color="primary"
-                    variant="filled"
-                    sx={{ fontWeight: 600, px: 1 }}
-                  />
-                  <Chip
-                    label={`${counts.owned ?? 0} Owned`}
-                    color="secondary"
-                    variant="filled"
-                    sx={{ fontWeight: 600, px: 1 }}
-                  />
-                  <Chip
-                    label={`${counts.supported ?? 0} Supported`}
-                    color="success"
-                    variant="filled"
-                    sx={{ fontWeight: 600, px: 1 }}
-                  />
-                  <Chip
-                    label={`${counts.following ?? 0} Following`}
-                    variant="filled"
-                    color="info"
-                  />
-                </>
-              )}
+            <Box sx={{ display: 'flex', gap: 1, mb: 2.5, flexWrap: 'wrap' }}>
+              <Chip label={`${counts.all ?? 0} Total`} size="small" />
+              <Chip label={`${counts.owned ?? 0} Owned`} size="small" />
+              <Chip label={`${counts.supported ?? 0} Supported`} size="small" />
+              <Chip label={`${counts.following ?? 0} Following`} size="small" />
             </Box>
           </motion.div>
-        )} */}
+        )}
 
         {/* Filter Section */}
         <motion.div
@@ -878,7 +845,7 @@ const ProjectsMainPage: FC = () => {
           </Alert>
         </Snackbar>
       </motion.div>
-    </div>
+    </Container>
   );
 };
 
