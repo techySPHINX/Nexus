@@ -5,6 +5,7 @@ import {
   Get,
   UseGuards,
   Req,
+  Res,
   Ip,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
@@ -19,7 +20,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
 /**
@@ -37,6 +38,33 @@ export class AuthController {
     private readonly documentVerificationService: DocumentVerificationService,
   ) {}
 
+  /** Write JWT tokens as httpOnly cookies on the response (Issue #164). */
+  private setAuthCookies(res: Response, authResponse: AuthResponseDto): void {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: 'strict' as const,
+      path: '/',
+    };
+
+    res.cookie('access_token', authResponse.accessToken, {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000, // 15 minutes
+    });
+    res.cookie('refresh_token', authResponse.refreshToken, {
+      ...cookieOptions,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/auth/refresh', // Restrict refresh token to the refresh endpoint
+    });
+  }
+
+  /** Clear auth cookies on logout. */
+  private clearAuthCookies(res: Response): void {
+    res.clearCookie('access_token', { path: '/' });
+    res.clearCookie('refresh_token', { path: '/auth/refresh' });
+  }
+
   /**
    * Register with document verification (for students/alumni)
    */
@@ -51,58 +79,81 @@ export class AuthController {
   }
 
   /**
-   * Regular registration (legacy support)
+   * Regular registration (legacy support) — sets httpOnly auth cookies.
    */
   @Post('register')
-  async register(@Body() dto: RegisterDto): Promise<AuthResponseDto> {
-    return this.authService.register(dto);
+  async register(
+    @Body() dto: RegisterDto,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<AuthResponseDto> {
+    const result = await this.authService.register(dto);
+    this.setAuthCookies(res, result);
+    return result;
   }
 
   /**
-   * Enhanced login with security tracking
+   * Enhanced login with security tracking — sets httpOnly auth cookies.
    */
   @Post('login')
   async login(
     @Body() dto: LoginDto,
     @Ip() ip: string,
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
     const userAgent = req.headers['user-agent'] || '';
-    return this.authService.login(dto, ip, userAgent);
+    const result = await this.authService.login(dto, ip, userAgent);
+    this.setAuthCookies(res, result);
+    return result;
   }
 
   /**
-   * Refresh access token
+   * Refresh access token — rotates both cookies.
    */
   @Post('refresh')
   async refreshToken(
     @Body() dto: RefreshTokenDto,
     @Ip() ip: string,
     @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
     const userAgent = req.headers['user-agent'] || '';
-    return this.authService.refreshToken(dto, ip, userAgent);
+    const result = await this.authService.refreshToken(dto, ip, userAgent);
+    this.setAuthCookies(res, result);
+    return result;
   }
 
   /**
-   * Logout from current device
+   * Logout from current device — clears auth cookies and invalidates refresh token.
    */
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   async logout(
-    @Body() body: { refreshToken: string },
+    @Body() body: { refreshToken?: string },
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<{ message: string }> {
-    return this.authService.logout(body.refreshToken);
+    // Support both body-provided token and cookie-based token for backwards compat.
+    const refreshToken =
+      body.refreshToken ??
+      (req.cookies?.['refresh_token'] as string | undefined);
+    this.clearAuthCookies(res);
+    if (refreshToken) {
+      return this.authService.logout(refreshToken);
+    }
+    return { message: 'Logged out successfully' };
   }
 
   /**
-   * Logout from all devices
+   * Logout from all devices — clears auth cookies.
    */
   @Post('logout-all')
   @UseGuards(JwtAuthGuard)
   async logoutAll(
     @GetCurrentUser('sub') userId: string,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<{ message: string }> {
+    this.clearAuthCookies(res);
     return this.authService.logoutAll(userId);
   }
 

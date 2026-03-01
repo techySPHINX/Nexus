@@ -9,13 +9,10 @@ export class EngagementService {
     this.baseURL = baseURL;
   }
 
+  // httpOnly cookie sent automatically via withCredentials \u2014 no manually
+  // attached Authorization header needed (Issue #164).
   private getAuthHeaders() {
-    const token = localStorage.getItem('token');
-    return {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
+    return { withCredentials: true };
   }
 
   // engagementService.ts - Update the error handling

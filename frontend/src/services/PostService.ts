@@ -1,21 +1,15 @@
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-const api = axios.create({ baseURL: BACKEND_URL });
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// withCredentials ensures the httpOnly access_token cookie is sent
+// automatically — no manual Authorization header needed (Issue #164).
+const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
 
 function getUser() {
-  const token = localStorage.getItem('token');
-  if (!token) return null;
   try {
-    return jwtDecode<{ role: string }>(token);
+    const raw = localStorage.getItem('user');
+    if (!raw) return null;
+    return JSON.parse(raw) as { role: string };
   } catch {
     return null;
   }

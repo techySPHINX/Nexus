@@ -2,14 +2,9 @@ import axios from 'axios';
 import { UpdateProfileInput } from '../types/profileType';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-const api = axios.create({ baseURL: BACKEND_URL });
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// withCredentials ensures the httpOnly access_token cookie is sent
+// automatically — no manual Authorization header needed (Issue #164).
+const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
 
 export async function fetchProfileDataService(userId: string) {
   try {
@@ -17,8 +12,6 @@ export async function fetchProfileDataService(userId: string) {
       api.get(`/profile/me`),
       api.get(`/profile/${userId}/badges`),
     ]);
-    console.log('profile', profileRes.data);
-    console.log('badges', badgesRes.data);
     return { profile: profileRes.data, badges: badgesRes.data };
   } catch (err) {
     if (axios.isAxiosError(err)) {
