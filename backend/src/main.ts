@@ -29,7 +29,7 @@ if (process.env.SENTRY_DSN) {
     // Capture 100% of traces in dev; reduce in production via SENTRY_TRACES_RATE
     tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_RATE ?? '0.1'),
     // Performance profiling (requires @sentry/profiling-node if needed)
-    integrations: [Sentry.httpIntegration({ tracing: true })],
+    integrations: [Sentry.httpIntegration()],
   });
 }
 
