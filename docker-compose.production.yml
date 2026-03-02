@@ -20,7 +20,6 @@ services:
     # are misconfigured) to connect directly to the database.
     networks:
       - nexus-internal
-      - nexus-network
     restart: unless-stopped
     logging:
       driver: json-file
@@ -49,7 +48,6 @@ services:
     # bridge network by the backend service.
     networks:
       - nexus-internal
-      - nexus-network
     restart: unless-stopped
     logging:
       driver: json-file
@@ -57,7 +55,7 @@ services:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -76,7 +74,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-nexus_chat}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set — refusing to start with no auth}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set — refusing to start with a default weak secret}
       FRONTEND_URLS: ${FRONTEND_URLS:-http://localhost:3001,http://localhost:3000}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-nexus-chat-files}
@@ -86,8 +84,8 @@ services:
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       CDN_URL: ${CDN_URL:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     networks:
       - nexus-internal  # needs to reach postgres and redis
       - nexus-network
