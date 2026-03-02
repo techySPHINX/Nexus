@@ -146,27 +146,43 @@ export class ProfileService {
   async getProfile(userId: string) {
     const profile = await this.prisma.profile.findUnique({
       where: { userId: userId },
-      include: {
+      // Replaced nested include chains with select to avoid over-fetching.
+      // The three-level include (skills → endorsements → endorser.profile)
+      // triggered a query per skill × endorsement; select limits columns.
+      select: {
+        id: true,
+        bio: true,
+        location: true,
+        interests: true,
+        avatarUrl: true,
+        branch: true,
+        course: true,
+        dept: true,
+        year: true,
+        studentId: true,
+        gender: true,
+        createdAt: true,
+        updatedAt: true,
         skills: {
-          include: {
+          select: {
+            id: true,
+            name: true,
             endorsements: {
-              include: {
+              select: {
+                id: true,
+                createdAt: true,
                 endorser: {
                   select: {
                     id: true,
                     name: true,
                     role: true,
                     profile: {
-                      select: {
-                        avatarUrl: true,
-                      },
+                      select: { avatarUrl: true },
                     },
                   },
                 },
               },
-              orderBy: {
-                createdAt: 'desc',
-              },
+              orderBy: { createdAt: 'desc' },
             },
           },
         },
@@ -189,10 +205,8 @@ export class ProfileService {
                     entityId: true,
                     createdAt: true,
                   },
-                  orderBy: {
-                    createdAt: 'desc',
-                  },
-                  take: 10, // Limit to recent transactions
+                  orderBy: { createdAt: 'desc' },
+                  take: 10,
                 },
               },
             },

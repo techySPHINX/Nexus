@@ -226,10 +226,13 @@ export class PostService {
 
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
+      // Use select instead of include to avoid over-fetching all user/profile
+      // columns. We only need the fields actually used for feed ranking.
+      select: {
         profile: {
-          include: {
-            skills: true,
+          select: {
+            interests: true,
+            skills: { select: { name: true } },
           },
         },
         requestedConnections: {

@@ -28,10 +28,22 @@ export class UserService {
    */
   async findAll() {
     return this.prisma.user.findMany({
-      include: {
+      // Use select to avoid over-fetching — we never need the raw password or
+      // all profile data in list views.
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        accountStatus: true,
+        createdAt: true,
+        isAccountActive: true,
         profile: {
-          include: {
-            skills: true,
+          select: {
+            bio: true,
+            avatarUrl: true,
+            location: true,
+            skills: { select: { id: true, name: true } },
           },
         },
       },
@@ -103,10 +115,35 @@ export class UserService {
 
     const user = await this.prisma.user.findUnique({
       where: { id },
-      include: {
+      // select avoids fetching password hash and all relations
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        accountStatus: true,
+        isAccountActive: true,
+        isEmailVerified: true,
+        createdAt: true,
+        description: true,
+        iconUrl: true,
+        bannerUrl: true,
+        graduationYear: true,
+        fcmDeviceToken: true,
         profile: {
-          include: {
-            skills: true,
+          select: {
+            id: true,
+            bio: true,
+            location: true,
+            interests: true,
+            avatarUrl: true,
+            branch: true,
+            course: true,
+            dept: true,
+            year: true,
+            studentId: true,
+            gender: true,
+            skills: { select: { id: true, name: true } },
           },
         },
       },
