@@ -36,29 +36,10 @@ die()  { echo "[$(date -u '+%Y-%m-%dT%H:%M:%SZ')] ERROR $*" >&2; exit 1; }
 AWS_REGION="${AWS_REGION:-us-east-1}"
 BACKUP_RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 
-# ── Derive pg_dump connection parameters from DATABASE_URL ───────────────────
-# Expects format: postgresql://user:password@host:port/dbname
-# The DATABASE_URL is passed directly to pg_dump via PGPASSFILE or
-# by setting PGPASSWORD derived from the URL.
-parse_url() {
-  # Strip the scheme prefix
-  local rest="${DATABASE_URL#postgresql://}"
-  rest="${rest#postgres://}"
-
-  PGUSER="${rest%%:*}"
-  rest="${rest#*:}"
-  PGPASSWORD="${rest%%@*}"
-  rest="${rest#*@}"
-  PGHOST="${rest%%:*}"
-  rest="${rest#*:}"
-  PGPORT="${rest%%/*}"
-  PGDATABASE="${rest#*/}"
-  # Remove any trailing query string
-  PGDATABASE="${PGDATABASE%%\?*}"
-}
-
-parse_url
-export PGPASSWORD PGUSER PGHOST PGPORT PGDATABASE
+# ── pg_dump connection — libpq natively parses the full DATABASE_URL ─────────
+# Passing --dbname with the full URL handles passwords containing special
+# characters, IPv6 hosts, and query-string options without brittle shell
+# string splitting.
 
 # ── Build filenames ───────────────────────────────────────────────────────────
 TIMESTAMP="$(date -u '+%Y-%m-%d_%H-%M-%S')"
@@ -66,15 +47,11 @@ FILENAME="nexus-backup-${TIMESTAMP}.dump.gz"
 TMP_FILE="/tmp/${FILENAME}"
 
 # ── Take the backup ───────────────────────────────────────────────────────────
-log "Starting pg_dump of ${PGDATABASE} on ${PGHOST}:${PGPORT} ..."
+log "Starting pg_dump using DATABASE_URL ..."
 pg_dump \
-  --host="${PGHOST}" \
-  --port="${PGPORT}" \
-  --username="${PGUSER}" \
-  --dbname="${PGDATABASE}" \
+  --dbname="${DATABASE_URL}" \
   --format=custom \
   --compress=9 \
-  --no-password \
   | gzip -9 > "${TMP_FILE}"
 
 BACKUP_SIZE="$(du -sh "${TMP_FILE}" | cut -f1)"
@@ -105,9 +82,12 @@ rm -f "${TMP_FILE}"
 # Lists objects in the bucket with the nexus-backup- prefix and deletes any
 # whose LastModified date is older than BACKUP_RETENTION_DAYS.
 if [[ "${BACKUP_RETENTION_DAYS}" -gt 0 ]]; then
-  CUTOFF_EPOCH="$(date -d "${BACKUP_RETENTION_DAYS} days ago" '+%s' 2>/dev/null \
-    || date -v-"${BACKUP_RETENTION_DAYS}"d '+%s' 2>/dev/null \
-    || echo 0)"
+  # Use epoch arithmetic so this works on Alpine (busybox date does not
+  # support `date -d "N days ago"` or GNU `--iso-8601` flag).
+  CUTOFF_EPOCH=$(( $(date -u +%s) - BACKUP_RETENTION_DAYS * 86400 ))
+  CUTOFF_ISO="$(date -u -d "@${CUTOFF_EPOCH}" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null \
+    || date -u -r "${CUTOFF_EPOCH}" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null \
+    || echo "1970-01-01T00:00:00Z")"
 
   if [[ "${CUTOFF_EPOCH}" -gt 0 ]]; then
     log "Pruning backups older than ${BACKUP_RETENTION_DAYS} days from ${BACKUP_S3_BUCKET} ..."
@@ -115,7 +95,7 @@ if [[ "${BACKUP_RETENTION_DAYS}" -gt 0 ]]; then
     LIST_ARGS=(s3api list-objects-v2
       --bucket "${BACKUP_S3_BUCKET#s3://}"
       --prefix "nexus-backup-"
-      --query "Contents[?LastModified<='$(date -d "${BACKUP_RETENTION_DAYS} days ago" --iso-8601=seconds 2>/dev/null || date -v-"${BACKUP_RETENTION_DAYS}"d -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo "1970-01-01T00:00:00Z")'].Key"
+      --query "Contents[?LastModified<='${CUTOFF_ISO}'].Key"
       --output text
     )
     [[ -n "${S3_ENDPOINT:-}" ]] && LIST_ARGS+=(--endpoint-url "${S3_ENDPOINT}")

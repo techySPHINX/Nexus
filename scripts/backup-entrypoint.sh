@@ -25,7 +25,7 @@ BACKUP_CRON="${BACKUP_CRON:-0 2 * * *}"
 # Export all env vars into a file sourced by the cron job, because crond
 # doesn't inherit the Docker container's environment variables.
 ENV_FILE=/etc/backup-env
-printenv | grep -E '^(DATABASE_URL|BACKUP_S3_BUCKET|AWS_|S3_ENDPOINT|BACKUP_RETENTION_DAYS|BACKUP_CRON)' \
+printenv | grep -E '^(DATABASE_URL|BACKUP_S3_BUCKET|AWS_|S3_ENDPOINT|BACKUP_RETENTION_DAYS)' \
   | sed 's/^/export /' > "${ENV_FILE}"
 chmod 600 "${ENV_FILE}"
 
