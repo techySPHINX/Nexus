@@ -31,6 +31,7 @@ model User {
   graduationYear                        Int?
   fcmDeviceToken                        String?
   publicEncryptionKey                   String?
+  updatedAt                             DateTime                      @default(now()) @updatedAt
   ReportsHandled                        ContentReport[]               @relation("ReportsHandled")
   ReportsMade                           ContentReport[]               @relation("ReportsMade")
   joinRequests                          JoinRequest[]
@@ -88,6 +89,10 @@ model User {
   Vote                                  Vote[]
   mentionedIn                           Comment[]                     @relation("mentionedUsers")
 
+  @@index([role])
+  @@index([accountStatus])
+  @@index([isAccountActive, role])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -356,6 +361,7 @@ model Connection {
   recipientId String
   status      ConnectionStatus @default(PENDING)
   createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   recipient   User             @relation("ReceivedConnections", fields: [recipientId], references: [id])
   requester   User             @relation("RequestedConnections", fields: [requesterId], references: [id])
 
@@ -409,6 +415,7 @@ model Notification {
   type      String?
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
@@ -444,6 +451,10 @@ model Post {
   Vote           Vote[]
 
   @@index([isDeleted])
+  @@index([authorId, status])
+  @@index([authorId, createdAt])
+  @@index([subCommunityId, status, createdAt])
+  @@index([status, createdAt])
   @@map("post")
 }
 
@@ -457,8 +468,12 @@ model Vote {
   comment    Comment?       @relation(fields: [commentId], references: [id])
   post       Post?          @relation(fields: [postId], references: [id])
   user       User           @relation(fields: [userId], references: [id])
+  updatedAt  DateTime       @updatedAt
 
   @@unique([userId, postId, commentId])
+  @@index([postId])
+  @@index([userId])
+  @@index([commentId])
   @@map("votes")
 }
 
@@ -482,8 +497,12 @@ model Comment {
   moderationLogs ModerationLog[]
   votes          Vote[]
   mentionedUsers User[]          @relation("mentionedUsers")
+  updatedAt      DateTime        @updatedAt
 
   @@index([isDeleted])
+  @@index([postId])
+  @@index([userId])
+  @@index([postId, isDeleted, createdAt])
   @@map("comment")
 }
 
@@ -545,6 +564,8 @@ model File {
   updatedAt    DateTime @updatedAt
   user         User     @relation("UserFiles", fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
+  @@index([uploadedBy])
   @@map("files")
 }
 
@@ -562,6 +583,8 @@ model Mentorship {
   agreement MentorshipAgreement?
 
   @@unique([mentorId, menteeId])
+  @@index([mentorId])
+  @@index([menteeId])
   @@map("mentorship")
 }
 
@@ -628,6 +651,9 @@ model SubCommunity {
   type                          SubCommunityType?            @relation(fields: [typeId], references: [id], onDelete: Cascade)
   members                       SubCommunityMember[]
   posts                         Post[]
+
+  @@index([ownerId])
+  @@index([status, createdAt])
 }
 
 model SubCommunityType {
@@ -649,6 +675,8 @@ model SubCommunityMember {
   user           User             @relation(fields: [userId], references: [id])
 
   @@unique([userId, subCommunityId])
+  @@index([subCommunityId, role])
+  @@index([userId])
 }
 
 model JoinRequest {
@@ -662,6 +690,8 @@ model JoinRequest {
   user           User              @relation(fields: [userId], references: [id])
 
   @@unique([userId, subCommunityId])
+  @@index([subCommunityId, status])
+  @@index([userId])
 }
 
 model SubCommunityCreationRequest {
@@ -703,6 +733,8 @@ model PointTransaction {
   message      String?
   userPoints   UserPoints @relation(fields: [userPointsId], references: [id])
 
+  @@index([userId, createdAt])
+  @@index([type])
   @@map("point_transactions")
 }
 
@@ -721,6 +753,8 @@ model MentorshipListing {
   applications          MentorshipApplication[]
   mentor                User                    @relation("MentorshipListings", fields: [mentorId], references: [id])
 
+  @@index([mentorId, status])
+  @@index([status])
   @@map("mentorship_listings")
 }
 
@@ -736,6 +770,8 @@ model MentorshipApplication {
   mentee    User                        @relation("MentorshipApplications", fields: [menteeId], references: [id])
 
   @@unique([menteeId, listingId])
+  @@index([listingId, status])
+  @@index([menteeId, status])
   @@map("mentorship_applications")
 }
 
@@ -751,6 +787,8 @@ model Meeting {
   updatedAt    DateTime      @updatedAt
   mentorship   Mentorship    @relation(fields: [mentorshipId], references: [id])
 
+  @@index([mentorshipId, status])
+  @@index([startTime])
   @@map("meetings")
 }
 
@@ -805,6 +843,9 @@ model Event {
   location         String?
   author           User          @relation(fields: [authorId], references: [id])
 
+  @@index([authorId, status])
+  @@index([status, date])
+  @@index([date])
   @@map("events")
 }
 
@@ -840,6 +881,9 @@ model LoginAttempt {
   success   Boolean
   createdAt DateTime @default(now())
 
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@index([success, createdAt])
   @@map("login_attempts")
 }
 
@@ -853,6 +897,8 @@ model SecurityEvent {
   createdAt DateTime          @default(now())
   user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
   @@map("security_events")
 }
 
@@ -868,6 +914,8 @@ model UserSession {
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, isActive])
+  @@index([lastActivity])
   @@map("user_sessions")
 }
 
