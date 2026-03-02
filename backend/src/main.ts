@@ -13,6 +13,25 @@ import helmet from 'helmet';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as Sentry from '@sentry/node';
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Sentry must be initialised BEFORE the NestJS application boots so that the
+// auto-instrumentation for Express/NestJS bootstraps correctly.  If SENTRY_DSN
+// is absent in the environment (e.g. local dev without a DSN) the init is a
+// no-op and produces no side-effects.
+// ──────────────────────────────────────────────────────────────────────────────
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? 'development',
+    release: process.env.APP_VERSION,
+    // Capture 100% of traces in dev; reduce in production via SENTRY_TRACES_RATE
+    tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_RATE ?? '0.1'),
+    // Performance profiling (requires @sentry/profiling-node if needed)
+    integrations: [Sentry.httpIntegration({ tracing: true })],
+  });
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

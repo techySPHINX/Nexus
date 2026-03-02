@@ -10,6 +10,7 @@ import { Request, Response } from 'express';
 import { WinstonLoggerService } from '../logger/winston-logger.service';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { ThrottlerException } from '@nestjs/throttler';
+import * as Sentry from '@sentry/node';
 
 interface ErrorResponse {
   statusCode: number;
@@ -28,7 +29,7 @@ interface ErrorResponse {
 @Catch()
 @Injectable()
 export class GlobalExceptionFilter implements ExceptionFilter {
-  constructor(private readonly logger: WinstonLoggerService) { }
+  constructor(private readonly logger: WinstonLoggerService) {}
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -185,6 +186,15 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       const stack =
         exception instanceof Error ? exception.stack : 'No stack trace';
       this.logger.error(logMessage, stack, 'ExceptionFilter');
+
+      // Report unexpected 5xx errors to Sentry (skip known 4xx client errors)
+      if (process.env.SENTRY_DSN) {
+        Sentry.captureException(exception, {
+          tags: { statusCode: String(statusCode), path, method },
+          user: userId !== 'anonymous' ? { id: userId } : undefined,
+          extra: metadata,
+        });
+      }
 
       // Log to security log if it's a security-related error
       if (this.isSecurityRelated(exception)) {
