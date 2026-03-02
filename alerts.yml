@@ -64,7 +64,7 @@ groups:
 
       - alert: HighHeapUsage
         expr: |
-          nexus_nodejs_heap_used_bytes
+          nexus_nodejs_heap_size_used_bytes
           /
           nexus_nodejs_heap_size_total_bytes
           > 0.80
