@@ -1,0 +1,26 @@
+apiVersion: 1
+
+# Grafana provisioned datasources for Nexus Platform.
+# These are created automatically when the Grafana container starts.
+# Manual changes in the UI are overwritten on restart when
+# deleteDatasources is configured — edit this file instead.
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      timeInterval: "15s"
+      queryTimeout: "60s"
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    editable: false
+    jsonData:
+      maxLines: 1000
