@@ -28,6 +28,7 @@ import { NewsModule } from './news/news.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ReferralAnalyticsModule } from './referral-analytics/referral-analytics.module';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { securityConfig } from './common/config/security.config';
 import { envValidationSchema } from './common/config/env.validation';
 import { WinstonLoggerService } from './common/logger/winston-logger.service';
@@ -83,6 +84,7 @@ import { CsrfMiddleware } from './common/middleware/csrf.middleware';
     DashboardModule,
     ReferralAnalyticsModule,
     HealthModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [

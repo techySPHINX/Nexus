@@ -1,5 +1,6 @@
-# Production Docker Compose for Chat Application
-version: '3.8'
+# Production Docker Compose for Nexus Platform
+# Note: the top-level 'version' key is deprecated in Compose Specification
+# (Docker Compose v2+) and has been removed.
 
 services:
   # PostgreSQL Database
@@ -9,15 +10,22 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-nexus_chat}
       POSTGRES_USER: ${POSTGRES_USER:-nexus}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nexus_password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set — refusing to start with a default}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
+    # No host port binding — postgres is reachable only on the internal Docker
+    # bridge network by the backend service. Exposing 5432 to the host would
+    # allow any process on the server (or the public internet if firewall rules
+    # are misconfigured) to connect directly to the database.
     networks:
-      - nexus-network
+      - nexus-internal
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nexus}"]
       interval: 30s
@@ -28,33 +36,46 @@ services:
   redis:
     image: redis:7-alpine
     container_name: nexus-redis
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD must be set — refusing to start with no auth}
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # No host port binding — redis is reachable only on the internal Docker
+    # bridge network by the backend service.
     networks:
-      - nexus-network
+      - nexus-internal
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
 
   # NestJS Backend
+  # Note: container_name has been removed — a fixed name conflicts with
+  # deploy.replicas: 2. Docker requires container names to be unique, so the
+  # second replica would fail to start.  Without container_name, Compose
+  # generates unique names automatically (nexus-backend-1, nexus-backend-2).
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: nexus-backend
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:-nexus_password}@postgres:5432/${POSTGRES_DB:-nexus_chat}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-nexus_chat}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD must be set — refusing to start with no auth}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set — refusing to start with a default weak secret}
       FRONTEND_URLS: ${FRONTEND_URLS:-http://localhost:3001,http://localhost:3000}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:-nexus-chat-files}
       AWS_REGION: ${AWS_REGION:-us-east-1}
@@ -63,9 +84,10 @@ services:
       S3_ENDPOINT: ${S3_ENDPOINT:-}
       CDN_URL: ${CDN_URL:-}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     networks:
+      - nexus-internal  # needs to reach postgres and redis
       - nexus-network
     depends_on:
       postgres:
@@ -73,6 +95,11 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 30s
@@ -104,6 +131,11 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]
       interval: 30s
@@ -126,6 +158,11 @@ services:
       - backend
       - frontend
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "10"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/health"]
       interval: 30s
@@ -138,6 +175,7 @@ services:
     container_name: nexus-prometheus
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
       - prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -151,13 +189,18 @@ services:
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
 
   # Grafana for visualization
   grafana:
     image: grafana/grafana:latest
     container_name: nexus-grafana
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD must be set — refusing to start with default 'admin'}
     volumes:
       - grafana_data:/var/lib/grafana
     ports:
@@ -167,6 +210,42 @@ services:
     depends_on:
       - prometheus
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ── Automated database backups ──────────────────────────────────────────────
+  # Runs scripts/backup-db.sh every 24 hours via a built-in cron loop.
+  # Requires BACKUP_S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY to be
+  # set in the environment (or .env file). See scripts/backup-db.sh for docs.
+  db-backup:
+    image: nexus-db-backup
+    build:
+      context: ./scripts
+      dockerfile: backup.Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-nexus}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:-nexus_chat}
+      BACKUP_S3_BUCKET: ${BACKUP_S3_BUCKET:?BACKUP_S3_BUCKET must be set}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID must be set}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY must be set}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-30}
+      # Run at 02:00 UTC daily — override with standard cron syntax
+      BACKUP_CRON: ${BACKUP_CRON:-0 2 * * *}
+    networks:
+      - nexus-internal  # needs to reach postgres
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:
@@ -175,5 +254,10 @@ volumes:
   grafana_data:
 
 networks:
+  # Internal network — postgres and redis are NOT reachable from the host
+  nexus-internal:
+    driver: bridge
+    internal: true
+  # External-facing network — nginx, backend, frontend, monitoring services
   nexus-network:
     driver: bridge
