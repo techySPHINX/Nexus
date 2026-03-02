@@ -1,20 +1,42 @@
 {
   "name": "nexus",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Full-stack student & alumni networking platform",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
+    "prepare": "husky",
+    "dev:backend": "cd backend && npm run start:dev",
+    "dev:frontend": "cd frontend && npm start",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test:backend": "cd backend && npm run test",
+    "test:frontend": "cd frontend && npm test -- --watchAll=false",
+    "test:e2e": "cd backend && npm run test:e2e",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\" --ignore-path .gitignore",
+    "migrate": "cd backend && npx prisma migrate deploy",
+    "migrate:dev": "cd backend && npx prisma migrate dev",
+    "db:studio": "cd backend && npx prisma studio",
+    "db:seed": "cd backend && node data/seed-dev-data.js",
+    "docker:up": "docker compose -f docker-compose.production.yml up -d",
+    "docker:down": "docker compose -f docker-compose.production.yml down",
+    "docker:logs": "docker compose -f docker-compose.production.yml logs -f"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/techySPHINX/Nexus.git"
   },
-  "keywords": [],
+  "keywords": [
+    "networking",
+    "alumni",
+    "students",
+    "nestjs",
+    "react"
+  ],
   "author": "Jagan Kumar Hotta",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/techySPHINX/Nexus/issues"
   },
@@ -31,9 +53,5 @@
     "*.{js,jsx,ts,tsx,json,css,scss,md}": [
       "prettier --write"
     ]
-  },
-  "dependencies": {
-    "jsonwebtoken": "^9.0.2",
-    "socket.io-client": "^4.8.1"
   }
 }
