@@ -3,24 +3,21 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Install pnpm via corepack
-RUN corepack enable pnpm
-
 # Copy only manifests first to leverage Docker layer cache
-COPY package.json pnpm-lock.yaml ./
+COPY package.json package-lock.json ./
 
-RUN pnpm install --frozen-lockfile
+RUN npm ci
 
 # Copy the rest of the source and build
 COPY . .
 
 # Vite reads VITE_* env vars at build time; pass them as build-args if needed
-ARG VITE_API_URL=http://localhost:3000
+ARG VITE_BACKEND_URL=http://localhost:3000
 ARG VITE_WS_URL=ws://localhost:3000
-ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_BACKEND_URL=${VITE_BACKEND_URL}
 ENV VITE_WS_URL=${VITE_WS_URL}
 
-RUN pnpm build
+RUN npm run build
 
 # ─── Stage 2: runner ─────────────────────────────────────────────────────────
 FROM nginx:1.27-alpine AS runner
