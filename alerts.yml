@@ -1,0 +1,61 @@
+# Prometheus alerting rules for Nexus Platform
+# Referenced by docker-compose.production.yml
+# Extend these groups as your observability needs grow.
+
+groups:
+  - name: nexus_availability
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} is down"
+          description: "{{ $labels.instance }} of job {{ $labels.job }} has been unreachable for more than 1 minute."
+
+      - alert: BackendDown
+        expr: up{job="nexus-backend"} == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Nexus backend is down"
+          description: "The backend API has been unreachable for more than 30 seconds."
+
+  - name: nexus_errors
+    rules:
+      - alert: HighHttpErrorRate
+        expr: >
+          rate(http_requests_total{status=~"5.."}[5m])
+          /
+          rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx error rate ({{ $value | printf \"%.2f\" }})"
+          description: "More than 5% of HTTP requests are returning 5xx errors over the last 5 minutes."
+
+      - alert: HighHttpLatency
+        expr: >
+          histogram_quantile(0.95,
+            rate(http_request_duration_seconds_bucket[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP latency (p95 = {{ $value | printf \"%.2fs\" }})"
+          description: "95th percentile HTTP response time exceeds 2 seconds."
+
+  - name: nexus_resources
+    rules:
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes > 450 * 1024 * 1024
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Process memory usage has exceeded 450 MB for more than 5 minutes."

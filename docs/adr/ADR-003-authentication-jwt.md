@@ -2,7 +2,7 @@
 
 **Date**: 2025-01-20
 **Status**: Accepted
-**Deciders**: Jagan Kumar Hotta, Core Engineering Team
+**Deciders**: Jagan Kumar Hotta, Core Engineer
 
 ---
 

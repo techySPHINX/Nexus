@@ -28,7 +28,13 @@ services:
   redis:
     image: redis:7-alpine
     container_name: nexus-redis
-    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    # Use sh -c so the shell can evaluate the ${REDIS_PASSWORD:+--requirepass ...}
+    # conditional: if REDIS_PASSWORD is non-empty, requirepass is enforced.
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    command: >
+      sh -c 'exec redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+      $${REDIS_PASSWORD:+--requirepass "$$REDIS_PASSWORD"}'
     volumes:
       - redis_data:/data
     ports:

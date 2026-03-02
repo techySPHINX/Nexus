@@ -27,9 +27,12 @@ if (dsn) {
     release: import.meta.env.VITE_APP_VERSION as string | undefined,
 
     // Capture 100 % of sessions in dev; tune via VITE_SENTRY_TRACES_RATE in prod.
-    tracesSampleRate: parseFloat(
-      (import.meta.env.VITE_SENTRY_TRACES_RATE as string | undefined) ?? '0.1'
-    ),
+    tracesSampleRate: (() => {
+      const raw = import.meta.env.VITE_SENTRY_TRACES_RATE as string | undefined;
+      const parsed = raw !== undefined ? parseFloat(raw) : 0.1;
+      const safe = Number.isFinite(parsed) ? parsed : 0.1;
+      return Math.min(1, Math.max(0, safe));
+    })(),
 
     integrations: [
       // Automatically trace route changes in React Router v6 / client-side nav.

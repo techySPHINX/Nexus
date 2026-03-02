@@ -2,7 +2,7 @@
 
 **Date**: 2025-01-25
 **Status**: Accepted
-**Deciders**: Jagan Kumar Hotta, Core Engineering Team
+**Deciders**: Jagan Kumar Hotta, Core Engineer
 
 ---
 
@@ -58,7 +58,7 @@ maxmemory-policy allkeys-lru
 appendonly yes
 ```
 
-Redis is started with `--requirepass ${REDIS_PASSWORD}` in production (mandatory via Docker Compose env var constraint).
+Redis is started with `--requirepass ${REDIS_PASSWORD}` in production when `REDIS_PASSWORD` is set in the environment (enforced via the Docker Compose `command` conditional). If `REDIS_PASSWORD` is empty the server starts without auth — **always set a strong password in production**.
 
 ---
 

@@ -165,7 +165,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     errorResponse: ErrorResponse,
   ) {
     const { statusCode, message, error, path, method } = errorResponse;
-    const userId = (request as any).user?.sub || 'anonymous';
+    const userId =
+      (request as any).user?.userId ||
+      (request as any).user?.sub ||
+      'anonymous';
     const ipAddress = request.ip || request.headers['x-forwarded-for'];
 
     const logMessage = `${method} ${path} - ${statusCode} ${error}: ${message}`;

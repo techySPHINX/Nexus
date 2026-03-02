@@ -22,12 +22,20 @@ import * as Sentry from '@sentry/node';
 // no-op and produces no side-effects.
 // ──────────────────────────────────────────────────────────────────────────────
 if (process.env.SENTRY_DSN) {
+  const sentryTracesEnv = process.env.SENTRY_TRACES_RATE;
+  const parsedTracesRate =
+    sentryTracesEnv !== undefined ? parseFloat(sentryTracesEnv) : 0.1;
+  const safeTracesRateBase = Number.isFinite(parsedTracesRate)
+    ? parsedTracesRate
+    : 0.1;
+  const tracesSampleRate = Math.min(1, Math.max(0, safeTracesRateBase));
+
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
     environment: process.env.NODE_ENV ?? 'development',
     release: process.env.APP_VERSION,
     // Capture 100% of traces in dev; reduce in production via SENTRY_TRACES_RATE
-    tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_RATE ?? '0.1'),
+    tracesSampleRate,
     // Performance profiling (requires @sentry/profiling-node if needed)
     integrations: [Sentry.httpIntegration()],
   });

@@ -42,16 +42,18 @@ Copy `.env.example` to `.env` and fill in every value before starting:
 cp .env.example .env
 ```
 
+> A root-level `.env.example` is provided in the repository. Backend-specific variables are also documented in `backend/.env.example`.
+
 ### Required Variables
 
-| Variable             | Example                   | Description                                      |
-| -------------------- | ------------------------- | ------------------------------------------------ |
-| `POSTGRES_DB`        | `nexus_prod`              | PostgreSQL database name                         |
-| `POSTGRES_USER`      | `nexus`                   | PostgreSQL username                              |
-| `POSTGRES_PASSWORD`  | _(strong password)_       | PostgreSQL password                              |
-| `REDIS_PASSWORD`     | _(strong password)_       | Redis AUTH password — **required in production** |
-| `JWT_SECRET`         | _(64-char random string)_ | JWT signing secret                               |
-| `JWT_REFRESH_SECRET` | _(64-char random string)_ | JWT refresh token secret                         |
+| Variable             | Example                   | Description                                                              |
+| -------------------- | ------------------------- | ------------------------------------------------------------------------ |
+| `POSTGRES_DB`        | `nexus_prod`              | PostgreSQL database name                                                 |
+| `POSTGRES_USER`      | `nexus`                   | PostgreSQL username                                                      |
+| `POSTGRES_PASSWORD`  | _(strong password)_       | PostgreSQL password                                                      |
+| `REDIS_PASSWORD`     | _(strong password)_       | Redis AUTH password (recommended; enforced when set via `--requirepass`) |
+| `JWT_SECRET`         | _(64-char random string)_ | JWT signing secret                                                       |
+| `JWT_REFRESH_SECRET` | _(64-char random string)_ | JWT refresh token secret                                                 |
 
 ### Application Variables
 
@@ -303,6 +305,8 @@ Access URLs (port-forward or configure reverse proxy):
 | Grafana    | `http://localhost:3002` | Set via `GF_SECURITY_ADMIN_*` env vars |
 | Prometheus | `http://localhost:9090` | No auth by default                     |
 | Loki (API) | `http://localhost:3100` | No auth by default                     |
+
+> **Security**: Prometheus and Loki have **no built-in authentication**. These ports must **never** be exposed directly to the internet. Access them only via VPN, SSH tunnel, or an authenticated reverse proxy. Review all Docker port bindings before deploying to a public host.
 
 Grafana datasources are auto-provisioned (Prometheus + Loki) via `grafana/provisioning/datasources/datasources.yml`. No manual configuration is needed after first start.
 

@@ -58,6 +58,11 @@ scrape_configs:
             stream: stream
             time: time
 
+      # Use Docker's original log timestamp instead of ingestion time
+      - timestamp:
+          source: time
+          format: RFC3339Nano
+
       # Promote the inner "log" field to the actual log line
       - output:
           source: log
