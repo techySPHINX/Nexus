@@ -23,6 +23,7 @@ import {
   Stack,
   CardActions,
   DialogContentText,
+  Skeleton,
 } from '@mui/material';
 import {
   Add,
@@ -35,6 +36,8 @@ import {
   Delete,
   Visibility,
   Send,
+  Refresh,
+  RestartAlt,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -132,6 +135,7 @@ const Referrals: FC = () => {
   const [referralApps, setReferralApps] = useState<ReferralApplication[]>([]);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const didInit = useRef(false);
   const socketRef = useRef<Socket | null>(null);
   const [analytics, setAnalytics] = useState<{
@@ -157,19 +161,29 @@ const Referrals: FC = () => {
     coverLetter: '',
   });
 
-  const fetchReferrals = useCallback(async () => {
+  const fetchReferrals = useCallback(async (force = false) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await apiService.referrals.getAll();
+      const response = await apiService.referrals.getAll({ force });
       setReferrals(response.data || []);
+      setLastRefreshedAt(new Date().toLocaleTimeString());
     } catch (err: unknown) {
       setError(`Failed to load referrals: ${getErrorMessage(err)}`);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  const handleForceRefresh = () => {
+    void fetchReferrals(true);
+  };
+
+  const handleResetFilters = () => {
+    setSearchQuery('');
+    setFilterStatus('ALL');
+  };
 
   const openReferralApplications = async (referralId: string) => {
     try {
@@ -483,23 +497,29 @@ const Referrals: FC = () => {
     [referrals, user?.role, user?.id, filterStatus, searchQuery]
   );
 
+  const referralStats = useMemo(() => {
+    const approved = referrals.filter(
+      (item) => item.status === 'APPROVED'
+    ).length;
+    const pending = referrals.filter(
+      (item) => item.status === 'PENDING'
+    ).length;
+    const myPosts = referrals.filter(
+      (item) => item.alumniId === user?.id
+    ).length;
+    return {
+      total: referrals.length,
+      approved,
+      pending,
+      myPosts,
+      myApplications: applications.length,
+    };
+  }, [referrals, applications.length, user?.id]);
+
   // Don't block the UI with a full-screen loader; show lightweight skeletons instead
 
   return (
     <Container maxWidth="xl" sx={{ py: 3 }}>
-      {/* Subtle top progress indicator */}
-      {loading && referrals.length === 0 && (
-        <Box sx={{ height: 3, bgcolor: 'grey.200', mb: 2 }}>
-          <Box
-            sx={{
-              height: 3,
-              width: '40%',
-              bgcolor: 'primary.main',
-              animation: 'pulse 1.2s ease-in-out infinite',
-            }}
-          />
-        </Box>
-      )}
       {/* Admin Analytics */}
       {user?.role === 'ADMIN' && analytics && (
         <Box
@@ -541,17 +561,67 @@ const Referrals: FC = () => {
         </Box>
       )}
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ fontWeight: 700, mb: 0.5 }}
-        >
-          Job Referrals
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Discover curated roles from KIIT alumni and apply directly
-        </Typography>
+      <Box
+        className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4 p-4"
+        sx={{
+          mb: 3,
+          p: { xs: 2, md: 3 },
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 3,
+          bgcolor: 'background.paper',
+        }}
+      >
+        <Box>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ fontWeight: 700, mb: 0.5 }}
+          >
+            Job Referrals
+          </Typography>
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+            Discover curated roles from alumni and track your referral journey
+            in one place
+          </Typography>
+          <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+            <Chip
+              label={`Total: ${referralStats.total}`}
+              color="primary"
+              variant="outlined"
+            />
+            <Chip
+              label={`Approved: ${referralStats.approved}`}
+              color="success"
+              variant="outlined"
+            />
+            <Chip
+              label={`Pending: ${referralStats.pending}`}
+              color="warning"
+              variant="outlined"
+            />
+            <Chip
+              label={`My Posts: ${referralStats.myPosts}`}
+              variant="outlined"
+            />
+            <Chip
+              label={`My Applications: ${referralStats.myApplications}`}
+              variant="outlined"
+            />
+          </Stack>
+        </Box>
+        <Box>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Refresh />}
+            onClick={handleForceRefresh}
+            disabled={loading}
+            sx={{ textTransform: 'none', width: { xs: '100%', sm: 'auto' } }}
+          >
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        </Box>
       </Box>
 
       {/* Error Alert */}
@@ -578,7 +648,14 @@ const Referrals: FC = () => {
         spacing={2}
         alignItems={{ xs: 'stretch', md: 'center' }}
         justifyContent="space-between"
-        sx={{ mb: 3 }}
+        sx={{
+          mb: 3,
+          p: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
+          bgcolor: 'background.paper',
+        }}
       >
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
@@ -611,29 +688,38 @@ const Referrals: FC = () => {
             </Select>
           </FormControl>
           <Button
-            variant="outlined"
+            variant="text"
             size="small"
-            onClick={() => {
-              console.log('🧪 Testing API call...');
-              fetchReferrals();
-            }}
-            disabled={loading}
+            startIcon={<RestartAlt />}
+            onClick={handleResetFilters}
             sx={{ textTransform: 'none', width: { xs: '100%', sm: 'auto' } }}
           >
-            Refresh
+            Clear filters
           </Button>
         </Stack>
 
-        {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setCreateDialogOpen(true)}
-            sx={{ borderRadius: 2, width: { xs: '100%', md: 'auto' } }}
-          >
-            Post Referral
-          </Button>
-        )}
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={1.2}
+          alignItems={{ xs: 'stretch', md: 'center' }}
+        >
+          {lastRefreshedAt && (
+            <Typography variant="caption" color="text.secondary">
+              Last updated: {lastRefreshedAt}
+            </Typography>
+          )}
+
+          {(user?.role === 'ALUM' || user?.role === 'ADMIN') && (
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={() => setCreateDialogOpen(true)}
+              sx={{ borderRadius: 2, width: { xs: '100%', md: 'auto' } }}
+            >
+              Post Referral
+            </Button>
+          )}
+        </Stack>
       </Stack>
 
       {/* Referrals Grid */}
@@ -643,105 +729,96 @@ const Referrals: FC = () => {
               <Grid item xs={12} md={6} lg={4} key={`sk-${idx}`}>
                 <Card sx={{ height: '100%', borderRadius: 3 }}>
                   <CardContent>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        mb: 2,
-                      }}
-                    >
+                    <Stack spacing={1.2}>
                       <Box
                         sx={{
-                          width: '60%',
-                          height: 28,
-                          bgcolor: 'grey.200',
-                          borderRadius: 1,
+                          display: 'flex',
+                          justifyContent: 'space-between',
                         }}
-                      />
-                      <Box
-                        sx={{
-                          width: 80,
-                          height: 24,
-                          bgcolor: 'grey.200',
-                          borderRadius: 2,
-                        }}
-                      />
-                    </Box>
-                    <Box
-                      sx={{
-                        width: '40%',
-                        height: 18,
-                        bgcolor: 'grey.100',
-                        borderRadius: 1,
-                        mb: 1,
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        width: '30%',
-                        height: 18,
-                        bgcolor: 'grey.100',
-                        borderRadius: 1,
-                        mb: 1,
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        width: '80%',
-                        height: 14,
-                        bgcolor: 'grey.100',
-                        borderRadius: 1,
-                        mb: 0.5,
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        width: '70%',
-                        height: 14,
-                        bgcolor: 'grey.100',
-                        borderRadius: 1,
-                      }}
-                    />
+                      >
+                        <Skeleton variant="text" width="58%" height={32} />
+                        <Skeleton variant="rounded" width={78} height={26} />
+                      </Box>
+                      <Skeleton variant="text" width="35%" height={24} />
+                      <Skeleton variant="text" width="45%" height={20} />
+                      <Skeleton variant="text" width="50%" height={20} />
+                      <Skeleton variant="text" width="88%" height={18} />
+                      <Skeleton variant="text" width="78%" height={18} />
+                    </Stack>
                   </CardContent>
                 </Card>
               </Grid>
             ))
           : filteredReferrals.map((referral) => (
-              <Grid item xs={12} md={6} lg={4} key={referral.id}>
+              <Grid
+                item
+                xs={12}
+                md={6}
+                lg={4}
+                key={referral.id}
+                sx={{ display: 'flex' }}
+              >
                 <motion.div
                   whileHover={{ y: -5 }}
                   transition={{ duration: 0.2 }}
+                  style={{ width: '100%', height: '100%' }}
                 >
                   <Card
                     sx={{
                       height: '100%',
+                      width: '100%',
                       borderRadius: 3,
                       display: 'flex',
                       flexDirection: 'column',
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+                      '&:hover': {
+                        boxShadow: 4,
+                      },
                     }}
                   >
-                    <CardContent sx={{ flexGrow: 1 }}>
+                    <CardContent
+                      sx={{
+                        flexGrow: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        minHeight: { xs: 350, md: 380 },
+                        p: 2.25,
+                      }}
+                    >
                       <Box
                         sx={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'flex-start',
-                          mb: 2,
+                          gap: 1,
+                          mb: 1.5,
                         }}
                       >
-                        <Box>
+                        <Box sx={{ minWidth: 0, pr: 1 }}>
                           <Typography
-                            variant="h6"
-                            sx={{ fontWeight: 600, mb: 1 }}
-                          >
-                            {referral.jobTitle}
-                          </Typography>
-                          <Typography
-                            variant="subtitle1"
-                            color="primary"
-                            sx={{ fontWeight: 500 }}
+                            variant="caption"
+                            color="text.secondary"
+                            sx={{ display: 'block', mb: 0.4 }}
                           >
                             {referral.company}
+                          </Typography>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: 700,
+                              mb: 0.6,
+                              fontSize: '1.05rem',
+                              lineHeight: 1.25,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                            }}
+                          >
+                            {referral.jobTitle}
                           </Typography>
                         </Box>
                         <Chip
@@ -750,6 +827,27 @@ const Referrals: FC = () => {
                           size="small"
                         />
                       </Box>
+
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        sx={{ mb: 1.5 }}
+                        useFlexGap
+                        flexWrap="wrap"
+                      >
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={`Applications: ${referral.applications?.length ?? 0}`}
+                        />
+                        <Chip
+                          size="small"
+                          variant="outlined"
+                          label={new Date(
+                            referral.createdAt
+                          ).toLocaleDateString()}
+                        />
+                      </Stack>
 
                       <Stack spacing={1} sx={{ mb: 2 }}>
                         <Box
@@ -774,8 +872,8 @@ const Referrals: FC = () => {
                               sx={{ fontSize: 16, color: 'text.secondary' }}
                             />
                             <Typography variant="body2" color="text.secondary">
-                              Deadline:{' '}
-                              {new Date(referral.deadline).toLocaleString()}
+                              Apply by:{' '}
+                              {new Date(referral.deadline).toLocaleDateString()}
                             </Typography>
                           </Box>
                         )}
@@ -793,7 +891,16 @@ const Referrals: FC = () => {
 
                       <Typography
                         variant="body2"
-                        sx={{ mb: 2, color: 'text.secondary' }}
+                        sx={{
+                          mb: 2,
+                          color: 'text.secondary',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: 'vertical',
+                          minHeight: 60,
+                        }}
                       >
                         {referral.description.length > 100
                           ? `${referral.description.substring(0, 100)}...`
@@ -801,12 +908,23 @@ const Referrals: FC = () => {
                       </Typography>
 
                       <CardActions
-                        sx={{ pt: 1, justifyContent: 'space-between' }}
+                        sx={{
+                          pt: 1,
+                          mt: 'auto',
+                          px: 0,
+                          borderTop: '1px solid',
+                          borderColor: 'divider',
+                          justifyContent: 'flex-end',
+                        }}
                       >
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(referral.createdAt).toLocaleDateString()}
-                        </Typography>
-                        <Stack direction="row" spacing={1}>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          useFlexGap
+                          flexWrap="wrap"
+                          justifyContent="flex-end"
+                          sx={{ rowGap: 0.8, width: '100%' }}
+                        >
                           {referral.referralLink && (
                             <Button
                               size="small"
@@ -814,6 +932,7 @@ const Referrals: FC = () => {
                               onClick={() =>
                                 window.open(referral.referralLink, '_blank')
                               }
+                              sx={{ textTransform: 'none' }}
                             >
                               Job Link
                             </Button>
@@ -827,7 +946,7 @@ const Referrals: FC = () => {
                             }}
                             sx={{ textTransform: 'none' }}
                           >
-                            Details
+                            View
                           </Button>
                           {(user?.role === 'STUDENT' ||
                             user?.role === 'ALUM') &&
@@ -849,7 +968,11 @@ const Referrals: FC = () => {
                                   });
                                   setApplyDialogOpen(true);
                                 }}
-                                sx={{ borderRadius: 2, textTransform: 'none' }}
+                                sx={{
+                                  borderRadius: 2,
+                                  textTransform: 'none',
+                                  minWidth: { xs: '100%', sm: 118 },
+                                }}
                               >
                                 {applications.some(
                                   (app) =>
@@ -893,6 +1016,7 @@ const Referrals: FC = () => {
                                 onClick={() =>
                                   openReferralApplications(referral.id)
                                 }
+                                sx={{ textTransform: 'none' }}
                               >
                                 Applications (
                                 {referral.applications?.length ?? 0})

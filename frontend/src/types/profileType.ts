@@ -286,3 +286,82 @@ export interface UpdateProfileInput {
   branch?: string;
   course?: string;
 }
+
+export interface MemberProfileSettings {
+  id?: string;
+  userId?: string;
+  headline?: string | null;
+  pronouns?: string | null;
+  websiteUrl?: string | null;
+  customStatus?: string | null;
+  showBadges: boolean;
+  showRecentActivity: boolean;
+  allowFollowers: boolean;
+  allowDirectMessage: boolean;
+}
+
+export interface MemberFlair {
+  id: string;
+  userId: string;
+  label: string;
+  color: string;
+  backgroundColor: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MemberRecentActivity {
+  id: string;
+  type: 'POST' | 'COMMENT' | 'PROJECT';
+  label: string;
+  createdAt: string;
+}
+
+export interface MemberExperience {
+  user: {
+    id: string;
+    name: string;
+    role: Role;
+    _count?: {
+      Post: number;
+      projects: number;
+      events: number;
+    };
+  };
+  profile: {
+    id: string;
+    bio?: string | null;
+    location?: string | null;
+    avatarUrl?: string | null;
+    dept?: string | null;
+    year?: string | null;
+    branch?: string | null;
+    course?: string | null;
+  };
+  settings: MemberProfileSettings;
+  activeFlair?: MemberFlair | null;
+  follow: {
+    isFollowing: boolean;
+    canFollow: boolean;
+    followersCount: number;
+  };
+  badges: ProfileBadge[];
+  recentActivity: MemberRecentActivity[];
+  privacy: {
+    showBadges: boolean;
+    showRecentActivity: boolean;
+    allowDirectMessage: boolean;
+  };
+}
+
+export interface NotificationPreference {
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  inAppEnabled: boolean;
+  digestModeEnabled: boolean;
+  digestFrequency: 'DAILY' | 'WEEKLY' | 'MONTHLY';
+  notifyOnFollow: boolean;
+  notifyOnFlairAssign: boolean;
+  notifyOnBadgeAward: boolean;
+}

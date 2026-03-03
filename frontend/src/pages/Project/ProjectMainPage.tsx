@@ -1,5 +1,4 @@
-// ProjectMainPage.tsx - Updated implementation
-import { FC, useState, useEffect, useCallback, useRef, memo } from 'react';
+import { FC, useState, useEffect, useCallback, memo } from 'react';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -18,11 +17,12 @@ import {
   Tabs,
   Tab,
   Chip,
-  Skeleton,
+  // Skeleton,
   Button,
   Snackbar,
   Alert,
   Fade,
+  Container,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -33,6 +33,12 @@ import ProjectModal from '@/components/Project/CreateProject';
 import CollaborationModal from '@/components/Project/CollaborationModal';
 import ProjectDetailModal from '@/components/Project/ProjectDetailsCard';
 import ProjectGrid from '@/components/Project/ProjectGrid';
+
+const TAB_FETCH_DEDUP_TTL_MS = 1500;
+const recentTabFetches = new Map<string, number>();
+const inFlightTabFetches = new Set<string>();
+const recentProjectCountFetches = new Map<string, number>();
+const inFlightProjectCountFetches = new Set<string>();
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -113,31 +119,42 @@ const ProjectsMainPage: FC = () => {
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [tabLoading, setTabLoading] = useState(false);
-  // Short-lived cache to avoid repeated refetches when an API returns empty results
-  // Keyed by `${activeTab}:${JSON.stringify(filters)}` -> timestamp of last empty response
-  const lastEmptyFetchRef = useRef<Record<string, number>>({});
-  const EMPTY_FETCH_TTL = 60 * 1000; // 60 seconds
 
   useEffect(() => {
-    getProjectCounts();
-  }, [getProjectCounts]);
+    if (!user?.id) return;
+
+    const key = user.id;
+    const lastFetchedAt = recentProjectCountFetches.get(key) ?? 0;
+    if (Date.now() - lastFetchedAt < TAB_FETCH_DEDUP_TTL_MS) return;
+    if (inFlightProjectCountFetches.has(key)) return;
+
+    inFlightProjectCountFetches.add(key);
+
+    const loadProjectCounts = async () => {
+      try {
+        await getProjectCounts();
+        recentProjectCountFetches.set(key, Date.now());
+      } finally {
+        inFlightProjectCountFetches.delete(key);
+      }
+    };
+
+    void loadProjectCounts();
+  }, [getProjectCounts, user?.id]);
 
   // Load projects based on active tab
   useEffect(() => {
-    if (!user) return;
+    if (!user?.id) return;
 
     const loadTabData = async () => {
+      const key = `${user.id}:${activeTab}:${JSON.stringify(filters ?? {})}`;
+      const lastFetchedAt = recentTabFetches.get(key) ?? 0;
+      if (Date.now() - lastFetchedAt < TAB_FETCH_DEDUP_TTL_MS) return;
+      if (inFlightTabFetches.has(key)) return;
+
+      inFlightTabFetches.add(key);
       setTabLoading(true);
       try {
-        // Build a short-lived key for this tab + filters to prevent rapid re-fetches
-        const key = `${activeTab}:${JSON.stringify(filters ?? {})}`;
-        const lastEmpty = lastEmptyFetchRef.current[key] ?? 0;
-        if (Date.now() - lastEmpty < EMPTY_FETCH_TTL) {
-          // We recently fetched this tab+filters and it returned empty — skip refetch for TTL
-          setTabLoading(false);
-          return;
-        }
-
         switch (activeTab) {
           case 0: // All Projects
             await getAllProjects(filters);
@@ -153,50 +170,24 @@ const ProjectsMainPage: FC = () => {
             break;
         }
 
-        // After fetching, if the resulting project list for this tab is empty, record timestamp
-        // so we don't keep re-requesting the same empty set repeatedly.
-        let currentDataLength = 0;
-        switch (activeTab) {
-          case 0:
-            currentDataLength = allProjects.data.length;
-            break;
-          case 1:
-            currentDataLength = myProjects.data.length;
-            break;
-          case 2:
-            currentDataLength = supportedProjects.data.length;
-            break;
-          case 3:
-            currentDataLength = followedProjects.data.length;
-            break;
-        }
-        if (currentDataLength === 0) {
-          lastEmptyFetchRef.current[key] = Date.now();
-        } else {
-          // if we have results, clear any previous empty marker for this key
-          delete lastEmptyFetchRef.current[key];
-        }
+        recentTabFetches.set(key, Date.now());
       } catch (err) {
         console.error('Failed to load tab data:', err);
       } finally {
+        inFlightTabFetches.delete(key);
         setTabLoading(false);
       }
     };
 
-    loadTabData();
+    void loadTabData();
   }, [
     activeTab,
     filters,
-    user,
+    user?.id,
     getAllProjects,
     getProjectsByUserId,
     getSupportedProjects,
     getFollowedProjects,
-    allProjects.data.length,
-    myProjects.data.length,
-    supportedProjects.data.length,
-    followedProjects.data.length,
-    EMPTY_FETCH_TTL,
   ]);
 
   // Get current pagination based on active tab
@@ -470,7 +461,7 @@ const ProjectsMainPage: FC = () => {
   const counts = getTabCounts();
 
   return (
-    <div className="w-full" style={{ padding: '1rem' }}>
+    <Container maxWidth="xl" sx={{ py: 2.5 }}>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -490,34 +481,25 @@ const ProjectsMainPage: FC = () => {
               mb: 4,
               flexWrap: 'wrap',
               gap: 2,
+              p: { xs: 2, md: 2.5 },
+              borderRadius: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
             }}
           >
             <Box>
               <Typography
-                variant="h3"
+                variant="h4"
                 component="h1"
                 sx={{
-                  fontWeight: 800,
-                  mb: 1,
-                  color: (theme) =>
-                    theme.palette.mode === 'dark'
-                      ? 'text.primary'
-                      : 'text.primary',
-                  background: (theme) =>
-                    theme.palette.mode === 'dark'
-                      ? 'linear-gradient(90deg, #00C9FF, #92FE9D)'
-                      : 'linear-gradient(90deg, #12720bff 0%, #0cb009ff 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 700,
+                  mb: 0.5,
                 }}
               >
                 Project Showcase
               </Typography>
-              <Typography
-                variant="h6"
-                color="text.secondary"
-                sx={{ fontWeight: 400 }}
-              >
+              <Typography variant="body1" color="text.secondary">
                 Discover, collaborate and support amazing projects
               </Typography>
             </Box>
@@ -532,15 +514,13 @@ const ProjectsMainPage: FC = () => {
                   startIcon={<Add />}
                   onClick={() => setShowCreateModal(true)}
                   sx={{
-                    borderRadius: 3,
-                    px: 3,
-                    py: 1.2,
+                    borderRadius: 2,
+                    px: 2.5,
                     fontWeight: 600,
-                    fontSize: '1rem',
                   }}
-                  size="large"
+                  size="medium"
                 >
-                  Create New Project
+                  Create Project
                 </Button>
               </motion.div>
               <motion.div
@@ -556,13 +536,11 @@ const ProjectsMainPage: FC = () => {
                     ) : undefined
                   }
                   sx={{
-                    borderRadius: 3,
-                    px: 3,
-                    py: 1.2,
+                    borderRadius: 2,
+                    px: 2.5,
                     fontWeight: 600,
-                    fontSize: '1rem',
                   }}
-                  size="large"
+                  size="medium"
                   disabled={actionLoading.refresh}
                 >
                   Refresh
@@ -572,48 +550,17 @@ const ProjectsMainPage: FC = () => {
           </Box>
         </motion.div>
 
-        {/* Summary Stats (show skeletons while loading to improve FCP) */}
         {user && (
           <motion.div
             initial={{ y: 8, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.2, delay: 0.05 }}
           >
-            <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
-              {actionLoading.count ? (
-                <>
-                  <Skeleton variant="text" width={140} height={40} />
-                  <Skeleton variant="text" width={100} height={40} />
-                  <Skeleton variant="text" width={120} height={40} />
-                  <Skeleton variant="text" width={120} height={40} />
-                </>
-              ) : (
-                <>
-                  <Chip
-                    label={`${counts.all ?? 0} Total Projects`}
-                    color="primary"
-                    variant="filled"
-                    sx={{ fontWeight: 600, px: 1 }}
-                  />
-                  <Chip
-                    label={`${counts.owned ?? 0} Owned`}
-                    color="secondary"
-                    variant="filled"
-                    sx={{ fontWeight: 600, px: 1 }}
-                  />
-                  <Chip
-                    label={`${counts.supported ?? 0} Supported`}
-                    color="success"
-                    variant="filled"
-                    sx={{ fontWeight: 600, px: 1 }}
-                  />
-                  <Chip
-                    label={`${counts.following ?? 0} Following`}
-                    variant="filled"
-                    color="info"
-                  />
-                </>
-              )}
+            <Box sx={{ display: 'flex', gap: 1, mb: 2.5, flexWrap: 'wrap' }}>
+              <Chip label={`${counts.all ?? 0} Total`} size="small" />
+              <Chip label={`${counts.owned ?? 0} Owned`} size="small" />
+              <Chip label={`${counts.supported ?? 0} Supported`} size="small" />
+              <Chip label={`${counts.following ?? 0} Following`} size="small" />
             </Box>
           </motion.div>
         )}
@@ -898,7 +845,7 @@ const ProjectsMainPage: FC = () => {
           </Alert>
         </Snackbar>
       </motion.div>
-    </div>
+    </Container>
   );
 };
 

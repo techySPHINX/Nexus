@@ -121,8 +121,8 @@ const ProjectCard: FC<ProjectCardProps> = ({
   // Support both possible spellings used in codebase: seekingCollaboration or seekingCOllaboration
   const seeking = Boolean(
     (project as unknown as Record<string, unknown>)['seekingCollaboration'] ??
-    (project as unknown as Record<string, unknown>)['seekingCOllaboration'] ??
-    false
+      (project as unknown as Record<string, unknown>)['seekingCOllaboration'] ??
+      false
   );
 
   // Centralized delete handler: use context action.

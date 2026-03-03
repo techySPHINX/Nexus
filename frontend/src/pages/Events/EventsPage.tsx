@@ -12,8 +12,6 @@ import {
   InputAdornment,
   Chip,
   Stack,
-  alpha,
-  useTheme,
 } from '@mui/material';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -35,7 +33,6 @@ const EventsPage: FC = () => {
   const [filter, setFilter] = useState<FilterType>('upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const theme = useTheme();
 
   useEffect(() => {
     void fetchEvents({ status: 'UPCOMING', limit: 50 });
@@ -94,39 +91,39 @@ const EventsPage: FC = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header Section */}
-      <Box sx={{ mb: 6, textAlign: 'left' }}>
+      <Paper
+        variant="outlined"
+        sx={{
+          mb: 3,
+          textAlign: 'left',
+          p: { xs: 2, md: 2.5 },
+          borderRadius: 2.5,
+        }}
+      >
         <Typography
-          variant="h2"
+          variant="h4"
           sx={{
-            fontWeight: 800,
-            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            mb: 2,
-            fontSize: { xs: '2.5rem', md: '3.5rem' },
+            fontWeight: 700,
+            mb: 0.75,
           }}
         >
           Discover Events
         </Typography>
-        <Typography
-          variant="h6"
-          color="text.secondary"
-          sx={{ maxWidth: 'auto', mb: 4 }}
-        >
+        <Typography variant="body1" color="text.secondary">
           Explore upcoming events, workshops, and gatherings. Find your next
           opportunity to learn and connect.
         </Typography>
-      </Box>
+      </Paper>
 
       {/* Controls Section */}
       <Paper
+        variant="outlined"
         sx={{
           p: 3,
           mb: 4,
-          borderRadius: 4,
-          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
-          border: `1px solid ${alpha(theme.palette.primary.main, 0.1)}`,
+          borderRadius: 2.5,
+          background: 'background.paper',
+          borderColor: 'divider',
         }}
       >
         <Grid container spacing={3} alignItems="center">
@@ -282,10 +279,11 @@ const EventsPage: FC = () => {
       {/* Empty State */}
       {!loading && !error && filteredEvents.length === 0 && (
         <Paper
+          variant="outlined"
           sx={{
             p: 8,
             textAlign: 'center',
-            background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.02)} 0%, ${alpha(theme.palette.secondary.main, 0.02)} 100%)`,
+            borderRadius: 2.5,
           }}
         >
           <CalendarMonth

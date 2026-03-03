@@ -108,12 +108,17 @@ export async function getRecentPostsService(page?: number, limit?: number) {
   }
 }
 
-export async function getFeedService(page?: number, limit?: number) {
+export async function getFeedService(
+  page?: number,
+  limit?: number,
+  scope: 'all' | 'following' = 'all'
+) {
   try {
     const { data } = await api.get('/posts/feed', {
       params: {
         page,
         limit,
+        scope,
       },
     });
     return data;
@@ -122,6 +127,30 @@ export async function getFeedService(page?: number, limit?: number) {
       throw new Error(err.response?.data?.message || 'Failed to fetch feed');
     }
     throw new Error('Failed to fetch feed');
+  }
+}
+
+export async function getCommunityFeedService(
+  page?: number,
+  limit?: number,
+  scope: 'all' | 'member' | 'managed' = 'all'
+) {
+  try {
+    const { data } = await api.get('/posts/community-feed', {
+      params: {
+        page,
+        limit,
+        scope,
+      },
+    });
+    return data;
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to fetch community feed'
+      );
+    }
+    throw new Error('Failed to fetch community feed');
   }
 }
 

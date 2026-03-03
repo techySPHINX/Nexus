@@ -4,9 +4,10 @@ import { getErrorMessage } from '@/utils/errorHandler';
 
 export const EventService = {
   getUpcoming: async (limit = 3) => {
+    const safeLimit = limit > 0 ? Math.floor(limit) : 3;
     try {
       const response = await api.get('/events', {
-        params: { status: 'UPCOMING', limit },
+        params: { status: 'UPCOMING', limit: safeLimit },
       });
       return response.data;
     } catch (error) {

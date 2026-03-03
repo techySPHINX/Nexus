@@ -219,7 +219,13 @@ export class PostService {
    * @throws {BadRequestException} If pagination parameters are invalid.
    * @throws {NotFoundException} If the user is not found.
    */
-  async getFeed(userId: string, page = 1, limit = 10, subCommunityId?: string) {
+  async getFeed(
+    userId: string,
+    page = 1,
+    limit = 10,
+    subCommunityId?: string,
+    scope: 'all' | 'following' = 'all',
+  ) {
     if (page < 1 || limit < 1 || limit > 50) {
       throw new BadRequestException('Invalid pagination parameters');
     }
@@ -254,6 +260,7 @@ export class PostService {
       ...user.requestedConnections.map((c) => c.recipientId),
       ...user.receivedConnections.map((c) => c.requesterId),
     ];
+    const uniqueConnectionIds = Array.from(new Set(connectionIds));
 
     const userInterests = user.profile?.interests?.split(',') || [];
     const userSkills = user.profile?.skills.map((s) => s.name) || [];
@@ -263,6 +270,23 @@ export class PostService {
       subCommunityId: null, // Ensure only non-subcommunity posts appear on the main feed
       authorId: { not: userId },
     };
+
+    if (scope === 'following') {
+      if (uniqueConnectionIds.length === 0) {
+        return {
+          posts: [],
+          pagination: {
+            page,
+            limit,
+            total: 0,
+            totalPages: 0,
+            hasNext: false,
+            hasPrev: false,
+          },
+        };
+      }
+      whereClause.authorId = { in: uniqueConnectionIds };
+    }
 
     if (subCommunityId) {
       // If a specific subCommunityId is provided, filter posts for that sub-community
@@ -466,6 +490,122 @@ export class PostService {
         where: {
           subCommunityId: subCommunityId,
           status: PostStatus.APPROVED,
+        },
+      }),
+    ]);
+
+    return {
+      posts,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1,
+      },
+    };
+  }
+
+  async getMyCommunitiesFeed(
+    userId: string,
+    page = 1,
+    limit = 10,
+    scope: 'all' | 'member' | 'managed' = 'all',
+  ) {
+    if (page < 1 || limit < 1 || limit > 50) {
+      throw new BadRequestException('Invalid pagination parameters');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const memberships = await this.prisma.subCommunityMember.findMany({
+      where: { userId },
+      select: { subCommunityId: true, role: true },
+    });
+
+    const filteredMemberships = memberships.filter((membership) => {
+      if (scope === 'member') {
+        return membership.role === 'MEMBER';
+      }
+      if (scope === 'managed') {
+        return (
+          membership.role === 'OWNER' || membership.role === 'MODERATOR'
+        );
+      }
+      return true;
+    });
+
+    const communityIds = filteredMemberships.map(
+      (membership) => membership.subCommunityId,
+    );
+
+    if (communityIds.length === 0) {
+      return {
+        posts: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [posts, total] = await Promise.all([
+      this.prisma.post.findMany({
+        where: {
+          status: PostStatus.APPROVED,
+          subCommunityId: { in: communityIds },
+        },
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+              profile: {
+                select: { bio: true, avatarUrl: true },
+              },
+            },
+          },
+          subCommunity: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+            },
+          },
+          Vote: {
+            where: { userId, targetType: VoteTargetType.POST },
+            select: { id: true, type: true },
+          },
+          _count: {
+            select: {
+              Vote: true,
+              Comment: true,
+            },
+          },
+        },
+      }),
+      this.prisma.post.count({
+        where: {
+          status: PostStatus.APPROVED,
+          subCommunityId: { in: communityIds },
         },
       }),
     ]);

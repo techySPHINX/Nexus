@@ -18,6 +18,7 @@ import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { PushNotificationService } from '../common/services/push-notification.service';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
 
 /**
  * Controller for handling notification-related requests.
@@ -41,6 +42,22 @@ export class NotificationController {
   @Post()
   create(@Body() dto: CreateNotificationDto) {
     return this.notificationService.create(dto);
+  }
+
+  @Get('preferences/me')
+  getMyNotificationPreference(@Req() req) {
+    return this.notificationService.getNotificationPreference(req.user.userId);
+  }
+
+  @Patch('preferences/me')
+  updateMyNotificationPreference(
+    @Req() req,
+    @Body() dto: UpdateNotificationPreferenceDto,
+  ) {
+    return this.notificationService.updateNotificationPreference(
+      req.user.userId,
+      dto,
+    );
   }
 
   /**

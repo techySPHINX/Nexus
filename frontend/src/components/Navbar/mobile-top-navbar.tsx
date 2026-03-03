@@ -17,7 +17,7 @@ const MobileTopNavbar: FC = () => {
   }
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 border-b border-sidebar-border bg-sidebar backdrop-blur-sm supports-[backdrop-filter]:bg-sidebar/95">
+    <nav className="sticky top-0 left-0 right-0 z-50 border-b border-sidebar-border bg-sidebar backdrop-blur-sm supports-[backdrop-filter]:bg-sidebar/95">
       <div className="flex items-center justify-between h-14 px-4">
         {/* Left: Hamburger menu */}
         <Button

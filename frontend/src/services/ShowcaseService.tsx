@@ -523,12 +523,18 @@ const ShowcaseService = {
   },
 
   getStartupComments: async (startupId: string, page: number = 1) => {
+    const safePage = page > 0 ? page : 1;
     try {
       const response = await api.get(
         `/showcase/startup/${startupId}/comments`,
-        { params: { page } }
+        { params: { page: safePage } }
       );
-      console.log('Fetched comments for startup ID:', startupId, 'page:', page);
+      console.log(
+        'Fetched comments for startup ID:',
+        startupId,
+        'page:',
+        safePage
+      );
       return response.data;
     } catch (error) {
       throw new Error(

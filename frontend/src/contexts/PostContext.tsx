@@ -11,6 +11,7 @@ import { Post } from '../types/post';
 import {
   createPostService,
   getFeedService,
+  getCommunityFeedService,
   getSubCommunityFeedService,
   getPendingPostsService,
   getPostByUserIdService,
@@ -30,6 +31,7 @@ interface PostContextType {
   posts: Post[];
   pendingPosts: Post[];
   feed: Post[];
+  communityFeed: Post[];
   subCommunityFeed: Post[];
   userPosts: Post[];
   searchResults: Post[];
@@ -71,7 +73,16 @@ interface PostContextType {
   getPostComments: (postId: string) => Promise<void>;
   createComment: (postId: string, content: string) => Promise<void>;
   incrementCurrentPostComments: (amount?: number) => void;
-  getFeed: (page?: number, limit?: number) => Promise<void>;
+  getFeed: (
+    page?: number,
+    limit?: number,
+    scope?: 'all' | 'following'
+  ) => Promise<void>;
+  getCommunityFeed: (
+    page?: number,
+    limit?: number,
+    scope?: 'all' | 'member' | 'managed'
+  ) => Promise<void>;
   getSubCommunityFeed: (
     subCommunityId: string,
     page?: number,
@@ -101,6 +112,7 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [pendingPosts, setPendingPosts] = useState<Post[]>([]);
   const [feed, setFeed] = useState<Post[]>([]);
+  const [communityFeed, setCommunityFeed] = useState<Post[]>([]);
   const [subCommunityFeed, setSubCommunityFeed] = useState<Post[]>([]);
   const [userPosts, setUserPosts] = useState<Post[]>([]);
   const [searchResults, setSearchResults] = useState<Post[]>([]);
@@ -115,6 +127,54 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
     hasNext: false,
     hasPrev: false,
   });
+
+  const normalizePagination = useCallback(
+    (
+      paginationData: Partial<{
+        page: number | string;
+        limit: number | string;
+        total: number | string;
+        totalPages: number | string;
+        hasNext: boolean;
+        hasPrev: boolean;
+      }>,
+      fallbackPage: number,
+      fallbackLimit: number,
+      fallbackTotal: number
+    ) => {
+      const normalizedPage = Number(paginationData.page);
+      const normalizedLimit = Number(paginationData.limit);
+      const normalizedTotal = Number(paginationData.total);
+      const normalizedTotalPages = Number(paginationData.totalPages);
+
+      return {
+        page:
+          Number.isFinite(normalizedPage) && normalizedPage > 0
+            ? normalizedPage
+            : fallbackPage,
+        limit:
+          Number.isFinite(normalizedLimit) && normalizedLimit > 0
+            ? normalizedLimit
+            : fallbackLimit,
+        total: Number.isFinite(normalizedTotal)
+          ? normalizedTotal
+          : fallbackTotal,
+        totalPages:
+          Number.isFinite(normalizedTotalPages) && normalizedTotalPages >= 0
+            ? normalizedTotalPages
+            : Math.ceil(fallbackTotal / fallbackLimit),
+        hasNext: Boolean(paginationData.hasNext),
+        hasPrev: Boolean(paginationData.hasPrev),
+      };
+    },
+    []
+  );
+
+  const mergeUniquePosts = useCallback((previous: Post[], incoming: Post[]) => {
+    const existingIds = new Set(previous.map((post) => post.id));
+    const next = incoming.filter((post) => !existingIds.has(post.id));
+    return [...previous, ...next];
+  }, []);
 
   const clearError = useCallback(() => setError(null), []);
 
@@ -193,12 +253,12 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
   );
 
   const getFeed = useCallback(
-    async (page = 1, limit = 10) => {
+    async (page = 1, limit = 10, scope: 'all' | 'following' = 'all') => {
       if (!user) return;
       try {
         setLoading(true);
         clearError();
-        const response = await getFeedService(page, limit);
+        const response = await getFeedService(page, limit, scope);
 
         // Use the correct structure from your API response
         const posts = response.posts || []; // response has posts array directly
@@ -214,16 +274,11 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (page === 1) {
           setFeed(posts);
         } else {
-          setFeed((prev) => [...prev, ...posts]);
+          setFeed((prev) => mergeUniquePosts(prev, posts));
         }
-        setPagination({
-          page: paginationData.page,
-          limit: paginationData.limit,
-          total: paginationData.total,
-          totalPages: paginationData.totalPages,
-          hasNext: paginationData.hasNext,
-          hasPrev: paginationData.hasPrev,
-        });
+        setPagination(
+          normalizePagination(paginationData, page, limit, posts.length)
+        );
         setLoading(false);
         return response;
       } catch (err) {
@@ -233,7 +288,49 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
         throw new Error(errorMessage);
       }
     },
-    [user, clearError]
+    [user, clearError, mergeUniquePosts, normalizePagination]
+  );
+
+  const getCommunityFeed = useCallback(
+    async (
+      page = 1,
+      limit = 10,
+      scope: 'all' | 'member' | 'managed' = 'all'
+    ) => {
+      if (!user) return;
+      try {
+        setLoading(true);
+        clearError();
+        const response = await getCommunityFeedService(page, limit, scope);
+
+        const posts = response.posts || [];
+        const paginationData = response.pagination || {
+          page,
+          limit,
+          total: posts.length,
+          totalPages: Math.ceil(posts.length / limit),
+          hasNext: false,
+          hasPrev: false,
+        };
+
+        if (page === 1) {
+          setCommunityFeed(posts);
+        } else {
+          setCommunityFeed((prev) => mergeUniquePosts(prev, posts));
+        }
+        setPagination(
+          normalizePagination(paginationData, page, limit, posts.length)
+        );
+        setLoading(false);
+        return response;
+      } catch (err) {
+        const errorMessage = getErrorMessage(err);
+        setError(errorMessage);
+        setLoading(false);
+        throw new Error(errorMessage);
+      }
+    },
+    [user, clearError, mergeUniquePosts, normalizePagination]
   );
 
   const getSubCommunityFeed = useCallback(
@@ -261,16 +358,11 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (page === 1) {
           setSubCommunityFeed(posts);
         } else {
-          setSubCommunityFeed((prev) => [...prev, ...posts]);
+          setSubCommunityFeed((prev) => mergeUniquePosts(prev, posts));
         }
-        setPagination({
-          page: paginationData.page,
-          limit: paginationData.limit,
-          total: paginationData.total,
-          totalPages: paginationData.totalPages,
-          hasNext: paginationData.hasNext,
-          hasPrev: paginationData.hasPrev,
-        });
+        setPagination(
+          normalizePagination(paginationData, page, limit, posts.length)
+        );
         setLoading(false);
         return response;
       } catch (err) {
@@ -280,7 +372,7 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
         throw new Error(errorMessage);
       }
     },
-    [user, clearError]
+    [user, clearError, mergeUniquePosts, normalizePagination]
   );
 
   const getPendingPosts = useCallback(
@@ -476,6 +568,9 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
         setPosts((prev) => prev.map((post) => (post.id === id ? data : post)));
         setFeed((prev) => prev.map((post) => (post.id === id ? data : post)));
+        setCommunityFeed((prev) =>
+          prev.map((post) => (post.id === id ? data : post))
+        );
         setSubCommunityFeed((prev) =>
           prev.map((post) => (post.id === id ? data : post))
         );
@@ -553,6 +648,7 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
         await deletePostService(id);
         setPosts((prev) => prev.filter((post) => post.id !== id));
         setFeed((prev) => prev.filter((post) => post.id !== id));
+        setCommunityFeed((prev) => prev.filter((post) => post.id !== id));
         setSubCommunityFeed((prev) => prev.filter((post) => post.id !== id));
         setUserPosts((prev) => prev.filter((post) => post.id !== id));
         setSearchResults((prev) => prev.filter((post) => post.id !== id));
@@ -610,6 +706,7 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
         posts,
         pendingPosts,
         feed,
+        communityFeed,
         subCommunityFeed,
         userPosts,
         searchResults,
@@ -627,6 +724,7 @@ const PostProvider: FC<{ children: ReactNode }> = ({ children }) => {
         getPostComments,
         createComment,
         getFeed,
+        getCommunityFeed,
         getSubCommunityFeed,
         getUserPosts,
         clearUserPosts,

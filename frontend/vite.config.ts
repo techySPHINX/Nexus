@@ -73,6 +73,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
               if (id.includes('dayjs')) return 'vendor-dayjs';
               if (id.includes('dexie')) return 'vendor-storage';
               if (id.includes('zustand')) return 'vendor-state';
+              if (id.includes('recharts')) return 'vendor-recharts';
 
               if (id.includes('@mui')) return 'vendor-mui';
               if (id.includes('@emotion')) return 'vendor-emotion';

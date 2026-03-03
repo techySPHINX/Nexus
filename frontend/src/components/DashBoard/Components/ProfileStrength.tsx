@@ -92,7 +92,7 @@ export default function ProfileStrength() {
   useEffect(() => {
     let mounted = true;
     if (showQuickAccess && !QuickAccessComponent) {
-      import('@/components/DashBoard/QuickAccessMenu')
+      import('@/components/DashBoard/Components/QuickAccessMenu')
         .then((mod) => {
           if (mounted) setQuickAccessComponent(() => mod.default ?? mod);
         })

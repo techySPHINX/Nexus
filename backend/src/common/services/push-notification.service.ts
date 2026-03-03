@@ -34,6 +34,9 @@ export class PushNotificationService {
       icon?: string;
       badge?: number;
     },
+    options?: {
+      persist?: boolean;
+    },
   ): Promise<boolean> {
     try {
       // Get user's FCM token
@@ -47,14 +50,16 @@ export class PushNotificationService {
         return false;
       }
 
-      // Save notification to database
-      await this.prisma.notification.create({
-        data: {
-          userId,
-          message: notification.body,
-          type: notification.type || 'SYSTEM',
-        },
-      });
+      // Save notification to database unless caller disables persistence
+      if (options?.persist !== false) {
+        await this.prisma.notification.create({
+          data: {
+            userId,
+            message: notification.body,
+            type: notification.type || 'SYSTEM',
+          },
+        });
+      }
 
       // Send via WebSocket if user is online
       if (this.dashboardGateway.isUserOnline(userId)) {

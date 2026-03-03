@@ -6,12 +6,13 @@ import NotificationMenu from './NotificationMenu';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const NotificationIndicator = () => {
-  const { unreadCount, fetchNotifications } = useNotification();
+  const { unreadCount, refreshUnreadCounts } = useNotification();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
+    void refreshUnreadCounts();
   };
 
   const handleClose = () => {
@@ -19,6 +20,10 @@ const NotificationIndicator = () => {
   };
 
   const { isDark } = useTheme();
+
+  useEffect(() => {
+    void refreshUnreadCounts();
+  }, [refreshUnreadCounts]);
 
   // Sound effect for new notifications
   // useEffect(() => {
@@ -39,7 +44,9 @@ const NotificationIndicator = () => {
       }
 
       const pollInterval = isVisible ? 60000 : 120000; // 60s vs 120s
-      interval = setInterval(fetchNotifications, pollInterval);
+      interval = setInterval(() => {
+        void refreshUnreadCounts();
+      }, pollInterval);
     };
 
     const stopPolling = () => {
@@ -81,7 +88,7 @@ const NotificationIndicator = () => {
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [fetchNotifications]);
+  }, [refreshUnreadCounts]);
 
   return (
     <>

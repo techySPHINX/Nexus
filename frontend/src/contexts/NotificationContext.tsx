@@ -7,8 +7,11 @@ import {
   deleteNotificationService,
   deleteReadNotificationService,
   fetchNotificationStatsService,
+  getNotificationPreferenceService,
+  updateNotificationPreferenceService,
 } from '@/services/notificationService';
 import { Notification, NotificationType } from '@/types/notification';
+import { NotificationPreference } from '@/types/profileType';
 import { FC, createContext, useContext, useState, useCallback } from 'react';
 import { Snackbar, Alert } from '@mui/material';
 import { useAuth } from './AuthContext';
@@ -25,14 +28,16 @@ interface NotificationContextType {
   };
   unreadCount: number;
   unreadCountsByCategory: Record<string, number>;
+  notificationPreference: NotificationPreference | null;
   loading: boolean;
   error: string | null;
   fetchNotifications: (
     page?: number,
     limit?: number,
-    category?: string
+    category?: string,
+    unreadOnly?: boolean
   ) => Promise<void>;
-  setPage: (page: number, category?: string) => void;
+  setPage: (page: number, category?: string, unreadOnly?: boolean) => void;
   addNotification: (
     notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
   ) => Promise<void>;
@@ -41,6 +46,11 @@ interface NotificationContextType {
   markAllAsRead: () => Promise<void>;
   deleteNotification: (id: string) => Promise<void>;
   deleteReadNotifications: () => Promise<void>;
+  fetchNotificationPreference: () => Promise<void>;
+  updateNotificationPreference: (
+    payload: Partial<NotificationPreference>
+  ) => Promise<void>;
+  refreshUnreadCounts: () => Promise<void>;
   /** lightweight helper to show a UI snackbar message */
   showNotification?: (
     message: string,
@@ -101,6 +111,8 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
     EVENT: 0,
     REFERRAL: 0,
   });
+  const [notificationPreference, setNotificationPreference] =
+    useState<NotificationPreference | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,7 +194,7 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
   }, [user]);
 
   const fetchNotifications = useCallback(
-    async (page = 1, limit = 10, category?: string) => {
+    async (page = 1, limit = 10, category?: string, unreadOnly = false) => {
       if (!user) return;
       setLoading(true);
       setError(null);
@@ -197,7 +209,9 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
         // If we have specific types for this category, fetch them individually and merge
         if (types.length > 0) {
           const results = await Promise.all(
-            types.map((type) => fetchNotificationsService(page, limit, type))
+            types.map((type) =>
+              fetchNotificationsService(page, limit, type, unreadOnly)
+            )
           );
 
           // Merge notifications from all types
@@ -229,7 +243,12 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
           setPagination(mergedPagination);
         } else {
           // Fetch all notifications (category is ALL or unknown)
-          const response = await fetchNotificationsService(page, limit);
+          const response = await fetchNotificationsService(
+            page,
+            limit,
+            undefined,
+            unreadOnly
+          );
           setNotifications(response.notification);
           setPagination(response.pagination);
         }
@@ -246,9 +265,9 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
     [user, fetchAllUnreadCounts]
   );
 
-  const setPage = (newPage: number, category?: string) => {
+  const setPage = (newPage: number, category?: string, unreadOnly = false) => {
     if (pagination && newPage > 0 && newPage <= pagination.totalPages) {
-      fetchNotifications(newPage, pagination.limit, category);
+      fetchNotifications(newPage, pagination.limit, category, unreadOnly);
     }
   };
 
@@ -395,6 +414,30 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  const fetchNotificationPreference = useCallback(async () => {
+    if (!user) return;
+    try {
+      const pref = await getNotificationPreferenceService();
+      setNotificationPreference(pref);
+    } catch (err) {
+      console.error('Failed to fetch notification preference:', err);
+    }
+  }, [user]);
+
+  const updateNotificationPreference = useCallback(
+    async (payload: Partial<NotificationPreference>) => {
+      if (!user) return;
+      try {
+        const pref = await updateNotificationPreferenceService(payload);
+        setNotificationPreference(pref);
+      } catch (err) {
+        console.error('Failed to update notification preference:', err);
+        throw err;
+      }
+    },
+    [user]
+  );
+
   return (
     <NotificationContext.Provider
       value={{
@@ -402,6 +445,7 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
         pagination,
         unreadCount,
         unreadCountsByCategory,
+        notificationPreference,
         loading,
         error,
         fetchNotifications,
@@ -412,6 +456,9 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
         markAllAsRead,
         deleteNotification,
         deleteReadNotifications,
+        fetchNotificationPreference,
+        updateNotificationPreference,
+        refreshUnreadCounts: fetchAllUnreadCounts,
         showNotification,
       }}
     >
