@@ -1,4 +1,4 @@
-import axios from 'axios';
+import api, { isAxiosError } from './api';
 import { Notification } from '@/types/notification';
 import { NotificationPreference } from '@/types/profileType';
 
@@ -22,11 +22,13 @@ type FetchNotificationsApiPayload = {
   pagination: NotificationPagination;
 };
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-
-// withCredentials ensures the httpOnly access_token cookie is sent
-// automatically — no manual Authorization header needed (Issue #164).
-const api = axios.create({ baseURL: BACKEND_URL, withCredentials: true });
+export type CreateNotificationResponse = {
+  notification: Notification | null;
+  delivered: {
+    inApp: boolean;
+    push: boolean;
+  };
+};
 
 export async function fetchNotificationsService(
   page = 1,
@@ -52,7 +54,7 @@ export async function fetchNotificationsService(
       unreadCount: unreadCountRes.data.unreadCount,
     };
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to fetch notifications'
       );
@@ -63,12 +65,15 @@ export async function fetchNotificationsService(
 
 export async function addNotificationService(
   notification: Omit<Notification, 'id' | 'timestamp' | 'read'>
-) {
+): Promise<CreateNotificationResponse> {
   try {
-    const response = await api.post('/notifications', notification);
+    const response = await api.post<CreateNotificationResponse>(
+      '/notifications',
+      notification
+    );
     return response.data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to add notification'
       );
@@ -83,7 +88,7 @@ export async function readNotificationService(id: string) {
     await api.patch(`/notifications/${id}/read`);
     // return response.data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to mark notification as read'
       );
@@ -96,7 +101,7 @@ export async function unreadNotificationService(id: string) {
   try {
     await api.patch(`/notifications/${id}/unread`);
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to mark notification as unread'
       );
@@ -128,7 +133,7 @@ export async function allReadNotificationService() {
   try {
     await api.patch('/notifications/read/all');
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message ||
           'Failed to mark all notifications as read'
@@ -146,7 +151,7 @@ export async function deleteNotificationService(id: string): Promise<void> {
     }
     return response.data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to delete notification'
       );
@@ -163,7 +168,7 @@ export async function deleteReadNotificationService(): Promise<void> {
     }
     return response.data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to delete all read notifications'
       );
@@ -180,7 +185,7 @@ export async function deleteAllNotificationService(): Promise<void> {
     }
     return response.data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to delete all notifications'
       );
@@ -194,7 +199,7 @@ export async function getNotificationPreferenceService(): Promise<NotificationPr
     const response = await api.get('/notifications/preferences/me');
     return response.data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to fetch notification preference'
       );
@@ -210,7 +215,7 @@ export async function updateNotificationPreferenceService(
     const response = await api.patch('/notifications/preferences/me', payload);
     return response.data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message ||
           'Failed to update notification preference'

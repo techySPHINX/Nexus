@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { VoteType } from '@prisma/client';
+import { Notification as PrismaNotification, VoteType } from '@prisma/client';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { PushNotificationService } from '../common/services/push-notification.service';
 import { UpdateNotificationPreferenceDto } from './dto/update-notification-preference.dto';
@@ -35,6 +35,14 @@ export enum NotificationType {
   PROJECT_FOLLOW = 'PROJECT_FOLLOW',
 }
 
+export interface NotificationCreateResult {
+  notification: PrismaNotification | null;
+  delivered: {
+    inApp: boolean;
+    push: boolean;
+  };
+}
+
 /**
  * Service for managing user notifications.
  * Handles creation, retrieval, marking as read/unread, and deletion of notifications.
@@ -50,11 +58,12 @@ export class NotificationService {
   /**
    * Creates a new notification.
    * @param dto - The data for creating the notification.
-   * @returns A promise that resolves to the created notification.
+   * @returns A promise that resolves to a delivery result containing the
+   * persisted notification (if in-app delivery is enabled) and delivery flags.
    * @throws {NotFoundException} If the target user is not found.
    * @throws {BadRequestException} If the message is empty, too long, or the type is invalid.
    */
-  async create(dto: CreateNotificationDto) {
+  async create(dto: CreateNotificationDto): Promise<NotificationCreateResult> {
     const user = await this.prisma.user.findUnique({
       where: { id: dto.userId },
     });
@@ -87,7 +96,7 @@ export class NotificationService {
     const shouldCreateInApp = preference.inAppEnabled !== false;
     const shouldSendPush = preference.pushEnabled === true;
 
-    let notification = null;
+    let notification: PrismaNotification | null = null;
     if (shouldCreateInApp) {
       notification = await this.prisma.notification.create({
         data: {
@@ -99,6 +108,7 @@ export class NotificationService {
     }
 
     // Send push notification via PushNotificationService
+    let pushDelivered = false;
     if (shouldSendPush) {
       try {
         await this.pushNotificationService.sendToUser(
@@ -111,23 +121,23 @@ export class NotificationService {
           },
           { persist: false },
         );
+        pushDelivered = true;
       } catch (error) {
         // Log error but don't fail the notification creation
         this.logger.error(
-        `Failed to send push notification: ${(error as Error).message}`,
-        (error as Error).stack,
-      );
+          `Failed to send push notification: ${(error as Error).message}`,
+          (error as Error).stack,
+        );
       }
     }
 
-    if (!notification) {
-      return {
-        message: 'Notification delivery skipped due to preferences',
-        userId: dto.userId,
-      };
-    }
-
-    return notification;
+    return {
+      notification,
+      delivered: {
+        inApp: notification !== null,
+        push: pushDelivered,
+      },
+    };
   }
 
   async getNotificationPreference(userId: string) {

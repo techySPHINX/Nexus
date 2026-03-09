@@ -13,7 +13,10 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { NotificationService } from './notification.service';
+import {
+  NotificationCreateResult,
+  NotificationService,
+} from './notification.service';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import { PushNotificationService } from '../common/services/push-notification.service';
@@ -37,10 +40,12 @@ export class NotificationController {
   /**
    * Creates a new notification.
    * @param dto - The data for creating the notification.
-   * @returns A promise that resolves to the created notification.
+   * @returns A promise that resolves to the notification delivery result.
    */
   @Post()
-  create(@Body() dto: CreateNotificationDto) {
+  create(
+    @Body() dto: CreateNotificationDto,
+  ): Promise<NotificationCreateResult> {
     return this.notificationService.create(dto);
   }
 

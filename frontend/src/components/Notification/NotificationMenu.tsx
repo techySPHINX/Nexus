@@ -16,7 +16,6 @@ import {
   ListItemButton,
   ListItemAvatar,
 } from '@mui/material';
-import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import CheckIcon from '@mui/icons-material/Check';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
@@ -29,7 +28,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import EventAvailableIcon from '@mui/icons-material/EventAvailable';
 import HandshakeIcon from '@mui/icons-material/Handshake';
 import InfoIcon from '@mui/icons-material/Info';
-import { FC, Fragment, useEffect, useState } from 'react';
+import { FC, Fragment, useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -37,6 +36,7 @@ import {
   NotificationType,
   getNotificationEmoji,
 } from '@/types/notification';
+import { isAxiosError } from '@/services/api';
 import { fetchNotificationsService } from '@/services/notificationService';
 
 interface NotificationMenuProps {
@@ -71,7 +71,7 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const loadUnreadPreview = async () => {
+  const loadUnreadPreview = useCallback(async () => {
     setLoadingPreview(true);
     setPreviewError(null);
     try {
@@ -84,7 +84,7 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
     } finally {
       setLoadingPreview(false);
     }
-  };
+  }, []);
 
   const handleNotificationClick = async (id: string) => {
     try {
@@ -94,7 +94,7 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
       await loadUnreadPreview();
     } catch (err: unknown) {
       showSnackbar('Failed to mark notification as read', 'error');
-      if (axios.isAxiosError(err)) {
+      if (isAxiosError(err)) {
         console.error(err.response?.data?.message || 'Axios error');
       } else if (err instanceof Error) {
         console.error(err.message);
@@ -112,7 +112,7 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
       await loadUnreadPreview();
     } catch (err: unknown) {
       showSnackbar('Failed to mark all as read', 'error');
-      if (axios.isAxiosError(err)) {
+      if (isAxiosError(err)) {
         console.error(err.response?.data?.message || 'Axios error');
       } else if (err instanceof Error) {
         console.error(err.message);
@@ -136,7 +136,7 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
       void loadUnreadPreview();
       void refreshUnreadCounts();
     }
-  }, [isOpen, refreshUnreadCounts]);
+  }, [isOpen, loadUnreadPreview, refreshUnreadCounts]);
 
   // Inline-specific style adjustments per request
   // Use theme-aware palette values so dark mode looks correct
