@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -30,7 +31,17 @@ export function AppSidebarNexus() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { open, toggleSidebar } = useSidebar();
+  const { open, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+
+  const closeMobileSidebar = useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
+
+  useEffect(() => {
+    closeMobileSidebar();
+  }, [closeMobileSidebar, location.pathname, location.search, location.hash]);
 
   const handleLogout = () => {
     logout();
@@ -208,7 +219,9 @@ export function AppSidebarNexus() {
       </SidebarHeader>
 
       <SidebarContent>
-        {user && navMain.length > 0 && <NavMainNexus items={navMain} />}
+        {user && navMain.length > 0 && (
+          <NavMainNexus items={navMain} onNavigate={closeMobileSidebar} />
+        )}
       </SidebarContent>
 
       <SidebarFooter>
@@ -242,7 +255,11 @@ export function AppSidebarNexus() {
             </Button>
           </div>
         </div>
-        <NavUser user={userData} onLogout={handleLogout} />
+        <NavUser
+          user={userData}
+          onLogout={handleLogout}
+          onNavigate={closeMobileSidebar}
+        />
       </SidebarFooter>
 
       <SidebarRail />

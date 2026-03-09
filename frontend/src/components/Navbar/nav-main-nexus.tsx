@@ -26,6 +26,7 @@ import {
 
 export function NavMainNexus({
   items,
+  onNavigate,
 }: {
   items: {
     title: string;
@@ -37,6 +38,7 @@ export function NavMainNexus({
       url: string;
     }[];
   }[];
+  onNavigate?: () => void;
 }) {
   const { state } = useSidebar();
 
@@ -69,6 +71,7 @@ export function NavMainNexus({
                         <Link
                           to={subItem.url}
                           className="w-full cursor-pointer"
+                          onClick={onNavigate}
                         >
                           {subItem.title}
                         </Link>
@@ -96,7 +99,11 @@ export function NavMainNexus({
                     isActive={item.isActive}
                   >
                     {!item.items || item.items.length === 0 ? (
-                      <Link to={item.url} className="flex items-center gap-3">
+                      <Link
+                        to={item.url}
+                        className="flex items-center gap-3"
+                        onClick={onNavigate}
+                      >
                         {item.icon && <item.icon className="h-8 w-8" />}
                         <span className="text-[0.98rem]">{item.title}</span>
                       </Link>
@@ -118,6 +125,7 @@ export function NavMainNexus({
                             <Link
                               to={subItem.url}
                               className="flex items-center gap-3"
+                              onClick={onNavigate}
                             >
                               <span className="text-[0.9rem]">
                                 {subItem.title}
