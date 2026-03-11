@@ -7,6 +7,7 @@ import {
   Req,
   Res,
   Ip,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -112,13 +113,25 @@ export class AuthController {
    */
   @Post('refresh')
   async refreshToken(
-    @Body() dto: RefreshTokenDto,
+    @Body() dto: Partial<RefreshTokenDto>,
     @Ip() ip: string,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ): Promise<AuthResponseDto> {
     const userAgent = req.headers['user-agent'] || '';
-    const result = await this.authService.refreshToken(dto, ip, userAgent);
+    const refreshToken =
+      dto.refreshToken ??
+      (req.cookies?.['refresh_token'] as string | undefined);
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Missing refresh token');
+    }
+
+    const result = await this.authService.refreshToken(
+      { refreshToken },
+      ip,
+      userAgent,
+    );
     this.setAuthCookies(res, result);
     return result;
   }
