@@ -44,6 +44,7 @@ if (require.main === module) {
     'seed-skills.js',
     'seed-badge.js',
     'seed-sub-community.js',
+    'seed-posts.js',
     'seed-connections.js',
     'seed-mentorship.js',
     'seed-referrals.js',
