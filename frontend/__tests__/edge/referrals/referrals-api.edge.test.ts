@@ -46,8 +46,8 @@ describe('edge referrals apiService', () => {
   });
 
   it('request interceptor injects bearer token when available', async () => {
-    localStorage.setItem('token', 'token-abc');
-    await import('@/services/api');
+    const { setApiAccessToken } = await import('@/services/api');
+    setApiAccessToken('token-abc');
 
     const requestUseCall = mockApi.interceptors.request.use.mock.calls[0];
     const requestInterceptor = requestUseCall?.[0] as
@@ -65,7 +65,6 @@ describe('edge referrals apiService', () => {
   });
 
   it('response interceptor clears auth state on 401', async () => {
-    localStorage.setItem('token', 'token-401');
     localStorage.setItem('user', JSON.stringify({ id: 'u1', role: 'ALUM' }));
 
     const originalLocation = window.location;
@@ -75,7 +74,10 @@ describe('edge referrals apiService', () => {
       configurable: true,
     });
 
-    await import('@/services/api');
+    const { getApiAccessToken, setApiAccessToken } = await import(
+      '@/services/api'
+    );
+    setApiAccessToken('token-401');
 
     const responseUseCall = mockApi.interceptors.response.use.mock.calls[0];
     const errorInterceptor = responseUseCall?.[1] as
@@ -88,8 +90,8 @@ describe('edge referrals apiService', () => {
       errorInterceptor!({ response: { status: 401 } })
     ).rejects.toEqual({ response: { status: 401 } });
 
-    expect(localStorage.getItem('token')).toBeNull();
     expect(localStorage.getItem('user')).toBeNull();
+    expect(getApiAccessToken()).toBeNull();
     expect(window.location.href).toBe('/login');
 
     Object.defineProperty(window, 'location', {
