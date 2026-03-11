@@ -3,8 +3,7 @@
 //   - X-CSRF-Token header interceptor (CSRF protection, Issue #162)
 // This avoids the need for manual header attachment and ensures CSRF tokens
 // are included on all mutating requests (Copilot recommendation from PR #210).
-import { AxiosError } from 'axios';
-import api from './api';
+import api, { isAxiosError } from './api';
 import { Comment, VoteType, Post } from '../types/engagement';
 import { getErrorMessage } from '@/utils/errorHandler';
 
@@ -12,7 +11,11 @@ const BASE = '/engagement';
 
 export class EngagementService {
   // engagementService.ts - Update the error handling
-  private handleServiceError(error: AxiosError): never {
+  private handleServiceError(error: unknown): never {
+    if (!isAxiosError(error)) {
+      throw new Error('An unknown error occurred');
+    }
+
     console.error('Service error:', error.response?.data || error.message);
 
     if (error.response) {
@@ -44,7 +47,7 @@ export class EngagementService {
       const response = await api.post(`${BASE}/${postId}/vote`, { voteType });
       return response.data;
     } catch (error) {
-      this.handleServiceError(error as AxiosError);
+      this.handleServiceError(error);
     }
   }
 
@@ -55,7 +58,7 @@ export class EngagementService {
       });
       return response.data;
     } catch (error) {
-      this.handleServiceError(error as AxiosError);
+      this.handleServiceError(error);
     }
   }
 
@@ -64,7 +67,7 @@ export class EngagementService {
       const response = await api.delete(`${BASE}/${voteId}/remove-vote`);
       return response.data;
     } catch (error) {
-      this.handleServiceError(error as AxiosError);
+      this.handleServiceError(error);
     }
   }
 
@@ -80,7 +83,7 @@ export class EngagementService {
       });
       return response.data;
     } catch (error) {
-      this.handleServiceError(error as AxiosError);
+      this.handleServiceError(error);
     }
   }
 
@@ -105,7 +108,7 @@ export class EngagementService {
       );
       return response.data;
     } catch (error) {
-      this.handleServiceError(error as AxiosError);
+      this.handleServiceError(error);
     }
   }
 
@@ -116,7 +119,7 @@ export class EngagementService {
       });
       return response.data;
     } catch (error) {
-      this.handleServiceError(error as AxiosError);
+      this.handleServiceError(error);
     }
   }
 
@@ -125,7 +128,7 @@ export class EngagementService {
       const response = await api.delete(`${BASE}/comments/${commentId}`);
       return response.data;
     } catch (error) {
-      this.handleServiceError(error as AxiosError);
+      this.handleServiceError(error);
     }
   }
 
@@ -134,7 +137,7 @@ export class EngagementService {
       const response = await api.get(`${BASE}/feed`);
       return response.data;
     } catch (error) {
-      this.handleServiceError(error as AxiosError);
+      this.handleServiceError(error);
     }
   }
 }
