@@ -315,6 +315,8 @@ const DocumentVerification: FC = () => {
 
   const handleDownload = useCallback(
     async (doc: PendingDocument) => {
+      let objectUrl: string | null = null;
+
       try {
         const response = await fetch(doc.documentUrl);
         if (!response.ok) {
@@ -322,15 +324,34 @@ const DocumentVerification: FC = () => {
         }
 
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
+        objectUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
+        link.href = objectUrl;
         link.setAttribute('download', doc.fileName || `document-${doc.id}`);
         document.body.appendChild(link);
         link.click();
         link.remove();
       } catch (err) {
-        showNotification?.('Download failed. ' + getErrorMessage(err), 'error');
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = doc.documentUrl;
+        fallbackLink.target = '_blank';
+        fallbackLink.rel = 'noopener noreferrer';
+        fallbackLink.setAttribute(
+          'download',
+          doc.fileName || `document-${doc.id}`
+        );
+        document.body.appendChild(fallbackLink);
+        fallbackLink.click();
+        fallbackLink.remove();
+
+        showNotification?.(
+          'Direct download was blocked, so the document was opened in a new tab.',
+          'warning'
+        );
+      } finally {
+        if (objectUrl) {
+          window.URL.revokeObjectURL(objectUrl);
+        }
       }
     },
     [showNotification]
