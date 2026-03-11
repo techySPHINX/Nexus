@@ -1,5 +1,3 @@
-import axios, { AxiosError } from 'axios';
-
 interface ApiErrorResponse {
   message?: string;
   error?: string;
@@ -8,6 +6,26 @@ interface ApiErrorResponse {
   path?: string;
   timestamp?: string;
 }
+
+type AxiosErrorLike = {
+  isAxiosError?: boolean;
+  message?: string;
+  code?: string;
+  request?: unknown;
+  response?: {
+    status?: number;
+    data?: ApiErrorResponse;
+  };
+};
+
+const isAxiosErrorLike = (err: unknown): err is AxiosErrorLike => {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'isAxiosError' in err &&
+    (err as AxiosErrorLike).isAxiosError === true
+  );
+};
 
 export class ApiError extends Error {
   constructor(
@@ -54,7 +72,7 @@ export const getErrorMessage = (err: unknown): string => {
     if (typeof e === 'string') return e.includes(dbMsg);
     if (e instanceof Error && typeof e.message === 'string')
       return e.message.includes(dbMsg);
-    if (axios.isAxiosError(e)) {
+    if (isAxiosErrorLike(e)) {
       if (typeof e.message === 'string' && e.message.includes(dbMsg))
         return true;
       const respData = e.response?.data as ApiErrorResponse | undefined;
@@ -75,7 +93,7 @@ export const getErrorMessage = (err: unknown): string => {
 
   if (containsDbMsg(err)) return dbMsg;
 
-  if (axios.isAxiosError(err)) {
+  if (isAxiosErrorLike(err)) {
     const responseData = err.response?.data as ApiErrorResponse | undefined;
     const backendMsg = extractBackendMessage(responseData);
     if (backendMsg) return backendMsg;
@@ -118,7 +136,7 @@ export const getErrorDetails = (
   timestamp?: string;
   path?: string;
 } => {
-  if (axios.isAxiosError(err)) {
+  if (isAxiosErrorLike(err)) {
     const response = err.response?.data as ApiErrorResponse;
     return {
       message:
@@ -160,8 +178,8 @@ export const getErrorDetails = (
 };
 
 export const isNetworkError = (err: unknown): boolean => {
-  if (axios.isAxiosError(err)) {
-    return !err.response && err.request && !navigator.onLine;
+  if (isAxiosErrorLike(err)) {
+    return !err.response && Boolean(err.request) && !navigator.onLine;
   }
   return err instanceof NetworkError;
 };
@@ -174,7 +192,7 @@ export const isApiError = (err: unknown): err is ApiError => {
   return err instanceof ApiError;
 };
 
-const getAxiosErrorMessage = (err: AxiosError): string => {
+const getAxiosErrorMessage = (err: AxiosErrorLike): string => {
   if (!err.response) {
     if (!navigator.onLine)
       return 'You are offline. Please check your internet connection.';
