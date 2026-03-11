@@ -202,14 +202,36 @@ export class AuthService {
       },
     });
 
-    if (!user || !user.password) {
+    if (!user) {
       await this.rateLimitService.recordLoginAttempt(
         dto.email,
         ipAddress,
         userAgent,
         false,
       );
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials1');
+    }
+
+    // Users created through document-based onboarding do not have a password
+    // until admin approval is complete. Return a clear account-state message
+    // instead of the generic invalid-credentials error.
+    if (!user.password) {
+      await this.rateLimitService.recordLoginAttempt(
+        dto.email,
+        ipAddress,
+        userAgent,
+        false,
+      );
+
+      if (!user.isAccountActive) {
+        throw new UnauthorizedException(
+          'Account is not yet activated. Please wait for admin approval.',
+        );
+      }
+
+      throw new UnauthorizedException(
+        'Account credentials are not ready yet. Please contact support.',
+      );
     }
 
     // Check if account is active
@@ -227,7 +249,7 @@ export class AuthService {
         userAgent,
         false,
       );
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials2');
     }
 
     // Reset failed attempts on successful login
