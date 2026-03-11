@@ -19,6 +19,7 @@ import {
   AttachFile as AttachFileIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => void;
@@ -42,6 +43,7 @@ const MessageInput: FC<MessageInputProps> = ({
   onTyping,
   disabled = false,
 }) => {
+  const { showNotification } = useNotification();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -85,7 +87,11 @@ const MessageInput: FC<MessageInputProps> = ({
    * Handle sending message
    */
   const handleSendMessage = useCallback(async () => {
-    if (!message.trim() || isSending || disabled) return;
+    if (isSending || disabled) return;
+    if (!message.trim()) {
+      showNotification?.('Message cannot be empty', 'warning');
+      return;
+    }
 
     const messageContent = message.trim();
     setMessage('');
@@ -104,10 +110,11 @@ const MessageInput: FC<MessageInputProps> = ({
       console.error('❌ Error sending message:', error);
       // Restore message on error
       setMessage(messageContent);
+      showNotification?.('Failed to send message. Please try again.', 'error');
     } finally {
       setIsSending(false);
     }
-  }, [message, isSending, disabled, onSendMessage, onTyping]);
+  }, [message, isSending, disabled, onSendMessage, onTyping, showNotification]);
 
   /**
    * Handle keyboard events

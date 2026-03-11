@@ -10,8 +10,6 @@ import {
   Box,
   Typography,
   Button,
-  Snackbar,
-  Alert,
   CircularProgress,
   Grid,
   Card,
@@ -33,6 +31,7 @@ import {
 } from '@mui/icons-material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '@/contexts/NotificationContext';
 // import { CreateSubCommunityDialog } from '../../components/SubCommunity/CreateSubCommunityDialog';
 // import { SubCommunityRequestDialog } from '../../components/SubCommunity/SubCommunityRequestDialog';
 import { SubCommunitySection } from '../../components/SubCommunity/SubCommunitySection';
@@ -324,11 +323,11 @@ const SubCommunityPage: React.FC = () => {
   } = useSubCommunity();
 
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   // const [searchTerm, setSearchTerm] = useState('');
   // const [createDialogOpen, setCreateDialogOpen] = useState(false);
   // const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [manageTypesOpen, setManageTypesOpen] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   // Note: we previously tracked loadedTypes here; async loading is handled
   // inside LazySection to avoid triggering async work during render.
@@ -382,17 +381,13 @@ const SubCommunityPage: React.FC = () => {
 
   useEffect(() => {
     if (error) {
-      setSnackbarOpen(true);
+      showNotification?.(error, 'error');
+      clearError();
     }
-  }, [error]);
+  }, [clearError, error, showNotification]);
 
   // No async calls during render: we use a small wrapper component below to
   // kick off `ensureTypeLoaded` in a useEffect when a section mounts.
-
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
-    clearError();
-  };
 
   // const filterCommunities = (communities: SubCommunity[]): SubCommunity[] => {
   //   if (!searchTerm) return communities;
@@ -808,23 +803,6 @@ const SubCommunityPage: React.FC = () => {
           />
         </Suspense>
       )}
-
-      {/* Error Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity="error"
-          sx={{ width: '100%' }}
-        >
-          {error}
-        </Alert>
-      </Snackbar>
-
       {showBackToTop && (
         <Button
           variant="contained"

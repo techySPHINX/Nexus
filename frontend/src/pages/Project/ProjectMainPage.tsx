@@ -1,6 +1,7 @@
 import { FC, useState, useEffect, useCallback, memo } from 'react';
 import { useShowcase } from '@/contexts/ShowcaseContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotification } from '@/contexts/NotificationContext';
 import {
   ProjectInterface,
   FilterProjectInterface,
@@ -19,9 +20,6 @@ import {
   Chip,
   // Skeleton,
   Button,
-  Snackbar,
-  Alert,
-  Fade,
   Container,
 } from '@mui/material';
 import { Add } from '@mui/icons-material';
@@ -89,7 +87,6 @@ const ProjectsMainPage: FC = () => {
     followProject,
     unfollowProject,
     requestCollaboration,
-    clearError,
     getProjectUpdates,
     getComments,
     createComment,
@@ -100,6 +97,7 @@ const ProjectsMainPage: FC = () => {
   } = useShowcase();
 
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [filters, setFilters] = useState<FilterProjectInterface>({
     pageSize: 12,
   });
@@ -111,11 +109,6 @@ const ProjectsMainPage: FC = () => {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
     null
   );
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info' | 'warning';
-  }>({ open: false, message: '', severity: 'info' });
 
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [tabLoading, setTabLoading] = useState(false);
@@ -173,6 +166,10 @@ const ProjectsMainPage: FC = () => {
         recentTabFetches.set(key, Date.now());
       } catch (err) {
         console.error('Failed to load tab data:', err);
+        showNotification?.(
+          'Failed to load projects. Please try again.',
+          'error'
+        );
       } finally {
         inFlightTabFetches.delete(key);
         setTabLoading(false);
@@ -188,6 +185,7 @@ const ProjectsMainPage: FC = () => {
     getProjectsByUserId,
     getSupportedProjects,
     getFollowedProjects,
+    showNotification,
   ]);
 
   // Get current pagination based on active tab
@@ -241,6 +239,7 @@ const ProjectsMainPage: FC = () => {
       }
     } catch (err) {
       console.error('Failed to load more projects:', err);
+      showNotification?.('Failed to load more projects', 'error');
     } finally {
       setIsLoadingMore(false);
     }
@@ -255,6 +254,7 @@ const ProjectsMainPage: FC = () => {
     user?.id,
     getSupportedProjects,
     getFollowedProjects,
+    showNotification,
   ]);
 
   // Get current projects based on active tab
@@ -283,19 +283,8 @@ const ProjectsMainPage: FC = () => {
     };
   };
 
-  useEffect(() => {
-    if (error) {
-      setSnackbar({ open: true, message: error, severity: 'error' });
-    }
-  }, [error]);
-
   const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar((prev) => ({ ...prev, open: false }));
-    clearError();
   };
 
   const handleCreateProject = useCallback(
@@ -303,25 +292,17 @@ const ProjectsMainPage: FC = () => {
       try {
         await createProject(data);
         setShowCreateModal(false);
-        setSnackbar({
-          open: true,
-          message: 'Created project!',
-          severity: 'success',
-        });
+        showNotification?.('Created project!', 'success');
         // Refresh my projects tab
         if (user) {
           await getProjectsByUserId(user.id, filters);
         }
       } catch (err) {
-        setSnackbar({
-          open: true,
-          message: 'Failed to create project',
-          severity: 'error',
-        });
+        showNotification?.('Failed to create project', 'error');
         console.error('Failed to create project:', err);
       }
     },
-    [createProject, user, getProjectsByUserId, filters]
+    [createProject, user, getProjectsByUserId, filters, showNotification]
   );
 
   const handleViewProjectDetails = async (
@@ -335,6 +316,7 @@ const ProjectsMainPage: FC = () => {
       await getProjectById(project.id, false, forceRefresh, activeTab);
     } catch (err) {
       console.error('Failed to load project details:', err);
+      showNotification?.('Failed to load project details', 'error');
     }
   };
 
@@ -343,39 +325,26 @@ const ProjectsMainPage: FC = () => {
       await deleteProject(projectId);
       setSelectedProjectId(null);
       setSelectedProject(null);
-      setSnackbar({
-        open: true,
-        message: 'Deleted project!',
-        severity: 'success',
-      });
       // Refresh all relevant tabs
       if (user) {
         await getProjectsByUserId(user.id, filters);
       }
     } catch (err) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to delete project',
-        severity: 'error',
-      });
       console.error('Failed to delete project:', err);
+      throw err;
     }
   };
 
   const handleCreateComment = async (projectId: string, comment: string) => {
+    if (!comment.trim()) {
+      showNotification?.('Comment cannot be empty', 'warning');
+      return;
+    }
     try {
       await createComment(projectId, comment);
-      setSnackbar({
-        open: true,
-        message: 'Comment added!',
-        severity: 'success',
-      });
+      showNotification?.('Comment added!', 'success');
     } catch (err) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to add comment',
-        severity: 'error',
-      });
+      showNotification?.('Failed to add comment', 'error');
       console.error('Failed to create comment:', err);
     }
   };
@@ -395,6 +364,7 @@ const ProjectsMainPage: FC = () => {
         }
       } catch (err) {
         console.error('Failed to toggle support:', err);
+        throw err;
       }
     },
     [supportProject, unsupportProject]
@@ -410,6 +380,7 @@ const ProjectsMainPage: FC = () => {
         }
       } catch (err) {
         console.error('Failed to toggle follow:', err);
+        throw err;
       }
     },
     [followProject, unfollowProject]
@@ -421,21 +392,13 @@ const ProjectsMainPage: FC = () => {
         await requestCollaboration(projectId, data);
         setShowCollaborationModal(false);
         setSelectedProject(null);
-        setSnackbar({
-          open: true,
-          message: 'Collaboration request sent!',
-          severity: 'success',
-        });
+        showNotification?.('Collaboration request sent!', 'success');
       } catch (err) {
-        setSnackbar({
-          open: true,
-          message: 'Failed to send collaboration request',
-          severity: 'error',
-        });
+        showNotification?.('Failed to send collaboration request', 'error');
         console.error('Failed to send collaboration request:', err);
       }
     },
-    [requestCollaboration]
+    [requestCollaboration, showNotification]
   );
 
   const handleLoadSeekingOptions = useCallback(
@@ -444,9 +407,10 @@ const ProjectsMainPage: FC = () => {
         await getSeekingOptions(projectId);
       } catch (err) {
         console.error('Failed to load seeking options:', err);
+        showNotification?.('Failed to load seeking options', 'error');
       }
     },
-    [getSeekingOptions]
+    [getSeekingOptions, showNotification]
   );
 
   const isProjectOwner = useCallback(
@@ -811,24 +775,6 @@ const ProjectsMainPage: FC = () => {
             />
           )}
         </AnimatePresence>
-
-        {/* Snackbar for messages */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={6000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          TransitionComponent={Fade}
-        >
-          <Alert
-            onClose={handleCloseSnackbar}
-            severity={snackbar.severity}
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
       </motion.div>
     </Container>
   );

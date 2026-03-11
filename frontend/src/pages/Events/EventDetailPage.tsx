@@ -33,6 +33,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { EventService } from '@/services/EventService';
 import { useEventContext } from '@/contexts/eventContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 type Event = {
   id: string;
@@ -60,6 +61,7 @@ const EventDetailPage: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const { fetchById, fetchEvents, fetchUpcoming } = useEventContext();
+  const { showNotification } = useNotification();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -92,11 +94,12 @@ const EventDetailPage: FC = () => {
       await EventService.remove(event.id);
       await fetchEvents();
       await fetchUpcoming();
+      showNotification?.('Event deleted successfully', 'success');
       navigate('/events', {
         state: { message: 'Event deleted successfully' },
       });
     } catch {
-      alert('Failed to delete event. Please try again.');
+      showNotification?.('Failed to delete event. Please try again.', 'error');
     }
   };
 
@@ -113,8 +116,7 @@ const EventDetailPage: FC = () => {
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      // You can add a toast notification here
-      alert('Event link copied to clipboard!');
+      showNotification?.('Event link copied to clipboard!', 'success');
     }
   };
 

@@ -21,8 +21,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  Snackbar,
-  Alert,
   Grid,
   Container,
   Tabs,
@@ -34,6 +32,7 @@ import {
 import { useTheme } from '@mui/material/styles';
 import RecentNews from '@/components/News/RecentNews';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { useNotification } from '@/contexts/NotificationContext';
 
 const FEED_FETCH_DEDUP_TTL_MS = 1500;
 const inFlightFeedFetches = new Set<string>();
@@ -122,17 +121,13 @@ const FeedPage: FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { getFeed, getCommunityFeed, loading, error, clearError } = usePosts();
+  const { showNotification } = useNotification();
   const { user } = useAuth();
   const { profile, refreshProfile } = useProfile();
   const [openForm, setOpenForm] = useState(false);
   const [activeTab, setActiveTab] = useState<
     'all' | 'following' | 'subcommunity' | 'mySubcomm'
   >('all');
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
-  );
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isTabLoading, setIsTabLoading] = useState(false);
   const [tabCache, setTabCache] = useState<Record<FeedTab, FeedTabState>>(
@@ -239,11 +234,9 @@ const FeedPage: FC = () => {
 
   const showSnackbar = useCallback(
     (message: string, severity: 'success' | 'error') => {
-      setSnackbarMessage(message);
-      setSnackbarSeverity(severity);
-      setSnackbarOpen(true);
+      showNotification?.(message, severity);
     },
-    []
+    [showNotification]
   );
 
   useEffect(() => {
@@ -630,21 +623,6 @@ const FeedPage: FC = () => {
           </Grid>
         </Grid>
       </Container>
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-          elevation={6}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </>
   );
 };

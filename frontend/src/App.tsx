@@ -7,6 +7,7 @@ import {
 } from 'react-router-dom';
 import { Box } from '@mui/material';
 import { ErrorBoundary } from 'react-error-boundary';
+import { SnackbarProvider } from 'notistack';
 import Loader from '@/utils/loader';
 import {
   GlobalErrorFallback,
@@ -651,11 +652,16 @@ function App() {
       onError={handleGlobalBoundaryError}
     >
       <ThemeProvider>
-        <AuthProvider>
-          <AuthenticatedProviders>
-            <Layout />
-          </AuthenticatedProviders>
-        </AuthProvider>
+        <SnackbarProvider
+          maxSnack={4}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <AuthProvider>
+            <AuthenticatedProviders>
+              <Layout />
+            </AuthenticatedProviders>
+          </AuthProvider>
+        </SnackbarProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

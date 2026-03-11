@@ -56,6 +56,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { isAxiosError } from '@/services/api';
 import { getErrorMessage } from '@/utils/errorHandler';
 import Loader from '@/utils/loader';
+import { useNotification } from '@/contexts/NotificationContext';
 // import RecentTransactions from '@/components/Profile/RecentTransaction';
 
 const Profile: FC = () => {
@@ -94,6 +95,7 @@ const Profile: FC = () => {
 
   const { userId } = useParams<{ userId?: string }>();
   const { user: currentUser } = useAuth();
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -169,6 +171,7 @@ const Profile: FC = () => {
         if (isMounted) {
           setApiError('Failed to load profile');
           console.error('Profile loading error:', err);
+          showNotification?.('Failed to load profile', 'error');
         }
       } finally {
         if (isMounted) setProfileLoading(false);
@@ -190,6 +193,7 @@ const Profile: FC = () => {
     fetchFlairs,
     fetchMemberSettings,
     fetchNotificationPreference,
+    showNotification,
   ]);
 
   useEffect(() => {
@@ -212,18 +216,25 @@ const Profile: FC = () => {
       if (memberExperience?.follow?.isFollowing) {
         await unfollowMember(targetId);
         setSuccess('Unfollowed successfully');
+        showNotification?.('Unfollowed successfully', 'success');
       } else {
         await followMember(targetId);
         setSuccess('Now following member');
+        showNotification?.('Now following member', 'success');
       }
     } catch (err) {
-      setError(getErrorMessage(err));
+      const msg = getErrorMessage(err);
+      setError(msg);
+      showNotification?.(msg, 'error');
     }
   };
 
   const handleCreateFlair = async () => {
     const targetId = currentUser?.id;
-    if (!targetId || !newFlairLabel.trim()) return;
+    if (!targetId || !newFlairLabel.trim()) {
+      showNotification?.('Flair label is required', 'warning');
+      return;
+    }
     try {
       await createFlair(targetId, {
         label: newFlairLabel.trim(),
@@ -233,8 +244,11 @@ const Profile: FC = () => {
       });
       setNewFlairLabel('');
       setSuccess('Flair created');
+      showNotification?.('Flair created', 'success');
     } catch (err) {
-      setError(getErrorMessage(err));
+      const msg = getErrorMessage(err);
+      setError(msg);
+      showNotification?.(msg, 'error');
     }
   };
 
@@ -242,17 +256,24 @@ const Profile: FC = () => {
     try {
       await activateFlair(flairId);
       setSuccess('Flair activated');
+      showNotification?.('Flair activated', 'success');
     } catch (err) {
-      setError(getErrorMessage(err));
+      const msg = getErrorMessage(err);
+      setError(msg);
+      showNotification?.(msg, 'error');
     }
   };
 
   const handleDeleteFlair = async (flairId: string) => {
+    showNotification?.('Confirm deletion to remove this flair', 'warning');
     try {
       await deleteFlair(flairId);
       setSuccess('Flair deleted');
+      showNotification?.('Flair deleted', 'success');
     } catch (err) {
-      setError(getErrorMessage(err));
+      const msg = getErrorMessage(err);
+      setError(msg);
+      showNotification?.(msg, 'error');
     }
   };
 
@@ -284,8 +305,11 @@ const Profile: FC = () => {
         await fetchMemberExperience(targetId);
       }
       setSuccess('Preferences updated');
+      showNotification?.('Preferences updated', 'success');
     } catch (err) {
-      setError(getErrorMessage(err));
+      const msg = getErrorMessage(err);
+      setError(msg);
+      showNotification?.(msg, 'error');
     }
   };
 
@@ -295,8 +319,11 @@ const Profile: FC = () => {
     try {
       await updateNotificationPreference({ digestFrequency });
       setSuccess('Digest frequency updated');
+      showNotification?.('Digest frequency updated', 'success');
     } catch (err) {
-      setError(getErrorMessage(err));
+      const msg = getErrorMessage(err);
+      setError(msg);
+      showNotification?.(msg, 'error');
     }
   };
 

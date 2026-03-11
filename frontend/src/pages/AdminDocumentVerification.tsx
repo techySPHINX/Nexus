@@ -17,8 +17,6 @@ import {
   TextField,
   CircularProgress,
   Link,
-  Snackbar,
-  Alert,
   Chip,
   Card,
   CardContent,
@@ -130,13 +128,6 @@ const DocumentVerification: FC = () => {
   const [activeDoc, setActiveDoc] = useState<PendingDocument | null>(null);
   const [adminComments, setAdminComments] = useState('');
   const [rejectReason, setRejectReason] = useState('');
-
-  // UI states
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity?: 'success' | 'error';
-  }>({ open: false, message: '', severity: 'success' });
 
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -254,23 +245,18 @@ const DocumentVerification: FC = () => {
           documentIds: idsToApprove,
           adminComments,
         });
-        setSnackbar({
-          open: true,
-          message: `${idsToApprove.length} document(s) approved successfully`,
-          severity: 'success',
-        });
+        showNotification?.(
+          `${idsToApprove.length} document(s) approved successfully`,
+          'success'
+        );
         setApproveDialogOpen(false);
         setSelectedDocs([]);
         fetchData();
       } catch (err: unknown) {
-        setSnackbar({
-          open: true,
-          message: getErrorMessage(err) || 'Approval failed',
-          severity: 'error',
-        });
+        showNotification?.(getErrorMessage(err) || 'Approval failed', 'error');
       }
     },
-    [activeDoc, adminComments, selectedDocs, fetchData]
+    [activeDoc, selectedDocs, adminComments, showNotification, fetchData]
   );
 
   const confirmReject = useCallback(
@@ -280,11 +266,7 @@ const DocumentVerification: FC = () => {
 
       if (idsToReject.length === 0) return;
       if (!rejectReason.trim() && !activeDoc) {
-        setSnackbar({
-          open: true,
-          message: 'Rejection reason is required',
-          severity: 'error',
-        });
+        showNotification?.('Rejection reason is required', 'error');
         return;
       }
 
@@ -294,23 +276,25 @@ const DocumentVerification: FC = () => {
           reason: rejectReason,
           adminComments,
         });
-        setSnackbar({
-          open: true,
-          message: `${idsToReject.length} document(s) rejected`,
-          severity: 'success',
-        });
+        showNotification?.(
+          `${idsToReject.length} document(s) rejected`,
+          'success'
+        );
         setRejectDialogOpen(false);
         setSelectedDocs([]);
         fetchData();
       } catch (err: unknown) {
-        setSnackbar({
-          open: true,
-          message: getErrorMessage(err) || 'Rejection failed',
-          severity: 'error',
-        });
+        showNotification?.(getErrorMessage(err) || 'Rejection failed', 'error');
       }
     },
-    [activeDoc, rejectReason, adminComments, selectedDocs, fetchData]
+    [
+      activeDoc,
+      selectedDocs,
+      rejectReason,
+      showNotification,
+      adminComments,
+      fetchData,
+    ]
   );
 
   const handleDownload = useCallback(
@@ -1253,21 +1237,6 @@ const DocumentVerification: FC = () => {
           )}
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
 
       {/* Floating Action Button for Mobile */}
       {isMobile && batchMode && selectedDocs.length > 0 && (

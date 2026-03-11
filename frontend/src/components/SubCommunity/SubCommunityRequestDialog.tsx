@@ -12,11 +12,10 @@ import {
   InputLabel,
   Select,
   Typography,
-  Snackbar,
-  Alert,
 } from '@mui/material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface SubCommunityRequestDialogProps {
   open: boolean;
@@ -41,25 +40,14 @@ export const SubCommunityRequestDialog: FC<SubCommunityRequestDialogProps> = ({
   onClose,
 }) => {
   const { createSubCommunityRequest } = useSubCommunity();
+  const { showNotification } = useNotification();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [rules, setRules] = useState('');
   const [type, setType] = useState('OTHER');
   const [loading, setLoading] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
-  );
-
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
+    showNotification?.(message, severity);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -220,22 +208,6 @@ export const SubCommunityRequestDialog: FC<SubCommunityRequestDialogProps> = ({
           </DialogActions>
         </form>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-          variant="filled"
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </>
   );
 };

@@ -16,7 +16,6 @@ import {
   Menu,
   MenuItem,
   CircularProgress,
-  Snackbar,
   Alert,
   Pagination,
   Tabs,
@@ -85,6 +84,7 @@ const Notification: FC = () => {
     updateNotificationPreference,
     loading,
     error,
+    showNotification,
   } = useNotification();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -96,11 +96,6 @@ const Notification: FC = () => {
     mode: 'single' | 'all' | null;
     notificationId?: string;
   }>({ open: false, mode: null });
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
-  );
   const [currentTab, setCurrentTab] = useState<NotificationCategory | 'ALL'>(
     'ALL'
   );
@@ -139,26 +134,18 @@ const Notification: FC = () => {
         currentTab,
         isUnreadRoute
       );
-      setSnackbarMessage('Notifications refreshed');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showNotification?.('Notifications refreshed', 'success');
     } catch {
-      setSnackbarMessage('Failed to refresh notifications');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      showNotification?.('Failed to refresh notifications', 'error');
     }
   };
 
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead();
-      setSnackbarMessage('All notifications marked as read');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showNotification?.('All notifications marked as read', 'success');
     } catch {
-      setSnackbarMessage('Failed to mark all notifications as read');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      showNotification?.('Failed to mark all notifications as read', 'error');
     }
   };
 
@@ -177,9 +164,7 @@ const Notification: FC = () => {
     }
 
     if (notificationsToMark.length === 0) {
-      setSnackbarMessage('No unread notifications to mark as read');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showNotification?.('No unread notifications to mark as read', 'info');
       return;
     }
 
@@ -187,24 +172,19 @@ const Notification: FC = () => {
       await markAsRead(id);
     }
 
-    setSnackbarMessage(
-      `All ${currentTab === 'ALL' ? '' : currentTab.toLowerCase()} notifications marked as read`
+    showNotification?.(
+      `All ${currentTab === 'ALL' ? '' : currentTab.toLowerCase()} notifications marked as read`,
+      'success'
     );
-    setSnackbarSeverity('success');
-    setSnackbarOpen(true);
   };
 
   const handleMarkAsRead = async (id: string) => {
     try {
       await markAsRead(id);
       closeMenu();
-      setSnackbarMessage('Notification marked as read');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showNotification?.('Notification marked as read', 'success');
     } catch {
-      setSnackbarMessage('Failed to mark notification as read');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      showNotification?.('Failed to mark notification as read', 'error');
     }
   };
 
@@ -212,23 +192,27 @@ const Notification: FC = () => {
     try {
       await markAsUnread(id);
       closeMenu();
-      setSnackbarMessage('Notification marked as unread');
-      setSnackbarSeverity('success');
-      setSnackbarOpen(true);
+      showNotification?.('Notification marked as unread', 'success');
     } catch {
-      setSnackbarMessage('Failed to mark notification as unread');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      showNotification?.('Failed to mark notification as unread', 'error');
     }
   };
 
   const handleDeleteNotification = async (id: string): Promise<void> => {
     closeMenu();
+    showNotification?.(
+      'Confirm deletion to remove this notification',
+      'warning'
+    );
     setConfirmDialog({ open: true, mode: 'single', notificationId: id });
   };
 
   const handleDeleteAllClick = () => {
     closeMenu();
+    showNotification?.(
+      'Confirm deletion to remove all read notifications',
+      'warning'
+    );
     setConfirmDialog({ open: true, mode: 'all' });
   };
 
@@ -236,18 +220,13 @@ const Notification: FC = () => {
     try {
       if (confirmDialog.mode === 'single' && confirmDialog.notificationId) {
         await deleteNotification(confirmDialog.notificationId);
-        setSnackbarMessage('Notification deleted');
-        setSnackbarSeverity('success');
+        showNotification?.('Notification deleted', 'success');
       } else if (confirmDialog.mode === 'all') {
         await deleteReadNotifications();
-        setSnackbarMessage('All read notifications deleted');
-        setSnackbarSeverity('success');
+        showNotification?.('All read notifications deleted', 'success');
       }
-      setSnackbarOpen(true);
     } catch {
-      setSnackbarMessage('Failed to delete notifications');
-      setSnackbarSeverity('error');
-      setSnackbarOpen(true);
+      showNotification?.('Failed to delete notifications', 'error');
     } finally {
       setConfirmDialog({ open: false, mode: null });
     }
@@ -818,24 +797,6 @@ const Notification: FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: isMobile ? 'center' : 'right',
-        }}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

@@ -21,6 +21,7 @@ import {
   Error,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { useAppToast } from '@/hooks/useAppToast';
 
 interface DocumentUpload {
   file: File;
@@ -54,6 +55,7 @@ const DocumentUploadComponent: FC<DocumentUploadComponentProps> = ({
 }) => {
   const [documents, setDocuments] = useState<DocumentUpload[]>([]);
   const [dragOver, setDragOver] = useState(false);
+  const { toast } = useAppToast();
 
   const documentTypes =
     userRole === 'STUDENT' ? STUDENT_DOCUMENT_TYPES : ALUMNI_DOCUMENT_TYPES;
@@ -64,7 +66,7 @@ const DocumentUploadComponent: FC<DocumentUploadComponentProps> = ({
     Array.from(files).forEach((file) => {
       if (file.size > 10 * 1024 * 1024) {
         // 10MB limit
-        alert(`File ${file.name} is too large. Maximum size is 10MB.`);
+        toast(`File ${file.name} is too large. Maximum size is 10MB.`, 'error');
         return;
       }
 
@@ -73,8 +75,9 @@ const DocumentUploadComponent: FC<DocumentUploadComponentProps> = ({
           file.type
         )
       ) {
-        alert(
-          `File ${file.name} has an unsupported format. Please use PDF, JPG, or PNG.`
+        toast(
+          `File ${file.name} has an unsupported format. Please use PDF, JPG, or PNG.`,
+          'error'
         );
         return;
       }
@@ -98,7 +101,7 @@ const DocumentUploadComponent: FC<DocumentUploadComponentProps> = ({
   const uploadDocument = async (index: number) => {
     const document = documents[index];
     if (!document.documentType) {
-      alert('Please select a document type first.');
+      toast('Please select a document type first.', 'error');
       return;
     }
 
@@ -127,6 +130,7 @@ const DocumentUploadComponent: FC<DocumentUploadComponentProps> = ({
           i === index ? { ...doc, status: 'success', url: result.url } : doc
         )
       );
+      toast('File uploaded successfully', 'success');
 
       // Parent will be updated via useEffect
     } catch {
@@ -137,6 +141,7 @@ const DocumentUploadComponent: FC<DocumentUploadComponentProps> = ({
             : doc
         )
       );
+      toast('Upload failed. Please try again.', 'error');
     }
   };
 

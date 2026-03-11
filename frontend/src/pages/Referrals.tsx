@@ -40,6 +40,7 @@ import {
   RestartAlt,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotification } from '../contexts/NotificationContext';
 import { motion } from 'framer-motion';
 import { apiService } from '../services/api';
 
@@ -98,6 +99,7 @@ interface CreateApplicationDto {
 }
 
 const Referrals: FC = () => {
+  const { showNotification } = useNotification();
   // Extract a human-friendly message from unknown errors
   const getErrorMessage = (err: unknown): string => {
     if (typeof err === 'string') return err;
@@ -213,6 +215,16 @@ const Referrals: FC = () => {
   };
 
   // Fetch referrals and applications
+  const fetchApplications = useCallback(async () => {
+    try {
+      const response = await apiService.referrals.getMyApplications();
+      setApplications(response.data || []);
+    } catch (err) {
+      console.error('Error fetching applications:', err);
+      showNotification?.('Failed to fetch applications', 'error');
+    }
+  }, [showNotification]);
+
   useEffect(() => {
     if (!user) {
       setError('User not authenticated');
@@ -263,21 +275,16 @@ const Referrals: FC = () => {
     return () => {
       socketRef.current?.disconnect();
     };
-  }, [fetchReferrals, user]);
-
-  const fetchApplications = async () => {
-    try {
-      const response = await apiService.referrals.getMyApplications();
-      setApplications(response.data || []);
-    } catch (err) {
-      console.error('Error fetching applications:', err);
-    }
-  };
+  }, [fetchApplications, fetchReferrals, user]);
 
   const handleCreateReferral = async () => {
     try {
       if (!createForm.deadline) {
         setError('Please provide an application deadline.');
+        showNotification?.(
+          'Please provide an application deadline.',
+          'warning'
+        );
         return;
       }
 
@@ -310,6 +317,10 @@ const Referrals: FC = () => {
       setSuccessMessage(
         'Referral created successfully! It will be reviewed by an admin.'
       );
+      showNotification?.(
+        'Referral created successfully! It will be reviewed by an admin.',
+        'success'
+      );
       setCreateDialogOpen(false);
       setCreateForm({
         company: '',
@@ -327,6 +338,10 @@ const Referrals: FC = () => {
       console.error('Error creating referral:', err);
       setError(getErrorMessage(err) || 'Failed to create referral');
       setSuccessMessage(null);
+      showNotification?.(
+        getErrorMessage(err) || 'Failed to create referral',
+        'error'
+      );
     }
   };
 
@@ -334,6 +349,10 @@ const Referrals: FC = () => {
     try {
       if (!applicationForm.resumeLink || !applicationForm.resumeLink.trim()) {
         setError('Please provide a resume link (Google Drive or URL).');
+        showNotification?.(
+          'Please provide a resume link (Google Drive or URL).',
+          'warning'
+        );
         return;
       }
 
@@ -363,11 +382,19 @@ const Referrals: FC = () => {
             setError(
               'Please provide a valid URL (must start with http:// or https://)'
             );
+            showNotification?.(
+              'Please provide a valid URL (must start with http:// or https://)',
+              'warning'
+            );
             return;
           }
         } else {
           setError(
             'Please provide a valid URL (must start with http:// or https://)'
+          );
+          showNotification?.(
+            'Please provide a valid URL (must start with http:// or https://)',
+            'warning'
           );
           return;
         }
@@ -382,6 +409,7 @@ const Referrals: FC = () => {
       // Success - show message and reset
       setError(null);
       setSuccessMessage('Application submitted successfully!');
+      showNotification?.('Application submitted successfully!', 'success');
       setApplyDialogOpen(false);
       setApplicationForm({
         referralId: '',
@@ -396,21 +424,31 @@ const Referrals: FC = () => {
       console.error('Error applying:', err);
       setError(getErrorMessage(err) || 'Failed to submit application');
       setSuccessMessage(null);
+      showNotification?.(
+        getErrorMessage(err) || 'Failed to submit application',
+        'error'
+      );
     }
   };
 
   const handleDeleteReferral = async (referralId: string) => {
+    showNotification?.('Confirm deletion to remove this referral.', 'warning');
     if (window.confirm('Are you sure you want to delete this referral?')) {
       try {
         await apiService.referrals.delete(referralId);
         setError(null);
         setSuccessMessage('Referral deleted successfully.');
+        showNotification?.('Referral deleted successfully.', 'success');
         fetchReferrals();
         setTimeout(() => setSuccessMessage(null), 5000);
       } catch (err: unknown) {
         console.error('Error deleting referral:', err);
         setError(getErrorMessage(err) || 'Failed to delete referral');
         setSuccessMessage(null);
+        showNotification?.(
+          getErrorMessage(err) || 'Failed to delete referral',
+          'error'
+        );
       }
     }
   };
@@ -1398,7 +1436,9 @@ const Referrals: FC = () => {
                           size="small"
                           variant="outlined"
                           startIcon={<Description />}
-                          onClick={() => alert(app.coverLetter)}
+                          onClick={() =>
+                            showNotification?.(app.coverLetter || '', 'info')
+                          }
                         >
                           View Cover Letter
                         </Button>

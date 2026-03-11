@@ -16,7 +16,6 @@ import {
   Container,
   Tabs,
   Tab,
-  Snackbar,
 } from '@mui/material';
 import { CheckCircle, Cancel, Visibility, Article } from '@mui/icons-material';
 import { useSubCommunity } from '../../contexts/SubCommunityContext';
@@ -26,6 +25,7 @@ import {
   RequestStatus,
 } from '../../types/subCommunity';
 import { getErrorMessage } from '@/utils/errorHandler';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -79,6 +79,7 @@ const getStatusChip = (status: RequestStatus) => {
 
 export const AdminSubCommunityModerationPage: FC = () => {
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const {
     creationRequests,
     getAllSubCommunityRequests,
@@ -94,11 +95,6 @@ export const AdminSubCommunityModerationPage: FC = () => {
     useState<SubCommunityCreationRequest | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error',
-  });
 
   // Load requests only when component mounts and tab changes
   useEffect(() => {
@@ -108,11 +104,7 @@ export const AdminSubCommunityModerationPage: FC = () => {
   }, [getAllSubCommunityRequests, user?.role]);
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
+    showNotification?.(message, severity);
     clearError();
   };
 
@@ -246,22 +238,6 @@ export const AdminSubCommunityModerationPage: FC = () => {
         onReject={handleReject}
         loading={actionLoading !== null} // Convert to boolean
       />
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 };

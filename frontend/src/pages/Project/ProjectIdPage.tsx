@@ -181,22 +181,14 @@ const ProjectIdPage: FC = () => {
 
   const onSupport = async (isSupported: boolean) => {
     if (!projectById) return;
-    try {
-      if (isSupported) await unsupportProject(projectById.id);
-      else await supportProject(projectById.id);
-    } catch {
-      // context handles errors
-    }
+    if (isSupported) await unsupportProject(projectById.id);
+    else await supportProject(projectById.id);
   };
 
   const onFollow = async (isFollowing: boolean) => {
     if (!projectById) return;
-    try {
-      if (isFollowing) await unfollowProject(projectById.id);
-      else await followProject(projectById.id);
-    } catch (e) {
-      console.error(e);
-    }
+    if (isFollowing) await unfollowProject(projectById.id);
+    else await followProject(projectById.id);
   };
 
   const isSupported = !!projectById?.supporters?.some(

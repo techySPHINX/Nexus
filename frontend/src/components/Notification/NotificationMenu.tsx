@@ -9,7 +9,6 @@ import {
   List,
   ListItemText,
   Divider,
-  Snackbar,
   ClickAwayListener,
   Paper,
   Avatar,
@@ -56,15 +55,15 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
   handleClose,
   open = false,
 }) => {
-  const { markAsRead, markAllAsRead, refreshUnreadCounts, unreadCount } =
-    useNotification();
+  const {
+    markAsRead,
+    markAllAsRead,
+    refreshUnreadCounts,
+    unreadCount,
+    showNotification,
+  } = useNotification();
   const navigate = useNavigate();
   const { isDark } = useTheme();
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
-  );
   const [unreadNotifications, setUnreadNotifications] = useState<
     Notification[]
   >([]);
@@ -89,11 +88,11 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
   const handleNotificationClick = async (id: string) => {
     try {
       await markAsRead(id);
-      showSnackbar('Notification marked as read', 'success');
+      showNotification?.('Notification marked as read', 'success');
       await refreshUnreadCounts();
       await loadUnreadPreview();
     } catch (err: unknown) {
-      showSnackbar('Failed to mark notification as read', 'error');
+      showNotification?.('Failed to mark notification as read', 'error');
       if (isAxiosError(err)) {
         console.error(err.response?.data?.message || 'Axios error');
       } else if (err instanceof Error) {
@@ -107,11 +106,11 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead();
-      showSnackbar('All notifications marked as read', 'success');
+      showNotification?.('All notifications marked as read', 'success');
       await refreshUnreadCounts();
       await loadUnreadPreview();
     } catch (err: unknown) {
-      showSnackbar('Failed to mark all as read', 'error');
+      showNotification?.('Failed to mark all as read', 'error');
       if (isAxiosError(err)) {
         console.error(err.response?.data?.message || 'Axios error');
       } else if (err instanceof Error) {
@@ -120,12 +119,6 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
         console.error('Unknown error');
       }
     }
-  };
-
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
   };
 
   const isAnchored = Boolean(anchorEl);
@@ -427,22 +420,6 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
           </ClickAwayListener>
         )
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-          elevation={6}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </>
   );
 };

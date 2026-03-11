@@ -25,17 +25,17 @@ const UserProjectPage: FC = () => {
   }, [userId, getProjectsByUserId]);
 
   const onSupport = useCallback(
-    (projectId: string, isSupported: boolean) => {
-      if (isSupported) unsupportProject(projectId);
-      else supportProject(projectId);
+    async (projectId: string, isSupported: boolean) => {
+      if (isSupported) await unsupportProject(projectId);
+      else await supportProject(projectId);
     },
     [supportProject, unsupportProject]
   );
 
   const onFollow = useCallback(
-    (projectId: string, isFollowing: boolean) => {
-      if (isFollowing) unfollowProject(projectId);
-      else followProject(projectId);
+    async (projectId: string, isFollowing: boolean) => {
+      if (isFollowing) await unfollowProject(projectId);
+      else await followProject(projectId);
     },
     [followProject, unfollowProject]
   );

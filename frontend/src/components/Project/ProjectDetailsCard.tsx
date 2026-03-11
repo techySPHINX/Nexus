@@ -1464,7 +1464,6 @@ const ProjectDetailModal: FC<ProjectDetailModalProps> = ({
             onUpdated={() => {
               onRefresh();
               setUpdateModalOpen(false);
-              showNotification?.('Project updated successfully', 'success');
             }}
           />
         </Suspense>

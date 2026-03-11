@@ -8,8 +8,6 @@ import {
   Chip,
   Tabs,
   Tab,
-  Snackbar,
-  Alert,
   Container,
   Paper,
 } from '@mui/material';
@@ -23,6 +21,7 @@ import {
   CreateStartupSummary,
 } from '@/types/StartupType';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotification } from '@/contexts/NotificationContext';
 import CreateStartupModal from '@/components/Startup/CreateStartupModal';
 import EditStartupModal from '@/components/Startup/EditStartupModal';
 import StartupDetailComponent from '@/components/Startup/StartupDetail';
@@ -72,6 +71,7 @@ const StartupMainPage: FC = () => {
   } = useStartup();
 
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [selectedStartup, setSelectedStartup] = useState<StartupDetail | null>(
     null
   );
@@ -82,11 +82,6 @@ const StartupMainPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [pageSize] = useState<number>(12);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity?: 'success' | 'error' | 'info' | 'warning';
-  } | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [startupToEdit, setStartupToEdit] = useState<StartupSummary | null>(
@@ -101,26 +96,17 @@ const StartupMainPage: FC = () => {
     try {
       if (startup.isFollowing) {
         await unfollowStartup(startup.id);
-        setSnackbar({
-          open: true,
-          message: `Unfollowed ${startup.name}`,
-          severity: 'success',
-        });
+        showNotification?.(`Unfollowed ${startup.name}`, 'success');
       } else {
         await followStartup(startup.id);
-        setSnackbar({
-          open: true,
-          message: `Following ${startup.name}`,
-          severity: 'success',
-        });
+        showNotification?.(`Following ${startup.name}`, 'success');
       }
     } catch (err) {
       console.error('Failed to toggle follow', err);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update follow status: ' + getErrorMessage(err),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to update follow status: ' + getErrorMessage(err),
+        'error'
+      );
     }
   };
 
@@ -134,6 +120,7 @@ const StartupMainPage: FC = () => {
       setComments(res?.comments || []);
     } catch (err) {
       console.error('Failed to load details or comments', err);
+      showNotification?.('Failed to load startup details', 'error');
       // fallback to summary
       setSelectedStartup(startup as StartupDetail);
     } finally {
@@ -148,7 +135,11 @@ const StartupMainPage: FC = () => {
   };
 
   const submitComment = async () => {
-    if (!selectedStartup || !comment.trim()) return;
+    if (!selectedStartup) return;
+    if (!comment.trim()) {
+      showNotification?.('Comment cannot be empty', 'warning');
+      return;
+    }
 
     const text = comment.trim();
     const tempId = `tmp-${Date.now()}`;
@@ -177,19 +168,14 @@ const StartupMainPage: FC = () => {
       setComments((prev) =>
         prev.map((c) => (c.id === tempId ? { ...created, pending: false } : c))
       );
-      setSnackbar({
-        open: true,
-        message: 'Comment posted successfully',
-        severity: 'success',
-      });
+      showNotification?.('Comment posted successfully', 'success');
     } catch (error) {
       // Remove temp comment on error
       setComments((prev) => prev.filter((c) => c.id !== tempId));
-      setSnackbar({
-        open: true,
-        message: 'Failed to post comment: ' + getErrorMessage(error),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to post comment: ' + getErrorMessage(error),
+        'error'
+      );
     }
   };
 
@@ -197,17 +183,12 @@ const StartupMainPage: FC = () => {
     try {
       await createStartup(data);
       setCreateModalOpen(false);
-      setSnackbar({
-        open: true,
-        message: 'Startup created successfully!',
-        severity: 'success',
-      });
+      showNotification?.('Startup created successfully!', 'success');
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to create startup: ' + getErrorMessage(error),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to create startup: ' + getErrorMessage(error),
+        'error'
+      );
     }
   };
 
@@ -218,34 +199,28 @@ const StartupMainPage: FC = () => {
       await updateStartup(startupToEdit.id, data);
       setEditModalOpen(false);
       setStartupToEdit(null);
-      setSnackbar({
-        open: true,
-        message: 'Startup updated successfully!',
-        severity: 'success',
-      });
+      showNotification?.('Startup updated successfully!', 'success');
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to update startup: ' + getErrorMessage(error),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to update startup: ' + getErrorMessage(error),
+        'error'
+      );
     }
   };
 
   const handleDeleteStartup = async (startupId: string) => {
+    showNotification?.(
+      'Delete requested. Confirm in the dialog to continue.',
+      'warning'
+    );
     try {
       await deleteStartup(startupId);
-      setSnackbar({
-        open: true,
-        message: 'Startup deleted successfully!',
-        severity: 'success',
-      });
+      showNotification?.('Startup deleted successfully!', 'success');
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to delete startup: ' + getErrorMessage(error),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to delete startup: ' + getErrorMessage(error),
+        'error'
+      );
     }
   };
 
@@ -285,6 +260,7 @@ const StartupMainPage: FC = () => {
       } catch (e) {
         // ignore
         console.error('Failed loading startups', e);
+        showNotification?.('Failed loading startups', 'error');
       }
     }, 350);
     return () => clearTimeout(timer);
@@ -296,6 +272,7 @@ const StartupMainPage: FC = () => {
     getFollowedStartups,
     getMyStartups,
     pageSize,
+    showNotification,
   ]);
 
   // when switching tabs, we can optionally scroll to top of list
@@ -367,18 +344,13 @@ const StartupMainPage: FC = () => {
                 onClick={async () => {
                   try {
                     await refreshTab(activeTab);
-                    setSnackbar({
-                      open: true,
-                      message: 'Refreshed',
-                      severity: 'success',
-                    });
+                    showNotification?.('Refreshed', 'success');
                   } catch (err) {
                     console.error('Refresh failed', err);
-                    setSnackbar({
-                      open: true,
-                      message: 'Failed to refresh: ' + getErrorMessage(err),
-                      severity: 'error',
-                    });
+                    showNotification?.(
+                      'Failed to refresh: ' + getErrorMessage(err),
+                      'error'
+                    );
                   }
                 }}
                 disabled={currentList.loading}
@@ -592,24 +564,6 @@ const StartupMainPage: FC = () => {
             startup={startupToEdit}
             loading={false}
           />
-        )}
-
-        {/* Snackbar for notifications */}
-        {snackbar && (
-          <Snackbar
-            open={snackbar.open}
-            autoHideDuration={4000}
-            onClose={() => setSnackbar(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          >
-            <Alert
-              onClose={() => setSnackbar(null)}
-              severity={snackbar.severity || 'success'}
-              sx={{ width: '100%' }}
-            >
-              {snackbar.message}
-            </Alert>
-          </Snackbar>
         )}
       </motion.div>
     </Container>

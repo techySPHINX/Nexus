@@ -27,7 +27,6 @@ import {
   IconButton,
   Tooltip,
   TablePagination,
-  Snackbar,
   Link,
   Dialog,
   DialogTitle,
@@ -58,19 +57,16 @@ import type {
 } from '../types/connections';
 import { apiService } from '../services/api';
 import { LocationOn, School, Email } from '@mui/icons-material';
+import { useNotification } from '@/contexts/NotificationContext';
 
 const Connections: FC = () => {
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info';
-  }>({ open: false, message: '', severity: 'success' });
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -170,7 +166,7 @@ const Connections: FC = () => {
     message: string,
     severity: 'success' | 'error' | 'info' = 'success'
   ) => {
-    setSnackbar({ open: true, message, severity });
+    showNotification?.(message, severity);
   };
 
   const handleAcceptRequest = async (requestId: string) => {
@@ -1122,22 +1118,6 @@ const Connections: FC = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </Paper>
-
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
 
       {/* Confirmation Dialog */}
       <Dialog

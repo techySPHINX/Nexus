@@ -21,8 +21,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   Tooltip,
 } from '@mui/material';
 import ReportButton from '../Report/ReportButton';
@@ -93,11 +91,6 @@ export const Post: FC<PostProps> = ({
   const [imagePreview, setImagePreview] = useState<string | undefined>(
     post?.imageUrl
   );
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error',
-  });
   const [expandedContent, setExpandedContent] = useState(false);
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -134,18 +127,10 @@ export const Post: FC<PostProps> = ({
 
       setIsEditing(false);
       if (onUpdate) onUpdate();
-      setSnackbar({
-        open: true,
-        message: 'Post updated successfully',
-        severity: 'success',
-      });
+      showNotification?.('Post updated successfully', 'success');
     } catch (error) {
       console.error('Error updating post:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update post',
-        severity: 'error',
-      });
+      showNotification?.('Failed to update post', 'error');
     }
   };
 
@@ -153,18 +138,10 @@ export const Post: FC<PostProps> = ({
     try {
       await deletePostContext(post.id);
       if (onDelete) onDelete();
-      setSnackbar({
-        open: true,
-        message: 'Post deleted successfully',
-        severity: 'success',
-      });
+      showNotification?.('Post deleted successfully', 'success');
     } catch (error) {
       console.error('Error deleting post:', error);
-      setSnackbar({
-        open: true,
-        message: 'Failed to delete post',
-        severity: 'error',
-      });
+      showNotification?.('Failed to delete post', 'error');
     } finally {
       setConfirmOpen(false);
     }
@@ -190,11 +167,7 @@ export const Post: FC<PostProps> = ({
       // Revert UI state on error
       setIsLiked(!isLiked);
       setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
-      setSnackbar({
-        open: true,
-        message: 'Failed to process vote',
-        severity: 'error',
-      });
+      showNotification?.('Failed to process vote', 'error');
     }
   };
 
@@ -218,19 +191,11 @@ export const Post: FC<PostProps> = ({
       approvePost(post.id)
         .then(() => {
           if (onDelete) onDelete();
-          setSnackbar({
-            open: true,
-            message: 'Post approved successfully',
-            severity: 'success',
-          });
+          showNotification?.('Post approved successfully', 'success');
         })
         .catch((error) => {
           console.error('Error approving post:', error);
-          setSnackbar({
-            open: true,
-            message: 'Failed to approve post',
-            severity: 'error',
-          });
+          showNotification?.('Failed to approve post', 'error');
         });
     }
   };
@@ -243,25 +208,13 @@ export const Post: FC<PostProps> = ({
       rejectPost(post.id)
         .then(() => {
           if (onDelete) onDelete();
-          setSnackbar({
-            open: true,
-            message: 'Post rejected successfully',
-            severity: 'success',
-          });
+          showNotification?.('Post rejected successfully', 'success');
         })
         .catch((error) => {
           console.error('Error rejecting post:', error);
-          setSnackbar({
-            open: true,
-            message: 'Failed to reject post',
-            severity: 'error',
-          });
+          showNotification?.('Failed to reject post', 'error');
         });
     }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
   };
 
   const handleConfirmDelete = () => {
@@ -771,16 +724,6 @@ export const Post: FC<PostProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-      >
-        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Card>
   );
 };

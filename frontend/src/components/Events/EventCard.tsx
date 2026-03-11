@@ -26,6 +26,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EventService } from '@/services/EventService';
 import { useEventContext } from '@/contexts/eventContext';
 import type { Event } from '@/types/Event';
+import { useNotification } from '@/contexts/NotificationContext';
 
 interface EventCardProps {
   event: Event;
@@ -36,6 +37,7 @@ const EventCard: FC<EventCardProps> = ({ event, variant = 'grid' }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const { fetchEvents, fetchUpcoming } = useEventContext();
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -55,9 +57,10 @@ const EventCard: FC<EventCardProps> = ({ event, variant = 'grid' }) => {
       await EventService.remove(event.id);
       await fetchEvents();
       await fetchUpcoming();
+      showNotification?.('Event deleted successfully', 'success');
     } catch (err) {
       console.error('Failed to delete event:', err);
-      alert('Failed to delete event. Please try again.');
+      showNotification?.('Failed to delete event. Please try again.', 'error');
     }
   };
 
@@ -75,8 +78,7 @@ const EventCard: FC<EventCardProps> = ({ event, variant = 'grid' }) => {
       navigator.clipboard.writeText(
         `${window.location.origin}/events/${event.id}`
       );
-      // Add toast notification here
-      alert('Event link copied to clipboard!');
+      showNotification?.('Event link copied to clipboard!', 'success');
     }
   };
 

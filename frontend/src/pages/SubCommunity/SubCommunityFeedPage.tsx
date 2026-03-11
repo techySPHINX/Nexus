@@ -23,8 +23,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  Snackbar,
-  Alert,
   Chip,
   Avatar,
   Container,
@@ -134,6 +132,7 @@ const SubCommunityEditBox = lazy(() =>
   })
 );
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
+import { useNotification } from '@/contexts/NotificationContext';
 
 // Tab panel component
 function TabPanel(props: {
@@ -185,14 +184,10 @@ const SubCommunityFeedPage: FC = () => {
   } = usePosts();
   const { user } = useAuth();
   const theme = useTheme();
+  const { showNotification } = useNotification();
 
   const [activeTab, setActiveTab] = useState(0);
   const [openForm, setOpenForm] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
-  );
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [isMember, setIsMember] = useState(false);
   const [userRole, setUserRole] = useState<SubCommunityRole | null>(null);
@@ -207,11 +202,9 @@ const SubCommunityFeedPage: FC = () => {
 
   const showSnackbar = useCallback(
     (message: string, severity: 'success' | 'error') => {
-      setSnackbarMessage(message);
-      setSnackbarSeverity(severity);
-      setSnackbarOpen(true);
+      showNotification?.(message, severity);
     },
-    []
+    [showNotification]
   );
 
   const isAdmin = user?.role === Role.ADMIN;
@@ -1446,27 +1439,6 @@ const SubCommunityFeedPage: FC = () => {
           </MenuItem>
         )}
       </Menu>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity={snackbarSeverity}
-          sx={{
-            width: '100%',
-            borderRadius: 2,
-            fontWeight: 500,
-          }}
-          elevation={6}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
-
       <Suspense
         fallback={
           <Dialog

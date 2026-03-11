@@ -39,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import api from '../../services/api';
 
 interface Document {
@@ -59,6 +60,7 @@ interface Document {
 
 const AdminDocumentVerification: FC = () => {
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -124,10 +126,13 @@ const AdminDocumentVerification: FC = () => {
         dialogType === 'approve'
           ? 'Document approved successfully!'
           : 'Document rejected successfully!';
-      alert(successMsg);
+      showNotification?.(successMsg, 'success');
     } catch (error) {
       console.error(`Failed to ${dialogType} document:`, error);
-      alert(`Failed to ${dialogType} document. Please try again.`);
+      showNotification?.(
+        `Failed to ${dialogType} document. Please try again.`,
+        'error'
+      );
     }
   };
 

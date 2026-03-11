@@ -13,8 +13,8 @@ import {
 import { Notification, NotificationType } from '@/types/notification';
 import { NotificationPreference } from '@/types/profileType';
 import { FC, createContext, useContext, useState, useCallback } from 'react';
-import { Snackbar, Alert } from '@mui/material';
 import { useAuth } from './AuthContext';
+import { useAppToast } from '@/hooks/useAppToast';
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -115,24 +115,16 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
     useState<NotificationPreference | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Lightweight snackbar helper state
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [notifMessage, setNotifMessage] = useState('');
-  const [notifSeverity, setNotifSeverity] = useState<
-    'success' | 'error' | 'info' | 'warning'
-  >('info');
+  const { toast } = useAppToast();
 
   const showNotification = useCallback(
     (
       message: string,
       severity: 'success' | 'error' | 'info' | 'warning' = 'info'
     ) => {
-      setNotifMessage(message);
-      setNotifSeverity(severity);
-      setNotifOpen(true);
+      toast(message, severity);
     },
-    []
+    [toast]
   );
 
   // Update the fetchAllUnreadCounts function
@@ -470,23 +462,6 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
       }}
     >
       {children}
-
-      {/* Lightweight snackbar for quick messages across the app */}
-      <Snackbar
-        open={notifOpen}
-        autoHideDuration={4000}
-        onClose={() => setNotifOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setNotifOpen(false)}
-          severity={notifSeverity}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {notifMessage}
-        </Alert>
-      </Snackbar>
     </NotificationContext.Provider>
   );
 };
