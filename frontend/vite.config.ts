@@ -6,6 +6,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
   // Load all .env variables
   const env = loadEnv(mode, process.cwd(), '');
   const isAnalyze = mode === 'analyze';
+  const CI_CHUNK_BUDGET_KB = 800;
 
   return {
     preview: {
@@ -41,7 +42,7 @@ export default defineConfig(({ mode }: ConfigEnv) => {
     },
     build: {
       outDir: 'dist',
-      sourcemap: mode === 'development',
+      sourcemap: mode === 'development' || mode === 'analyze',
       minify: 'terser',
       // Use a modern target so esbuild / Vite can emit top-level await
       target: 'es2017',
@@ -49,7 +50,8 @@ export default defineConfig(({ mode }: ConfigEnv) => {
       esbuild: {
         target: 'es2017',
       },
-      chunkSizeWarningLimit: 1200,
+      // Soft budget warning in local builds; hard budget is enforced by scripts/check-bundle-budget.mjs in CI.
+      chunkSizeWarningLimit: CI_CHUNK_BUDGET_KB,
       terserOptions: {
         compress: {
           drop_console: mode === 'production',

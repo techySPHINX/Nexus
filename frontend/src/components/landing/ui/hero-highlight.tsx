@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useMotionValue, motion, useMotionTemplate } from 'motion/react';
+import { useMotionValue, motion, useMotionTemplate } from 'framer-motion';
 import React from 'react';
 
 export const HeroHighlight = ({

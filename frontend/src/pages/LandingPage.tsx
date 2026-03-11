@@ -1,5 +1,4 @@
 import { FC, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
-// import * as THREE from 'three';
 import ThemeToggle from '@/components/ThemeToggle';
 import NotificationIndicator from '@/components/Notification/NotificationIndicator';
 import { useTheme } from '@/contexts/ThemeContext';

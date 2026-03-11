@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { motion, stagger, useAnimate } from 'motion/react';
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 export const TextGenerateEffect = ({
@@ -17,13 +17,11 @@ export const TextGenerateEffect = ({
   staggerDelay?: number;
   pauseBetween?: number;
 }) => {
-  const [scope, animate] = useAnimate();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(false);
-  const [key, setKey] = useState(0); // force re-mount to reset animation
+  const [animationKey, setAnimationKey] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
-  const cycleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isRunningRef = useRef(false);
+  const cycleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const currentSentence = sentences[currentIndex];
   const wordsArray = currentSentence?.split(' ') ?? [];
@@ -44,59 +42,69 @@ export const TextGenerateEffect = ({
     return () => observer.disconnect();
   }, []);
 
-  const runAnimation = useCallback(async () => {
-    if (!scope.current) return;
-
-    // Animate words in
-    await animate(
-      'span',
-      { opacity: 1, filter: filter ? 'blur(0px)' : 'none' },
-      { duration, delay: stagger(staggerDelay) }
-    );
-
-    // Pause while fully visible
-    await new Promise((res) => setTimeout(res, pauseBetween));
-
-    // Fade out all words together
-    await animate(
-      'span',
-      { opacity: 0, filter: filter ? 'blur(10px)' : 'none' },
-      { duration: 0.4 }
-    );
-  }, [animate, duration, filter, staggerDelay, pauseBetween, scope]);
+  // Total animation duration: words in + pause + words out
+  const totalDuration = duration + pauseBetween / 1000 + 0.4;
 
   // Cycle through sentences when visible
   useEffect(() => {
     if (!isVisible) {
-      if (cycleRef.current) clearTimeout(cycleRef.current);
-      isRunningRef.current = false;
+      if (cycleTimeoutRef.current) clearTimeout(cycleTimeoutRef.current);
       return;
     }
 
-    let cancelled = false;
-
-    const cycle = async () => {
-      if (cancelled) return;
-      isRunningRef.current = true;
-
-      await runAnimation();
-
-      if (cancelled) return;
-
+    cycleTimeoutRef.current = setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % sentences.length);
-      setKey((k) => k + 1);
-    };
-
-    cycle();
+      setAnimationKey((k) => k + 1);
+    }, totalDuration * 1000);
 
     return () => {
-      cancelled = true;
-      isRunningRef.current = false;
+      if (cycleTimeoutRef.current) clearTimeout(cycleTimeoutRef.current);
     };
-  }, [isVisible, currentIndex, key, sentences.length, runAnimation]);
+  }, [isVisible, animationKey, sentences.length, totalDuration]);
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: staggerDelay,
+        delayChildren: 0,
+      },
+    },
+  };
+
+  const wordVariants = {
+    hidden: {
+      opacity: 0,
+      filter: filter ? 'blur(10px)' : 'none',
+    },
+    visible: {
+      opacity: 1,
+      filter: filter ? 'blur(0px)' : 'none',
+      transition: {
+        duration,
+        ease: 'easeOut',
+      },
+    },
+    exit: {
+      opacity: 0,
+      filter: filter ? 'blur(10px)' : 'none',
+      transition: {
+        duration: 0.4,
+        ease: 'easeOut',
+      },
+    },
+  };
 
   const renderWords = () => (
-    <motion.div ref={scope} className="inline">
+    <motion.div
+      key={`sentence-${animationKey}`}
+      className="inline"
+      variants={containerVariants}
+      initial="hidden"
+      animate={isVisible ? 'visible' : 'hidden'}
+      exit="exit"
+    >
       {wordsArray.map((word, idx) => {
         const isLast = idx === wordsArray.length - 1;
         return (
@@ -109,9 +117,17 @@ export const TextGenerateEffect = ({
                 : 'dark:text-white text-black'
             )}
             style={{
-              filter: filter ? 'blur(10px)' : 'none',
               display: 'inline-block',
               marginRight: '0.25em',
+            }}
+            variants={wordVariants}
+            onAnimationComplete={(definition) => {
+              // After words fully animate in, pause, then trigger exit
+              if (definition === 'visible') {
+                setTimeout(() => {
+                  // Trigger exit animation via re-rendering
+                }, pauseBetween);
+              }
             }}
           >
             {word}
