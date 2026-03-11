@@ -21,7 +21,7 @@ export class PrismaService
 
   constructor(private configService: ConfigService) {
     const connectionLimit = parseInt(
-      process.env.DATABASE_CONNECTION_LIMIT || '10',
+      process.env.DATABASE_CONNECTION_LIMIT || '2',
       10,
     );
     const poolTimeout = parseInt(process.env.DATABASE_POOL_TIMEOUT || '30', 10);
@@ -58,35 +58,77 @@ export class PrismaService
     );
   }
 
+  private getRetryConfig() {
+    const maxRetries = parseInt(
+      this.configService.get<string>('DATABASE_CONNECT_RETRIES') || '5',
+      10,
+    );
+    const retryDelayMs = parseInt(
+      this.configService.get<string>('DATABASE_CONNECT_RETRY_DELAY_MS') ||
+        '1500',
+      10,
+    );
+
+    return {
+      maxRetries: Math.max(1, maxRetries),
+      retryDelayMs: Math.max(250, retryDelayMs),
+    };
+  }
+
+  private async wait(ms: number) {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
   /**
    * Connects to the database when the module is initialized.
    */
   async onModuleInit() {
-    try {
-      await this.$connect();
-      this.logger.log('✅ Database connected successfully');
+    const { maxRetries, retryDelayMs } = this.getRetryConfig();
 
-      // Set up event listeners for production monitoring
-      this.$on('query' as never, (e: any) => {
-        if (process.env.NODE_ENV === 'development') {
-          this.logger.debug(`Query: ${e.query} | Duration: ${e.duration}ms`);
-        }
-      });
-
-      this.$on('error' as never, (e: any) => {
-        this.logger.error('Database error:', e);
-      });
-
-      this.$on('warn' as never, (e: any) => {
-        this.logger.warn('Database warning:', e);
-      });
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.$connect();
 
       // Test database connectivity with a simple query
-      await this.$queryRaw`SELECT 1`;
-      this.logger.log('✅ Database connectivity test passed');
-    } catch (error) {
-      this.logger.error('❌ Failed to connect to database:', error.message);
-      throw error;
+        await this.$queryRaw`SELECT 1`;
+
+      this.logger.log('✅ Database connected successfully');
+        this.logger.log('✅ Database connectivity test passed');
+
+      // Set up event listeners for production monitoring
+        this.$on('query' as never, (e: any) => {
+          if (process.env.NODE_ENV === 'development') {
+            this.logger.debug(`Query: ${e.query} | Duration: ${e.duration}ms`);
+          }
+        });
+
+        this.$on('error' as never, (e: any) => {
+          this.logger.error('Database error:', e);
+        });
+
+        this.$on('warn' as never, (e: any) => {
+          this.logger.warn('Database warning:', e);
+        });
+
+        return;
+      } catch (error) {
+        const errorMessage =
+          error?.message || 'Unknown database connection error';
+
+        if (attempt === maxRetries) {
+          this.logger.error(
+            `❌ Failed to connect to database after ${maxRetries} attempts: ${errorMessage}`,
+          );
+          throw error;
+        }
+
+        const backoffMs = retryDelayMs * attempt;
+        this.logger.warn(
+          `⚠️ Database connection attempt ${attempt}/${maxRetries} failed: ${errorMessage}. Retrying in ${backoffMs}ms...`,
+        );
+
+        await this.wait(backoffMs);
+      }
     }
   }
 

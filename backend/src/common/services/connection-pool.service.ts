@@ -60,10 +60,10 @@ export class ConnectionPoolService implements OnModuleInit, OnModuleDestroy {
 
       this.logger.log('Database Connection Pool Configuration:');
       this.logger.log(
-        `  - Connection Limit: ${params.get('connection_limit') || 'default (10)'}`,
+        `  - Connection Limit: ${params.get('connection_limit') || 'default (2)'}`,
       );
       this.logger.log(
-        `  - Pool Timeout: ${params.get('pool_timeout') || 'default (10s)'}`,
+        `  - Pool Timeout: ${params.get('pool_timeout') || 'default (30s)'}`,
       );
       this.logger.log(
         `  - Connect Timeout: ${params.get('connect_timeout') || 'default (5s)'}`,
