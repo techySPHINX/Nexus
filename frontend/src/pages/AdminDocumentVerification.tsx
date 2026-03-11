@@ -331,7 +331,7 @@ const DocumentVerification: FC = () => {
         document.body.appendChild(link);
         link.click();
         link.remove();
-      } catch (err) {
+      } catch {
         const fallbackLink = document.createElement('a');
         fallbackLink.href = doc.documentUrl;
         fallbackLink.target = '_blank';
