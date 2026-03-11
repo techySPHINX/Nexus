@@ -21,7 +21,7 @@ export class PrismaService
 
   constructor(private configService: ConfigService) {
     const connectionLimit = parseInt(
-      process.env.DATABASE_CONNECTION_LIMIT || '2',
+      process.env.DATABASE_CONNECTION_LIMIT || '10',
       10,
     );
     const poolTimeout = parseInt(process.env.DATABASE_POOL_TIMEOUT || '30', 10);
