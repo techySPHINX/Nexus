@@ -276,20 +276,27 @@ export const NotificationProvider: FC<{ children: React.ReactNode }> = ({
   ) => {
     try {
       const response = await addNotificationService(notification);
-      setNotifications((prev) => [response.data, ...prev]);
+      const createdNotification = response.notification;
 
-      // Update unread counts
-      setUnreadCount((prev) => prev + 1);
-      const category =
-        Object.entries(categoryToTypes).find(([, types]) =>
-          types.includes(notification.type as NotificationType)
-        )?.[0] || 'ALL';
+      if (!createdNotification) {
+        return;
+      }
 
-      setUnreadCountsByCategory((prev) => ({
-        ...prev,
-        [category]: (prev[category] || 0) + 1,
-        ALL: prev.ALL + 1,
-      }));
+      setNotifications((prev) => [createdNotification, ...prev]);
+
+      if (!createdNotification.read) {
+        setUnreadCount((prev) => prev + 1);
+        const category =
+          Object.entries(categoryToTypes).find(([, types]) =>
+            types.includes(createdNotification.type as NotificationType)
+          )?.[0] || 'ALL';
+
+        setUnreadCountsByCategory((prev) => ({
+          ...prev,
+          [category]: (prev[category] || 0) + 1,
+          ALL: prev.ALL + 1,
+        }));
+      }
     } catch (err) {
       console.error('Failed to add notification:', err);
     }
