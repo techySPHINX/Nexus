@@ -8,6 +8,11 @@ import {
   MaxLength,
 } from 'class-validator';
 
+export enum FrontendErrorBoundaryScope {
+  GLOBAL = 'global',
+  ROUTE = 'route',
+}
+
 export class FrontendErrorReportDto {
   @ApiProperty({
     description: 'High-level error message from frontend runtime',
@@ -36,10 +41,10 @@ export class FrontendErrorReportDto {
 
   @ApiProperty({
     description: 'Boundary scope that captured the exception',
-    enum: ['global', 'route'],
+    enum: FrontendErrorBoundaryScope,
   })
-  @IsEnum(['global', 'route'])
-  boundary: 'global' | 'route';
+  @IsEnum(FrontendErrorBoundaryScope)
+  boundary: FrontendErrorBoundaryScope;
 
   @ApiProperty({
     description: 'Browser route at the time of the error',
