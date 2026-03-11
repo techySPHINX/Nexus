@@ -1,6 +1,19 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios';
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
+type RefreshAuthResponse = {
+  accessToken?: string;
+};
+
+let apiAccessToken: string | null = null;
+
+export const setApiAccessToken = (token: string | null) => {
+  apiAccessToken = token;
+};
+
+export const getApiAccessToken = () => apiAccessToken;
+export const isAxiosError = axios.isAxiosError;
+
 // Create axios instance with default config
 const api: AxiosInstance = axios.create({
   baseURL: BACKEND_URL,
@@ -47,8 +60,7 @@ function cacheGetOrFetch<T>(
 }
 
 // Request interceptor: attach CSRF token for mutating requests (Issue #162).
-// JWT is no longer read from localStorage; the httpOnly access_token cookie
-// is sent automatically by the browser via withCredentials (Issue #164).
+// Auth token is managed in-memory through setApiAccessToken (Issue #175).
 api.interceptors.request.use(
   (config) => {
     // Read the CSRF token from the non-httpOnly cookie set by the backend.
@@ -57,9 +69,16 @@ api.interceptors.request.use(
       .find((row) => row.startsWith('csrf-token='))
       ?.split('=')[1];
 
-    if (csrfToken) {
+    config.headers = config.headers ?? {};
+
+    if (apiAccessToken) {
+      config.headers.Authorization = `Bearer ${apiAccessToken}`;
+    }
+
+    if (csrfToken && config.headers) {
       config.headers['X-CSRF-Token'] = csrfToken;
     }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -68,13 +87,66 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response: AxiosResponse) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Cookie-based auth: clear stale local state and redirect to login.
-      // The httpOnly cookie will be cleared server-side on /auth/logout.
+  async (error: AxiosError) => {
+    const originalRequest = error.config as
+      | (AxiosError['config'] & { _retry?: boolean })
+      | undefined;
+    const status = error.response?.status;
+    const requestUrl = originalRequest?.url ?? 'unknown';
+    const method = (originalRequest?.method ?? 'get').toUpperCase();
+
+    if (status === 401) {
+      console.error('[Auth] 401 response intercepted', {
+        method,
+        url: requestUrl,
+        status,
+        data: error.response?.data,
+      });
+
+      const isAuthEndpoint =
+        requestUrl.includes('/auth/login') ||
+        requestUrl.includes('/auth/register') ||
+        requestUrl.includes('/auth/refresh') ||
+        requestUrl.includes('/auth/logout');
+
+      // For auth endpoints, let callers handle 401 (avoid forced redirects
+      // during session restore/login/logout flows).
+      if (isAuthEndpoint) {
+        return Promise.reject(error);
+      }
+
+      if (originalRequest && !originalRequest._retry) {
+        originalRequest._retry = true;
+        try {
+          const refreshResponse = await axios.post<RefreshAuthResponse>(
+            '/auth/refresh',
+            {},
+            {
+              baseURL: BACKEND_URL,
+              withCredentials: true,
+              headers: {
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+
+          if (refreshResponse.data?.accessToken) {
+            setApiAccessToken(refreshResponse.data.accessToken);
+          }
+
+          return api(originalRequest);
+        } catch (refreshError) {
+          console.error('[Auth] Refresh attempt failed', refreshError);
+        }
+      }
+
       localStorage.removeItem('user');
-      window.location.href = '/login';
+      setApiAccessToken(null);
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
+
     return Promise.reject(error);
   }
 );

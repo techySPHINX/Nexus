@@ -550,21 +550,6 @@ const ProjectsMainPage: FC = () => {
           </Box>
         </motion.div>
 
-        {user && (
-          <motion.div
-            initial={{ y: 8, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.2, delay: 0.05 }}
-          >
-            <Box sx={{ display: 'flex', gap: 1, mb: 2.5, flexWrap: 'wrap' }}>
-              <Chip label={`${counts.all ?? 0} Total`} size="small" />
-              <Chip label={`${counts.owned ?? 0} Owned`} size="small" />
-              <Chip label={`${counts.supported ?? 0} Supported`} size="small" />
-              <Chip label={`${counts.following ?? 0} Following`} size="small" />
-            </Box>
-          </motion.div>
-        )}
-
         {/* Filter Section */}
         <motion.div
           initial={{ y: 8, opacity: 0 }}

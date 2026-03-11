@@ -1,9 +1,9 @@
-import axios from 'axios';
+import api from './api';
 
 const gamificationService = {
   getLeaderboard: async (period = 'all', limit = 10) => {
     console.log('Fetching leaderboard for period:', period, 'limit:', limit);
-    const resp = await axios.get(
+    const resp = await api.get(
       `/gamification/leaderboard?period=${period}&limit=${limit}`
     );
     return resp.data;
@@ -11,13 +11,13 @@ const gamificationService = {
 
   getUserPoints: async (userId: string) => {
     console.log('Fetching points for userId:', userId);
-    const resp = await axios.get(`/gamification/points/${userId}`);
+    const resp = await api.get(`/gamification/points/${userId}`);
     return resp.data;
   },
 
   getTransactions: async (userId: string, limit = 10) => {
     console.log('Fetching transactions for userId:', userId, 'limit:', limit);
-    const resp = await axios.get(
+    const resp = await api.get(
       `/gamification/transactions/${userId}?limit=${limit}`
     );
     return resp.data;
@@ -30,7 +30,7 @@ const gamificationService = {
     entityId?: string;
   }) => {
     console.log('Awarding points with payload:', payload);
-    const resp = await axios.post('/gamification/award', payload);
+    const resp = await api.post('/gamification/award', payload);
     return resp.data;
   },
 };

@@ -46,7 +46,6 @@ import {
   Refresh,
   Star,
 } from '@mui/icons-material';
-import axios from 'axios';
 import {
   Role,
   UserBadge,
@@ -54,6 +53,7 @@ import {
   Skill,
 } from '@/types/profileType';
 import { useNavigate, useParams } from 'react-router-dom';
+import { isAxiosError } from '@/services/api';
 import { getErrorMessage } from '@/utils/errorHandler';
 import Loader from '@/utils/loader';
 // import RecentTransactions from '@/components/Profile/RecentTransaction';
@@ -366,7 +366,7 @@ const Profile: FC = () => {
       await endorseSkill(skillId);
       setSuccess('Skill endorsed successfully!');
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
+      if (isAxiosError(err)) {
         setError(err.response?.data?.message || 'Failed to endorse skill');
       } else {
         setError('An unexpected error occurred');
@@ -380,7 +380,7 @@ const Profile: FC = () => {
       await removeEndorsement(endorsementId);
       setSuccess('Endorsement removed successfully!');
     } catch (err: unknown) {
-      if (axios.isAxiosError(err)) {
+      if (isAxiosError(err)) {
         setError(err.response?.data?.message || 'Failed to remove endorsement');
       } else {
         setError('An unexpected error occurred');
@@ -397,7 +397,7 @@ const Profile: FC = () => {
       setBadgeDialogOpen(false);
       setSelectedBadge('');
     } catch (error: unknown) {
-      if (axios.isAxiosError(error)) {
+      if (isAxiosError(error)) {
         setError(error.response?.data?.message || 'Failed to award badge');
       } else {
         setError('An unexpected error occurred');

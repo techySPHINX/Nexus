@@ -60,7 +60,7 @@ import {
   Close,
   Search,
 } from '@mui/icons-material';
-import axios from 'axios';
+import api from '@/services/api';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { useNotification } from '@/contexts/NotificationContext';
 
@@ -149,7 +149,7 @@ const DocumentVerification: FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/admin/pending-documents');
+      const res = await api.get('/admin/pending-documents');
       const docs: PendingDocument[] = Array.isArray(res.data)
         ? res.data
         : (res.data?.data ?? []);
@@ -250,7 +250,7 @@ const DocumentVerification: FC = () => {
       if (idsToApprove.length === 0) return;
 
       try {
-        await axios.post('/admin/approve-documents', {
+        await api.post('/admin/approve-documents', {
           documentIds: idsToApprove,
           adminComments,
         });
@@ -289,7 +289,7 @@ const DocumentVerification: FC = () => {
       }
 
       try {
-        await axios.post('/admin/reject-documents', {
+        await api.post('/admin/reject-documents', {
           documentIds: idsToReject,
           reason: rejectReason,
           adminComments,
@@ -316,10 +316,13 @@ const DocumentVerification: FC = () => {
   const handleDownload = useCallback(
     async (doc: PendingDocument) => {
       try {
-        const response = await axios.get(doc.documentUrl, {
-          responseType: 'blob',
-        });
-        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const response = await fetch(doc.documentUrl);
+        if (!response.ok) {
+          throw new Error('Failed to download file');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
         link.setAttribute('download', doc.fileName || `document-${doc.id}`);

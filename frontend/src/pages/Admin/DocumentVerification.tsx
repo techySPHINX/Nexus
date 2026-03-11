@@ -39,7 +39,7 @@ import {
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import axios from 'axios';
+import api from '../../services/api';
 
 interface Document {
   id: string;
@@ -81,7 +81,7 @@ const AdminDocumentVerification: FC = () => {
 
   const fetchPendingDocuments = async () => {
     try {
-      const response = await axios.get('/auth/admin/pending-documents');
+      const response = await api.get('/auth/admin/pending-documents');
       const docs = response.data;
       setDocuments(docs);
     } catch (error) {
@@ -109,7 +109,7 @@ const AdminDocumentVerification: FC = () => {
       };
       if (dialogType === 'reject') payload.reason = rejectionReason;
 
-      await axios.post(endpoint, payload);
+      await api.post(endpoint, payload);
 
       // Refresh the list
       await fetchPendingDocuments();
