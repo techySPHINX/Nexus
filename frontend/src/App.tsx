@@ -121,11 +121,23 @@ const LoadingSpinner: FC = () => (
   </Box>
 );
 
+const toError = (error: unknown): Error => {
+  if (error instanceof Error) {
+    return error;
+  }
+
+  const fallbackMessage =
+    typeof error === 'string' ? error : 'Unknown error from error boundary';
+  return new Error(fallbackMessage);
+};
+
 const reportBoundaryError =
-  (boundary: 'global' | 'route') => (error: Error, info: ErrorInfo) => {
+  (boundary: 'global' | 'route') => (error: unknown, info: ErrorInfo) => {
+    const normalizedError = toError(error);
+
     void reportFrontendError({
-      message: error.message,
-      stack: error.stack,
+      message: normalizedError.message,
+      stack: normalizedError.stack,
       componentStack: info.componentStack ?? undefined,
       boundary,
       route: window.location.pathname,
@@ -134,7 +146,7 @@ const reportBoundaryError =
     });
 
     // Sentry wiring can be added here when M1 is completed.
-    console.error(`[ErrorBoundary:${boundary}]`, error, info);
+    console.error(`[ErrorBoundary:${boundary}]`, normalizedError, info);
   };
 
 const handleGlobalBoundaryError = reportBoundaryError('global');
