@@ -26,7 +26,12 @@ vi.mock('axios', () => {
   };
 });
 
-import { fetchNotificationsService } from '@/services/notificationService';
+import {
+  fetchNotificationsService,
+  readNotificationService,
+  unreadNotificationService,
+  deleteNotificationService,
+} from '@/services/notificationService';
 
 describe('Notification domain behavior', () => {
   beforeEach(() => vi.clearAllMocks());
@@ -52,5 +57,40 @@ describe('Notification domain behavior', () => {
     );
     expect(result.unreadCount).toBe(4);
     expect(result.notification).toEqual([{ id: 'n1' }]);
+  });
+
+  it('includes type filter when category is not ALL', async () => {
+    mockApi.get
+      .mockResolvedValueOnce({
+        data: { notifications: [], pagination: { page: 1, total: 0 } },
+      } as never)
+      .mockResolvedValueOnce({ data: { unreadCount: 0 } } as never);
+
+    await fetchNotificationsService(2, 20, 'MESSAGE');
+
+    expect(mockApi.get).toHaveBeenNthCalledWith(1, '/notifications', {
+      params: { page: 2, limit: 20, type: 'MESSAGE' },
+    });
+  });
+
+  it('calls mark read/unread endpoints', async () => {
+    mockApi.patch.mockResolvedValue({ data: {} } as never);
+
+    await readNotificationService('n7');
+    await unreadNotificationService('n7');
+
+    expect(mockApi.patch).toHaveBeenNthCalledWith(1, '/notifications/n7/read');
+    expect(mockApi.patch).toHaveBeenNthCalledWith(
+      2,
+      '/notifications/n7/unread'
+    );
+  });
+
+  it('throws when delete notification returns non-2xx status', async () => {
+    mockApi.delete.mockResolvedValueOnce({ status: 500, data: {} } as never);
+
+    await expect(deleteNotificationService('n3')).rejects.toThrow(
+      'Failed to delete notification'
+    );
   });
 });

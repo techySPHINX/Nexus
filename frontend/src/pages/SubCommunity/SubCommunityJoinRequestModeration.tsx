@@ -18,7 +18,6 @@ import {
   Divider,
   IconButton,
   Tooltip,
-  Snackbar,
 } from '@mui/material';
 import {
   CheckCircle,
@@ -35,6 +34,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { JoinRequest, RequestStatus } from '../../types/subCommunity';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
+import { useNotification } from '@/contexts/NotificationContext';
 
 // Move getStatusChip function outside the component
 const getStatusChip = (status: string | RequestStatus) => {
@@ -76,6 +76,7 @@ export const SubCommunityJoinRequestModeration: FC = () => {
   const { id: subCommunityId } = useParams<{ id: string }>();
   //   const navigate = useNavigate();
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const {
     joinRequests,
     getPendingJoinRequests,
@@ -93,11 +94,6 @@ export const SubCommunityJoinRequestModeration: FC = () => {
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error',
-  });
 
   useEffect(() => {
     if (subCommunityId) {
@@ -107,11 +103,7 @@ export const SubCommunityJoinRequestModeration: FC = () => {
   }, [subCommunityId, getPendingJoinRequests, getSubCommunity]);
 
   const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    setSnackbar({ open: true, message, severity });
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar({ ...snackbar, open: false });
+    showNotification?.(message, severity);
     clearError();
   };
 
@@ -286,22 +278,6 @@ export const SubCommunityJoinRequestModeration: FC = () => {
         onRejectionReasonChange={setRejectionReason}
         formatDate={formatDate}
       />
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Container>
   );
 };

@@ -6,12 +6,9 @@ import {
   useEffect,
   ReactNode,
 } from 'react';
-import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
+import api, { isAxiosError, setApiAccessToken } from '@/services/api';
 type UserRole = 'STUDENT' | 'ALUM' | 'ADMIN' | 'MENTOR';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
-axios.defaults.baseURL = BACKEND_URL;
 
 export interface User {
   id: string;
@@ -110,18 +107,13 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Configure axios defaults — withCredentials ensures httpOnly cookies are
-  // sent automatically with every request (Issue #164).
-  axios.defaults.baseURL = BACKEND_URL;
-  axios.defaults.withCredentials = true;
-
   // On mount: attempt silent token refresh using the refresh_token httpOnly
   // cookie. This restores session state after a page reload without storing
   // the access token in localStorage (Issue #164).
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const response = await axios.post<AuthResponse>('/auth/refresh', {});
+        const response = await api.post<AuthResponse>('/auth/refresh', {});
         const { accessToken } = response.data;
         const decoded: DecodedToken = jwtDecode(accessToken);
         const restoredUser: User = {
@@ -137,10 +129,12 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
           profile: decoded.profile,
         };
         setToken(accessToken);
+        setApiAccessToken(accessToken);
         setUser(restoredUser);
       } catch {
         // No valid refresh cookie — user must log in again.
         setToken(null);
+        setApiAccessToken(null);
         setUser(null);
       } finally {
         setLoading(false);
@@ -152,7 +146,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await axios.post<AuthResponse>('/auth/login', {
+      const response = await api.post<AuthResponse>('/auth/login', {
         email,
         password,
       });
@@ -176,6 +170,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       // Store token in memory state only — httpOnly cookie is set by the
       // backend and sent automatically; no localStorage needed (Issue #164).
       setToken(accessToken);
+      setApiAccessToken(accessToken);
       setUser(loggedInUser);
       // Store non-sensitive user metadata for service-layer role checks.
       localStorage.setItem('user', JSON.stringify(loggedInUser));
@@ -183,7 +178,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       console.error('Login error:', error);
       let message = 'Login failed. Please try again.';
       if (
-        axios.isAxiosError(error) &&
+        isAxiosError(error) &&
         error.response &&
         error.response.data &&
         typeof error.response.data.message === 'string'
@@ -215,15 +210,12 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       if (graduationYear) payload.graduationYear = graduationYear;
       if (studentId) payload.studentId = studentId;
 
-      const response = await axios.post(
-        '/auth/register-with-documents',
-        payload
-      );
+      const response = await api.post('/auth/register-with-documents', payload);
       return response?.data?.message || 'Registration submitted successfully';
     } catch (error: unknown) {
       let message = 'Registration failed. Please try again.';
       if (
-        axios.isAxiosError(error) &&
+        isAxiosError(error) &&
         error.response &&
         error.response.data &&
         typeof error.response.data.message === 'string'
@@ -241,7 +233,7 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     role: string
   ) => {
     try {
-      const response = await axios.post<AuthResponse>('/auth/register', {
+      const response = await api.post<AuthResponse>('/auth/register', {
         email,
         password,
         name,
@@ -265,13 +257,14 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
       };
 
       setToken(accessToken);
+      setApiAccessToken(accessToken);
       setUser(registeredUser);
       localStorage.setItem('user', JSON.stringify(registeredUser));
     } catch (error: unknown) {
       console.error('Register error:', error);
       let message = 'Registration failed. Please try again.';
       if (
-        axios.isAxiosError(error) &&
+        isAxiosError(error) &&
         error.response &&
         error.response.data &&
         typeof error.response.data.message === 'string'
@@ -297,17 +290,16 @@ export const AuthProvider: FC<AuthProviderProps> = ({ children }) => {
     try {
       // Ask the backend to clear the httpOnly auth cookies server-side.
       const csrfToken = getCsrfToken();
-      await axios.post(
+      await api.post(
         '/auth/logout',
         {},
-        csrfToken
-          ? { headers: { 'X-CSRF-Token': csrfToken }, withCredentials: true }
-          : { withCredentials: true }
+        csrfToken ? { headers: { 'X-CSRF-Token': csrfToken } } : undefined
       );
     } catch {
       // Ignore errors — proceed with local state cleanup regardless.
     }
     setToken(null);
+    setApiAccessToken(null);
     setUser(null);
     localStorage.removeItem('user');
   };

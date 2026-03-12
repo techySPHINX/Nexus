@@ -9,20 +9,34 @@ import {
   List,
   ListItemText,
   Divider,
-  Snackbar,
   ClickAwayListener,
   Paper,
   Avatar,
   ListItemButton,
   ListItemAvatar,
 } from '@mui/material';
-import axios from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import CheckIcon from '@mui/icons-material/Check';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
-import { FC, Fragment, useState } from 'react';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import ChatBubbleIcon from '@mui/icons-material/ChatBubble';
+import MailIcon from '@mui/icons-material/Mail';
+import SettingsIcon from '@mui/icons-material/Settings';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import HandshakeIcon from '@mui/icons-material/Handshake';
+import InfoIcon from '@mui/icons-material/Info';
+import { FC, Fragment, useCallback, useEffect, useState } from 'react';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import {
+  Notification,
+  NotificationType,
+  getNotificationEmoji,
+} from '@/types/notification';
+import { isAxiosError } from '@/services/api';
+import { fetchNotificationsService } from '@/services/notificationService';
 
 interface NotificationMenuProps {
   // If provided, the menu will be rendered as a Popover anchored to this element.
@@ -44,32 +58,42 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
   const {
     markAsRead,
     markAllAsRead,
-    fetchNotifications,
+    refreshUnreadCounts,
     unreadCount,
-    notifications,
-    loading,
-    error,
+    showNotification,
   } = useNotification();
   const navigate = useNavigate();
   const { isDark } = useTheme();
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
-  );
+  const [unreadNotifications, setUnreadNotifications] = useState<
+    Notification[]
+  >([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const unreadNotifications = notifications.filter(
-    (notification) => !notification.read
-  );
+  const loadUnreadPreview = useCallback(async () => {
+    setLoadingPreview(true);
+    setPreviewError(null);
+    try {
+      const response = await fetchNotificationsService(1, 20, undefined, true);
+      setUnreadNotifications(
+        response.notification.filter((n: Notification) => !n.read)
+      );
+    } catch {
+      setPreviewError('Failed to load unread notifications');
+    } finally {
+      setLoadingPreview(false);
+    }
+  }, []);
 
   const handleNotificationClick = async (id: string) => {
     try {
       await markAsRead(id);
-      showSnackbar('Notification marked as read', 'success');
-      fetchNotifications();
+      showNotification?.('Notification marked as read', 'success');
+      await refreshUnreadCounts();
+      await loadUnreadPreview();
     } catch (err: unknown) {
-      showSnackbar('Failed to mark notification as read', 'error');
-      if (axios.isAxiosError(err)) {
+      showNotification?.('Failed to mark notification as read', 'error');
+      if (isAxiosError(err)) {
         console.error(err.response?.data?.message || 'Axios error');
       } else if (err instanceof Error) {
         console.error(err.message);
@@ -82,11 +106,12 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
   const handleMarkAllAsRead = async () => {
     try {
       await markAllAsRead();
-      showSnackbar('All notifications marked as read', 'success');
-      fetchNotifications();
+      showNotification?.('All notifications marked as read', 'success');
+      await refreshUnreadCounts();
+      await loadUnreadPreview();
     } catch (err: unknown) {
-      showSnackbar('Failed to mark all as read', 'error');
-      if (axios.isAxiosError(err)) {
+      showNotification?.('Failed to mark all as read', 'error');
+      if (isAxiosError(err)) {
         console.error(err.response?.data?.message || 'Axios error');
       } else if (err instanceof Error) {
         console.error(err.message);
@@ -96,14 +121,15 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
     }
   };
 
-  const showSnackbar = (message: string, severity: 'success' | 'error') => {
-    setSnackbarMessage(message);
-    setSnackbarSeverity(severity);
-    setSnackbarOpen(true);
-  };
-
   const isAnchored = Boolean(anchorEl);
   const isOpen = isAnchored ? Boolean(anchorEl) : open;
+
+  useEffect(() => {
+    if (isOpen) {
+      void loadUnreadPreview();
+      void refreshUnreadCounts();
+    }
+  }, [isOpen, loadUnreadPreview, refreshUnreadCounts]);
 
   // Inline-specific style adjustments per request
   // Use theme-aware palette values so dark mode looks correct
@@ -123,6 +149,31 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
     color: 'text.primary',
   };
   const secondaryTextSx = { fontSize: '0.85rem' };
+
+  const getNotificationIcon = (type: NotificationType) => {
+    switch (type) {
+      case NotificationType.CONNECTION_REQUEST:
+        return <PersonAddIcon fontSize="small" />;
+      case NotificationType.CONNECTION_ACCEPTED:
+        return <PeopleAltIcon fontSize="small" />;
+      case NotificationType.POST_VOTE:
+        return <FavoriteIcon fontSize="small" />;
+      case NotificationType.POST_COMMENT:
+        return <ChatBubbleIcon fontSize="small" />;
+      case NotificationType.MESSAGE:
+        return <MailIcon fontSize="small" />;
+      case NotificationType.SYSTEM:
+        return <SettingsIcon fontSize="small" />;
+      case NotificationType.EVENT:
+        return <EventAvailableIcon fontSize="small" />;
+      case NotificationType.REFERRAL_APPLICATION:
+      case NotificationType.REFERRAL_STATUS_UPDATE:
+      case NotificationType.REFERRAL_APPLICATION_STATUS_UPDATE:
+        return <HandshakeIcon fontSize="small" />;
+      default:
+        return <InfoIcon fontSize="small" />;
+    }
+  };
 
   const content = (
     <Box
@@ -195,13 +246,13 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
           },
         }}
       >
-        {loading ? (
+        {loadingPreview ? (
           <Box display="flex" justifyContent="center" p={3}>
             <CircularProgress size={24} />
           </Box>
-        ) : error ? (
+        ) : previewError ? (
           <Alert severity="error" sx={{ m: 2 }}>
-            {error}
+            {previewError}
           </Alert>
         ) : unreadNotifications.length === 0 ? (
           <Box
@@ -253,11 +304,11 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
                         height: 40,
                       }}
                     >
-                      <NotificationsNoneOutlinedIcon fontSize="small" />
+                      {getNotificationIcon(notification.type)}
                     </Avatar>
                   </ListItemAvatar>
                   <ListItemText
-                    primary={notification.message}
+                    primary={`${getNotificationEmoji(notification.type)} ${notification.message}`}
                     secondary={formatDistanceToNow(
                       new Date(notification.createdAt),
                       {
@@ -290,9 +341,23 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
           display: 'flex',
           borderTop: '1px solid',
           borderColor: 'divider',
-          height: '45px',
+          minHeight: '45px',
+          gap: 1,
         }}
       >
+        {unreadCount > 0 && (
+          <Button
+            fullWidth
+            size="small"
+            sx={{ color: 'primary.main' }}
+            onClick={() => {
+              navigate('/notifications/unread');
+              handleClose();
+            }}
+          >
+            View unread
+          </Button>
+        )}
         <Button
           fullWidth
           size="small"
@@ -355,22 +420,6 @@ const NotificationMenu: FC<NotificationMenuProps> = ({
           </ClickAwayListener>
         )
       )}
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbarOpen(false)}
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-          elevation={6}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </>
   );
 };

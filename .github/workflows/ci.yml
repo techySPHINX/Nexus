@@ -26,6 +26,8 @@ jobs:
       #   run: npm test
       - name: Build
         run: npm run build
+      - name: Bundle budget check
+        run: npm run check:bundle-budget
 
   backend:
     runs-on: ubuntu-latest

@@ -15,8 +15,14 @@ export type NewsItem = {
 
 export const newsService = {
   list: (opts?: { page?: number; limit?: number }) => {
-    const page = opts?.page || 1;
-    const limit = opts?.limit || 20;
+    const page =
+      typeof opts?.page === 'number' && opts.page > 0
+        ? Math.floor(opts.page)
+        : 1;
+    const limit =
+      typeof opts?.limit === 'number' && opts.limit > 0
+        ? Math.floor(opts.limit)
+        : 20;
     return api.get('/news', {
       params: { skip: (page - 1) * limit, take: limit },
     });

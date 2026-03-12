@@ -33,6 +33,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { EventService } from '@/services/EventService';
 import { useEventContext } from '@/contexts/eventContext';
+import { useNotification } from '@/contexts/NotificationContext';
 
 type Event = {
   id: string;
@@ -60,6 +61,7 @@ const EventDetailPage: FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const { fetchById, fetchEvents, fetchUpcoming } = useEventContext();
+  const { showNotification } = useNotification();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -92,11 +94,12 @@ const EventDetailPage: FC = () => {
       await EventService.remove(event.id);
       await fetchEvents();
       await fetchUpcoming();
+      showNotification?.('Event deleted successfully', 'success');
       navigate('/events', {
         state: { message: 'Event deleted successfully' },
       });
     } catch {
-      alert('Failed to delete event. Please try again.');
+      showNotification?.('Failed to delete event. Please try again.', 'error');
     }
   };
 
@@ -113,8 +116,7 @@ const EventDetailPage: FC = () => {
       }
     } else {
       navigator.clipboard.writeText(window.location.href);
-      // You can add a toast notification here
-      alert('Event link copied to clipboard!');
+      showNotification?.('Event link copied to clipboard!', 'success');
     }
   };
 
@@ -205,10 +207,10 @@ const EventDetailPage: FC = () => {
           {/* Main Content */}
           <Grid item xs={12} md={8}>
             <Card
+              variant="outlined"
               sx={{
-                borderRadius: 3,
+                borderRadius: 2.5,
                 overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.08)',
                 mb: 3,
               }}
             >
@@ -254,12 +256,11 @@ const EventDetailPage: FC = () => {
 
               <CardContent sx={{ p: 4 }}>
                 <Typography
-                  variant="h3"
+                  variant="h4"
                   component="h1"
                   sx={{
                     fontWeight: 700,
-                    mb: 3,
-                    fontSize: { xs: '2rem', md: '2.5rem' },
+                    mb: 2.5,
                     lineHeight: 1.2,
                   }}
                 >
@@ -326,7 +327,7 @@ const EventDetailPage: FC = () => {
                 {/* Description */}
                 {event.description && (
                   <Box sx={{ mb: 4 }}>
-                    <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                       About This Event
                     </Typography>
                     <Typography
@@ -334,7 +335,6 @@ const EventDetailPage: FC = () => {
                       sx={{
                         lineHeight: 1.8,
                         whiteSpace: 'pre-line',
-                        fontSize: '1.1rem',
                       }}
                     >
                       {event.description}
@@ -345,7 +345,7 @@ const EventDetailPage: FC = () => {
                 {/* Additional Info */}
                 {(event.capacity || event.author) && (
                   <Box sx={{ mb: 4 }}>
-                    <Typography variant="h5" sx={{ mb: 2, fontWeight: 600 }}>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                       Additional Information
                     </Typography>
                     <Stack spacing={1}>
@@ -378,10 +378,10 @@ const EventDetailPage: FC = () => {
             <Stack spacing={3}>
               {/* Action Card */}
               <Paper
+                variant="outlined"
                 sx={{
                   p: 3,
-                  borderRadius: 3,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  borderRadius: 2.5,
                 }}
               >
                 <Stack spacing={2}>
@@ -392,24 +392,16 @@ const EventDetailPage: FC = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       variant="contained"
-                      size="large"
+                      size="medium"
                       fullWidth
                       sx={{
-                        py: 1.5,
                         fontWeight: 700,
-                        fontSize: '1.1rem',
                       }}
                     >
                       Register Now
                     </Button>
                   ) : (
-                    <Button
-                      variant="outlined"
-                      size="large"
-                      fullWidth
-                      disabled
-                      sx={{ py: 1.5 }}
-                    >
+                    <Button variant="outlined" size="medium" fullWidth disabled>
                       Registration Closed
                     </Button>
                   )}
@@ -472,10 +464,10 @@ const EventDetailPage: FC = () => {
 
               {/* Quick Info */}
               <Paper
+                variant="outlined"
                 sx={{
                   p: 3,
-                  borderRadius: 3,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  borderRadius: 2.5,
                 }}
               >
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>

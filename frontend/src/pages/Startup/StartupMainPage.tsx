@@ -8,8 +8,8 @@ import {
   Chip,
   Tabs,
   Tab,
-  Snackbar,
-  Alert,
+  Container,
+  Paper,
 } from '@mui/material';
 import { Add, TrendingUp, People, Rocket } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -21,6 +21,7 @@ import {
   CreateStartupSummary,
 } from '@/types/StartupType';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNotification } from '@/contexts/NotificationContext';
 import CreateStartupModal from '@/components/Startup/CreateStartupModal';
 import EditStartupModal from '@/components/Startup/EditStartupModal';
 import StartupDetailComponent from '@/components/Startup/StartupDetail';
@@ -70,6 +71,7 @@ const StartupMainPage: FC = () => {
   } = useStartup();
 
   const { user } = useAuth();
+  const { showNotification } = useNotification();
   const [selectedStartup, setSelectedStartup] = useState<StartupDetail | null>(
     null
   );
@@ -80,11 +82,6 @@ const StartupMainPage: FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [pageSize] = useState<number>(12);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity?: 'success' | 'error' | 'info' | 'warning';
-  } | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [startupToEdit, setStartupToEdit] = useState<StartupSummary | null>(
@@ -99,26 +96,17 @@ const StartupMainPage: FC = () => {
     try {
       if (startup.isFollowing) {
         await unfollowStartup(startup.id);
-        setSnackbar({
-          open: true,
-          message: `Unfollowed ${startup.name}`,
-          severity: 'success',
-        });
+        showNotification?.(`Unfollowed ${startup.name}`, 'success');
       } else {
         await followStartup(startup.id);
-        setSnackbar({
-          open: true,
-          message: `Following ${startup.name}`,
-          severity: 'success',
-        });
+        showNotification?.(`Following ${startup.name}`, 'success');
       }
     } catch (err) {
       console.error('Failed to toggle follow', err);
-      setSnackbar({
-        open: true,
-        message: 'Failed to update follow status: ' + getErrorMessage(err),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to update follow status: ' + getErrorMessage(err),
+        'error'
+      );
     }
   };
 
@@ -132,6 +120,7 @@ const StartupMainPage: FC = () => {
       setComments(res?.comments || []);
     } catch (err) {
       console.error('Failed to load details or comments', err);
+      showNotification?.('Failed to load startup details', 'error');
       // fallback to summary
       setSelectedStartup(startup as StartupDetail);
     } finally {
@@ -146,7 +135,11 @@ const StartupMainPage: FC = () => {
   };
 
   const submitComment = async () => {
-    if (!selectedStartup || !comment.trim()) return;
+    if (!selectedStartup) return;
+    if (!comment.trim()) {
+      showNotification?.('Comment cannot be empty', 'warning');
+      return;
+    }
 
     const text = comment.trim();
     const tempId = `tmp-${Date.now()}`;
@@ -175,19 +168,14 @@ const StartupMainPage: FC = () => {
       setComments((prev) =>
         prev.map((c) => (c.id === tempId ? { ...created, pending: false } : c))
       );
-      setSnackbar({
-        open: true,
-        message: 'Comment posted successfully',
-        severity: 'success',
-      });
+      showNotification?.('Comment posted successfully', 'success');
     } catch (error) {
       // Remove temp comment on error
       setComments((prev) => prev.filter((c) => c.id !== tempId));
-      setSnackbar({
-        open: true,
-        message: 'Failed to post comment: ' + getErrorMessage(error),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to post comment: ' + getErrorMessage(error),
+        'error'
+      );
     }
   };
 
@@ -195,17 +183,12 @@ const StartupMainPage: FC = () => {
     try {
       await createStartup(data);
       setCreateModalOpen(false);
-      setSnackbar({
-        open: true,
-        message: 'Startup created successfully!',
-        severity: 'success',
-      });
+      showNotification?.('Startup created successfully!', 'success');
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to create startup: ' + getErrorMessage(error),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to create startup: ' + getErrorMessage(error),
+        'error'
+      );
     }
   };
 
@@ -216,34 +199,28 @@ const StartupMainPage: FC = () => {
       await updateStartup(startupToEdit.id, data);
       setEditModalOpen(false);
       setStartupToEdit(null);
-      setSnackbar({
-        open: true,
-        message: 'Startup updated successfully!',
-        severity: 'success',
-      });
+      showNotification?.('Startup updated successfully!', 'success');
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to update startup: ' + getErrorMessage(error),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to update startup: ' + getErrorMessage(error),
+        'error'
+      );
     }
   };
 
   const handleDeleteStartup = async (startupId: string) => {
+    showNotification?.(
+      'Delete requested. Confirm in the dialog to continue.',
+      'warning'
+    );
     try {
       await deleteStartup(startupId);
-      setSnackbar({
-        open: true,
-        message: 'Startup deleted successfully!',
-        severity: 'success',
-      });
+      showNotification?.('Startup deleted successfully!', 'success');
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: 'Failed to delete startup: ' + getErrorMessage(error),
-        severity: 'error',
-      });
+      showNotification?.(
+        'Failed to delete startup: ' + getErrorMessage(error),
+        'error'
+      );
     }
   };
 
@@ -283,6 +260,7 @@ const StartupMainPage: FC = () => {
       } catch (e) {
         // ignore
         console.error('Failed loading startups', e);
+        showNotification?.('Failed loading startups', 'error');
       }
     }, 350);
     return () => clearTimeout(timer);
@@ -294,6 +272,7 @@ const StartupMainPage: FC = () => {
     getFollowedStartups,
     getMyStartups,
     pageSize,
+    showNotification,
   ]);
 
   // when switching tabs, we can optionally scroll to top of list
@@ -302,50 +281,41 @@ const StartupMainPage: FC = () => {
   // }, [activeTab]);
 
   return (
-    <div className="w-full" style={{ padding: '1rem', position: 'relative' }}>
+    <Container maxWidth="xl" sx={{ py: 2.5, position: 'relative' }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
         {/* Header Section */}
-        <Box
+        <Paper
+          variant="outlined"
           sx={{
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'center',
+            alignItems: { xs: 'flex-start', sm: 'center' },
             mb: 4,
+            gap: 2,
+            flexDirection: { xs: 'column', sm: 'row' },
+            p: { xs: 2, md: 2.5 },
+            borderRadius: 2.5,
           }}
         >
           <Box>
             <Typography
-              variant="h3"
+              variant="h4"
               sx={{
-                fontWeight: 800,
-                mb: 1,
-                color: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? 'text.primary'
-                    : 'text.primary',
-                background: (theme) =>
-                  theme.palette.mode === 'dark'
-                    ? 'linear-gradient(90deg, #00C9FF, #92FE9D)'
-                    : 'linear-gradient(90deg, #12720bff 0%, #0cb009ff 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                fontWeight: 700,
+                mb: 0.5,
               }}
             >
               Startup Ecosystem
             </Typography>
-            <Typography
-              variant="h6"
-              color="text.secondary"
-              sx={{ fontWeight: 400 }}
-            >
+            <Typography variant="body1" color="text.secondary">
               Discover and support the next generation of innovative startups
             </Typography>
           </Box>
-          <div>
+          <Box>
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -356,15 +326,13 @@ const StartupMainPage: FC = () => {
                 startIcon={<Add />}
                 onClick={() => setCreateModalOpen(true)}
                 sx={{
-                  borderRadius: 3,
-                  px: 3,
-                  py: 1.5,
+                  borderRadius: 2,
+                  px: 2.5,
                   fontWeight: 600,
-                  background: 'primary.main',
                 }}
-                size="large"
+                size="medium"
               >
-                Startup
+                Create Startup
               </Button>
             </motion.div>
             <motion.div
@@ -376,29 +344,24 @@ const StartupMainPage: FC = () => {
                 onClick={async () => {
                   try {
                     await refreshTab(activeTab);
-                    setSnackbar({
-                      open: true,
-                      message: 'Refreshed',
-                      severity: 'success',
-                    });
+                    showNotification?.('Refreshed', 'success');
                   } catch (err) {
                     console.error('Refresh failed', err);
-                    setSnackbar({
-                      open: true,
-                      message: 'Failed to refresh: ' + getErrorMessage(err),
-                      severity: 'error',
-                    });
+                    showNotification?.(
+                      'Failed to refresh: ' + getErrorMessage(err),
+                      'error'
+                    );
                   }
                 }}
                 disabled={currentList.loading}
-                sx={{ borderRadius: 3, px: 2, py: 1.2, fontWeight: 600 }}
-                size="large"
+                sx={{ borderRadius: 2, px: 2.5, fontWeight: 600 }}
+                size="medium"
               >
                 Refresh
               </Button>
             </motion.div>
-          </div>
-        </Box>
+          </Box>
+        </Paper>
 
         {/* Stats Summary */}
         <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
@@ -549,11 +512,9 @@ const StartupMainPage: FC = () => {
           maxWidth="md"
           PaperProps={{
             sx: {
-              borderRadius: 4,
-              background:
-                'linear-gradient(180deg, rgba(255,255,255,0.95), rgba(245,247,250,0.9))',
-              backdropFilter: 'blur(12px)',
-              boxShadow: '0 8px 40px rgba(0,0,0,0.12)',
+              borderRadius: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
               overflow: 'hidden',
             },
           }}
@@ -604,26 +565,8 @@ const StartupMainPage: FC = () => {
             loading={false}
           />
         )}
-
-        {/* Snackbar for notifications */}
-        {snackbar && (
-          <Snackbar
-            open={snackbar.open}
-            autoHideDuration={4000}
-            onClose={() => setSnackbar(null)}
-            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          >
-            <Alert
-              onClose={() => setSnackbar(null)}
-              severity={snackbar.severity || 'success'}
-              sx={{ width: '100%' }}
-            >
-              {snackbar.message}
-            </Alert>
-          </Snackbar>
-        )}
       </motion.div>
-    </div>
+    </Container>
   );
 };
 

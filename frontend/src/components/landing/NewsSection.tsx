@@ -23,6 +23,8 @@ const NewsSection: React.FC<NewsSectionProps> = ({ sectionBackground }) => {
     loadNews();
   }, [loadNews]);
 
+  const hasNews = Array.isArray(news) && news.length > 0;
+
   return (
     <section
       className={`relative py-10 md:py-14 rounded-[8rem] ${sectionBackground}`}
@@ -67,13 +69,81 @@ const NewsSection: React.FC<NewsSectionProps> = ({ sectionBackground }) => {
           )}
         </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid lg:grid-cols-3 gap-6" aria-busy={newsLoading}>
           {newsLoading ? (
-            <p
-              className={`text-center py-20 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}
+            Array.from({ length: 3 }).map((_, index) => (
+              <article
+                key={`news-skeleton-${index}`}
+                className={`rounded-3xl border p-6 md:p-7 backdrop-blur-xl animate-pulse ${
+                  darkMode
+                    ? 'border-violet-300/20 bg-slate-900/45'
+                    : 'border-violet-200 bg-white/80'
+                } ${index === 0 ? 'lg:col-span-2 lg:min-h-[250px]' : ''}`}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div
+                    className={`h-6 w-24 rounded-full ${
+                      darkMode ? 'bg-violet-300/20' : 'bg-violet-100'
+                    }`}
+                  />
+                  <div
+                    className={`h-4 w-24 rounded ${
+                      darkMode ? 'bg-slate-700' : 'bg-slate-200'
+                    }`}
+                  />
+                </div>
+                <div
+                  className={`h-8 w-4/5 rounded mb-4 ${
+                    darkMode ? 'bg-slate-700' : 'bg-slate-200'
+                  }`}
+                />
+                <div className="space-y-2">
+                  <div
+                    className={`h-4 w-full rounded ${
+                      darkMode ? 'bg-slate-700' : 'bg-slate-200'
+                    }`}
+                  />
+                  <div
+                    className={`h-4 w-11/12 rounded ${
+                      darkMode ? 'bg-slate-700' : 'bg-slate-200'
+                    }`}
+                  />
+                  <div
+                    className={`h-4 w-2/3 rounded ${
+                      darkMode ? 'bg-slate-700' : 'bg-slate-200'
+                    }`}
+                  />
+                </div>
+              </article>
+            ))
+          ) : !hasNews ? (
+            <div
+              className={`lg:col-span-3 rounded-3xl border p-10 text-center ${
+                darkMode
+                  ? 'border-violet-300/20 bg-slate-900/45 text-slate-300'
+                  : 'border-violet-200 bg-white/80 text-slate-700'
+              }`}
             >
-              Loading news...
-            </p>
+              <p className="text-xl font-semibold mb-2">No updates found</p>
+              <p
+                className={`${darkMode ? 'text-slate-400' : 'text-slate-500'}`}
+              >
+                There are no news posts available right now. Please check back
+                later.
+              </p>
+              <button
+                onClick={() => {
+                  void loadNews();
+                }}
+                className={`mt-5 inline-flex items-center gap-2 rounded-xl px-5 py-2.5 border font-semibold ${
+                  darkMode
+                    ? 'border-violet-300/30 text-violet-200 hover:bg-violet-400/10'
+                    : 'border-violet-200 text-violet-700 hover:bg-violet-50'
+                }`}
+              >
+                Retry
+              </button>
+            </div>
           ) : (
             news.map((item, index) => (
               <motion.article

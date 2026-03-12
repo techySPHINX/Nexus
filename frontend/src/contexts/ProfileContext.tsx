@@ -18,13 +18,30 @@ import {
   getAllBadgesService,
   getProfilePreviewService,
   ProfilePreviewResponse,
+  getMemberExperienceService,
+  followMemberService,
+  unfollowMemberService,
+  getMemberSettingsService,
+  updateMemberSettingsService,
+  getMemberFlairsService,
+  createMemberFlairService,
+  activateMemberFlairService,
+  deleteMemberFlairService,
 } from '../services/profileService';
+import {
+  getNotificationPreferenceService,
+  updateNotificationPreferenceService,
+} from '../services/notificationService';
 import {
   Profile,
   ProfileBadge,
   UpdateProfileInput,
   Skill,
   Badge,
+  MemberExperience,
+  MemberFlair,
+  MemberProfileSettings,
+  NotificationPreference,
 } from '../types/profileType';
 import { useAuth } from './AuthContext';
 
@@ -38,6 +55,10 @@ interface ProfileContextType {
   loading: boolean;
   skillsLoading: boolean;
   error: string;
+  memberExperience: MemberExperience | null;
+  memberSettings: MemberProfileSettings | null;
+  flairs: MemberFlair[];
+  notificationPreference: NotificationPreference | null;
   fetchProfileData: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   allSearchedProfile: () => Promise<void>;
@@ -54,6 +75,26 @@ interface ProfileContextType {
     userId: string,
     avatarUrl?: boolean
   ) => Promise<ProfilePreviewResponse>;
+  fetchMemberExperience: (userId: string) => Promise<void>;
+  followMember: (userId: string) => Promise<void>;
+  unfollowMember: (userId: string) => Promise<void>;
+  fetchMemberSettings: () => Promise<void>;
+  updateMemberSettings: (
+    payload: Partial<MemberProfileSettings>
+  ) => Promise<void>;
+  fetchFlairs: (userId: string) => Promise<void>;
+  createFlair: (
+    userId: string,
+    payload: Pick<MemberFlair, 'label' | 'color' | 'backgroundColor'> & {
+      isActive?: boolean;
+    }
+  ) => Promise<void>;
+  activateFlair: (flairId: string) => Promise<void>;
+  deleteFlair: (flairId: string) => Promise<void>;
+  fetchNotificationPreference: () => Promise<void>;
+  updateNotificationPreference: (
+    payload: Partial<NotificationPreference>
+  ) => Promise<void>;
   // Gamification helper
   getUserTransactions?: (
     userId: string,
@@ -70,6 +111,10 @@ const ProfileContext = createContext<ProfileContextType>({
   loading: false,
   skillsLoading: false,
   error: '',
+  memberExperience: null,
+  memberSettings: null,
+  flairs: [],
+  notificationPreference: null,
   fetchProfileData: async () => {},
   refreshProfile: async () => {},
   allSearchedProfile: async () => {},
@@ -83,6 +128,17 @@ const ProfileContext = createContext<ProfileContextType>({
   updateProfile: async () => {},
   setError: () => {},
   getProfilePreview: async () => ({}),
+  fetchMemberExperience: async () => {},
+  followMember: async () => {},
+  unfollowMember: async () => {},
+  fetchMemberSettings: async () => {},
+  updateMemberSettings: async () => {},
+  fetchFlairs: async () => {},
+  createFlair: async () => {},
+  activateFlair: async () => {},
+  deleteFlair: async () => {},
+  fetchNotificationPreference: async () => {},
+  updateNotificationPreference: async () => {},
   getUserTransactions: async () => [],
 });
 
@@ -96,6 +152,13 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [skillsLoading, setSkillsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [memberExperience, setMemberExperience] =
+    useState<MemberExperience | null>(null);
+  const [memberSettings, setMemberSettings] =
+    useState<MemberProfileSettings | null>(null);
+  const [flairs, setFlairs] = useState<MemberFlair[]>([]);
+  const [notificationPreference, setNotificationPreference] =
+    useState<NotificationPreference | null>(null);
   const previewCacheRef = useState<Map<string, ProfilePreviewResponse>>(
     () => new Map()
   )[0];
@@ -311,6 +374,126 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
     [previewCacheRef]
   );
 
+  const fetchMemberExperience = useCallback(async (userId: string) => {
+    if (!userId) return;
+    try {
+      const payload = await getMemberExperienceService(userId);
+      setMemberExperience(payload);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to load member experience');
+      }
+    }
+  }, []);
+
+  const followMember = useCallback(
+    async (userId: string) => {
+      await followMemberService(userId);
+      await fetchMemberExperience(userId);
+    },
+    [fetchMemberExperience]
+  );
+
+  const unfollowMember = useCallback(
+    async (userId: string) => {
+      await unfollowMemberService(userId);
+      await fetchMemberExperience(userId);
+    },
+    [fetchMemberExperience]
+  );
+
+  const fetchMemberSettings = useCallback(async () => {
+    try {
+      const settings = await getMemberSettingsService();
+      setMemberSettings(settings);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to load member settings');
+      }
+    }
+  }, []);
+
+  const updateMemberSettings = useCallback(
+    async (payload: Partial<MemberProfileSettings>) => {
+      try {
+        const settings = await updateMemberSettingsService(payload);
+        setMemberSettings(settings);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to update member settings');
+        }
+      }
+    },
+    []
+  );
+
+  const fetchFlairs = useCallback(async (userId: string) => {
+    try {
+      const list = await getMemberFlairsService(userId);
+      setFlairs(list);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to load flairs');
+      }
+    }
+  }, []);
+
+  const createFlair = useCallback(
+    async (
+      userId: string,
+      payload: Pick<MemberFlair, 'label' | 'color' | 'backgroundColor'> & {
+        isActive?: boolean;
+      }
+    ) => {
+      await createMemberFlairService(userId, payload);
+      await fetchFlairs(userId);
+    },
+    [fetchFlairs]
+  );
+
+  const activateFlair = useCallback(
+    async (flairId: string) => {
+      if (!profile?.user?.id) return;
+      await activateMemberFlairService(flairId);
+      await fetchFlairs(profile.user.id);
+    },
+    [fetchFlairs, profile?.user?.id]
+  );
+
+  const deleteFlair = useCallback(
+    async (flairId: string) => {
+      if (!profile?.user?.id) return;
+      await deleteMemberFlairService(flairId);
+      await fetchFlairs(profile.user.id);
+    },
+    [fetchFlairs, profile?.user?.id]
+  );
+
+  const fetchNotificationPreference = useCallback(async () => {
+    try {
+      const pref = await getNotificationPreferenceService();
+      setNotificationPreference(pref);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || 'Failed to load notification preferences');
+      }
+    }
+  }, []);
+
+  const updateNotificationPreference = useCallback(
+    async (payload: Partial<NotificationPreference>) => {
+      try {
+        const pref = await updateNotificationPreferenceService(payload);
+        setNotificationPreference(pref);
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message || 'Failed to update notification preferences');
+        }
+      }
+    },
+    []
+  );
+
   // Gamification: fetch user transactions
   const getUserTransactions = useCallback(async (userId: string, limit = 5) => {
     if (!userId) return [] as Array<Record<string, unknown>>;
@@ -338,6 +521,10 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       loading,
       skillsLoading,
       error,
+      memberExperience,
+      memberSettings,
+      flairs,
+      notificationPreference,
       fetchProfileData,
       refreshProfile,
       allSearchedProfile,
@@ -351,6 +538,17 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       updateProfile,
       setError,
       getProfilePreview,
+      fetchMemberExperience,
+      followMember,
+      unfollowMember,
+      fetchMemberSettings,
+      updateMemberSettings,
+      fetchFlairs,
+      createFlair,
+      activateFlair,
+      deleteFlair,
+      fetchNotificationPreference,
+      updateNotificationPreference,
       getUserTransactions,
     }),
     [
@@ -362,6 +560,10 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       loading,
       skillsLoading,
       error,
+      memberExperience,
+      memberSettings,
+      flairs,
+      notificationPreference,
       fetchProfileData,
       refreshProfile,
       allSearchedProfile,
@@ -374,6 +576,17 @@ const ProfileProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
       awardBadge,
       updateProfile,
       getProfilePreview,
+      fetchMemberExperience,
+      followMember,
+      unfollowMember,
+      fetchMemberSettings,
+      updateMemberSettings,
+      fetchFlairs,
+      createFlair,
+      activateFlair,
+      deleteFlair,
+      fetchNotificationPreference,
+      updateNotificationPreference,
       getUserTransactions,
     ]
   );

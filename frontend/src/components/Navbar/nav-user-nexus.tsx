@@ -32,6 +32,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 export function NavUser({
   user,
   onLogout,
+  onNavigate,
 }: {
   user: {
     name: string;
@@ -39,6 +40,7 @@ export function NavUser({
     avatar?: string;
   };
   onLogout: () => void;
+  onNavigate?: () => void;
 }) {
   const { isMobile } = useSidebar();
   const { isDark, toggleTheme } = useTheme();
@@ -59,10 +61,10 @@ export function NavUser({
                 </AvatarFallback>
               </Avatar>
               <div className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-md font-semibold">
+                <span className="truncate text-sm font-semibold">
                   {user.name}
                 </span>
-                <span className="truncate text-base">{user.email}</span>
+                <span className="truncate text-xs">{user.email}</span>
               </div>
               <ChevronsUpDown className="ml-auto h-6 w-6" />
             </SidebarMenuButton>
@@ -90,19 +92,31 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to="/profile" className="cursor-pointer">
+                <Link
+                  to="/profile"
+                  className="cursor-pointer"
+                  onClick={onNavigate}
+                >
                   <BadgeCheck className="mr-2 h-4 w-4" />
                   Profile
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/notifications" className="cursor-pointer">
+                <Link
+                  to="/notifications"
+                  className="cursor-pointer"
+                  onClick={onNavigate}
+                >
                   <Bell className="mr-2 h-4 w-4" />
                   Notifications
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/gamification" className="cursor-pointer">
+                <Link
+                  to="/gamification"
+                  className="cursor-pointer"
+                  onClick={onNavigate}
+                >
                   <Sparkles className="mr-2 h-4 w-4" />
                   Gamification
                 </Link>
@@ -111,7 +125,11 @@ export function NavUser({
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link to="/feed" className="cursor-pointer">
+                <Link
+                  to="/feed"
+                  className="cursor-pointer"
+                  onClick={onNavigate}
+                >
                   <Settings className="mr-2 h-4 w-4" />
                   My Feed
                 </Link>
@@ -132,7 +150,12 @@ export function NavUser({
               )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLogout}>
+            <DropdownMenuItem
+              onClick={() => {
+                onNavigate?.();
+                onLogout();
+              }}
+            >
               <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>

@@ -27,6 +27,7 @@
     "test:verbose": "jest --verbose",
     "test:silent": "jest --silent",
     "check:integrity": "node scripts/check-integrity.js",
+    "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:indexes": "psql $DATABASE_URL -f prisma/migrations/add_performance_indexes.sql",
@@ -35,7 +36,8 @@
     "perf:test": "k6 run --out json=load-tests/results/results.json -e BASE_URL=http://localhost:3000 load-tests/k6-load-test.js",
     "perf:spike": "k6 run --out json=load-tests/results/spike-results.json -e BASE_URL=http://localhost:3000 load-tests/k6-spike-test.js",
     "perf:soak": "k6 run --out json=load-tests/results/soak-results.json -e BASE_URL=http://localhost:3000 load-tests/k6-soak-test.js",
-    "perf:all": "npm run perf:test && npm run perf:spike"
+    "perf:all": "npm run perf:test && npm run perf:spike",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.916.0",

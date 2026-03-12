@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { useCallback, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
@@ -30,7 +31,17 @@ export function AppSidebarNexus() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const { open, toggleSidebar } = useSidebar();
+  const { open, toggleSidebar, isMobile, setOpenMobile } = useSidebar();
+
+  const closeMobileSidebar = useCallback(() => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, setOpenMobile]);
+
+  useEffect(() => {
+    closeMobileSidebar();
+  }, [closeMobileSidebar, location.pathname, location.search, location.hash]);
 
   const handleLogout = () => {
     logout();
@@ -88,7 +99,7 @@ export function AppSidebarNexus() {
             },
             {
               title: 'Member SubCommunities',
-              url: '/subcommunities/my/members?memberPage=1',
+              url: '/subcommunities/my/member?memberPage=1',
             },
           ],
         },
@@ -196,7 +207,7 @@ export function AppSidebarNexus() {
               className="size-9 object-contain"
             />
           </motion.div>
-          <div className="grid flex-1 text-left text-[2rem] leading-tight group-data-[collapsible=icon]:hidden">
+          <div className="grid flex-1 text-left text-[1.35rem] leading-tight group-data-[collapsible=icon]:hidden">
             <motion.span
               whileHover={{ letterSpacing: '0.05em' }}
               className="truncate font-semibold bg-gradient-to-r from-green-400 via-green-500 to-emerald-600 bg-clip-text text-transparent"
@@ -208,7 +219,9 @@ export function AppSidebarNexus() {
       </SidebarHeader>
 
       <SidebarContent>
-        {user && navMain.length > 0 && <NavMainNexus items={navMain} />}
+        {user && navMain.length > 0 && (
+          <NavMainNexus items={navMain} onNavigate={closeMobileSidebar} />
+        )}
       </SidebarContent>
 
       <SidebarFooter>
@@ -242,7 +255,11 @@ export function AppSidebarNexus() {
             </Button>
           </div>
         </div>
-        <NavUser user={userData} onLogout={handleLogout} />
+        <NavUser
+          user={userData}
+          onLogout={handleLogout}
+          onNavigate={closeMobileSidebar}
+        />
       </SidebarFooter>
 
       <SidebarRail />

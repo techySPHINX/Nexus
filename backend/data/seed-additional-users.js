@@ -7,6 +7,12 @@ async function seedAdditionalUsers() {
   try {
     console.log('🌱 Seeding database with additional test users...');
 
+    const avatar = (seed) =>
+      `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(seed)}`;
+
+    const banner = (seed) =>
+      `https://picsum.photos/seed/${encodeURIComponent(seed)}/1200/320`;
+
     // Create additional test users with more realistic data
     const additionalUsers = [
       {
@@ -21,7 +27,8 @@ async function seedAdditionalUsers() {
           dept: 'IT',
           year: '2020',
           branch: 'CSE',
-          course: 'B.Tech'
+          course: 'B.Tech',
+          avatarUrl: avatar('Admin User'),
         }
       },
       {
@@ -36,7 +43,8 @@ async function seedAdditionalUsers() {
           dept: 'CSE',
           year: '2024',
           branch: 'CSE',
-          course: 'B.Tech'
+          course: 'B.Tech',
+          avatarUrl: avatar('John Doe'),
         }
       },
       {
@@ -51,7 +59,8 @@ async function seedAdditionalUsers() {
           dept: 'ECE',
           year: '2025',
           branch: 'ECE',
-          course: 'B.Tech'
+          course: 'B.Tech',
+          avatarUrl: avatar('Jane Smith'),
         }
       },
       {
@@ -66,7 +75,8 @@ async function seedAdditionalUsers() {
           dept: 'CSE',
           year: '2020',
           branch: 'CSE',
-          course: 'B.Tech'
+          course: 'B.Tech',
+          avatarUrl: avatar('Alex Johnson'),
         }
       },
       {
@@ -81,7 +91,8 @@ async function seedAdditionalUsers() {
           dept: 'CSE',
           year: '2019',
           branch: 'CSE',
-          course: 'B.Tech'
+          course: 'B.Tech',
+          avatarUrl: avatar('Sarah Wilson'),
         }
       },
       {
@@ -96,7 +107,8 @@ async function seedAdditionalUsers() {
           dept: 'CSE',
           year: '2010',
           branch: 'CSE',
-          course: 'B.Tech'
+          course: 'B.Tech',
+          avatarUrl: avatar('Dr. Mentor Singh'),
         }
       }
     ];
@@ -106,7 +118,21 @@ async function seedAdditionalUsers() {
 
       const user = await prisma.user.upsert({
         where: { email: userData.email },
-        update: {},
+        update: {
+          name: userData.name,
+          role: userData.role,
+          iconUrl: userData.profile.avatarUrl,
+          bannerUrl: banner(userData.email),
+          isEmailVerified: true,
+          isAccountActive: true,
+          accountStatus: 'ACTIVE',
+          profile: {
+            upsert: {
+              update: userData.profile,
+              create: userData.profile,
+            },
+          },
+        },
         create: {
           email: userData.email,
           password: hashedPassword,
@@ -115,6 +141,8 @@ async function seedAdditionalUsers() {
           isEmailVerified: true,
           isAccountActive: true,
           accountStatus: 'ACTIVE',
+          iconUrl: userData.profile.avatarUrl,
+          bannerUrl: banner(userData.email),
           profile: {
             create: userData.profile,
           },

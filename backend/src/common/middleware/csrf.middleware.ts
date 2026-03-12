@@ -41,6 +41,8 @@ export class CsrfMiddleware implements NestMiddleware {
     '/auth/verify-email',
     '/auth/resend-verification',
     '/auth/refresh',
+    // Frontend runtime error telemetry endpoint (must remain best-effort).
+    '/monitoring/frontend-errors',
   ];
 
   use(req: Request, res: Response, next: NextFunction): void {
@@ -63,6 +65,19 @@ export class CsrfMiddleware implements NestMiddleware {
       return next();
     }
 
+    // Root path does not expose mutating handlers in this app.
+    // Some browsers/extensions/dev tooling may probe POST / without CSRF headers.
+    if (req.path === '/') {
+      return next();
+    }
+
+    // Bearer-token authenticated JSON APIs are not vulnerable to browser CSRF
+    // in the same way as cookie-auth flows; skip CSRF validation for these
+    // requests to avoid false 403s from non-browser/API clients.
+    if (this.hasBearerAuthorization(req)) {
+      return next();
+    }
+
     // Check for exempt paths.
     const isExempt = CsrfMiddleware.EXEMPT_PATH_PREFIXES.some((prefix) =>
       req.path.startsWith(prefix),
@@ -75,14 +90,21 @@ export class CsrfMiddleware implements NestMiddleware {
     const headerToken = req.headers[CsrfMiddleware.CSRF_HEADER] as
       | string
       | undefined;
+
     if (!headerToken || !this.tokensMatch(token, headerToken)) {
       this.logger.warn(
-        `CSRF validation failed — method=${method} path=${req.path} ip=${req.ip}`,
+        `CSRF validation failed — method=${method} path=${req.path} ip=${req.ip} referer=${req.headers.referer ?? 'n/a'} ua=${req.headers['user-agent'] ?? 'n/a'} hasAuth=${Boolean(req.headers.authorization)} hasCsrfHeader=${Boolean(headerToken)}`,
       );
       throw new ForbiddenException('Invalid or missing CSRF token.');
     }
 
     next();
+  }
+
+  private hasBearerAuthorization(req: Request): boolean {
+    const authorization = req.headers.authorization;
+    if (!authorization) return false;
+    return /^bearer\s+.+$/i.test(authorization);
   }
 
   /**

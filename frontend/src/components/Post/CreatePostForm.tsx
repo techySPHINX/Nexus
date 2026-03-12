@@ -8,8 +8,6 @@ import {
   IconButton,
   Divider,
   Chip,
-  Snackbar,
-  Alert,
   CircularProgress,
 } from '@mui/material';
 import { Image, Close, Cancel } from '@mui/icons-material';
@@ -19,6 +17,7 @@ const RichTextEditorWrapper = lazy(
 import { getErrorMessage } from '@/utils/errorHandler';
 import { ProfileNameLink } from '@/utils/ProfileNameLink';
 import { SubCommunityRole } from '@/types/subCommunity';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export interface Profile {
   id: string;
@@ -50,6 +49,7 @@ export const CreatePostForm: FC<CreatePostFormProps> = ({
   console.log('Profile prop in CreatePostForm:', profile);
   const { user } = useAuth();
   const { createPost, clearError } = usePosts();
+  const { showNotification } = useNotification();
   const [content, setContent] = useState('');
   const [subject, setSubject] = useState('');
   const [type, setType] = useState<'DISCUSSION' | 'QUESTION' | 'UPDATE'>(
@@ -58,19 +58,12 @@ export const CreatePostForm: FC<CreatePostFormProps> = ({
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<
-    'success' | 'error' | 'info'
-  >('success');
 
   const showSnackbar = useCallback(
     (message: string, severity: 'success' | 'error' | 'info') => {
-      setSnackbarMessage(message);
-      setSnackbarSeverity(severity);
-      setSnackbarOpen(true);
+      showNotification?.(message, severity);
     },
-    []
+    [showNotification]
   );
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -132,10 +125,6 @@ export const CreatePostForm: FC<CreatePostFormProps> = ({
     setImagePreview(null);
     setImageUrl('');
     showSnackbar('Image removed', 'info');
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -404,22 +393,6 @@ export const CreatePostForm: FC<CreatePostFormProps> = ({
           </Box>
         </Box>
       </Box>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-          elevation={6}
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

@@ -22,62 +22,56 @@ async function seedMessages() {
       return;
     }
 
-    // Create sample messages
-    const messages = [
-      {
-        senderId: connections[0].requesterId,
-        receiverId: connections[0].recipientId,
-        content: "Hey! How are you doing? I saw your recent project on GitHub, it looks amazing!"
-      },
-      {
-        senderId: connections[0].recipientId,
-        receiverId: connections[0].requesterId,
-        content: "Thank you! I've been working on it for a while. Are you interested in collaborating?"
-      },
-      {
-        senderId: connections[0].requesterId,
-        receiverId: connections[0].recipientId,
-        content: "Absolutely! I'd love to contribute. What technologies are you using?"
-      },
-      {
-        senderId: connections[1].requesterId,
-        receiverId: connections[1].recipientId,
-        content: "Hi! I noticed you're working in the same field. Would you like to connect and share experiences?"
-      },
-      {
-        senderId: connections[1].recipientId,
-        receiverId: connections[1].requesterId,
-        content: "That sounds great! I'm always interested in networking with fellow professionals."
-      },
-      {
-        senderId: connections[2]?.requesterId,
-        receiverId: connections[2]?.recipientId,
-        content: "Hello! I saw your profile and I'm impressed with your achievements. Would you be interested in mentoring?"
-      },
-      {
-        senderId: connections[2]?.recipientId,
-        receiverId: connections[2]?.requesterId,
-        content: "I'd be happy to help! What specific areas are you looking to develop?"
-      },
-      {
-        senderId: connections[3]?.requesterId,
-        receiverId: connections[3]?.recipientId,
-        content: "Hey there! Are you attending the upcoming tech conference?"
-      },
-      {
-        senderId: connections[3]?.recipientId,
-        receiverId: connections[3]?.requesterId,
-        content: "Yes, I am! Are you going too? We should meet up!"
-      },
-      {
-        senderId: connections[4]?.requesterId,
-        receiverId: connections[4]?.recipientId,
-        content: "Good morning! I hope you're having a productive day. Any exciting projects you're working on?"
-      }
-    ].filter(msg => msg.senderId && msg.receiverId); // Filter out undefined values
+    const messageTemplates = [
+      [
+        'Hey! I saw your latest project update. The architecture breakdown was super clear.',
+        'Thanks! I am refining the API layer next. Happy to share the planning doc if useful.',
+        'That would be great. I can also help with test coverage this weekend.',
+      ],
+      [
+        'Are you joining the alumni AMA session on Friday?',
+        'Yes, I am. I am preparing a few questions on backend interview prep.',
+        'Perfect, I will join too. Let us sync before the session.',
+      ],
+      [
+        'Your post on internship prep was very helpful. Do you have a mock interview checklist?',
+        'I do. I can send a concise checklist and a system design template.',
+        'Amazing, thanks a lot. That will help our group as well.',
+      ],
+      [
+        'Would you be open to reviewing my project README once?',
+        'Sure. Share the repo link and I will leave comments tonight.',
+        'Sent. Really appreciate the quick help.',
+      ],
+    ];
+
+    const messages = [];
+    for (let i = 0; i < connections.length; i++) {
+      const c = connections[i];
+      const thread = messageTemplates[i % messageTemplates.length];
+
+      thread.forEach((content, idx) => {
+        const senderId = idx % 2 === 0 ? c.requesterId : c.recipientId;
+        const receiverId = idx % 2 === 0 ? c.recipientId : c.requesterId;
+        messages.push({ senderId, receiverId, content });
+      });
+    }
 
     for (const messageData of messages) {
       try {
+        const exists = await prisma.message.findFirst({
+          where: {
+            senderId: messageData.senderId,
+            receiverId: messageData.receiverId,
+            content: messageData.content,
+          },
+        });
+
+        if (exists) {
+          console.log('⏭️ Skipping duplicate message');
+          continue;
+        }
+
         const message = await prisma.message.create({
           data: messageData,
           include: {

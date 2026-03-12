@@ -27,7 +27,6 @@ import {
   IconButton,
   Tooltip,
   TablePagination,
-  Snackbar,
   Link,
   Dialog,
   DialogTitle,
@@ -58,19 +57,16 @@ import type {
 } from '../types/connections';
 import { apiService } from '../services/api';
 import { LocationOn, School, Email } from '@mui/icons-material';
+import { useNotification } from '@/contexts/NotificationContext';
 
 const Connections: FC = () => {
   const navigate = useNavigate();
+  const { showNotification } = useNotification();
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity: 'success' | 'error' | 'info';
-  }>({ open: false, message: '', severity: 'success' });
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
     title: string;
@@ -170,7 +166,7 @@ const Connections: FC = () => {
     message: string,
     severity: 'success' | 'error' | 'info' = 'success'
   ) => {
-    setSnackbar({ open: true, message, severity });
+    showNotification?.(message, severity);
   };
 
   const handleAcceptRequest = async (requestId: string) => {
@@ -459,19 +455,24 @@ const Connections: FC = () => {
       sx={{ py: 4, maxWidth: '1280px', px: { xs: 2, md: 3 } }}
     >
       {/* Header */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        flexWrap="wrap"
-        mb={3}
-        gap={2}
+      <Paper
+        variant="outlined"
+        sx={{
+          p: { xs: 2, md: 2.5 },
+          mb: 3,
+          borderRadius: 2.5,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
       >
         <Box>
           <Typography
-            variant="h4"
+            variant="h5"
             component="h1"
-            sx={{ fontWeight: 600 }}
+            sx={{ fontWeight: 700 }}
             gutterBottom
           >
             Connections
@@ -492,90 +493,40 @@ const Connections: FC = () => {
 
         {/* Stats Cards */}
         {stats && (
-          <Stack direction="row" spacing={1} alignItems="center">
-            <Paper
-              sx={{
-                p: 2,
-                textAlign: 'center',
-                minWidth: 80,
-                minHeight: '100px', // Fixed height for uniform appearance
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <PeopleIcon color="primary" sx={{ mb: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {stats.total}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Total
-              </Typography>
-            </Paper>
-            <Paper
-              sx={{
-                p: 2,
-                textAlign: 'center',
-                minWidth: 80,
-                minHeight: '100px', // Fixed height for uniform appearance
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <SchoolIcon color="info" sx={{ mb: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {stats.byRole.students}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Students
-              </Typography>
-            </Paper>
-            <Paper
-              sx={{
-                p: 2,
-                textAlign: 'center',
-                minWidth: 80,
-                minHeight: '100px', // Fixed height for uniform appearance
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <WorkIcon color="secondary" sx={{ mb: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {stats.byRole.alumni}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Alumni
-              </Typography>
-            </Paper>
-            <Paper
-              sx={{
-                p: 2,
-                textAlign: 'center',
-                minWidth: 80,
-                minHeight: '100px', // Fixed height for uniform appearance
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-            >
-              <BlockIcon color="warning" sx={{ mb: 1 }} />
-              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                {stats.pendingReceived}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Pending
-              </Typography>
-            </Paper>
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            flexWrap="wrap"
+            useFlexGap
+          >
+            <Chip
+              size="small"
+              icon={<PeopleIcon />}
+              label={`${stats.total} Total`}
+              variant="outlined"
+            />
+            <Chip
+              size="small"
+              icon={<SchoolIcon />}
+              label={`${stats.byRole.students} Students`}
+              variant="outlined"
+            />
+            <Chip
+              size="small"
+              icon={<WorkIcon />}
+              label={`${stats.byRole.alumni} Alumni`}
+              variant="outlined"
+            />
+            <Chip
+              size="small"
+              icon={<BlockIcon />}
+              label={`${stats.pendingReceived} Pending`}
+              variant="outlined"
+            />
           </Stack>
         )}
-      </Box>
+      </Paper>
 
       <Divider sx={{ mb: 3 }} />
 
@@ -1168,22 +1119,6 @@ const Connections: FC = () => {
         />
       </Paper>
 
-      {/* Snackbar for notifications */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-
       {/* Confirmation Dialog */}
       <Dialog
         open={confirmDialog.open}
@@ -1224,7 +1159,9 @@ const Connections: FC = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 2,
+            borderRadius: 2.5,
+            border: '1px solid',
+            borderColor: 'divider',
             maxHeight: '90vh',
           },
         }}

@@ -17,9 +17,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { EventService } from '@/services/EventService';
+import { useNotification } from '@/contexts/NotificationContext';
 
 export default function UpcomingEvents() {
   const { isDark } = useTheme();
+  const { showNotification } = useNotification();
   const {
     upcomingEvents: upcoming,
     getUpcomingEvents,
@@ -187,9 +189,9 @@ export default function UpcomingEvents() {
                     try {
                       await EventService.remove(event.id);
                       if (getUpcomingEvents) await getUpcomingEvents(3);
-                      alert('Event deleted');
+                      showNotification?.('Event deleted', 'success');
                     } catch {
-                      alert('Failed to delete event');
+                      showNotification?.('Failed to delete event', 'error');
                     }
                   }}
                 >

@@ -24,8 +24,12 @@ export const subCommunityService = {
   }): Promise<SubCommunity[]> => {
     const params: Record<string, unknown> = {};
     if (opts?.compact !== undefined) params.compact = opts.compact;
-    if (opts?.page) params.page = opts.page;
-    if (opts?.limit) params.limit = opts.limit;
+    if (typeof opts?.page === 'number' && opts.page > 0) {
+      params.page = Math.floor(opts.page);
+    }
+    if (typeof opts?.limit === 'number' && opts.limit > 0) {
+      params.limit = Math.floor(opts.limit);
+    }
     const response = await api.get('/sub-community', { params });
     console.log('Fetched all sub-communities:', response.data);
     return response.data;
@@ -43,7 +47,12 @@ export const subCommunityService = {
     q?: string,
     filters?: SubCommunityFilterParams
   ): Promise<{ data: SubCommunity[]; pagination: PaginationData }> => {
-    const params: Record<string, unknown> = { page, limit };
+    const safePage = page > 0 ? Math.floor(page) : 1;
+    const safeLimit = limit > 0 ? Math.floor(limit) : 20;
+    const params: Record<string, unknown> = {
+      page: safePage,
+      limit: safeLimit,
+    };
     if (q) params.q = q;
     if (filters?.privacy && filters.privacy !== 'all')
       params.privacy = filters.privacy;

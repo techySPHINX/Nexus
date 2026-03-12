@@ -31,6 +31,7 @@ describe('PostService - Unit Tests', () => {
     },
     subCommunityMember: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
     },
     comment: {
       deleteMany: jest.fn(),
@@ -39,7 +40,6 @@ describe('PostService - Unit Tests', () => {
       deleteMany: jest.fn(),
     },
   };
-
 
   beforeEach(async () => {
     mockPrismaService = JSON.parse(JSON.stringify(baseMockPrismaService));
@@ -52,6 +52,7 @@ describe('PostService - Unit Tests', () => {
     mockPrismaService.post.delete = jest.fn();
     mockPrismaService.post.count = jest.fn();
     mockPrismaService.subCommunityMember.findFirst = jest.fn();
+    mockPrismaService.subCommunityMember.findMany = jest.fn();
     mockPrismaService.comment.deleteMany = jest.fn();
     mockPrismaService.vote.deleteMany = jest.fn();
 
@@ -568,6 +569,67 @@ describe('PostService - Unit Tests', () => {
       await expect(service.getRecentPosts(userId, 1, 1000)).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('✅ getMyCommunitiesFeed() - Aggregated Community Feed', () => {
+    const userId = 'user-123';
+
+    it('should return empty feed when user has no community memberships', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: userId });
+      mockPrismaService.subCommunityMember.findMany.mockResolvedValue([]);
+
+      const result = await service.getMyCommunitiesFeed(userId, 1, 10);
+
+      expect(result.posts).toEqual([]);
+      expect(result.pagination.total).toBe(0);
+      expect(result.pagination.totalPages).toBe(0);
+      expect(mockPrismaService.post.findMany).not.toHaveBeenCalled();
+    });
+
+    it('should return paginated approved posts from joined communities', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ id: userId });
+      mockPrismaService.subCommunityMember.findMany.mockResolvedValue([
+        { subCommunityId: 'community-1' },
+        { subCommunityId: 'community-2' },
+      ]);
+      mockPrismaService.post.findMany.mockResolvedValue([
+        { id: 'post-1', subCommunityId: 'community-1' },
+      ]);
+      mockPrismaService.post.count.mockResolvedValue(1);
+
+      const result = await service.getMyCommunitiesFeed(userId, 1, 10);
+
+      expect(mockPrismaService.post.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: PostStatus.APPROVED,
+            subCommunityId: { in: ['community-1', 'community-2'] },
+          }),
+          orderBy: { createdAt: 'desc' },
+          skip: 0,
+          take: 10,
+        }),
+      );
+      expect(result.posts).toHaveLength(1);
+      expect(result.pagination.total).toBe(1);
+    });
+
+    it('should throw NotFoundException when user does not exist', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.getMyCommunitiesFeed(userId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw BadRequestException for invalid pagination', async () => {
+      await expect(service.getMyCommunitiesFeed(userId, 0, 10)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(
+        service.getMyCommunitiesFeed(userId, 1, 100),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 });

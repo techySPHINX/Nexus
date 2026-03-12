@@ -3,8 +3,7 @@
 //   - X-CSRF-Token request interceptor (CSRF protection, Issue #162)
 // This ensures all POST/PATCH requests include the CSRF token and prevents
 // 403 errors from the backend CSRF middleware (Copilot recommendation PR #210).
-import axios from 'axios';
-import api from './api';
+import api, { isAxiosError } from './api';
 
 function getUser() {
   try {
@@ -82,7 +81,7 @@ export async function createPostService(
 
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(err.response?.data?.message || 'Failed to create post');
     }
     throw new Error('Failed to create post');
@@ -99,7 +98,7 @@ export async function getRecentPostsService(page?: number, limit?: number) {
     });
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to fetch recent posts'
       );
@@ -108,20 +107,49 @@ export async function getRecentPostsService(page?: number, limit?: number) {
   }
 }
 
-export async function getFeedService(page?: number, limit?: number) {
+export async function getFeedService(
+  page?: number,
+  limit?: number,
+  scope: 'all' | 'following' = 'all'
+) {
   try {
     const { data } = await api.get('/posts/feed', {
       params: {
         page,
         limit,
+        scope,
       },
     });
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(err.response?.data?.message || 'Failed to fetch feed');
     }
     throw new Error('Failed to fetch feed');
+  }
+}
+
+export async function getCommunityFeedService(
+  page?: number,
+  limit?: number,
+  scope: 'all' | 'member' | 'managed' = 'all'
+) {
+  try {
+    const { data } = await api.get('/posts/community-feed', {
+      params: {
+        page,
+        limit,
+        scope,
+      },
+    });
+    return data;
+  } catch (err) {
+    if (isAxiosError(err)) {
+      throw new Error(
+        err.response?.data?.message || 'Failed to fetch community feed'
+      );
+    }
+    throw new Error('Failed to fetch community feed');
   }
 }
 
@@ -142,7 +170,7 @@ export async function getSubCommunityFeedService(
     );
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to fetch sub-community feed'
       );
@@ -165,7 +193,7 @@ export async function getPendingPostsService(page?: number, limit?: number) {
     });
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to fetch pending posts'
       );
@@ -188,7 +216,7 @@ export async function getPostByUserIdService(
     });
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(
         err.response?.data?.message || 'Failed to fetch user posts'
       );
@@ -202,7 +230,7 @@ export async function getPostByIdService(postId: string) {
     const { data } = await api.get(`/posts/${postId}`);
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(err.response?.data?.message || 'Failed to fetch post');
     }
     throw new Error('Failed to fetch post');
@@ -302,7 +330,7 @@ export async function updatePostService(
 
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(err.response?.data?.message || 'Failed to update post');
     }
     throw new Error('Failed to update post');
@@ -317,7 +345,7 @@ export async function approvePostService(postId: string) {
   try {
     await api.patch(`/posts/${postId}/approve`);
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(err.response?.data?.message || 'Failed to approve post');
     }
     throw new Error('Failed to approve post');
@@ -332,7 +360,7 @@ export async function rejectPostService(postId: string) {
   try {
     await api.patch(`/posts/${postId}/reject`);
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(err.response?.data?.message || 'Failed to reject post');
     }
     throw new Error('Failed to reject post');
@@ -349,7 +377,7 @@ export async function deletePostService(postId: string) {
   try {
     await api.delete(`/posts/${postId}`);
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(err.response?.data?.message || 'Failed to delete post');
     }
     throw new Error('Failed to delete post');
@@ -373,7 +401,7 @@ export async function searchPostsService(
     });
     return data;
   } catch (err) {
-    if (axios.isAxiosError(err)) {
+    if (isAxiosError(err)) {
       throw new Error(err.response?.data?.message || 'Failed to search posts');
     }
     throw new Error('Failed to search posts');

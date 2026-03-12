@@ -12,8 +12,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Snackbar,
-  Alert,
   Paper,
   Chip,
   Grid,
@@ -41,6 +39,7 @@ import {
 } from '@mui/icons-material';
 import { Post as PostType } from '../../types/post';
 import { SubCommunity } from '../../types/subCommunity';
+import { useNotification } from '@/contexts/NotificationContext';
 
 // interface TabPanelProps {
 //   children?: React.ReactNode;
@@ -77,16 +76,12 @@ const AdminModerationPage: FC = () => {
   } = usePosts();
 
   const { subCommunities, getAllSubCommunities } = useSubCommunity();
+  const { showNotification } = useNotification();
   const navigate = useNavigate();
 
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<'approve' | 'reject' | null>(
     null
-  );
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>(
-    'success'
   );
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -98,11 +93,9 @@ const AdminModerationPage: FC = () => {
 
   const showSnackbar = useCallback(
     (message: string, severity: 'success' | 'error') => {
-      setSnackbarMessage(message);
-      setSnackbarSeverity(severity);
-      setSnackbarOpen(true);
+      showNotification?.(message, severity);
     },
-    []
+    [showNotification]
   );
 
   const loadPosts = useCallback(
@@ -192,10 +185,6 @@ const AdminModerationPage: FC = () => {
   const handleCancelAction = () => {
     setSelectedPostId(null);
     setActionType(null);
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbarOpen(false);
   };
 
   const toggleExpandPost = (postId: string) => {
@@ -557,23 +546,6 @@ const AdminModerationPage: FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar for feedback */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={4000}
-        onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          onClose={handleCloseSnackbar}
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-          variant="filled"
-        >
-          {snackbarMessage}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

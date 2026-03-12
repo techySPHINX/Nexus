@@ -1,5 +1,5 @@
 import { ReactNode, useRef, memo } from 'react';
-import { motion } from 'motion/react';
+import { motion } from 'framer-motion';
 import { useTheme } from '@/contexts/ThemeContext';
 
 export const TextRevealCard = ({

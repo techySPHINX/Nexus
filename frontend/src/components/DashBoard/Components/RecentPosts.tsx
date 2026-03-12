@@ -16,8 +16,8 @@ import AttachmentIcon from '@mui/icons-material/Attachment';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '@/contexts/NotificationContext';
 import { Box, Tooltip } from '@mui/material';
-import ReportButton from '../Report/ReportButton';
-import { SubCommunityBadge } from '../Post/SubCommunityBadge';
+import ReportButton from '../../Report/ReportButton';
+import { SubCommunityBadge } from '../../Post/SubCommunityBadge';
 
 export default function RecentPosts() {
   const {

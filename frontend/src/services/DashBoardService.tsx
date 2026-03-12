@@ -1,6 +1,14 @@
 import { getErrorMessage } from '@/utils/errorHandler';
 import api from './api';
 
+export type DashboardLayoutItem = {
+  i: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
 export const DashBoardService = {
   getProfileCompletionStats: async () => {
     try {

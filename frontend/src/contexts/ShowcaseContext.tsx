@@ -1263,6 +1263,7 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
         setError(
           `Failed to support project: ${err instanceof Error ? err.message : String(err)}`
         );
+        throw err;
       } finally {
         setActionLoading((prev) => {
           const next = new Set(prev.support);
@@ -1351,6 +1352,7 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
         setError(
           `Failed to unsupport project: ${err instanceof Error ? err.message : String(err)}`
         );
+        throw err;
       } finally {
         setActionLoading((prev) => {
           const next = new Set(prev.support);
@@ -1453,6 +1455,7 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
         setError(
           `Failed to follow project: ${err instanceof Error ? err.message : String(err)}`
         );
+        throw err;
       } finally {
         setActionLoading((prev) => {
           const next = new Set(prev.follow);
@@ -1541,6 +1544,7 @@ const ShowcaseProvider: FC<{ children: React.ReactNode }> = ({ children }) => {
         setError(
           `Failed to unfollow project: ${err instanceof Error ? err.message : String(err)}`
         );
+        throw err;
       } finally {
         setActionLoading((prev) => {
           const next = new Set(prev.follow);

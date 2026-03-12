@@ -38,4 +38,24 @@ module.exports = {
     'react/react-in-jsx-scope': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off', // allow inferred return types
   },
+  overrides: [
+    {
+      files: ['src/**/*.{ts,tsx}'],
+      excludedFiles: ['src/services/api.ts'],
+      rules: {
+        'no-restricted-imports': [
+          'error',
+          {
+            paths: [
+              {
+                name: 'axios',
+                message:
+                  "Use '@/services/api' instead of importing axios directly.",
+              },
+            ],
+          },
+        ],
+      },
+    },
+  ],
 };

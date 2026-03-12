@@ -17,8 +17,6 @@ import {
   TextField,
   CircularProgress,
   Link,
-  Snackbar,
-  Alert,
   Chip,
   Card,
   CardContent,
@@ -60,7 +58,7 @@ import {
   Close,
   Search,
 } from '@mui/icons-material';
-import axios from 'axios';
+import api from '@/services/api';
 import { getErrorMessage } from '@/utils/errorHandler';
 import { useNotification } from '@/contexts/NotificationContext';
 
@@ -131,13 +129,6 @@ const DocumentVerification: FC = () => {
   const [adminComments, setAdminComments] = useState('');
   const [rejectReason, setRejectReason] = useState('');
 
-  // UI states
-  const [snackbar, setSnackbar] = useState<{
-    open: boolean;
-    message: string;
-    severity?: 'success' | 'error';
-  }>({ open: false, message: '', severity: 'success' });
-
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     status: 'all',
@@ -149,7 +140,7 @@ const DocumentVerification: FC = () => {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axios.get('/admin/pending-documents');
+      const res = await api.get('/admin/pending-documents');
       const docs: PendingDocument[] = Array.isArray(res.data)
         ? res.data
         : (res.data?.data ?? []);
@@ -250,27 +241,22 @@ const DocumentVerification: FC = () => {
       if (idsToApprove.length === 0) return;
 
       try {
-        await axios.post('/admin/approve-documents', {
+        await api.post('/admin/approve-documents', {
           documentIds: idsToApprove,
           adminComments,
         });
-        setSnackbar({
-          open: true,
-          message: `${idsToApprove.length} document(s) approved successfully`,
-          severity: 'success',
-        });
+        showNotification?.(
+          `${idsToApprove.length} document(s) approved successfully`,
+          'success'
+        );
         setApproveDialogOpen(false);
         setSelectedDocs([]);
         fetchData();
       } catch (err: unknown) {
-        setSnackbar({
-          open: true,
-          message: getErrorMessage(err) || 'Approval failed',
-          severity: 'error',
-        });
+        showNotification?.(getErrorMessage(err) || 'Approval failed', 'error');
       }
     },
-    [activeDoc, adminComments, selectedDocs, fetchData]
+    [activeDoc, selectedDocs, adminComments, showNotification, fetchData]
   );
 
   const confirmReject = useCallback(
@@ -280,54 +266,76 @@ const DocumentVerification: FC = () => {
 
       if (idsToReject.length === 0) return;
       if (!rejectReason.trim() && !activeDoc) {
-        setSnackbar({
-          open: true,
-          message: 'Rejection reason is required',
-          severity: 'error',
-        });
+        showNotification?.('Rejection reason is required', 'error');
         return;
       }
 
       try {
-        await axios.post('/admin/reject-documents', {
+        await api.post('/admin/reject-documents', {
           documentIds: idsToReject,
           reason: rejectReason,
           adminComments,
         });
-        setSnackbar({
-          open: true,
-          message: `${idsToReject.length} document(s) rejected`,
-          severity: 'success',
-        });
+        showNotification?.(
+          `${idsToReject.length} document(s) rejected`,
+          'success'
+        );
         setRejectDialogOpen(false);
         setSelectedDocs([]);
         fetchData();
       } catch (err: unknown) {
-        setSnackbar({
-          open: true,
-          message: getErrorMessage(err) || 'Rejection failed',
-          severity: 'error',
-        });
+        showNotification?.(getErrorMessage(err) || 'Rejection failed', 'error');
       }
     },
-    [activeDoc, rejectReason, adminComments, selectedDocs, fetchData]
+    [
+      activeDoc,
+      selectedDocs,
+      rejectReason,
+      showNotification,
+      adminComments,
+      fetchData,
+    ]
   );
 
   const handleDownload = useCallback(
     async (doc: PendingDocument) => {
+      let objectUrl: string | null = null;
+
       try {
-        const response = await axios.get(doc.documentUrl, {
-          responseType: 'blob',
-        });
-        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const response = await fetch(doc.documentUrl);
+        if (!response.ok) {
+          throw new Error('Failed to download file');
+        }
+
+        const blob = await response.blob();
+        objectUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
+        link.href = objectUrl;
         link.setAttribute('download', doc.fileName || `document-${doc.id}`);
         document.body.appendChild(link);
         link.click();
         link.remove();
-      } catch (err) {
-        showNotification?.('Download failed. ' + getErrorMessage(err), 'error');
+      } catch {
+        const fallbackLink = document.createElement('a');
+        fallbackLink.href = doc.documentUrl;
+        fallbackLink.target = '_blank';
+        fallbackLink.rel = 'noopener noreferrer';
+        fallbackLink.setAttribute(
+          'download',
+          doc.fileName || `document-${doc.id}`
+        );
+        document.body.appendChild(fallbackLink);
+        fallbackLink.click();
+        fallbackLink.remove();
+
+        showNotification?.(
+          'Direct download was blocked, so the document was opened in a new tab.',
+          'warning'
+        );
+      } finally {
+        if (objectUrl) {
+          window.URL.revokeObjectURL(objectUrl);
+        }
       }
     },
     [showNotification]
@@ -1229,21 +1237,6 @@ const DocumentVerification: FC = () => {
           )}
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert
-          severity={snackbar.severity}
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
 
       {/* Floating Action Button for Mobile */}
       {isMobile && batchMode && selectedDocs.length > 0 && (

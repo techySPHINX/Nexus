@@ -38,6 +38,7 @@ import { RedisService } from './common/services/redis.service';
 import { RateLimitService } from './common/guards/enhanced-rate-limit.guard';
 import { FileSecurityService } from './common/services/file-security.service';
 import { CsrfMiddleware } from './common/middleware/csrf.middleware';
+import { FrontendErrorController } from './common/controllers/frontend-error.controller';
 
 @Module({
   imports: [
@@ -86,7 +87,7 @@ import { CsrfMiddleware } from './common/middleware/csrf.middleware';
     HealthModule,
     MetricsModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, FrontendErrorController],
   providers: [
     AppService,
     // Global Services - Logging & Audit
